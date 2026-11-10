@@ -28,7 +28,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'geo_code.governorate','category':'تكويدية','ar':'سياسة تكويد المحافظات ( يرث ك دولة )','en':'Governorate coding policy','value':'{"prefix":"Gov","digits":2,"parent_digits":2}','mandatory':true,'all':true},
     {'key':'geo_code.district','category':'تكويدية','ar':'سياسة تكويد حي/مركز ( يرث ك محافظة )','en':'District/center coding policy','value':'{"prefix":"Dis","digits":2,"parent_digits":4}','mandatory':true,'all':true},
     {'key':'geo_code.area','category':'تكويدية','ar':'سياسة تكويد منطقة ( يرث ك حي/مركز )','en':'Area/village coding policy','value':'{"prefix":"Rig","digits":2,"parent_digits":6}','mandatory':true,'all':true},
-    {'key':'customer_code','category':'تكويدية','ar':'سياسة تكويد العملاء ( يرث ك منطقة )','en':'Customer coding policy','value':'{"prefix":"Cus","geo_digits":8,"serial_digits":2,"required":true,"apply_to_all":true}','mandatory':true,'all':true},
+    {'key':'customer_code','category':'تكويدية','ar':'سياسة تكويد العملاء ( يرث ك منطقة )','en':'Customer coding policy','value':'{"prefix":"Cus","geo_digits":8,"serial_digits":4,"required":true,"apply_to_all":true}','mandatory':true,'all':true},
     {'key':'category_code.main','category':'تكويدية','ar':'سياسة تكويد فئات أصناف رئيسية','en':'Main item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":0}','mandatory':true,'all':true},
     {'key':'category_code.sub','category':'تكويدية','ar':'سياسة تكويد فئة أصناف فرعية ( يرث ك ف رئيسية )','en':'Sub item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":2}','mandatory':true,'all':true},
     {'key':'category_code.secondary','category':'تكويدية','ar':'سياسة تكويد فئة ثانوية ( يرث ك ف فرعية )','en':'Secondary item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":4}','mandatory':true,'all':true},
@@ -504,7 +504,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'shift','name':'ورديات العمل','en':'Work shifts','prefix':'Shf','digits':'5'},
     {'key':'commission_plan','name':'خطط العمولات','en':'Commission plans','prefix':'Com','digits':'5'},
     {'key':'sales_fulfillment','name':'أذون التجهيز والتسليم','en':'Sales fulfillment notes','prefix':'Ful','digits':'5'},
-    {'key':'user_type','name':'أنواع المستخدمين','en':'User types','prefix':'Typ','digits':'5'},
+    {'key':'user_type','name':'أنواع المستخدمين','en':'User types','prefix':'Typ','digits':'2'},
     {'key':'permission_template','name':'قوالب الصلاحيات','en':'Permission templates','prefix':'Tpl','digits':'5'},
     {'key':'user_classification','name':'تصنيفات المستخدمين','en':'User classifications','prefix':'Cls','digits':'5'},
     {'key':'journal_entry','name':'القيود اليومية','en':'Journal entries','prefix':'Jrn','digits':'5'},
@@ -625,13 +625,13 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final parsed = jsonDecode((policy['value'] ?? '{}').toString());
       if (parsed is Map) return Map<String, dynamic>.from(parsed);
     } catch (_) {}
-    return {'prefix':'Cus','geo_digits':8,'serial_digits':2,'required':true,'apply_to_all':true};
+    return {'prefix':'Cus','geo_digits':8,'serial_digits':4,'required':true,'apply_to_all':true};
   }
 
   Widget _customerCodeEditor(Map<String, dynamic> policy) {
     final config = _customerCodeConfig(policy);
     final prefix = (config['prefix'] ?? 'Cus').toString();
-    final serialDigits = int.tryParse((config['serial_digits'] ?? 2).toString()) ?? 2;
+    final serialDigits = int.tryParse((config['serial_digits'] ?? 4).toString()) ?? 2;
     final locked = _codePolicyIsLocked('customer_code');
     void update(String key, dynamic value) {
       final next = _customerCodeConfig(policy)..[key] = value;
