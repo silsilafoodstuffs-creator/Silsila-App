@@ -146,10 +146,6 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           .eq('company_id', widget.companyId).eq('name_ar', 'مصر').maybeSingle();
       }
       if (country != null) _geoSegments['country']!.text = country['country_code'].toString();
-      final policyRows = await _db.from('erp_program_policies').select('policy_code')
-        .eq('company_id', widget.companyId).like('policy_code', 'Pol%');
-      final usedPolicySerials = (policyRows as List).map((r) => int.tryParse((r['policy_code'] ?? '').toString().replaceFirst(RegExp(r'^Pol'), '')) ?? 0);
-      _nextProgramPolicySerial = (usedPolicySerials.fold<int>(0, (a, b) => a > b ? a : b)) + 1;
       final customerPolicy = await _db.from('erp_program_policies').select('policy_value')
         .eq('company_id', widget.companyId).eq('policy_key', 'customer_code').maybeSingle();
       if (customerPolicy != null) {
