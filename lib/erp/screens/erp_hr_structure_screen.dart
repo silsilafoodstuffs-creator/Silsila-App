@@ -610,7 +610,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       doc.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, theme:pw.ThemeData.withFont(base:font,bold:font),build:(_)=>[
         ErpPrintSupport.text('Silsila • ${_quickKind=='department'?'بيانات الإدارات':_quickKind=='location'?'مواقع العمل':_quickKind=='grade'?'درجات الوظائف':'بيانات الوظائف'}',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold)),
         pw.SizedBox(height:10),
-        pw.TableHelper.fromTextArray(headers:const ['م','الكود','الاسم','الحالة'],data:rows.asMap().entries.map((e)=>[e.key+1,_quickCode(e.value),_quickName(e.value),e.value['is_active']==true?'نشط':'موقوف']).toList()),
+        pw.TableHelper.fromTextArray(headers:const ['م','الكود','الاسم','الحالة'],data:ErpPrintSupport.normalizeTable(rows.asMap().entries.map((e)=>[e.key+1,_quickCode(e.value),_quickName(e.value),e.value['is_active']==true?'نشط':'موقوف']).toList())),
       ]));
       final bytes=await doc.save();
       if(share){await Printing.sharePdf(bytes:bytes,filename:'Silsila-HR-Structure.pdf');}

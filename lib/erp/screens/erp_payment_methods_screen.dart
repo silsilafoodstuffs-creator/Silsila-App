@@ -248,7 +248,7 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
           pw.SizedBox(height: 10),
           pw.TableHelper.fromTextArray(
             headers: const ['الكود','الاسم','النوع','الخزينة','قبض','صرف','مرجع','الحالة'],
-            data: _filtered.map((r) => [
+            data: ErpPrintSupport.normalizeTable(_filtered.map((r) => [
               _s(r['payment_method_code']), _s(r['name_ar']),
               _types[_s(r['method_type'])] ?? _s(r['method_type']),
               _cashboxName(_s(r['cashbox_id']).isEmpty ? null : _s(r['cashbox_id'])),
@@ -256,7 +256,7 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
               r['allow_payments'] == true ? 'نعم' : 'لا',
               r['requires_reference'] == true ? 'نعم' : 'لا',
               r['is_active'] == true ? 'نشطة' : 'موقوفة',
-            ]).toList(),
+            ]).toList()),
           ),
         ],
       ));

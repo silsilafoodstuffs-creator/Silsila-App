@@ -333,7 +333,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
         if (rows.isEmpty) ErpPrintSupport.text('لا توجد بيانات للتصدير.', textAlign: pw.TextAlign.right)
         else pw.TableHelper.fromTextArray(
           headers: headers,
-          data: rows,
+          data: ErpPrintSupport.normalizeTable(rows),
           headerStyle: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
           cellStyle: const pw.TextStyle(fontSize: 7),
           cellAlignment: pw.Alignment.centerRight,

@@ -429,10 +429,10 @@ class _ErpWhatsappContactsScreenState extends State<ErpWhatsappContactsScreen> {
         pw.SizedBox(height: 12),
         pw.TableHelper.fromTextArray(
           headers: ['اسم الجروب', 'اسم الحساب أو المستخدم', 'رقم موبايل', 'م'],
-          data: rows.asMap().entries.map((entry) {
+          data: ErpPrintSupport.normalizeTable(rows.asMap().entries.map((entry) {
             final row = entry.value;
             return [_s(row['group_name']), _s(row['contact_name']), _s(row['phone']), (entry.key + 1).toString()];
-          }).toList(),
+          }).toList()),
           headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
           cellStyle: const pw.TextStyle(fontSize: 8),
           cellAlignment: pw.Alignment.centerRight,

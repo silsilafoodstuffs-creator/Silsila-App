@@ -274,7 +274,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       doc.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, theme: pw.ThemeData.withFont(base: font, bold: font), build: (_) => [
         ErpPrintSupport.text('سلسلة — أنواع الأنشطة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 12),
-        pw.TableHelper.fromTextArray(headers: keys, data: _rows.map((row) => keys.map((key) => row[key] ?? '').toList()).toList()),
+        pw.TableHelper.fromTextArray(headers: keys, data: ErpPrintSupport.normalizeTable(_rows.map((row) => keys.map((key) => row[key] ?? '').toList()).toList())),
       ]));
       await Printing.layoutPdf(onLayout: (_) async => doc.save());
       if (mounted) setState(() => _message = 'تم تجهيز ملف الطباعة / PDF.');
