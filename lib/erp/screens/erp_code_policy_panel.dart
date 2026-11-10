@@ -27,7 +27,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     {'key':'shift','name':'ورديات العمل','prefix':'Shf','digits':'5'},
     {'key':'commission_plan','name':'خطط العمولات','prefix':'Com','digits':'5'},
     {'key':'sales_fulfillment','name':'أذون التجهيز والتسليم','prefix':'Ful','digits':'5'},
-    {'key':'user_type','name':'أنواع المستخدمين','prefix':'Typ','digits':'5'},
+    {'key':'user_type','name':'أنواع المستخدمين','prefix':'Typ','digits':'2'},
     {'key':'permission_template','name':'قوالب الصلاحيات','prefix':'Tpl','digits':'5'},
     {'key':'user_classification','name':'تصنيفات المستخدمين','prefix':'Cls','digits':'5'},
     {'key':'journal_entry','name':'القيود اليومية','prefix':'Jrn','digits':'5'},

@@ -132,7 +132,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     return List<Map<String, dynamic>>.generate(defaults.length, (i) => {
       'id': 'local-default-user-type-$i',
       'type_code': i + 1,
-      'type_code_display': 'UT${(i + 1).toString().padLeft(4, '0')}',
+      'type_code_display': 'Typ${(i + 1).toString().padLeft(2, '0')}',
       ...defaults[i],
       'is_active': true,
       '_local_default': true,
@@ -256,8 +256,8 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           userList = [];
           loadWarning = 'تعذر تحميل المستخدمين من قاعدة البيانات. راجع الشركة النشطة وسياسات RLS. تفاصيل الخطأ: $e';
         }
-        // User codes are prefixed strings (USR-1, USR-2, ...); sort by the
-        // numeric suffix so USR-10 does not appear before USR-2.
+        // User codes contain the numeric user-type code followed by a 5-digit serial.
+        // Sort by the trailing serial, not by the inherited type segment.
         int codeNumber(Map<String, dynamic> row) {
           final match = RegExp(r'(\d+)$').firstMatch((row['user_code'] ?? '').toString());
           return int.tryParse(match?.group(1) ?? '') ?? 0;
