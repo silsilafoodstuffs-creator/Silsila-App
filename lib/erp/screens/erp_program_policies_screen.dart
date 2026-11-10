@@ -20,6 +20,19 @@ class ErpProgramPoliciesScreen extends StatefulWidget {
 
 class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   static const tabs = ['الكل','برمجية','تكويدية','محاسبية','مخزنية','بيعية','شرائية','إدارية','الخطوط والألوان'];
+  static const Set<String> _retiredDuplicateCodePolicyKeys = {
+    'code_type.cash_voucher',
+    'code_type.sales_representative',
+    'code_type.sales_campaign',
+    'code_type.customer_monthly_goal',
+    'code_type.employee_monthly_target',
+  };
+
+  bool _isHiddenInternalOrDuplicatePolicy(Map<String, dynamic> policy) {
+    final key = (policy['key'] ?? '').toString();
+    return key == 'code_generation_registry' ||
+        _retiredDuplicateCodePolicyKeys.contains(key);
+  }
   static const defaults = <Map<String,dynamic>>[
     {'key':'visual_identity.program_name','category':'برمجية','ar':'اسم المشروع','en':'Project name','value':'سلسلة','mandatory':true,'all':true},
     {'key':'visual_identity.logo','category':'برمجية','ar':'شعار المشروع','en':'Project logo','value':'','mandatory':true,'all':true},
@@ -797,7 +810,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     ]);
   }
   Future<void> _previewCurrentTab() async {
-    final current = values.values.where((p) => tabs[tab] == 'الكل' || p['category'] == tabs[tab]).toList();
+    final current = values.values.where((p) => !_isHiddenInternalOrDuplicatePolicy(p) && (tabs[tab] == 'الكل' || p['category'] == tabs[tab])).toList();
     await showDialog<void>(      context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('معاينة ${tabs[tab]}'),
@@ -822,18 +835,10 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   }
 
   Future<List<List<String>>> _currentExportRows() async {
-    const retiredDuplicatePolicies = <String>{
-      'code_type.cash_voucher', 'code_type.sales_representative',
-      'code_type.sales_campaign', 'code_type.customer_monthly_goal',
-      'code_type.employee_monthly_target',
-    };
-
-    final current = values.values.where((p) {
-      final key = (p['key'] ?? '').toString();
-      if (retiredDuplicatePolicies.contains(key)) return false;
-      if (tab == 2 && key == 'code_generation_registry') return false;
-      return tabs[tab] == 'الكل' || p['category'] == tabs[tab];
-    }).toList();
+    final current = values.values
+        .where((p) => !_isHiddenInternalOrDuplicatePolicy(p) &&
+            (tabs[tab] == 'الكل' || p['category'] == tabs[tab]))
+        .toList();
 
     if (tab == 0 || tab == 2) {
       current.sort((a, b) => _programPolicyCode((a['key'] ?? '').toString())
@@ -1331,13 +1336,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   Widget build(BuildContext context) {
     final query = policySearch.trim().toLowerCase();
     final list = values.values.where((p) {
-      const retiredDuplicatePolicies = <String>{
-        'code_type.cash_voucher', 'code_type.sales_representative',
-        'code_type.sales_campaign', 'code_type.customer_monthly_goal',
-        'code_type.employee_monthly_target',
-        };
-      if (retiredDuplicatePolicies.contains((p['key'] ?? '').toString())) return false;
-      if (tab == 2 && p['key'] == 'code_generation_registry') return false;
+      if (_isHiddenInternalOrDuplicatePolicy(p)) return false;
       if (tabs[tab] != 'الكل' && p['category'] != tabs[tab]) return false;
       if (query.isEmpty) return true;
       final ar = (p['ar'] ?? '').toString().toLowerCase();
