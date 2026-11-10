@@ -206,6 +206,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final registryTypes = Map<String, dynamic>.from(registryPayload['types'] as Map? ?? {});
       final existingTypeKeys = (rows as List).whereType<Map<String,dynamic>>().map((row) => (row['policy_key'] ?? '').toString()).toSet();
       final newTypeRows = <Map<String, dynamic>>[];
+      const additionalPolicyCodes = <String, String>{
+        'construction_material_movement':'Pol146',
+        'workspace_item_link':'Pol147',
+        'business_suite_record':'Pol148',
+      };
       for (var i = 0; i < _codePolicyTypeDefinitions.length; i++) {
         final definition = _codePolicyTypeDefinitions[i];
         final typeKey = definition['key']!;
@@ -217,7 +222,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           'name_ar': definition['name'], 'name_en': definition['en'],
           'is_enabled': true, 'apply_to_all': true, 'user_ids': <String>[],
           'policy_value': jsonEncode({'prefix': (config['prefix'] ?? definition['prefix']).toString(), 'digits': int.tryParse((config['digits'] ?? definition['digits']).toString()) ?? 5}),
-          'policy_code': 'Pol${(77 + i).toString().padLeft(3, '0')}',
+          'policy_code': additionalPolicyCodes[typeKey] ?? 'Pol${(77 + i).toString().padLeft(3, '0')}',
         });
       }
       if (newTypeRows.isNotEmpty) {
@@ -1190,6 +1195,12 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   Widget build(BuildContext context) {
     final query = policySearch.trim().toLowerCase();
     final list = values.values.where((p) {
+      const retiredDuplicatePolicies = <String>{
+        'code_type.cash_voucher', 'code_type.sales_representative',
+        'code_type.sales_campaign', 'code_type.customer_monthly_goal',
+        'code_type.employee_monthly_target',
+      };
+      if (retiredDuplicatePolicies.contains((p['key'] ?? '').toString())) return false;
       if (tab == 2 && p['key'] == 'code_generation_registry') return false;
       if (tabs[tab] != 'الكل' && p['category'] != tabs[tab]) return false;
       if (query.isEmpty) return true;
