@@ -23,6 +23,7 @@ on:
       - 'supabase/migrations/*policy*codes*.sql'
       - 'supabase/migrations/*codes*program*policies*.sql'
       - 'supabase/migrations/*user*code*.sql'
+      - 'supabase/migrations/*.sql'
 
 permissions:
   contents: read
