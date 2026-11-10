@@ -1199,6 +1199,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         'code_type.cash_voucher', 'code_type.sales_representative',
         'code_type.sales_campaign', 'code_type.customer_monthly_goal',
         'code_type.employee_monthly_target',
+        'code_policy.storage_location', 'code_policy.section',
       };
       if (retiredDuplicatePolicies.contains((p['key'] ?? '').toString())) return false;
       if (tab == 2 && p['key'] == 'code_generation_registry') return false;
