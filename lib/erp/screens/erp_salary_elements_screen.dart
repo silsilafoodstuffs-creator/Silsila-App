@@ -502,6 +502,7 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
             ErpPrintSupport.text('توقيع الموظف: ........................'),
             ErpPrintSupport.text('اعتماد الحسابات: ........................'),
           ]),
+          ErpPrintSupport.footer(ctx),
         ]),
       )));
       await Printing.layoutPdf(onLayout:(_) async=>doc.save());
