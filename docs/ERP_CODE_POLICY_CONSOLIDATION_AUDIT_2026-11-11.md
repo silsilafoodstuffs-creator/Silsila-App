@@ -65,7 +65,7 @@ A transaction-based insert/rollback check successfully exercised geographic area
 | UI geometry persisted and applied in the coding policy grid | 85% (project-wide all-screen enforcement still needs visual verification) |
 | Final Flutter/Web/Android/Pages workflow evidence | 0% verified |
 
-Estimated completion for this coding-policy consolidation work package: **83%**. The remaining portion is final CI/build/deployment evidence and visual verification across all screens. This is not a claim that the entire Silsila ERP product is 83% functionally complete.
+Estimated completion for this coding-policy consolidation work package: **85%**. The remaining portion is final CI/build/deployment evidence and runtime visual verification across all screens. This is not a claim that the entire Silsila ERP product is 83% functionally complete.
 
 ## Broader project items still open
 
