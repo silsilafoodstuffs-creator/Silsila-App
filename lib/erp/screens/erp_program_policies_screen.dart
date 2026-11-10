@@ -107,6 +107,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   String get company => (widget.companyId ?? '').trim();
   static const Map<String, String> _codePolicyCodeSources = {
     'code_policy.employee':'erp_employees.employee_code',
+    'customer_code':'erp_parties.party_code',
+    'brand_code':'erp_items.brand_name',
     'code_policy.user':'erp_users.user_code',
     'code_policy.supplier':'erp_parties.party_code',
     'code_policy.representative':'erp_sales_representatives.rep_code',
@@ -618,18 +620,22 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final config = _codePolicyConfig(policy);
     final prefix = (config['prefix'] ?? 'Cod').toString();
     final digits = int.tryParse((config['digits'] ?? 3).toString()) ?? 3;
+    final locked = _codePolicyIsLocked((policy['key'] ?? '').toString());
     final preview = prefix + '1'.padLeft(digits.clamp(1, 12).toInt(), '0');
     void update(String field, String value) {
       final next = _codePolicyConfig(policy)..[field] = field == 'digits' ? (int.tryParse(value) ?? 1) : value;
       policy['value'] = jsonEncode(next);
       setState(() {});
     }
-    return Row(children: [
-      SizedBox(width:78,height:40,child:TextField(controller:_codePolicyController(policy,prefix:true),textAlign:TextAlign.center,maxLength:10,inputFormatters:[FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z]'))],style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),decoration:const InputDecoration(hintText:'ABC',counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:4),border:OutlineInputBorder()),onChanged:(v)=>update('prefix',v))),
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      Row(children: [
+      SizedBox(width:78,height:40,child:TextField(controller:_codePolicyController(policy,prefix:true),readOnly:!_isEditing || locked,textAlign:TextAlign.center,maxLength:10,inputFormatters:[FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z]'))],style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),decoration:const InputDecoration(hintText:'ABC',counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:4),border:OutlineInputBorder()),onChanged:(v)=>update('prefix',v))),
       const SizedBox(width:5),
-      SizedBox(width:58,height:40,child:TextField(controller:_codePolicyController(policy,prefix:false),textAlign:TextAlign.center,maxLength:2,keyboardType:TextInputType.number,inputFormatters:[FilteringTextInputFormatter.digitsOnly],style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),decoration:const InputDecoration(hintText:'3',counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:4),border:OutlineInputBorder()),onChanged:(v)=>update('digits',v))),
+      SizedBox(width:58,height:40,child:TextField(controller:_codePolicyController(policy,prefix:false),readOnly:!_isEditing || locked,textAlign:TextAlign.center,maxLength:2,keyboardType:TextInputType.number,inputFormatters:[FilteringTextInputFormatter.digitsOnly],style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),decoration:const InputDecoration(hintText:'3',counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:4),border:OutlineInputBorder()),onChanged:(v)=>update('digits',v))),
       const SizedBox(width:7),
       Expanded(child:Text(preview,textAlign:TextAlign.center,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
+      ]),
+      if (locked) const Text('لا يمكن التعديل بعد عمل أول كود', style: TextStyle(color: Colors.red, fontSize: 8, height: 1)),
     ]);
   }
 
@@ -660,6 +666,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final config = _customerCodeConfig(policy);
     final prefix = (config['prefix'] ?? 'Cus').toString();
     final serialDigits = int.tryParse((config['serial_digits'] ?? 2).toString()) ?? 2;
+    final locked = _codePolicyIsLocked('customer_code');
     void update(String key, dynamic value) {
       final next = _customerCodeConfig(policy)..[key] = value;
       next['required'] = true;
@@ -672,10 +679,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final safeSerialDigits = serialDigits.clamp(1, 12).toInt();
     final preview = prefix + List.filled(8, '0').join() +
         '1'.padLeft(safeSerialDigits, '0');
-    return SizedBox(width:300,height:40,child:Row(children:[
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      SizedBox(width:300,height:40,child:Row(children:[
       SizedBox(width:66,height:40,child:TextFormField(
         key:ValueKey('customer-code-prefix-$prefix'),
-        initialValue:prefix,maxLength:10,
+        initialValue:prefix,readOnly:!_isEditing || locked,maxLength:10,
         textAlign:TextAlign.center,
         style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
         inputFormatters:[FilteringTextInputFormatter.allow(RegExp('[a-zA-Z]'))],
@@ -690,7 +698,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       const SizedBox(width:4),
       SizedBox(width:48,height:40,child:TextFormField(
         key:ValueKey('customer-code-serial-$serialDigits'),
-        initialValue:serialDigits.toString(),maxLength:2,
+        initialValue:serialDigits.toString(),readOnly:!_isEditing || locked,maxLength:2,
         textAlign:TextAlign.center,
         style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
         keyboardType:TextInputType.number,
@@ -711,7 +719,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         maxLines:1,overflow:TextOverflow.ellipsis,
         style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,
           color:Color(0xFF3E007D)))),
-    ]));
+      ])),
+      if (locked) const Text('لا يمكن التعديل بعد عمل أول كود', style: TextStyle(color: Colors.red, fontSize: 8, height: 1)),
+    ]);
   }
 
   Map<String, dynamic> _itemCodeConfig(Map<String, dynamic> policy) {
@@ -726,25 +736,39 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final config = _itemCodeConfig(policy);
     final prefix = (config['prefix'] ?? 'Itm').toString();
     final serialDigits = int.tryParse((config['serial_digits'] ?? 3).toString()) ?? 3;
+    final locked = _codePolicyIsLocked('item_code');
+    void update(String field, dynamic value) {
+      final next = _itemCodeConfig(policy)..[field] = value;
+      next['category_digits'] = 6;
+      policy['value'] = jsonEncode(next);
+      setState(() {});
+    }
     // The six category digits are inherited from the secondary item category;
     // only the serial length is displayed as an editable-policy value.
     const inheritedCategoryCode = '010101';
     final preview = '$prefix$inheritedCategoryCode${'1'.padLeft(serialDigits.clamp(1, 12).toInt(), '0')}';
-    return SizedBox(width:300,height:40,child:Row(children:[
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      SizedBox(width:300,height:40,child:Row(children:[
       SizedBox(width:66,height:40,child:TextFormField(
-        key:ValueKey('item-code-prefix-$prefix'),initialValue:prefix,readOnly:true,textAlign:TextAlign.center,maxLength:3,
+        key:ValueKey('item-code-prefix-$prefix'),initialValue:prefix,readOnly:!_isEditing || locked,textAlign:TextAlign.center,maxLength:10,
+        inputFormatters:[FilteringTextInputFormatter.allow(RegExp('[a-zA-Z]'))],
+        onChanged:(v)=>update('prefix',v.toUpperCase()),
         decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
         style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
       )),
       const SizedBox(width:4),
       SizedBox(width:48,height:40,child:TextFormField(
-        key:ValueKey('item-code-serial-$serialDigits'),initialValue:serialDigits.toString(),readOnly:true,textAlign:TextAlign.center,maxLength:2,
+        key:ValueKey('item-code-serial-$serialDigits'),initialValue:serialDigits.toString(),readOnly:!_isEditing || locked,textAlign:TextAlign.center,maxLength:2,
+        keyboardType:TextInputType.number,inputFormatters:[FilteringTextInputFormatter.digitsOnly],
+        onChanged:(v){final n=int.tryParse(v);if(n!=null&&n>=1&&n<=12)update('serial_digits',n);},
         decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
         style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
       )),
       const SizedBox(width:5),
       Expanded(child:Text(preview,textAlign:TextAlign.center,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
-    ]));
+      ])),
+      if (locked) const Text('لا يمكن التعديل بعد عمل أول كود', style: TextStyle(color: Colors.red, fontSize: 8, height: 1)),
+    ]);
   }
 
   Widget _geoCodeEditor(Map<String, dynamic> policy) {
@@ -753,6 +777,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final digits = int.tryParse((config['digits'] ?? 2).toString()) ?? 2;
     final parentDigits = int.tryParse((config['parent_digits'] ?? 0).toString()) ?? 0;
     final key = (policy['key'] ?? '').toString();
+    final locked = _codePolicyIsLocked(key);
     final previewDigits = key == 'brand_code'
         ? '001'
         : key.startsWith('category_code.')
@@ -763,10 +788,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       policy['value'] = jsonEncode(next);
       setState(() {});
     }
-    return SizedBox(width:300,height:40,child:Row(children:[
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      SizedBox(width:300,height:40,child:Row(children:[
       SizedBox(width:66,height:40,child:TextFormField(
         key:ValueKey('geo-prefix-${policy['key']}-$prefix'),initialValue:prefix,
-        readOnly:key.startsWith('category_code.') || key == 'brand_code',
+        readOnly:!_isEditing || locked,
         textAlign:TextAlign.center,maxLength:3,
         inputFormatters:[FilteringTextInputFormatter.allow(RegExp('[a-zA-Z]'))],
         style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
@@ -776,14 +802,16 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       const SizedBox(width:4),
       SizedBox(width:48,height:40,child:TextFormField(
         key:ValueKey('geo-digits-${policy['key']}-$digits'),initialValue:digits.toString(),
-        readOnly:key.startsWith('category_code.') || key == 'brand_code',
+        readOnly:!_isEditing || locked,
         textAlign:TextAlign.center,maxLength:2,keyboardType:TextInputType.number,
         inputFormatters:[FilteringTextInputFormatter.digitsOnly],        style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
         decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
         onChanged:(v){final n=int.tryParse(v);if(n!=null&&n>=1&&n<=2)update('digits',n);},
       )),      const SizedBox(width:5),
       Expanded(child:Text('$prefix$previewDigits',textAlign:TextAlign.center,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
-    ]));
+      ])),
+      if (locked) const Text('لا يمكن التعديل بعد عمل أول كود', style: TextStyle(color: Colors.red, fontSize: 8, height: 1)),
+    ]);
   }
   Future<void> _previewCurrentTab() async {
     final current = values.values.where((p) => tabs[tab] == 'الكل' || p['category'] == tabs[tab]).toList();
@@ -1218,7 +1246,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           .compareTo(_programPolicyCode((b['key'] ?? '').toString())));
     }
 
-    return Column(children: [
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Column(children: [
       Container(
         color: const Color(0xFF3E007D),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1252,7 +1282,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
             ErpQuickTaskButton(label: 'تحديث', icon: Icons.refresh_rounded, compact: true, onPressed: loading ? null : _refreshCurrentTab),
             ErpQuickTaskButton(label: 'إضافة', icon: Icons.add_circle_outline_rounded, compact: true, onPressed: null),
-            ErpQuickTaskButton(label: 'حفظ', icon: Icons.save_outlined, compact: true, onPressed: saving ? null : _saveCurrentTab),
+            ErpQuickTaskButton(label: 'حفظ', icon: Icons.save_outlined, compact: true, onPressed: saving || !_isEditing ? null : _saveCurrentTab),
             ErpQuickTaskButton(label: 'تعديل', icon: Icons.edit_outlined, compact: true, onPressed: loading ? null : _editCurrentTab),
             ErpQuickTaskButton(label: 'حذف', icon: Icons.delete_outline_rounded, compact: true, onPressed: null),
             ErpQuickTaskButton(label: 'معاينة', icon: Icons.preview_outlined, compact: true, onPressed: _previewCurrentTab),
@@ -1265,7 +1295,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       if (message != null) Padding(padding: const EdgeInsets.all(4), child: Text(message!, style: const TextStyle(color: Colors.green, fontSize: 11))),
       SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: List.generate(tabs.length, (i) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-        child: ChoiceChip(label: Text(tabs[i]), selected: tab == i, onSelected: (_) => setState(() => tab = i), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
+        child: ChoiceChip(label: Text(tabs[i]), selected: tab == i, onSelected: (_) => _selectPolicyTab(i), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
       )))),
       Expanded(
         child: tab == 8
@@ -1283,10 +1313,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                         child: SingleChildScrollView(
                           controller: _policyHorizontalController,
                           scrollDirection: Axis.horizontal,
-                          child: SizedBox(width: 1200, child: ListView(
-                        controller: _policyVerticalController,                        padding: const EdgeInsets.fromLTRB(5, 1, 5, 3),
-                        children: [
-                          Card(
+                          child: SizedBox(width: 1200, child: Column(children: [
+                                                      Card(
                             margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1),
                             elevation: 0, color: const Color(0xFFF5EFFB),
                             child: Padding(
@@ -1310,6 +1338,10 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                               ])),
                             ),
                           ),
+
+                            Expanded(child: ListView(
+                        controller: _policyVerticalController,                        padding: const EdgeInsets.fromLTRB(5, 1, 5, 3),
+                        children: [
                           ...List.generate(list.length, (index) {
                             final p = list[index];
                             final mandatory = p['mandatory'] == true;
@@ -1329,7 +1361,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                               shape: RoundedRectangleBorder(side: BorderSide(color: Colors.deepPurple.withValues(alpha: 0.16)), borderRadius: BorderRadius.circular(6)),
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                child: SizedBox(width: 1200, child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                child: IgnorePointer(ignoring: !_isEditing, child: SizedBox(width: 1200, child: Row(mainAxisSize: MainAxisSize.min, children: [
                                   SizedBox(width: 34, child: Text((index + 1).toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10))),
                                   const SizedBox(width: 8),
                                   SizedBox(width: 82, child: Text(policyCode, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600))),
@@ -1419,7 +1451,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                   const SizedBox(width: 4),
                                   checkColumn('الكل', mandatory || all, mandatory ? null : (v) => setState(() { p['all'] = v == true; if (v == true) p['user_ids'] = <String>[]; }), 62),
                                   const SizedBox(width: 4),
-                                  SizedBox(width: 80, height: 34, child: Focus(
+                                  SizedBox(width: 44, height: 34, child: Focus(
                                     onKeyEvent: (node, event) {
                                       if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.f1 && !mandatory && !all) { _pickUsers(p); return KeyEventResult.handled; }
                                       return KeyEventResult.ignored;
@@ -1432,7 +1464,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                   )),
                                   const SizedBox(width: 4),
                                   SizedBox(width: 58, child: Text(mandatory ? '—' : (p['user_ids'] as List).length.toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 9))),
-                                ])),
+                                ]))),
                               ),
                             );
                           }),
@@ -1448,10 +1480,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                           ],
                         ],
                           )),
+                          ])),
                         ),
                       ),
                     ),
       ),
-    ]);
+    ]));
   }
 }
