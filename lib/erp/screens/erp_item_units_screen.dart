@@ -224,10 +224,10 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
         pw.SizedBox(height: 10),
         pw.TableHelper.fromTextArray(
           headers: const ['م', 'كود الوحدة', 'اسم الوحدة عربي', 'اسم الوحدة إنجليزي', 'الحالة'],
-          data: rows.asMap().entries.map((e) => [
+          data: ErpPrintSupport.normalizeTable(rows.asMap().entries.map((e) => [
             e.key + 1, _s(e.value['unit_code']), _s(e.value['unit_name_ar']),
             _s(e.value['unit_name_en']), e.value['is_active'] == true ? 'نشط' : 'غير نشط',
-          ]).toList(),
+          ]).toList()),
         ),
       ],
     ));

@@ -144,7 +144,7 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
       pdf.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, theme: pw.ThemeData.withFont(base: font, bold: font), build: (_) => [
         ErpPrintSupport.text('Silsila • ' + _title, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 10),
-        pw.TableHelper.fromTextArray(headers: keys, data: _rows.map((row) => keys.map((key) => row[key]?.toString() ?? '').toList()).toList()),
+        pw.TableHelper.fromTextArray(headers: keys, data: ErpPrintSupport.normalizeTable(_rows.map((row) => keys.map((key) => row[key]?.toString() ?? '').toList()).toList())),
       ]));
       await Printing.layoutPdf(onLayout: (_) async => pdf.save());
     } catch (error) {

@@ -65,7 +65,7 @@ class _ErpHrLeaveScreenState extends State<ErpHrLeaveScreen>{
         ErpPrintSupport.text('الشركة: ${_company.text.trim()}    •    تاريخ التقرير: ${date(DateTime.now())}    •    عدد الطلبات: ${rows.length}', textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 9)),
         pw.SizedBox(height: 12),
         if (rows.isEmpty) ErpPrintSupport.text('لا توجد طلبات إجازة.', textAlign: pw.TextAlign.right)
-        else pw.TableHelper.fromTextArray(headers: headers, data: rows, headerStyle: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold), cellStyle: const pw.TextStyle(fontSize: 8), cellAlignment: pw.Alignment.centerRight, headerAlignment: pw.Alignment.centerRight),
+        else pw.TableHelper.fromTextArray(headers: headers, data: ErpPrintSupport.normalizeTable(rows), headerStyle: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold), cellStyle: const pw.TextStyle(fontSize: 8), cellAlignment: pw.Alignment.centerRight, headerAlignment: pw.Alignment.centerRight),
       ],
     ));
     return Uint8List.fromList(await pdf.save());

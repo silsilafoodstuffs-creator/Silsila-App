@@ -209,7 +209,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
       doc.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, theme:pw.ThemeData.withFont(base:font,bold:font),build:(_)=>[
         ErpPrintSupport.text('Silsila • ${widget.title}',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold)),
         pw.SizedBox(height:8),
-        pw.TableHelper.fromTextArray(headers:const ['م','كود الصنف','الصنف','رصيد النظام','الجرد','الفرق','القيمة'],data:lines.asMap().entries.map((e){final l=e.value;final item=items.firstWhere((x)=>s(x['id'])==s(l['item_id']),orElse:()=>{});final d=countedBase(l)-n(l['physical_snapshot']);return [e.key+1,s(item['item_code']),s(item['item_name']),n(l['physical_snapshot']).toStringAsFixed(3),countedBase(l).toStringAsFixed(3),d.toStringAsFixed(3),(d.abs()*n(l['valuation_price'])).toStringAsFixed(2)];}).toList()),
+        pw.TableHelper.fromTextArray(headers:const ['م','كود الصنف','الصنف','رصيد النظام','الجرد','الفرق','القيمة'],data:ErpPrintSupport.normalizeTable(lines.asMap().entries.map((e){final l=e.value;final item=items.firstWhere((x)=>s(x['id'])==s(l['item_id']),orElse:()=>{});final d=countedBase(l)-n(l['physical_snapshot']);return [e.key+1,s(item['item_code']),s(item['item_name']),n(l['physical_snapshot']).toStringAsFixed(3),countedBase(l).toStringAsFixed(3),d.toStringAsFixed(3),(d.abs()*n(l['valuation_price'])).toStringAsFixed(2)];}).toList())),
       ]));
       final bytes=await doc.save();
       if(share){await Printing.sharePdf(bytes:bytes,filename:'Silsila-Stocktake.pdf');}

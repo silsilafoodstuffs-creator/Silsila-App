@@ -1160,7 +1160,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           pw.SizedBox(height: 10),
           pw.TableHelper.fromTextArray(
             headers: keys,
-            data: _rows.map((row) => keys.map((key) => row[key] ?? '').toList()).toList(),
+            data: ErpPrintSupport.normalizeTable(_rows.map((row) => keys.map((key) => row[key] ?? '').toList()).toList()),
           ),
         ],
       ));

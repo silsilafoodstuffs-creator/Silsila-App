@@ -295,10 +295,10 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
       doc.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, theme:pw.ThemeData.withFont(base:font,bold:font),build:(_)=>[
         ErpPrintSupport.text('عناصر المرتبات',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold)),
         pw.SizedBox(height:8),
-        pw.TableHelper.fromTextArray(headers:const ['م','الكود','اسم العنصر','النوع','طريقة الحساب','الطبيعة','القيمة الافتراضية','الحالة'],data:_rows.asMap().entries.map((e){
+        pw.TableHelper.fromTextArray(headers:const ['م','الكود','اسم العنصر','النوع','طريقة الحساب','الطبيعة','القيمة الافتراضية','الحالة'],data:ErpPrintSupport.normalizeTable(_rows.asMap().entries.map((e){
           final r=e.value;
           return [e.key+1,_s(r['element_code']),_s(r['name_ar']),_s(r['element_type'])=='deduction'?'استقطاع':'استحقاق',_s(r['value_mode'])=='variable'?'متغير':'ثابت',_s(r['nature']),_s(r['default_value']),r['is_active']==true?'نشط':'موقوف'];
-        }).toList()),
+        }).toList())),
       ]));
       final bytes=await doc.save();
       if(share){await Printing.sharePdf(bytes:bytes,filename:'Silsila-Salary-Elements.pdf');}
@@ -483,12 +483,12 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
           pw.Row(crossAxisAlignment:pw.CrossAxisAlignment.start,children:[
             pw.Expanded(child:pw.Column(children:[
               ErpPrintSupport.text('الاستحقاقات',style:pw.TextStyle(fontWeight:pw.FontWeight.bold,fontSize:13)),
-              pw.TableHelper.fromTextArray(headers:earningRows.first, data:earningRows.skip(1).toList()),
+              pw.TableHelper.fromTextArray(headers:earningRows.first, data:ErpPrintSupport.normalizeTable(earningRows.skip(1).toList())),
             ])),
             pw.SizedBox(width:12),
             pw.Expanded(child:pw.Column(children:[
               ErpPrintSupport.text('الاستقطاعات',style:pw.TextStyle(fontWeight:pw.FontWeight.bold,fontSize:13)),
-              pw.TableHelper.fromTextArray(headers:deductionRows.first, data:deductionRows.skip(1).toList()),
+              pw.TableHelper.fromTextArray(headers:deductionRows.first, data:ErpPrintSupport.normalizeTable(deductionRows.skip(1).toList())),
             ])),
           ]),
           pw.SizedBox(height:18),
@@ -549,7 +549,7 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
           pw.SizedBox(height:8),
           ErpPrintSupport.text('الاستحقاقات',style:pw.TextStyle(fontWeight:pw.FontWeight.bold,color:PdfColors.green800)),
           ErpPrintSupport.text('الاستقطاعات',style:pw.TextStyle(fontWeight:pw.FontWeight.bold,color:PdfColors.red800)),
-          pw.TableHelper.fromTextArray(headers:headers,data:data,headerStyle:pw.TextStyle(fontSize:6,fontWeight:pw.FontWeight.bold),cellStyle:const pw.TextStyle(fontSize:6)),
+          pw.TableHelper.fromTextArray(headers:headers,data:ErpPrintSupport.normalizeTable(data),headerStyle:pw.TextStyle(fontSize:6,fontWeight:pw.FontWeight.bold),cellStyle:const pw.TextStyle(fontSize:6)),
           pw.SizedBox(height:12),
           ErpPrintSupport.text('إجمالي الموظفين: ${employees.length}    توقيع المسؤول: ................................................'),
         ])),
