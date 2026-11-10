@@ -27,7 +27,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'geo_code.governorate','category':'تكويدية','ar':'سياسة تكويد محافظات','en':'Governorate coding policy','value':'{"prefix":"Gov","digits":2,"parent_digits":2}','mandatory':true,'all':true},
     {'key':'geo_code.district','category':'تكويدية','ar':'سياسة تكويد أحياء/مراكز','en':'District/center coding policy','value':'{"prefix":"Dis","digits":2,"parent_digits":4}','mandatory':true,'all':true},
     {'key':'geo_code.area','category':'تكويدية','ar':'سياسة تكويد مناطق/قرى','en':'Area/village coding policy','value':'{"prefix":"Rig","digits":2,"parent_digits":6}','mandatory':true,'all':true},
-    {'key':'customer_code','category':'تكويدية','ar':'سياسة تكويد العملاء','en':'Customer coding policy','value':'{"prefix":"Cus","geo_digits":8,"serial_digits":2,"required":true,"apply_to_all":true}','mandatory':true,'all':true},
+    {'key':'customer_code','category':'تكويدية','ar':'سياسة تكويد العملاء ( يرث كود المنطقة )','en':'Customer coding policy','value':'{"prefix":"Cus","geo_digits":8,"serial_digits":2,"required":true,"apply_to_all":true}','mandatory':true,'all':true},
     {'key':'category_code.main','category':'تكويدية','ar':'سياسة تكويد فئات أصناف رئيسية','en':'Main item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":0}','mandatory':true,'all':true},
     {'key':'category_code.sub','category':'تكويدية','ar':'سياسة تكويد فئات أصناف فرعية','en':'Sub item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":2}','mandatory':true,'all':true},
     {'key':'category_code.secondary','category':'تكويدية','ar':'سياسة تكويد فئات أصناف ثانوية','en':'Secondary item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":4}','mandatory':true,'all':true},
@@ -407,30 +407,53 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final next = _customerCodeConfig(policy)..[key] = value;
       next['required'] = true;
       next['apply_to_all'] = true;
+      // Customer code inherits the eight-digit geographic code.
+      next['geo_digits'] = 8;
       policy['value'] = jsonEncode(next);
       setState(() {});
     }
-    final preview = prefix + List.filled(8, '0').join() + '1'.padLeft(serialDigits.clamp(1, 12).toInt(), '0');
+    final safeSerialDigits = serialDigits.clamp(1, 12).toInt();
+    final preview = prefix + List.filled(8, '0').join() +
+        '1'.padLeft(safeSerialDigits, '0');
     return SizedBox(width:300,height:40,child:Row(children:[
       SizedBox(width:66,height:40,child:TextFormField(
-        key:const ValueKey('customer-code-prefix'),initialValue:prefix,maxLength:10,
-        textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800),
+        key:ValueKey('customer-code-prefix-$prefix'),
+        initialValue:prefix,maxLength:10,
+        textAlign:TextAlign.center,
+        style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
         inputFormatters:[FilteringTextInputFormatter.allow(RegExp('[a-zA-Z]'))],
-        decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
+        decoration:const InputDecoration(
+          counterText:'',isDense:true,
+          constraints:BoxConstraints(minHeight:40,maxHeight:40),
+          contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),
+          border:OutlineInputBorder(),
+        ),
         onChanged:(v)=>update('prefix',v),
       )),
       const SizedBox(width:4),
-      const SizedBox(width:48,height:40,child:Center(child:Text('8',style:TextStyle(fontSize:11,fontWeight:FontWeight.w800)))),
-      const SizedBox(width:4),
       SizedBox(width:48,height:40,child:TextFormField(
-        key:const ValueKey('customer-code-serial'),initialValue:serialDigits.toString(),maxLength:2,
-        textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800),
-        keyboardType:TextInputType.number,inputFormatters:[FilteringTextInputFormatter.digitsOnly],
-        decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
-        onChanged:(v)=>update('serial_digits',int.tryParse(v) ?? 0),
+        key:ValueKey('customer-code-serial-$serialDigits'),
+        initialValue:serialDigits.toString(),maxLength:2,
+        textAlign:TextAlign.center,
+        style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
+        keyboardType:TextInputType.number,
+        inputFormatters:[FilteringTextInputFormatter.digitsOnly],
+        decoration:const InputDecoration(
+          counterText:'',isDense:true,
+          constraints:BoxConstraints(minHeight:40,maxHeight:40),
+          contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),
+          border:OutlineInputBorder(),
+        ),
+        onChanged:(v){
+          final n=int.tryParse(v);
+          if(n!=null&&n>=1&&n<=12)update('serial_digits',n);
+        },
       )),
       const SizedBox(width:5),
-      Expanded(child:Text(preview,textAlign:TextAlign.center,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
+      Expanded(child:Text(preview,textAlign:TextAlign.center,
+        maxLines:1,overflow:TextOverflow.ellipsis,
+        style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,
+          color:Color(0xFF3E007D)))),
     ]));
   }
 
