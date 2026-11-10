@@ -23,7 +23,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     {'key':'payroll_run','name':'مسيرات الرواتب','prefix':'Prl','digits':'5'},
     {'key':'warehouse','name':'المخازن','prefix':'Whs','digits':'5'},
     {'key':'unit','name':'وحدات الأصناف','prefix':'Unt','digits':'5'},
-    {'key':'brand','name':'البراندات/الماركات','prefix':'Bra','digits':'3'},
+    {'key':'brand','name':'البراندات/الماركات','prefix':'Bra','digits':'2'},
     {'key':'payment_method','name':'طرق الدفع','prefix':'Pmt','digits':'5'},
     {'key':'shift','name':'ورديات العمل','prefix':'Shf','digits':'5'},
     {'key':'commission_plan','name':'خطط العمولات','prefix':'Com','digits':'5'},
@@ -91,7 +91,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     'main': TextEditingController(text: '2'),
     'sub': TextEditingController(text: '2'),
     'secondary': TextEditingController(text: '2'),
-    'brand': TextEditingController(text: '3'),
+    'brand': TextEditingController(text: '2'),
     'serial': TextEditingController(text: '3'),
   };
   bool _itemAutomatic = true, _itemComposite = true;
@@ -239,8 +239,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       setState(() => _error = 'يجب أن تكون كل بادئة فريدة، وألا تتكرر مع بادئة الأصناف.');
       throw StateError(_error!);
     }
-    if (_prefix['brand']!.text.trim() != 'Bra' || int.tryParse(_digits['brand']!.text) != 3) {
-      setState(() => _error = 'سياسة البراندات الحالية ثابتة على Bra + 3 أرقام حتى لا تتعارض مع أكواد البراندات والأصناف القائمة.');
+    if (_prefix['brand']!.text.trim() != 'Bra' || int.tryParse(_digits['brand']!.text) != 2) {
+      setState(() => _error = 'سياسة البراندات الحالية ثابتة على Bra + رقمين حتى تتطابق مع كود الصنف.');
       throw StateError(_error!);
     }
     if (_itemPrefix.text.trim() != 'Itm') {
@@ -249,7 +249,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     }
     for (final entry in _itemSegments.entries) {
       final value = int.tryParse(entry.value.text);
-      final expected = entry.key == 'serial' ? 3 : entry.key == 'brand' ? (int.tryParse(_digits['brand']!.text) ?? 3) : 2;
+      final expected = entry.key == 'serial' ? 3 : entry.key == 'brand' ? (int.tryParse(_digits['brand']!.text) ?? 2) : 2;
       if (value != expected) {
         final label = {'main':'الرئيسية','sub':'الفرعية','secondary':'الثانوية','brand':'البراند/الماركة','serial':'تسلسل'}[entry.key];
         setState(() => _error = 'عدد خانات $label يجب أن يكون $expected بالضبط.');
@@ -426,7 +426,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           const SizedBox(height:5),
           Text('بادئة ${_prefix['brand']!.text.trim()} تليها ${_digits['brand']!.text} أرقام متسلسلة. كود الصنف يرث الأرقام فقط دون حروف.',style:const TextStyle(fontSize:11)),
           const SizedBox(height:5),
-          Text('المعاينة الأولى: ${_prefix['brand']!.text.trim()}${'1'.padLeft(int.tryParse(_digits['brand']!.text)??3,'0')}',style:const TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)),
+          Text('المعاينة الأولى: ${_prefix['brand']!.text.trim()}${'1'.padLeft(int.tryParse(_digits['brand']!.text)??2,'0')}',style:const TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)),
         ],
       ),
     ),
@@ -447,7 +447,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       
       _field(_itemSegments['serial']!,max:3,letters:false,changed:(){}),
       const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('البراند/الماركة',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
-      _segmentField('عدد',_itemSegments['brand']!,3,readOnly:true),
+      _segmentField('عدد',_itemSegments['brand']!,2,readOnly:true),
       const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('فئة ثانوية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
       
       _field(_itemSegments['secondary']!,max:2,letters:false,changed:(){}),
@@ -465,7 +465,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         const Text('3 حروف إنجليزية فقط',style:TextStyle(fontSize:8,color:Colors.black54)),
       ])),
       SizedBox(width:112,child:Text(
-        '${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['brand']!.text)??3,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??3,'0')}',
+        '${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['brand']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??3,'0')}',
         textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
     ])),
   );
@@ -657,12 +657,12 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             _segmentField('فئة رئيسية',_itemSegments['main']!,2,readOnly:true),
             _segmentField('فئة فرعية',_itemSegments['sub']!,2,readOnly:true),
             _segmentField('فئة ثانوية',_itemSegments['secondary']!,2,readOnly:true),
-            _segmentField('البراند/الماركة',_itemSegments['brand']!,3,readOnly:true),
+            _segmentField('البراند/الماركة',_itemSegments['brand']!,2,readOnly:true),
             _segmentField('تسلسل الصنف',_itemSegments['serial']!,3,readOnly:true),
           ]),
           const SizedBox(height:8),
           Text('الصيغة: ${_itemPrefix.text.trim()} + كود الفئة الثانوية بدون Cat (6 أرقام) + أرقام البراند بدون Bra (${_digits['brand']!.text}) + تسلسل الصنف (3 أرقام)',style:const TextStyle(fontSize:11)),
-          Text('المعاينة الأولى: ${_itemPrefix.text.trim()}010101${'1'.padLeft(int.tryParse(_itemSegments['brand']!.text)??3,'0')}001',style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:_purple)),
+          Text('المعاينة الأولى: ${_itemPrefix.text.trim()}010101${'1'.padLeft(int.tryParse(_itemSegments['brand']!.text)??2,'0')}001',style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:_purple)),
           Text('كود الصنف = Itm + 6 أرقام الفئة الثانوية + ${_digits['brand']!.text} أرقام البراند + 3 أرقام تسلسل. مستويات Cat ثابتة على 2 + 2 + 2.',style:const TextStyle(fontSize:10,color:Colors.black54)),
         ]))),
         if(_error!=null) Padding(padding:const EdgeInsets.all(6),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:11))),

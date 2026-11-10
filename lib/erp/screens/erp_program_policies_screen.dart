@@ -32,11 +32,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'category_code.main','category':'تكويدية','ar':'سياسة تكويد فئات أصناف رئيسية','en':'Main item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":0}','mandatory':true,'all':true},
     {'key':'category_code.sub','category':'تكويدية','ar':'سياسة تكويد فئة أصناف فرعية ( يرث ك ف رئيسية )','en':'Sub item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":2}','mandatory':true,'all':true},
     {'key':'category_code.secondary','category':'تكويدية','ar':'سياسة تكويد فئة ثانوية ( يرث ك ف فرعية )','en':'Secondary item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":4}','mandatory':true,'all':true},
-    {'key':'brand_code','category':'تكويدية','ar':'سياسة تكويد البراند','en':'Brand coding policy','value':'{"prefix":"Bra","digits":3,"parent_digits":0}','mandatory':true,'all':true},
-    {'key':'item_code','category':'تكويدية','ar':'سياسة تكويد الأصناف ( يرث كود الفئة الثانوية )','en':'Item coding policy','value':'{"prefix":"Itm","category_digits":6,"serial_digits":3}','mandatory':true,'all':true},
+    {'key':'brand_code','category':'تكويدية','ar':'سياسة تكويد البراند','en':'Brand coding policy','value':'{"prefix":"Bra","digits":2,"parent_digits":0}','mandatory':true,'all':true},
+    {'key':'item_code','category':'تكويدية','ar':'سياسة تكويد الأصناف ( يرث كود الفئة الثانوية )','en':'Item coding policy','value':'{"prefix":"Itm","category_digits":6,"brand_digits":2,"serial_digits":3}','mandatory':true,'all':true},
     {'key':'code_policy.program_policy','category':'تكويدية','ar':'سياسات البرنامج','en':'Program policies','value':'Pol + 3 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.employee','category':'تكويدية','ar':'الموظفون','en':'Employees','value':'Emp + 5 أرقام تسلسلية','mandatory':true,'all':true},
-    {'key':'code_policy.user','category':'تكويدية','ar':'المستخدمون','en':'Users','value':'Usr + كود الموظف المرتبط بدون البادئة Emp','mandatory':true,'all':true},
+    {'key':'code_policy.user','category':'تكويدية','ar':'المستخدمون','en':'Users','value':'Usr + كود نوع المستخدم بدون البادئة Typ + 5 أرقام؛ وللموظف نفس آخر 5 أرقام من كود الموظف المرتبط','mandatory':true,'all':true},
     {'key':'code_policy.supplier','category':'تكويدية','ar':'الموردون','en':'Suppliers','value':'Ven + 5 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.representative','category':'تكويدية','ar':'المندوبون','en':'Representatives','value':'Rep + كود الموظف المرتبط بدون البادئة Emp','mandatory':true,'all':true},
     {'key':'code_policy.branch','category':'تكويدية','ar':'الفروع','en':'Branches','value':'Brn + 3 أرقام تسلسلية','mandatory':true,'all':true},
@@ -402,7 +402,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       'category_code.main': {'prefix':'Cat','digits':2,'parent_digits':0},
       'category_code.sub': {'prefix':'Cat','digits':2,'parent_digits':2},
       'category_code.secondary': {'prefix':'Cat','digits':2,'parent_digits':4},
-      'brand_code': {'prefix':'Bra','digits':3,'parent_digits':0},
+      'brand_code': {'prefix':'Bra','digits':2,'parent_digits':0},
     };
     for (final entry in expectedCodePolicies.entries) {
       final config = _geoCodeConfig(values[entry.key]!);
@@ -413,10 +413,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final itemCode = _itemCodeConfig(values['item_code']!);
     final itemPrefix = (itemCode['prefix'] ?? '').toString().trim();
     final itemSerialDigits = int.tryParse((itemCode['serial_digits'] ?? '').toString());
-    if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(itemPrefix) || itemCode['category_digits'] != 6 || itemSerialDigits == null || itemSerialDigits < 1 || itemSerialDigits > 8) {
-      throw StateError('سياسة كود الصنف تتطلب بادئة من ثلاثة أحرف، وستة أرقام للفئات، وتسلسلًا من 1 إلى 8 أرقام.');
+    if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(itemPrefix) || itemCode['category_digits'] != 6 || itemCode['brand_digits'] != 2 || itemSerialDigits == null || itemSerialDigits < 1 || itemSerialDigits > 8) {
+      throw StateError('سياسة كود الصنف تتطلب بادئة من ثلاثة أحرف، وستة أرقام للفئات، ورقمين للبراند، وتسلسلًا من 1 إلى 8 أرقام.');
     }
     itemCode['prefix'] = itemPrefix;
+    itemCode['brand_digits'] = 2;
     itemCode['serial_digits'] = itemSerialDigits;
     values['item_code']!['value'] = jsonEncode(itemCode);
     for (final key in ['geo_code.country','geo_code.governorate','geo_code.district','geo_code.area','category_code.main','brand_code']) {
@@ -614,7 +615,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       'geo_code.area': {'prefix':'Rig','digits':2,'parent_digits':6},      'category_code.main': {'prefix':'Cat','digits':2,'parent_digits':0},
       'category_code.sub': {'prefix':'Cat','digits':2,'parent_digits':2},
       'category_code.secondary': {'prefix':'Cat','digits':2,'parent_digits':4},
-      'brand_code': {'prefix':'Bra','digits':3,'parent_digits':0},
+      'brand_code': {'prefix':'Bra','digits':2,'parent_digits':0},
     };
     return Map<String, dynamic>.from(defaults[key] ?? defaults['geo_code.country']!);
   }
@@ -694,7 +695,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final parsed = jsonDecode((policy['value'] ?? '{}').toString());
       if (parsed is Map) return Map<String, dynamic>.from(parsed);
     } catch (_) {}
-    return {'prefix':'Itm','category_digits':6,'serial_digits':3};
+    return {'prefix':'Itm','category_digits':6,'brand_digits':2,'serial_digits':3};
   }
 
   Widget _itemCodeEditor(Map<String, dynamic> policy) {
@@ -711,7 +712,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     // The six category digits are inherited from the secondary item category;
     // only the serial length is displayed as an editable-policy value.
     const inheritedCategoryCode = '010101';
-    final preview = '$prefix$inheritedCategoryCode${'1'.padLeft(serialDigits.clamp(1, 8).toInt(), '0')}';
+    final preview = '$prefix$inheritedCategoryCode${'1'.padLeft(2, '0')}${'1'.padLeft(serialDigits.clamp(1, 8).toInt(), '0')}';
     return Column(mainAxisSize: MainAxisSize.min, children: [
       SizedBox(width:300,height:40,child:Row(children:[
       SizedBox(width:66,height:40,child:TextFormField(
@@ -743,7 +744,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final parentDigits = int.tryParse((config['parent_digits'] ?? 0).toString()) ?? 0;
     final key = (policy['key'] ?? '').toString();
     final previewDigits = key == 'brand_code'
-        ? '001'
+        ? '01'
         : key.startsWith('category_code.')
             ? List.filled((parentDigits ~/ 2) + 1, '01').join()
             : List.filled(parentDigits + digits, '0').join();

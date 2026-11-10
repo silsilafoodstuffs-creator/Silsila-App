@@ -597,7 +597,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
             child: Text(s(row['name_ar']), maxLines: 2, overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w700)),
           ),
-          Expanded(flex: 2, child: Text(level == 'area' ? 'Rig${s(row['hierarchical_code'])}' : (s(row['hierarchical_code']).isEmpty ? s(row['geo_code']) : s(row['hierarchical_code'])))),
+          Expanded(flex: 2, child: Text('${level == 'area' && !s(row['hierarchical_code']).startsWith('Rig') ? 'Rig' : ''}${s(row['hierarchical_code']).isEmpty ? s(row['geo_code']) : s(row['hierarchical_code'])}')),
           Expanded(flex: 2, child: Text(label(level, s(row['admin_type'])))),
           SizedBox(
             width: 82,
