@@ -48,6 +48,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   bool _itemsHasMore = false;
   bool _itemsLoadingMore = false;
   List<Map<String, dynamic>> _categories = [];
+  List<Map<String, dynamic>> _brands = [];
   List<Map<String, dynamic>> _warehouses = [];
   List<Map<String, dynamic>> _items = [];
   List<Map<String, dynamic>> _workspaceItemProposals = [];
@@ -67,6 +68,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   String? _parentWarehouseId;
   String? _governorateId, _districtId, _areaId;
   String? _itemCategoryId;
+  String? _itemBrandId;
   String _view = 'warehouses';
   bool _expiry = false;
   bool _loading = false;
@@ -156,6 +158,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         loadPart('الأصناف', () => _repo.fetchItems(companyId, pageSize: 500, search: _itemSearch.text)),
         loadPart('الفروع', () => _repo.fetchBranches(companyId)),
         loadPart('فئات الأصناف', () => _repo.fetchCategories(companyId)),
+        loadPart('البراندات/الماركات', () => _repo.fetchBrands(companyId)),
         loadPart('أصناف مقترحة', () async {
           if (!isManagementUser) return <Map<String,dynamic>>[];
           final rows = await Supabase.instance.client.from('erp_business_workspace_item_proposals')
@@ -183,9 +186,10 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       }
       if (!mounted) return;
       setState(() {
-        _warehouses = values[0]; _items = values[1]; _itemImageFutures.clear(); _itemsOffset = values[1].length; _itemsHasMore = values[1].length == 500; _branches = values[2]; _categories = values[3]; _workspaceItemProposals = values[4]; _isManagementUser = isManagementUser; _itemUnits = extra[0];
+        _warehouses = values[0]; _items = values[1]; _itemImageFutures.clear(); _itemsOffset = values[1].length; _itemsHasMore = values[1].length == 500; _branches = values[2]; _categories = values[3]; _workspaceItemProposals = values[4]; _brands = values[5]; _isManagementUser = isManagementUser; _itemUnits = extra[0];
         _selectedSharedItemId = _items.any((item)=>_s(item['id'])==_selectedSharedItemId) ? _selectedSharedItemId : (_items.isNotEmpty ? _s(_items.first['id']) : null); if (!isManagementUser && (_view=='proposals'||_view=='shared_stock')) _view='items'; _warehouseItemSettings = extra[1]; _geoRows = geoRows;
         if (!_categories.any((g) => _s(g['id']) == _itemCategoryId && g['is_active'] == true)) _itemCategoryId = null;
+        if (!_brands.any((g) => _s(g['id']) == _itemBrandId && g['is_active'] == true)) _itemBrandId = _brands.where((g) => g['is_active'] == true && g['is_system'] != true).isNotEmpty ? _s(_brands.firstWhere((g) => g['is_active'] == true && g['is_system'] != true)['id']) : null;
         if (!_branches.any((b) => _s(b['id']) == _branchId)) _branchId = null;
         _loading = false;
         _error = loadErrors.isEmpty ? null : 'تم تحميل البيانات المتاحة، وتعذر تحميل بعض الأقسام: ${loadErrors.join(' | ')}';
@@ -307,6 +311,10 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       setState(() { _error = 'اختار الفئة الثانوية المرتبطة بفئة فرعية ورئيسية لتوليد كود الصنف تلقائيًا.'; _message = null; });
       return;
     }
+    if (_itemBrandId == null || !_brands.any((b) => _s(b['id']) == _itemBrandId && b['is_active'] == true)) {
+      setState(() { _error = 'اختر البراند/الماركة قبل حفظ الصنف؛ كود الصنف يرث أرقام كود البراند.'; _message = null; });
+      return;
+    }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
 
@@ -323,14 +331,14 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         throw ArgumentError('صيغة الصورة غير مدعومة. استخدم JPG أو PNG أو WEBP.');
       }
       final generatedItemCode = await _repo.createItem(companyId: _company.text, name: _itemName.text,
-        barcode: _barcode.text, categoryId: _itemCategoryId, unit: _unit.text,
+        barcode: _barcode.text, categoryId: _itemCategoryId, brandId: _itemBrandId, unit: _unit.text,
         middleUnit: _middleUnit.text, minorUnit: _minorUnit.text,
         majorInnerQuantity: majorInner, middleInnerQuantity: _middleUnit.text.trim().isEmpty ? null : middleInner,
         purchasePrice: purchase,
         salePrice: sale, taxRate: taxRate, reorderLevel: reorder, expiryTracking: _expiry,
         imageBytes: imageBytes, imageMimeType: imageBytes == null ? null : contentType);
       if (!mounted) return;
-      _itemCode.clear(); _itemName.clear(); _barcode.clear(); _middleUnit.clear(); _minorUnit.clear(); _majorInner.text = '1'; _middleInner.text = '1'; _pickedItemImage = null; _pickedItemImageBytes = null; _purchasePrice.text = '0'; _salePrice.text = '0'; _taxRate.text = '0'; _reorder.text = '0';
+      _itemCode.clear(); _itemName.clear(); _barcode.clear(); _itemBrandId = null; _middleUnit.clear(); _minorUnit.clear(); _majorInner.text = '1'; _middleInner.text = '1'; _pickedItemImage = null; _pickedItemImageBytes = null; _purchasePrice.text = '0'; _salePrice.text = '0'; _taxRate.text = '0'; _reorder.text = '0';
       setState(() { _saving = false; _message = 'تمت إضافة الصنف بالكود التلقائي: $generatedItemCode'; });
       await _load(clearMessage: false);
     } catch (e) {
@@ -893,8 +901,18 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
               items: _categories.where((g) => g['is_active'] == true && _isSecondaryCategory(g)).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['category_code']) + ' — ' + _s(g['category_name']), overflow: TextOverflow.ellipsis))).toList(),
               onChanged: (v) => setState(() => _itemCategoryId = v),
             ),
+            DropdownButtonFormField<String>(
+              itemHeight:40,
+              value:_brands.any((b)=>_s(b['id'])==_itemBrandId && b['is_active']==true)?_itemBrandId:null,
+              isExpanded:true,
+              decoration:const InputDecoration(labelText:'البراند/الماركة *',helperText:'يرث كود الصنف أرقام البراند دون بادئته Bra'),
+              items:_brands.where((b)=>b['is_active']==true).map((b)=>DropdownMenuItem<String>(
+                value:_s(b['id']),
+                child:Text('${_s(b['brand_code'])} — ${_s(b['brand_name'])}',overflow:TextOverflow.ellipsis),
+              )).toList(),
+              onChanged:_saving?null:(value)=>setState(()=>_itemBrandId=value),
+            ),
             TextField(controller: _itemName, decoration: const InputDecoration(labelText: 'اسم الصنف *')),
-
             TextField(controller: _barcode, decoration: const InputDecoration(labelText: 'الباركود')),
             const SizedBox(height: 10),
             Container(

@@ -41,10 +41,18 @@ class ErpInventoryMasterRepository {
     return rows.map((r) { final item = Map<String, dynamic>.from(r); item['category_code'] = item['category_code']; item['category_name'] = item['category_name']; return item; }).toList();
   }
 
+  Future<List<Map<String, dynamic>>> fetchBrands(String companyId) async {
+    final rows = await _db.from('erp_brands')
+      .select('id,brand_code,brand_name,brand_name_en,is_active,is_system')
+      .eq('company_id', companyId.trim())
+      .order('brand_code');
+    return rows.map((r) => Map<String,dynamic>.from(r)).toList();
+  }
+
   Future<List<Map<String, dynamic>>> fetchItems(String companyId, {int offset = 0, int pageSize = 500, String search = ''}) async {
     if (offset < 0 || pageSize < 1 || pageSize > 1000) throw ArgumentError('نطاق صفحة الأصناف غير صالح.');
     var query = _db.from('erp_items')
-      .select('id, item_code, barcode, item_name, item_name_en, category_id, base_unit, purchase_price, sale_price, tax_rate, reorder_level, expiry_tracking, is_active, image_url, image_mime_type')
+      .select('id, item_code, barcode, item_name, item_name_en, category_id, brand_id, brand_name, base_unit, purchase_price, sale_price, tax_rate, reorder_level, expiry_tracking, is_active, image_url, image_mime_type')
       .eq('company_id', companyId.trim());
     final term = search.trim();
     if (term.isNotEmpty) query = query.or('item_name.ilike.%$term%,item_code.ilike.%$term%,barcode.ilike.%$term%');
@@ -117,6 +125,7 @@ class ErpInventoryMasterRepository {
 
   Future<String> createItem({
     required String companyId, required String name,
+    required String? brandId,
     String? barcode, String? categoryId, String unit = 'وحدة',
     String? middleUnit, double? majorInnerQuantity,
     double? middleInnerQuantity, String? minorUnit,
@@ -163,7 +172,7 @@ class ErpInventoryMasterRepository {
     );
 
     final inserted = await _db.from('erp_items').insert({
-      'company_id': companyId.trim(), 'item_code': '', 'item_name': name.trim(), 'category_id': normalizedCategoryId,
+      'company_id': companyId.trim(), 'item_code': '', 'item_name': name.trim(), 'category_id': normalizedCategoryId, 'brand_id': brandId,
       'barcode': _blank(barcode), 'base_unit': hasMinor ? minorName : hasMiddle ? middleName : majorName,
       'purchase_price': purchasePrice, 'sale_price': salePrice, 'tax_rate': taxRate,
       'reorder_level': reorderLevel, 'expiry_tracking': expiryTracking,

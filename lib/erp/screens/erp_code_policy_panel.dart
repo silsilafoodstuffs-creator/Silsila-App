@@ -23,6 +23,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     {'key':'payroll_run','name':'مسيرات الرواتب','prefix':'Prl','digits':'5'},
     {'key':'warehouse','name':'المخازن','prefix':'Whs','digits':'5'},
     {'key':'unit','name':'وحدات الأصناف','prefix':'Unt','digits':'5'},
+    {'key':'brand','name':'البراندات/الماركات','prefix':'Bra','digits':'3'},
     {'key':'payment_method','name':'طرق الدفع','prefix':'Pmt','digits':'5'},
     {'key':'shift','name':'ورديات العمل','prefix':'Shf','digits':'5'},
     {'key':'commission_plan','name':'خطط العمولات','prefix':'Com','digits':'5'},
@@ -90,7 +91,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     'main': TextEditingController(text: '2'),
     'sub': TextEditingController(text: '2'),
     'secondary': TextEditingController(text: '2'),
-        'serial': TextEditingController(text: '3'),
+    'brand': TextEditingController(text: '3'),
+    'serial': TextEditingController(text: '3'),
   };
   bool _itemAutomatic = true, _itemComposite = true;
   bool _loading = true, _saving = false;
@@ -201,6 +203,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         _itemSegments['main']!.text = '2';
         _itemSegments['sub']!.text = '2';
         _itemSegments['secondary']!.text = '2';
+        _itemSegments['brand']!.text = _digits['brand']!.text;
         _itemSegments['serial']!.text = '3';
       }
     } catch (e) {
@@ -242,9 +245,9 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     }
     for (final entry in _itemSegments.entries) {
       final value = int.tryParse(entry.value.text);
-      final expected = entry.key == 'serial' ? 3 : 2;
+      final expected = entry.key == 'serial' ? 3 : entry.key == 'brand' ? (int.tryParse(_digits['brand']!.text) ?? 3) : 2;
       if (value != expected) {
-        final label = {'main':'الرئيسية','sub':'الفرعية','secondary':'الثانوية','serial':'تسلسل'}[entry.key];
+        final label = {'main':'الرئيسية','sub':'الفرعية','secondary':'الثانوية','brand':'البراند/الماركة','serial':'تسلسل'}[entry.key];
         setState(() => _error = 'عدد خانات $label يجب أن يكون $expected بالضبط.');
         throw StateError(_error!);
       }
@@ -254,15 +257,10 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       setState(() => _error = 'يجب تحديد كود الدولة من تبويب بيانات الدول (رقمان).');
       throw StateError(_error!);
     }
-    const expectedGeoLengths = {'governorate':2,'center':2,'area':2};
-    for (final entry in expectedGeoLengths.entries) {
-      final value = int.tryParse(_geoSegments[entry.key]!.text);
+    for (final key in const ['governorate','center','area']) {
+      final value = int.tryParse(_geoSegments[key]!.text);
+      final label = {'governorate':'المحافظة','center':'المركز/الحي','area':'المنطقة/القرية'}[key];
       if (value == null || value < 1 || value > 6) {
-        final label = {
-          'governorate':'المحافظة',
-          'center':'المركز/الحي',
-          'area':'المنطقة/القرية/التسلسل',
-        }[entry.key];
         setState(() => _error = 'عدد خانات $label يجب أن يكون من 1 إلى 6.');
         throw StateError(_error!);
       }
@@ -271,8 +269,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         int.parse(_geoSegments['governorate']!.text) +
         int.parse(_geoSegments['center']!.text) +
         int.parse(_geoSegments['area']!.text);
-    if (inheritedGeoDigits != 8) {
-      setState(() => _error = 'كود المنطقة الموروث في كود العميل يجب أن يظل 8 أرقام.');
+    if (inheritedGeoDigits < 5 || inheritedGeoDigits > 20) {
+      setState(() => _error = 'إجمالي كود المنطقة خارج النطاق المسموح لسياسة التكويد.');
       throw StateError(_error!);
     }
     final customerPolicy = await _db.from('erp_program_policies').select('policy_value')
@@ -316,8 +314,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       types['customer'] = {
         'prefix':_customerPrefix, 'digits':_customerSerialDigits, 'automatic':true, 'composite':true,
         'required':true, 'apply_to_all':true,
-        'inherit_geo_code':true, 'geo_digits':8, 'serial_digits':_customerSerialDigits,
-        'fields':[{'name':'كود المنطقة بدون بادئة Rig','digits':8},{'name':'تسلسل العميل','digits':_customerSerialDigits}],
+        'inherit_geo_code':true, 'geo_digits':inheritedGeoDigits, 'serial_digits':_customerSerialDigits,
+        'fields':[{'name':'كود المنطقة بدون بادئة Rig','digits':inheritedGeoDigits},{'name':'تسلسل العميل','digits':_customerSerialDigits}],
       };
       final itemSegments = <String, int>{
         for (final entry in _itemSegments.entries) entry.key:int.parse(entry.value.text),
@@ -330,20 +328,21 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           'count_cell_width':_countCellWidth.toInt(),
         },
         'types':types,
-        'customer_code':{'prefix':_customerPrefix,'inherit_geo_code':true,'geo_digits':8,'serial_digits':_customerSerialDigits},
+        'customer_code':{'prefix':_customerPrefix,'inherit_geo_code':true,'geo_digits':inheritedGeoDigits,'serial_digits':_customerSerialDigits},
         'item_prefix':_itemPrefix.text.trim(),
         'item_automatic':_itemAutomatic,
         'item_composite':_itemComposite,
         'item_fields':[
           {'name':'تسلسل الصنف','digits':itemSegments['serial']},
+          {'name':'البراند/الماركة بدون حروف','digits':itemSegments['brand']},
           {'name':'فئة ثانوية','digits':itemSegments['secondary']},
           {'name':'فئة فرعية','digits':itemSegments['sub']},
           {'name':'فئة رئيسية','digits':itemSegments['main']},
         ],
         'category_prefix':'Cat',
         'category_segments':{'main':2,'sub':2,'secondary':2},
-        'brand_prefix':'Bra',
-        'brand_digits':3,
+        'brand_prefix':_prefix['brand']!.text.trim(),
+        'brand_digits':int.parse(_digits['brand']!.text),
         'item_segments':itemSegments,
         'geo_prefix':_geoPrefix.text.trim(),
         // Legacy cumulative values are intentionally preserved for existing
@@ -420,9 +419,9 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         children:[
           const Text('سياسة تكويد البراند / الماركة',style:TextStyle(fontWeight:FontWeight.w900,color:_purple)),
           const SizedBox(height:5),
-          const Text('بادئة ثابتة Bra تليها 3 أرقام متسلسلة، دون إضافة بادئة جغرافية أو حروف أخرى.',style:TextStyle(fontSize:11)),
+          Text('بادئة ${_prefix['brand']!.text.trim()} تليها ${_digits['brand']!.text} أرقام متسلسلة. كود الصنف يرث الأرقام فقط دون حروف.',style:const TextStyle(fontSize:11)),
           const SizedBox(height:5),
-          const Text('المعاينة الأولى: Bra001',style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)),
+          Text('المعاينة الأولى: ${_prefix['brand']!.text.trim()}${'1'.padLeft(int.tryParse(_digits['brand']!.text)??3,'0')}',style:const TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)),
         ],
       ),
     ),
@@ -432,7 +431,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     margin:const EdgeInsets.symmetric(vertical:2),
     padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
     decoration:BoxDecoration(color:const Color(0xFFFFF4E5),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
-    child:SizedBox(width:1420,child:Row(spacing:_columnSpacing,children:[
+    child:SizedBox(width:1560,child:Row(spacing:_columnSpacing,children:[
       SizedBox(width:30,child:Text('${_types.length+3}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
       const SizedBox(width:150,child:Text('الأصناف',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
       SizedBox(width:52,child:Checkbox(value:_itemAutomatic,onChanged:(v)=>setState(()=>_itemAutomatic=v ?? true),visualDensity:VisualDensity.compact)),
@@ -442,7 +441,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       _firstFieldName(),
       
       _field(_itemSegments['serial']!,max:3,letters:false,changed:(){}),
-      
+      const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('البراند/الماركة',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
+      _segmentField('عدد',_itemSegments['brand']!,3,readOnly:true),
       const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('فئة ثانوية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
       
       _field(_itemSegments['secondary']!,max:2,letters:false,changed:(){}),
@@ -460,7 +460,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         const Text('3 حروف إنجليزية فقط',style:TextStyle(fontSize:8,color:Colors.black54)),
       ])),
       SizedBox(width:112,child:Text(
-        '${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??2,'0')}',
+        '${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['brand']!.text)??3,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??3,'0')}',
         textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
     ])),
   );
@@ -469,7 +469,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     margin:const EdgeInsets.symmetric(vertical:2),
     padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
     decoration:BoxDecoration(color:const Color(0xFFF5EFFB),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
-    child:SizedBox(width:1420,child:Row(spacing:_columnSpacing,children:[
+    child:SizedBox(width:1560,child:Row(spacing:_columnSpacing,children:[
       SizedBox(width:30,child:Text('${_types.length+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
       const SizedBox(width:150,child:Text('التقسيم الجغرافي',style:TextStyle(fontSize:11,fontWeight:FontWeight.w600))),
       const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
@@ -491,21 +491,23 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     margin:const EdgeInsets.symmetric(vertical:2),
     padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
     decoration:BoxDecoration(color:const Color(0xFFFFF4E5),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
-    child:SizedBox(width:1420,child:Row(spacing:_columnSpacing,children:[
+    child:SizedBox(width:1560,child:Row(spacing:_columnSpacing,children:[
       SizedBox(width:30,child:Text('${_types.length+2}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
       const SizedBox(width:150,child:Text('تكويد العملاء',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
       const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
       const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
       const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('كود المنطقة',style:TextStyle(fontSize:11)))),
-      const SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('8',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
+      SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('${_geoDigitsTotal()}',style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
       const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('تسلسل العميل',style:TextStyle(fontSize:11)))),
       SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('$_customerSerialDigits',style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
       const SizedBox(width:124,height:_cellHeight),
       const SizedBox(width:_countCellWidth,height:_cellHeight),
       SizedBox(width:112,child:Center(child:Text(_customerPrefix,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)))),
-      SizedBox(width:112,child:Text('$_customerPrefix + كود المنطقة (8 أرقام) + ' + '1'.padLeft(_customerSerialDigits, '0'),textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
+      SizedBox(width:112,child:Text('$_customerPrefix + كود المنطقة (${_geoDigitsTotal()} أرقام) + ' + '1'.padLeft(_customerSerialDigits, '0'),textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
     ])),
   );
+
+  int _geoDigitsTotal() => 2 + (int.tryParse(_geoSegments['governorate']!.text) ?? 2) + (int.tryParse(_geoSegments['center']!.text) ?? 2) + (int.tryParse(_geoSegments['area']!.text) ?? 2);
 
   Widget _geoNameCell(String name) => SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text(name,textAlign:TextAlign.center,style:const TextStyle(fontSize:11))));
 
@@ -544,7 +546,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       child:SingleChildScrollView(
         controller:_gridHorizontalController,
         scrollDirection:Axis.horizontal,
-        child:SizedBox(width:1420,child:ListView(
+        child:SizedBox(width:1560,child:ListView(
       controller:_gridVerticalController,
       padding:const EdgeInsets.all(8),
       children:[
@@ -570,7 +572,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           const SizedBox(height:8),
           const Text('معيار تنسيق الجدول: ارتفاع 40 بكسل، والمسافة بين الأعمدة 2.5 بكسل، وعرض خانات أسماء الخانات 83 بكسل (بدلًا من 124)، وعرض خانة العدد 62 بكسل.',style:TextStyle(fontSize:10,color:Colors.black54)),
           const SizedBox(height:8),
-          SizedBox(width:1420,child:Row(spacing:_columnSpacing,children:const[
+          SizedBox(width:1560,child:Row(spacing:_columnSpacing,children:const[
             SizedBox(width:30,child:Text('م',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
             SizedBox(width:150,child:Text('اسم السياسة',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
             SizedBox(width:52,child:Text('تلقائي',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
@@ -604,7 +606,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           final t=_types[i]; final key=t['key']!;
           return Container(margin:const EdgeInsets.symmetric(vertical:2),padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
             decoration:BoxDecoration(color:i.isEven?Colors.white:const Color(0xFFFAF8FC),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
-            child:SizedBox(width:1420,child:Row(spacing:_columnSpacing,children:[
+            child:SizedBox(width:1560,child:Row(spacing:_columnSpacing,children:[
               SizedBox(width:30,child:Text('${i+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
               SizedBox(width:150,child:Text(t['name']!,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600))),
               SizedBox(width:52,child:Checkbox(value:_automatic[key] ?? true,onChanged:(v)=>setState(()=>_automatic[key]=v ?? true),visualDensity:VisualDensity.compact)),
@@ -644,12 +646,13 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             _field(_itemPrefix,max:3,letters:true,changed:(){}),
           ]),
           const SizedBox(height:10),
-          const Text('أطوال الخانات المعتمدة — ثابتة: 2 + 2 + 2 + 3',style:TextStyle(fontSize:11,fontWeight:FontWeight.w800)),
+          const Text('تركيب كود الصنف: فئة رئيسية + فئة فرعية + فئة ثانوية + أرقام البراند + تسلسل من 3 أرقام',style:TextStyle(fontSize:11,fontWeight:FontWeight.w800)),
           const SizedBox(height:6),
           Wrap(spacing:8,runSpacing:8,children:[
             _segmentField('فئة رئيسية',_itemSegments['main']!,2,readOnly:true),
             _segmentField('فئة فرعية',_itemSegments['sub']!,2,readOnly:true),
             _segmentField('فئة ثانوية',_itemSegments['secondary']!,2,readOnly:true),
+            _segmentField('البراند/الماركة',_itemSegments['brand']!,3,readOnly:true),
             _segmentField('تسلسل الصنف',_itemSegments['serial']!,3,readOnly:true),
           ]),
           const SizedBox(height:8),
