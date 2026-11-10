@@ -571,7 +571,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ErpKeyboardNavigation.registerActions(add: _add, save: _save);
+    ErpKeyboardNavigation.registerActions(add: _catalogTab == 3 ? null : _add, save: _catalogTab == 3 ? null : _save);
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Column(

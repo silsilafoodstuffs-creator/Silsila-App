@@ -129,7 +129,8 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         if (mounted) _selectedId = _s(inserted['id']);
       } else {
         await _db.from('erp_brands').update(payload)
-          .eq('id',_s(row['id'])).eq('company_id',widget.companyId.trim());
+          .eq('id',_s(row['id'])).eq('company_id',widget.companyId.trim())
+          .select('id').single();
       }
       await _load();
       if (mounted) ErpCenterToast.show(context, row == null ? 'تمت إضافة البراند وتوليد كوده.' : 'تم تعديل بيانات البراند.');
@@ -146,7 +147,8 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     if (row['is_system'] == true) return;
     try {
       await _db.from('erp_brands').update({'is_active':row['is_active'] != true})
-        .eq('id',_s(row['id'])).eq('company_id',widget.companyId.trim());
+        .eq('id',_s(row['id'])).eq('company_id',widget.companyId.trim())
+        .select('id').single();
       await _load();
       if (mounted) ErpCenterToast.show(context, 'تم تحديث حالة البراند.');
     } catch (error) {
@@ -169,8 +171,10 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       ErpCenterToast.show(context, 'لا يمكن حذف سجل «بدون علامة تجارية».', isError: true);
       return;
     }
-    await _db.from('erp_brands').delete()
-      .eq('id',_s(row['id'])).eq('company_id',widget.companyId.trim());
+    final deleted = await _db.from('erp_brands').delete()
+      .eq('id',_s(row['id'])).eq('company_id',widget.companyId.trim())
+      .select('id');
+    if (deleted.isEmpty) throw StateError('لم يتم حذف البراند المحدد.');
     await _load();
   }
 
