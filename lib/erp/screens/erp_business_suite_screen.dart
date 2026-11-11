@@ -320,7 +320,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    final materialText=(d['materials']??'').toString().trim();
    final parsed=<Map<String,dynamic>>[];
    if(materialText.isNotEmpty){
-    for(final line in materialText.split(RegExp(r'[\\n;]+'))){
+    for(final line in materialText.split(RegExp(r'[\n;]+'))){
      final parts=line.split('|').map((x)=>x.trim()).toList();
      if(parts.length<2)continue;
      final q=_n(parts[1]);if(parts[0].isEmpty||q<=0)continue;
