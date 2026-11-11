@@ -292,13 +292,17 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     'erp_fixed_assets'=>'company_id,asset_code',
     'erp_asset_depreciation_runs'=>'company_id,run_code',
     'erp_asset_disposals'=>'company_id,disposal_code',
+    'erp_asset_movements'=>'company_id,suite_record_code',
     'erp_manufacturing_boms'=>'company_id,bom_code,version',
     'erp_manufacturing_work_centers'=>'company_id,center_code',
     'erp_production_orders'=>'company_id,order_code',
     'erp_production_variances'=>'company_id,variance_code',
+    'erp_production_quality_checks'=>'company_id,inspection_code',
     'erp_construction_projects'=>'company_id,project_code',
     'erp_construction_material_requests'=>'company_id,request_code',
     'erp_construction_material_movements'=>'company_id,movement_code',
+    'erp_construction_boq_lines'=>'company_id,suite_record_code',
+    'erp_construction_costs'=>'company_id,suite_record_code',
     'erp_construction_payment_certificates'=>'company_id,certificate_number',
     'erp_construction_site_reports'=>'company_id,report_code',
     'erp_crm_leads'=>'company_id,lead_code',
@@ -308,27 +312,9 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     'erp_crm_activities'=>'company_id,activity_code',
     _=>null
    };
-   if(conflictColumns!=null){
-    final saved=await _db.from(table).upsert(data,onConflict:conflictColumns).select('id').single();
-    id=saved['id'].toString();
-   }else{
-    final uniqueColumn=switch(table){
-     'erp_asset_movements'=>'suite_record_code',
-     'erp_production_quality_checks'=>'inspection_code',
-     'erp_construction_boq_lines'=>'suite_record_code',
-     'erp_construction_costs'=>'suite_record_code',
-     _=>null
-    };
-    final existing=uniqueColumn==null?[]:await _db.from(table).select('id').eq('company_id',co).eq(uniqueColumn,code).limit(1);
-    if(existing.isNotEmpty){
-     id=existing.first['id'].toString();
-     final updated=await _db.from(table).update(data).eq('id',id).eq('company_id',co).select('id').maybeSingle();
-     if(updated==null)throw Exception('السجل التشغيلي الموجود لم يعد متاحًا للتعديل؛ أعد المحاولة.');
-    }else{
-     final inserted=await _db.from(table).insert(data).select('id').single();
-     id=inserted['id'].toString();
-    }
-   }
+   if(conflictColumns==null)throw Exception('لا يوجد مفتاح فريد معتمد لهذا النوع من السجلات التشغيلية؛ أوقف الحفظ بدل إنشاء سجل غير مضمون التفرد.');
+   final saved=await _db.from(table).upsert(data,onConflict:conflictColumns).select('id').single();
+   id=saved['id'].toString();
   }  if(table=='erp_construction_material_requests'&&(d['materials']??'').toString().trim().isNotEmpty){
    await _db.from('erp_construction_material_request_lines').delete().eq('company_id',co).eq('request_id',id);
    final parsed=<Map<String,dynamic>>[];for(final line in (d['materials']??'').toString().split(RegExp(r'[\n;]+'))){final parts=line.split('|').map((x)=>x.trim()).toList();if(parts.length<2)continue;final q=_n(parts[1]);if(parts[0].isEmpty||q<=0)continue;
