@@ -470,13 +470,6 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     'p_replace_lines':certificateText.isNotEmpty
    });
   }
-  if(table=='erp_construction_costs'||table=='erp_construction_material_movements'){
-   final projectId=data['project_id'];final costs=await _db.from('erp_construction_costs').select('amount,status').eq('company_id',co).eq('project_id',projectId);
-   final approvedCost=(costs as List).where((row)=>['approved','posted'].contains(row['status'])).fold<double>(0,(sum,row)=>sum+_n(row['amount']));
-   final materialMoves=await _db.from('erp_construction_material_movements').select('movement_type,quantity,unit_cost').eq('company_id',co).eq('project_id',projectId);
-   final materialCost=(materialMoves as List).fold<double>(0,(sum,row)=>sum+(_n(row['quantity'])*_n(row['unit_cost'])*(row['movement_type']=='return'?-1:1)));
-   await _db.from('erp_construction_projects').update({'actual_cost':approvedCost+materialCost,'updated_at':DateTime.now().toIso8601String()}).eq('company_id',co).eq('id',projectId);
-  }
   if(table=='erp_construction_boq_lines'){
    final projectId=data['project_id'];final lines=await _db.from('erp_construction_boq_lines').select('planned_quantity,executed_quantity,unit_rate').eq('company_id',co).eq('project_id',projectId);
    double budget=0,executed=0;for(final line in (lines as List)){final rate=_n(line['unit_rate']);budget+=_n(line['planned_quantity'])*rate;executed+=_n(line['executed_quantity'])*rate;}
