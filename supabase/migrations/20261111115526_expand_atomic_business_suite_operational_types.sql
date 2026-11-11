@@ -452,12 +452,17 @@ begin
           nullif(p_operational->>'expense_account_id','')::uuid,
           coalesce(nullif(p_operational->>'status',''),'draft')
         )
-        on conflict(company_id,asset_code) do nothing
+        on conflict(company_id,asset_code) do update
+        set name=excluded.name,category_id=excluded.category_id,serial_number=excluded.serial_number,
+            acquisition_date=excluded.acquisition_date,in_service_date=excluded.in_service_date,
+            acquisition_cost=excluded.acquisition_cost,residual_value=excluded.residual_value,
+            useful_life_months=excluded.useful_life_months,depreciation_method=excluded.depreciation_method,
+            accumulated_depreciation=excluded.accumulated_depreciation,net_book_value=excluded.net_book_value,
+            location=excluded.location,custodian=excluded.custodian,supplier_name=excluded.supplier_name,
+            purchase_reference=excluded.purchase_reference,asset_account_id=excluded.asset_account_id,
+            accumulated_account_id=excluded.accumulated_account_id,expense_account_id=excluded.expense_account_id,
+            status=excluded.status,updated_at=now()
         returning id into v_operational_id;
-        get diagnostics v_count=row_count;
-        if v_count<>1 then
-          raise exception 'يوجد أصل بهذا الكود بالفعل دون رابط سجل عام مطابق؛ افتح الأصل الحالي لتعديله بدل إنشاء أصل جديد' using errcode='23505';
-        end if;
       end if;
 
     when v_module_key='manufacturing' and v_record_type='production_quality_check' then
