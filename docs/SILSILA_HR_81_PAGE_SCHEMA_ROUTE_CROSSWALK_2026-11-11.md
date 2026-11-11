@@ -20,7 +20,7 @@
 | 194 | العقود | ErpHrRecordsScreen | `erp_hr_employee_contracts` |
 | 195 | أنواع الإجازات | ErpHrLeaveScreen | قائمة نوع الإجازة hard-coded؛ لا تستخدم `erp_hr_reference_catalogs` |
 | 196 | قواعد الورديات والحضور والانصراف | HrShiftRulesScreen | يحفظ JSON في `erp_company_settings` بمفتاح `hr_shift_rules`؛ لا يستخدم `erp_hr_shifts` أو `erp_hr_shift_assignments` رغم وجودهما |
-| 197 | أجهزة البصمة وربط الحضور | ErpHrRecordsScreen (fallback) | خطأ توجيه: لا يفتح إدارة الأجهزة؛ إعداد النموذج الافتراضي قد يعرض `erp_hr_end_of_service_settlements` |
+| 197 | أجهزة البصمة وربط الحضور | ErpHrRecordsScreen (fallback) | خطأ ترتيب توجيه: شرط `HrFingerprintDevicesScreen` موجود لاحقًا في Dashboard، لكن شرط وحدة HR يسبقه ويلتقط الصفحة أولًا؛ فتسقط داخل HR Affairs إلى fallback `erp_hr_end_of_service_settlements` |
 | 198 | عناصر المرتبات | ErpSalaryElementsScreen | `erp_hr_salary_elements` |
 | 199 | سياسات العمولة | ErpSalesTargetsCommissionsScreen | `erp_commission_plans`, `erp_commission_tiers` |
 | 200 | الحضور والانصراف | ErpHrOperationsScreen | `erp_attendance_records`, `erp_hr_attendance_events`, `erp_hr_fingerprint_devices` |
@@ -138,3 +138,7 @@
 
 ## 6. حدود المراجعة
 هذه مطابقة من الكود والـcatalog. لم يتم تعديل مسارات Flutter أو SQL أو بيانات HR. لم يتم اختبار اتصال أجهزة البصمة أو تنفيذ رواتب/إجازات تجريبية، ولم يتم تشغيل الاختبار الشامل.
+
+
+### تصحيح ترتيب شرط أجهزة البصمة
+في `erp_dashboard_screen.dart` يوجد شرط مباشر لفتح `HrFingerprintDevicesScreen`، لكنه يأتي بعد شرط `_module == 'شئون موظفين' || _module == 'موارد بشرية'`. لذلك لا يصل التنفيذ إلى شرط الأجهزة عند اختيار الصفحة من وحدة HR؛ إذ يتم التقاطها أولًا بواسطة `ErpHrAffairsScreen`. يجب نقل شرط الأجهزة قبل شرط الوحدة أو توجيهه صراحة داخل `ErpHrAffairsScreen`.
