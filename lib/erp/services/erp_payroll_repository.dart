@@ -101,18 +101,16 @@ class ErpPayrollRepository {
         deductions < 0 || elementEarnings < 0 || elementDeductions < 0 || totalDeductions > gross || elementValues.values.any((v) => v < 0 || v > 999.999)) {
       throw ArgumentError('راجع عناصر المرتبات والاستقطاعات.');
     }
-    await _db.from('erp_payroll_lines').insert({
-      'company_id': companyId.trim(),
-      'payroll_run_id': runId,
-      'employee_id': employeeId,
-      'basic_amount': basic,
-      'allowances': allowances,
-      'commissions': commissions,
-      'overtime_amount': overtime,
-      'deductions': totalDeductions,
-      'element_values': elementValues,
-      'gross_amount': gross,
-      'net_amount': net,
+    await _db.rpc('erp_add_payroll_line_and_recalculate', params: {
+      'p_company_id': companyId.trim(),
+      'p_run_id': runId,
+      'p_employee_id': employeeId,
+      'p_basic': basic,
+      'p_allowances': allowances,
+      'p_commissions': commissions,
+      'p_overtime_amount': overtime,
+      'p_deductions': deductions,
+      'p_element_values': elementValues,
     });
   }
 
