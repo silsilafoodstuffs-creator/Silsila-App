@@ -159,3 +159,13 @@
 | `workspace_transfer` | `Wtr` | 5 |  |  |
 | `workspace_warehouse` | `Wwh` | 5 |  |  |
 
+
+
+## 8. مطابقة أقفال السياسات مع أنواع الأكواد
+- سجل `code_generation_registry.types` يحتوي 80 نوعًا.
+- دالة `private.erp_code_policy_lock_status` ترجع 82 مفتاح قفل، وتشمل معظم أنواع الكود بالإضافة إلى السياسات الخاصة.
+- المفاتيح الخاصة `customer_code` و`item_code` لها أقفال عند وجود سجلات بالفعل.
+- بعض مفاتيح `brand` و`category` لا تظهر كـ`code_type.*` في lock list، لكن شاشة السياسة الحالية تثبت بادئاتها/أطوالها في validation، فلا يمكن تعديلها من الواجهة الحالية.
+- **الفجوة الأوضح:** لا توجد مفاتيح قفل لـ`geo_code.country`, `geo_code.governorate`, `geo_code.district`, `geo_code.area`. دالة القفل لا تفحص `erp_geographic_data`، رغم أن trigger الجغرافيا يستخدم `geo_prefix` و`geo_segment_lengths` من registry، وأن أكواد العملاء تعتمد على كود المنطقة. بالتالي يمكن تعديل سياسة الجغرافيا بعد وجود مناطق/عملاء، بما يسبب عدم اتساق بين الأكواد الحالية والجديدة.
+- `code_type.customer` و`code_type.delegate` لا يظهران في قائمة القفل، لكنهما مغطّيان وظيفيًا عبر `customer_code` و`code_policy.representative`; يجب أن توضح الشاشة ذلك بدل إظهار سياسة ديناميكية غير مقفلة.
+- يجب أن يرفض الخادم تعديل أي مقطع جغرافي إذا وُجدت سجلات جغرافية أو عملاء مرتبطة به، أو يقدم migration versioned لإعادة التكويد مع سجل aliases؛ لا يكفي قفل الواجهة.
