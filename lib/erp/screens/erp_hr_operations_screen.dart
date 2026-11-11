@@ -208,7 +208,47 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
   Future<Map<String,dynamic>?> search(bool job)async{final q=TextEditingController();Map<String,dynamic>? chosen;final source=job?jobs:employees;await showDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh){final term=q.text.toLowerCase().trim();final rows=source.where((x){final fields=job?[x['job_code'],x['name_ar'],x['name_en']]:[x['employee_code'],x['full_name'],x['full_name_en'],x['job_title'],x['department_name'],x['governorate'],x['district'],x['locality'],branches.where((b)=>s(b['id'])==s(x['branch_id'])).map((b)=>s(b['branch_name'])).join()];return term.isEmpty||fields.any((v)=>s(v).toLowerCase().contains(term));}).toList();return AlertDialog(title:Text(job?'بحث الوظائف':'بحث الموظفين'),content:SizedBox(width:650,height:430,child:Column(children:[TextField(controller:q,autofocus:true,decoration:InputDecoration(labelText:job?'ابحث بالكود أو الاسم عربي/إنجليزي':'كود أو اسم أو فرع أو إدارة أو قسم أو موقع',prefixIcon:const Icon(Icons.search)),onChanged:(_)=>refresh((){})),Expanded(child:ListView(children:rows.map((x)=>ListTile(title:Text(job?'${s(x['job_code'])} • ${s(x['name_ar'])}':'${s(x['employee_code'])} • ${s(x['full_name'])}'),subtitle:Text(job?s(x['name_en']):'${s(x['department_name'])} • ${s(x['district'])}'),onTap:(){chosen=x;Navigator.pop(ctx);})).toList()))])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق'))]);}));q.dispose();return chosen;}
   void addEmployee(Map<String,dynamic> e,{String? jobId}){final id=s(e['id']);if(!daily.containsKey(id))daily[id]={'employeeId':id,'jobId':jobId??s(e['job_id']),'present':false,'absent':false,'fraction':'يوم كامل','absenceType':'غياب بدون إذن','penalty':'بدون جزاء'};}
   Future<void> yesterday()async{if(locked)return;try{final rows=await _db.from('erp_attendance_records').select().eq('company_id',_company.text.trim()).eq('work_date',date(day.subtract(const Duration(days:1))));setState((){daily.clear();for(final raw in rows){final r=Map<String,dynamic>.from(raw);daily[s(r['employee_id'])]={'employeeId':s(r['employee_id']),'jobId':s(r['job_id']),'present':s(r['attendance_status'])!='absent','absent':s(r['attendance_status'])=='absent','fraction':fractions.entries.firstWhere((x)=>x.value==((r['attendance_fraction'] as num?)?.toDouble()??1),orElse:()=>fractions.entries.first).key,'absenceType':s(r['absence_type']).isEmpty?'غياب بدون إذن':s(r['absence_type']),'penalty':penalties.entries.firstWhere((x)=>x.value==((r['absence_penalty_days'] as num?)?.toDouble()??0),orElse:()=>penalties.entries.first).key};}message='تم استدعاء كشف أمس؛ راجعه ثم احفظ.';});}catch(e){if(mounted)setState(()=>error='تعذر استدعاء أمس: $e');}}
-  Future<void> saveAttendance()async{if(locked){setState(()=>error='الشهر مقفل بالرواتب.');return;}setState(()=>saving=true);try{for(final x in daily.values){final e=emp(s(x['employeeId']));if(e==null)continue;final absent=x['absent']==true,present=x['present']==true&&!absent,absence=s(x['absenceType']);final old=attendance.where((r)=>s(r['employee_id'])==s(e['id'])&&s(r['work_date'])==date(day));await _db.from('erp_attendance_records').upsert({'company_id':_company.text.trim(),'employee_id':e['id'],'work_date':date(day),'check_in':present?(old.isEmpty?DateTime(day.year,day.month,day.day,9).toIso8601String():old.first['check_in']):null,'check_out':old.isEmpty?null:old.first['check_out'],'attendance_status':absent?'absent':present?'present':'excused','attendance_fraction':present?(fractions[s(x['fraction'])]??1):0,'absence_type':absent?absence:null,'absence_penalty_days':absent&&absence=='غياب بدون إذن'?(penalties[s(x['penalty'])]??0):0,'attendance_source':'manual','job_id':s(x['jobId']).isEmpty?e['job_id']:x['jobId'],'notes':present?'تسجيل حضور يدوي':absent?'حالة غياب: $absence':'لم يسجل حضور'},onConflict:'employee_id,work_date');}if(mounted)setState(()=>message='تم حفظ ${daily.length} سجلًا ليوم ${date(day)}.');await load();}catch(e){if(mounted)setState(()=>error='تعذر حفظ الحضور: $e');}finally{if(mounted)setState(()=>saving=false);}}
+  Future<void> saveAttendance()async{
+    if(locked){setState(()=>error='الشهر مقفل بالرواتب.');return;}
+    setState(()=>saving=true);
+    try{
+      final rows=<Map<String,dynamic>>[];
+      for(final x in daily.values){
+        final employee=emp(s(x['employeeId']));
+        if(employee==null)continue;
+        final absent=x['absent']==true;
+        final present=x['present']==true&&!absent;
+        final absence=s(x['absenceType']);
+        rows.add({
+          'employee_id':employee['id'],
+          'job_id':s(x['jobId']).isEmpty?employee['job_id']:x['jobId'],
+          'attendance_status':absent?'absent':present?'present':'excused',
+          'attendance_fraction':present?(fractions[s(x['fraction'])]??1):0,
+          'absence_type':absent?absence:null,
+          'absence_penalty_days':absent&&absence=='غياب بدون إذن'?(penalties[s(x['penalty'])]??0):0,
+        });
+      }
+      if(rows.isEmpty){
+        if(mounted)setState(()=>message='لا توجد سجلات موظفين صالحة للحفظ في كشف اليوم.');
+        return;
+      }
+      final result=await _db.rpc('erp_save_hr_manual_attendance_batch',params:{
+        'p_company_id':_company.text.trim(),
+        'p_work_date':date(day),
+        'p_rows':rows,
+      });
+      final summary=Map<String,dynamic>.from(result as Map);
+      final total=(summary['total'] as num?)?.toInt()??0;
+      final inserted=(summary['inserted'] as num?)?.toInt()??0;
+      final updated=(summary['updated'] as num?)?.toInt()??0;
+      if(mounted)setState(()=>message='تم حفظ كشف \${date(day)} بالكامل: $total موظفًا (إضافة $inserted، تحديث $updated).');
+      await load();
+    }catch(e){
+      if(mounted)setState(()=>error='تعذر حفظ كشف الحضور؛ لم تُحفظ أي مجموعة جزئية: $e');
+    }finally{
+      if(mounted)setState(()=>saving=false);
+    }
+  }
   Future<void> direct(Map<String,dynamic> e)async{if(locked)return;try{await _db.from('erp_attendance_records').upsert({'company_id':_company.text.trim(),'employee_id':e['id'],'work_date':date(day),'check_in':DateTime.now().toIso8601String(),'attendance_status':'present','attendance_fraction':1,'absence_type':null,'absence_penalty_days':0,'attendance_source':'direct','notes':'تسجيل حضور مباشر فقط'},onConflict:'employee_id,work_date');if(mounted)setState(()=>message='تم تسجيل حضور مباشر فقط للموظف ${s(e['full_name'])}.');await load();}catch(e){if(mounted)setState(()=>error='تعذر تسجيل الحضور: $e');}}
   Future<void> changeEmployee(Map<String,dynamic> row,String jobId) async { final picked=await search(false); if(picked==null)return; setState((){daily.remove(s(row['employeeId']));addEmployee(picked,jobId:jobId);}); }
   Widget attendanceRow(Map<String,dynamic> x){final e=emp(s(x['employeeId']));if(e==null)return const SizedBox.shrink();final jid=s(x['jobId']).isEmpty?s(e['job_id']):s(x['jobId']);final found=jobs.where((j)=>s(j['id'])==jid);final j=found.isEmpty?null:found.first;final abs=x['absent']==true;return Card(child:Padding(padding:const EdgeInsets.all(8),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(children:[SizedBox(width:95,child:Text(s(j?['job_code']),style:const TextStyle(fontWeight:FontWeight.w900))),Expanded(child:Text(s(j?['name_ar']).isEmpty?s(e['job_title']):s(j?['name_ar']),style:const TextStyle(fontWeight:FontWeight.w800))),IconButton(onPressed:locked?null:()=>setState(()=>daily.remove(s(e['id']))),icon:const Icon(Icons.remove_circle_outline,color:Colors.red))]),Row(children:[SizedBox(width:115,child:GestureDetector(onDoubleTap:locked?null:()=>changeEmployee(x,jid),child:Text(s(e['employee_code']),style:const TextStyle(color:purple,fontWeight:FontWeight.w900)))),Expanded(child:Text(s(e['full_name']))),Checkbox(value:x['present']==true&&!abs,onChanged:locked?null:(v)=>setState((){x['present']=v==true;x['absent']=false;})),const Text('حضور')]),Wrap(spacing:7,runSpacing:5,children:[const Text('نوع الحضور'),SizedBox(width:120,child:DropdownButtonFormField<String>(itemHeight: 40, value:fractions.containsKey(s(x['fraction']))?s(x['fraction']):'يوم كامل',isExpanded:true,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder()),items:fractions.keys.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:locked||abs?null:(v)=>setState(()=>x['fraction']=v??'يوم كامل'))),Checkbox(value:abs,onChanged:locked?null:(v)=>setState((){x['absent']=v==true;x['present']=false;if(v!=true)x['penalty']='بدون جزاء';})),const Text('غياب'),SizedBox(width:170,child:DropdownButtonFormField<String>(itemHeight: 40, value:absenceTypes.contains(s(x['absenceType']))?s(x['absenceType']):'غياب بدون إذن',isExpanded:true,decoration:const InputDecoration(labelText:'حالة الغياب',isDense:true,border:OutlineInputBorder()),items:absenceTypes.map((v)=>DropdownMenuItem(value:v,child:Text(v,overflow:TextOverflow.ellipsis))).toList(),onChanged:locked||!abs?null:(v)=>setState((){x['absenceType']=v??'غياب بدون إذن';if(v!='غياب بدون إذن')x['penalty']='بدون جزاء';}))),SizedBox(width:140,child:DropdownButtonFormField<String>(itemHeight: 40, value:penalties.containsKey(s(x['penalty']))?s(x['penalty']):'بدون جزاء',isExpanded:true,decoration:const InputDecoration(labelText:'جزاء الغياب',isDense:true,border:OutlineInputBorder()),items:penalties.keys.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:locked||!abs||s(x['absenceType'])!='غياب بدون إذن'?null:(v)=>setState(()=>x['penalty']=v??'بدون جزاء'))),FilledButton.tonal(onPressed:locked?null:()=>direct(e),child:const Text('تسجيل حضور مباشر'))])])));}
