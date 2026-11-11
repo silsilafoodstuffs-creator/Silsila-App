@@ -91,8 +91,6 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     'عمولات المندوبين': <String>['erp_commission_runs', 'erp_commission_plans'],
     'أداء العروض': <String>['erp_sales_campaigns', 'erp_sales_campaign_items'],
     'تقارير الفاتورة الإلكترونية': <String>['erp_einvoice_operations'],
-    'شريط قبض موظف': <String>['erp_v_employee_payslips'],
-    'شريط قبض مجمع': <String>['erp_v_payroll_payslip_summary'],
   };
 
   static const Map<String, String> _searchColumns = <String, String>{
@@ -104,8 +102,6 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     'erp_workspace_records': 'record_key',
     'erp_sales_representatives': 'rep_name',
     'erp_cash_vouchers': 'voucher_number',
-    'erp_v_employee_payslips': 'employee_name',
-    'erp_v_payroll_payslip_summary': 'run_code',
     'erp_items': 'item_name',
   };
 
