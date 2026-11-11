@@ -289,6 +289,11 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    // select-then-insert race when two CRM activity saves use the same code.
    final saved=await _db.from(table).upsert(data,onConflict:'company_id,activity_code').select('id').single();
    id=saved['id'].toString();
+  }else if(table=='erp_manufacturing_boms'){
+   // A BOM revision is identified by company + BOM code + version, not code alone.
+   // The matching unique constraint makes revision creation safe under concurrent saves.
+   final saved=await _db.from(table).upsert(data,onConflict:'company_id,bom_code,version').select('id').single();
+   id=saved['id'].toString();
   }else{
    final uniqueColumn=switch(table){
     'erp_asset_categories'=>'category_code','erp_fixed_assets'=>'asset_code','erp_asset_depreciation_runs'=>'run_code','erp_asset_disposals'=>'disposal_code','erp_asset_movements'=>'suite_record_code',
