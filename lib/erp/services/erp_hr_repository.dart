@@ -42,38 +42,46 @@ class ErpHrRepository {
 
   Future<void> addEmployee({
     required String companyId,
+    required String branchId,
     required String employeeCode,
     required String fullName,
     String? nationalId,
     String? phone,
     String? jobTitle,
     String? department,
+    String? departmentId,
+    String? jobId,
+    String? workLocationId,
+    DateTime? hireDate,
     double baseSalary = 0,
   }) async {
-    if (companyId.trim().isEmpty || fullName.trim().isEmpty) {
-      throw ArgumentError('الشركة واسم الموظف حقول إلزامية.');
+    if (companyId.trim().isEmpty || branchId.trim().isEmpty || fullName.trim().isEmpty) {
+      throw ArgumentError('الشركة والفرع واسم الموظف حقول إلزامية.');
     }
-    if (baseSalary < 0) throw ArgumentError('الراتب لا يمكن أن يكون سالبًا.');
+    if (!baseSalary.isFinite || baseSalary < 0) {
+      throw ArgumentError('الراتب لا يمكن أن يكون سالبًا أو غير صالح.');
+    }
     final normalizedNationalId = (nationalId ?? '').trim();
-    final requiredNationalId = await isNationalIdRequired(companyId);
-    if (requiredNationalId && normalizedNationalId.isEmpty) {
-      throw ArgumentError('سياسة البرنامج تشترط الرقم القومي للموظف الجديد.');
-    }
     if (normalizedNationalId.isNotEmpty &&
         !RegExp(r'^[0-9]{14}$').hasMatch(normalizedNationalId)) {
       throw ArgumentError('الرقم القومي يجب أن يتكون من 14 رقمًا.');
     }
-    await _db.from('erp_employees').insert({
-      'company_id': companyId.trim(),
-      'employee_code': '',
-      'full_name': fullName.trim(),
-      'phone': _blankToNull(phone),
-      'job_title': _blankToNull(jobTitle),
-      'department_name': _blankToNull(department),
-      'base_salary': baseSalary,
-      'employment_status': 'active',
-      'is_active': true,
+
+    await _db.rpc('erp_create_employee', params: {
+      'p_company_id': companyId.trim(),
+      'p_branch_id': branchId.trim(),
+      'p_full_name': fullName.trim(),
+      'p_national_id': normalizedNationalId.isEmpty ? null : normalizedNationalId,
+      'p_phone': _blankToNull(phone),
+      'p_job_title': _blankToNull(jobTitle),
+      'p_department_name': _blankToNull(department),
+      'p_base_salary': baseSalary,
+      'p_department_id': _blankToNull(departmentId),
+      'p_job_id': _blankToNull(jobId),
+      'p_work_location_id': _blankToNull(workLocationId),
+      'p_hire_date': hireDate == null ? null : _dateOnly(hireDate),
     });
+    // employeeCode is intentionally not sent: the database central-code trigger owns it.
   }
 
   Future<List<Map<String, dynamic>>> fetchLeaveRequests(String companyId) async {
