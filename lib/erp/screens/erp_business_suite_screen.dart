@@ -502,7 +502,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   }
   final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('تأكيد الحذف'),content:Text('حذف '+r['record_code'].toString()+'؟'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),style:FilledButton.styleFrom(backgroundColor:Colors.red),child:const Text('حذف'))]));
   if(yes!=true)return;
-  try{if(table!=null&&opId!=null&&table.startsWith('erp_'))await _db.from(table).delete().eq('id',opId).eq('company_id',widget.companyId!);await _db.from('erp_business_suite_records').delete().eq('id',r['id']).eq('company_id',widget.companyId!);await _load();}
+  try{await _db.rpc('erp_delete_business_suite_record',params:{'p_record_id':r['id']});await _load();}
   catch(e){if(mounted)ErpCenterToast.show(context, 'تعذر الحذف: $e', isError: true, duration: const Duration(seconds: 3));}
  }
  @override Widget build(BuildContext context){final list=_filtered;final total=_rows.fold<num>(0,(s,r)=>s+(r['amount'] as num? ?? 0));return Directionality(textDirection:TextDirection.rtl,child:Container(color:const Color(0xFFFAF8FC),padding:const EdgeInsets.all(15),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
