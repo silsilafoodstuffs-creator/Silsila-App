@@ -163,6 +163,19 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    case 'manufacturing:bom':{
     final productKey=(d['product']??name).toString();final byCode=await _db.from('erp_items').select('id,item_name,base_unit').eq('company_id',co).eq('item_code',productKey).limit(1);
     final products=byCode.isNotEmpty?byCode:await _db.from('erp_items').select('id,item_name,base_unit').eq('company_id',co).eq('item_name',productKey).limit(1);
+    final componentText=(d['components']??'').toString().trim();
+    if(componentText.isNotEmpty){
+     for(final line in componentText.split(RegExp(r'[\n;]+')).where((x)=>x.trim().isNotEmpty)){
+      final parts=line.split('|').map((x)=>x.trim()).toList();
+      if(parts.length<2||parts[0].isEmpty)throw Exception('مكون قائمة المواد غير مكتمل؛ أدخل كود الصنف والكمية.');
+      final componentQty=_n(parts[1]);
+      final scrap=parts.length>3?_n(parts[3]):0;
+      if(componentQty<=0||scrap<0||scrap>100)throw Exception('كمية المكون يجب أن تكون أكبر من صفر ونسبة الفاقد بين صفر و100%.');
+      final byComponentCode=await _db.from('erp_items').select('id').eq('company_id',co).eq('item_code',parts[0]).limit(1);
+      final componentRows=byComponentCode.isNotEmpty?byComponentCode:await _db.from('erp_items').select('id').eq('company_id',co).eq('item_name',parts[0]).limit(1);
+      if(componentRows.isEmpty)throw Exception('المكون '+parts[0]+' غير موجود في دليل الأصناف.');
+     }
+    }
     table='erp_manufacturing_boms';data={'company_id':co,'bom_code':code,'product_id':products.isEmpty?null:products.first['id'],'product_name':products.isEmpty?name:products.first['item_name'],'output_quantity':qty>0?qty:1,'output_unit':(d['unit']??(products.isEmpty?'وحدة':products.first['base_unit'])).toString(),'version':_n(d['version'],1).round().clamp(1,999),'scrap_percent':_n(d['scrap_rate']),'status':status=='active'?'active':'draft','effective_from':d['effective_from'],'effective_to':d['effective_to']};break;
    }
    case 'manufacturing:work_center':
@@ -470,12 +483,37 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     }
    }
   }
-  if(table=='erp_manufacturing_boms'&&(d['components']??'').toString().trim().isNotEmpty){
-   await _db.from('erp_manufacturing_bom_lines').delete().eq('company_id',co).eq('bom_id',id);
-   final lines=(d['components']??'').toString().split(RegExp(r'[\n;]+')).where((x)=>x.trim().isNotEmpty).toList();
-   var lineNo=0;final parsed=<Map<String,dynamic>>[];
-   for(final line in lines){final parts=line.split('|').map((x)=>x.trim()).toList();if(parts.length<2)continue;final q=_n(parts[1]);if(parts[0].isEmpty||q<=0)continue;lineNo++;final byCode=await _db.from('erp_items').select('id,item_name,base_unit').eq('company_id',co).eq('item_code',parts[0]).limit(1);final items=byCode.isNotEmpty?byCode:await _db.from('erp_items').select('id,item_name,base_unit').eq('company_id',co).eq('item_name',parts[0]).limit(1);parsed.add({'company_id':co,'bom_id':id,'line_no':lineNo,'item_id':items.isEmpty?null:items.first['id'],'item_name':items.isEmpty?parts[0]:items.first['item_name'],'quantity':q,'unit':parts.length>2&&parts[2].isNotEmpty?parts[2]:(items.isEmpty?'وحدة':items.first['base_unit']),'scrap_percent':parts.length>3?_n(parts[3]):0,'is_byproduct':parts.length>4&&(['نعم','true','1'].contains(parts[4].toLowerCase())||parts[4].contains('ثانوي'))});}
-   if(parsed.isNotEmpty)await _db.from('erp_manufacturing_bom_lines').insert(parsed);
+  if(table=='erp_manufacturing_boms'){
+   final componentText=(d['components']??'').toString().trim();
+   final parsed=<Map<String,dynamic>>[];
+   if(componentText.isNotEmpty){
+    for(final line in componentText.split(RegExp(r'[\n;]+')).where((x)=>x.trim().isNotEmpty)){
+     final parts=line.split('|').map((x)=>x.trim()).toList();
+     if(parts.length<2||parts[0].isEmpty)throw Exception('مكون قائمة المواد غير مكتمل؛ أدخل كود الصنف والكمية.');
+     final q=_n(parts[1]);
+     if(q<=0)throw Exception('كمية مكون قائمة المواد يجب أن تكون أكبر من صفر.');
+     final byCode=await _db.from('erp_items').select('id,item_name,base_unit').eq('company_id',co).eq('item_code',parts[0]).limit(1);
+     final items=byCode.isNotEmpty?byCode:await _db.from('erp_items').select('id,item_name,base_unit').eq('company_id',co).eq('item_name',parts[0]).limit(1);
+     if(items.isEmpty)throw Exception('المكون '+parts[0]+' غير موجود في دليل الأصناف.');
+     final scrap=parts.length>3?_n(parts[3]):0;
+     if(scrap<0||scrap>100)throw Exception('نسبة فاقد المكون يجب أن تكون بين صفر و100%.');
+     parsed.add({
+      'item_id':items.first['id'],
+      'item_name':items.first['item_name'],
+      'quantity':q,
+      'unit':parts.length>2&&parts[2].isNotEmpty?parts[2]:(items.first['base_unit']??'وحدة'),
+      'scrap_percent':scrap,
+      'is_byproduct':parts.length>4&&(['نعم','true','1'].contains(parts[4].toLowerCase())||parts[4].contains('ثانوي')),
+      'notes':null
+     });
+    }
+   }
+   await _db.rpc('erp_replace_manufacturing_bom_lines',params:{
+    'p_company_id':co,
+    'p_bom_id':id,
+    'p_parent_record_id':oldRow?['id'],
+    'p_lines':parsed
+   });
   }
   if(table=='erp_production_orders'){
    final quality=(d['quality']??'').toString();
