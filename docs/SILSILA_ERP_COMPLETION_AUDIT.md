@@ -999,3 +999,29 @@ Commit:
 
 **نسبة إغلاق حزمة تنفيذ أمر التصنيع التابعة (الخامات + استلام الإنتاج + التكلفة + الجودة): 100%.**
 هذه ليست نسبة دورة أمر التصنيع الكاملة ولا نسبة المرحلة الثانية كلها. لم تُشغّل اختبارات Dart/Flutter أو Web/Android/WebView.
+
+
+### ربط سجل أحداث تذاكر خدمة العملاء بتغيير الحالة ذريًا — 2026-11-11
+
+تم استبدال إدخال حدث تغيير حالة التذكرة من Flutter بـTrigger في قاعدة البيانات:
+- `trg_erp_service_ticket_status_event` يعمل بعد تحديث `erp_service_tickets.status` فقط عندما تتغير الحالة بالفعل.
+- يسجل `from_status` و`to_status` ووقت التنفيذ والمستخدم في `erp_service_ticket_events`.
+- الحدث والانتقال في حالة التذكرة جزء من المعاملة نفسها؛ فشل إدخال الحدث يلغي تحديث الحالة أيضًا.
+- دالة Trigger `SECURITY INVOKER` و`search_path` فارغ، وتخضع لإذن INSERT وRLS الحالي على `erp_service_ticket_events`.
+- أزيل إدخال الحدث المنفصل من Flutter لتجنب تكرار الأحداث.
+
+Migration:
+- `20261111034228_atomic_service_ticket_status_events`
+- الملف: `supabase/migrations/20261111034228_atomic_service_ticket_status_events.sql`
+
+Commits:
+- `f3fbdcb403315c5b27db2a0390394d1c62cae910` — إزالة الإدخال اليدوي للأحداث من Flutter.
+- `ae57b092eb0a21de4538f75c2faa117ce6ee80c8` — إضافة Migration الدالة والـTrigger.
+
+التحقق البنيوي:
+- Trigger ظاهر ومفعّل على `erp_service_tickets`.
+- الدالة `prosecdef=false`, `search_path` فارغ، `anon_execute=false`, `authenticated_execute=true`.
+- لا تظهر في تحذير SECURITY DEFINER في Advisor.
+
+**نسبة إغلاق تسجيل أحداث تغيير حالة التذكرة: 100%.**
+هذه النسبة تخص الحدث المرتبط بتغيير الحالة فقط؛ لا تغطي محادثات التذاكر ومرفقاتها أو دورة الحفظ العامة في Business Suite.
