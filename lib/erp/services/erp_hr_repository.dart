@@ -116,21 +116,17 @@ class ErpHrRepository {
     required String employeeId,
     String? notes,
   }) async {
-    final date = _dateOnly(DateTime.now());
-    await _db.from('erp_attendance_records').insert({
-      'company_id': companyId.trim(),
-      'employee_id': employeeId,
-      'work_date': date,
-      'check_in': DateTime.now().toIso8601String(),
-      'attendance_status': 'present',
-      'notes': _blankToNull(notes),
+    await _db.rpc('erp_record_hr_direct_check_in', params: {
+      'p_company_id': companyId.trim(),
+      'p_employee_id': employeeId,
+      'p_notes': _blankToNull(notes),
     });
   }
 
   Future<void> checkOut(String attendanceId) async {
-    await _db.from('erp_attendance_records').update({
-      'check_out': DateTime.now().toIso8601String(),
-    }).eq('id', attendanceId).isFilter('check_out', null);
+    await _db.rpc('erp_record_hr_direct_check_out', params: {
+      'p_attendance_id': attendanceId,
+    });
   }
 
   static String _dateOnly(DateTime date) =>
