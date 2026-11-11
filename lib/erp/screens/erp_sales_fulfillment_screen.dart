@@ -254,32 +254,50 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
     }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
+      final rows = <Map<String, dynamic>>[];
       for (final invoiceId in _selectedInvoiceIds) {
-        final invoice = _invoices.firstWhere((r) => _s(r['id']) == invoiceId);
-        final prepIds = _isPreparation ? <String>[] : _preparations
-            .where((p) => _selectedPreparationIds.contains(_s(p['id'])) && _s(p['invoice_id']) == invoiceId)
-            .map((p) => _s(p['id']))
-            .toList();
-        await _db.from('erp_sales_fulfillment_documents').upsert({
-          'company_id': widget.companyId,
-          'kind': widget.kind,
+        final invoice = _invoices.where((r) => _s(r['id']) == invoiceId);
+        if (invoice.isEmpty) {
+          throw StateError('إحدى فواتير البيع المختارة لم تعد متاحة؛ أعد تحميل القائمة.');
+        }
+        final prepIds = _isPreparation
+            ? <String>[]
+            : _preparations
+                .where((p) => _selectedPreparationIds.contains(_s(p['id'])) && _s(p['invoice_id']) == invoiceId)
+                .map((p) => _s(p['id']))
+                .where((id) => id.isNotEmpty)
+                .toSet()
+                .toList();
+        final weight = double.tryParse(_controller(_weights, invoiceId).text) ?? 0;
+        final load = double.tryParse(_controller(_loads, invoiceId).text) ?? 0;
+        if (!weight.isFinite || !load.isFinite || weight < 0 || load < 0) {
+          throw ArgumentError('الوزن والحمولة يجب أن يكونا رقمين صالحين غير سالبين.');
+        }
+        rows.add({
           'invoice_id': invoiceId,
           'source_fulfillment_ids': prepIds,
           'source_mode': _isPreparation ? 'invoice' : _sourceMode,
-           'manual_number': _saved.where((r) => _s(r['invoice_id']) == invoiceId).isEmpty ? '' : _s(_saved.firstWhere((r) => _s(r['invoice_id']) == invoiceId)['manual_number']),
-          'customer_name': _customer(_s(invoice['customer_id'])),
-          'area_name': _area(_s(invoice['customer_id'])),
-          'invoice_amount': _n(invoice['grand_total']),
-          'weight_kg': double.tryParse(_controller(_weights, invoiceId).text) ?? 0,
-          'load_kg': double.tryParse(_controller(_loads, invoiceId).text) ?? 0,
-          'status': 'draft',
-          'created_by': _db.auth.currentUser?.id,
-        }, onConflict: 'company_id,kind,invoice_id');
+          'weight_kg': weight,
+          'load_kg': load,
+        });
       }
-      if (mounted) setState(() { _saving = false; _message = 'تم حفظ ${_selectedInvoiceIds.length} إذن بنجاح. تم إنشاء أرقام الأذون تلقائيًا وفق سياسات التكويد.'; });
+      final result = await _db.rpc('erp_save_sales_fulfillment_batch', params: {
+        'p_company_id': widget.companyId,
+        'p_kind': widget.kind,
+        'p_rows': rows,
+      });
+      final summary = Map<String, dynamic>.from(result as Map);
+      final savedCount = (summary['saved_count'] as num?)?.toInt() ?? 0;
+      if (mounted) setState(() {
+        _saving = false;
+        _message = 'تم حفظ $savedCount إذن دفعة واحدة. تم الاحتفاظ بأرقام الأذون المركزية الحالية.';
+      });
       await _load();
     } catch (e) {
-      if (mounted) setState(() { _saving = false; _error = 'تعذر حفظ الإذن: $e'; });
+      if (mounted) setState(() {
+        _saving = false;
+        _error = 'تعذر حفظ دفعة الأذون؛ لم يتم اعتماد أي إذن جزئي: $e';
+      });
     }
   }
 
