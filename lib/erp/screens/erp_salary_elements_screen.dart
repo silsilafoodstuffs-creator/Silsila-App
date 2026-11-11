@@ -334,6 +334,7 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
   List<Map<String,dynamic>> _runs=[];
   List<Map<String,dynamic>> _employees=[];
   List<Map<String,dynamic>> _lines=[];
+  List<Map<String,dynamic>> _summaries=[];
   List<Map<String,dynamic>> _elements=[];
   List<Map<String,dynamic>> _departments=[];
   List<Map<String,dynamic>> _locations=[];
@@ -396,8 +397,21 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
 
   Future<void> _loadLines()async{
     if(_runId==null){if(mounted)setState((){_lines=[];_employeeId=null;});return;}
-    try{final rows=await _db.from('erp_payroll_lines').select('*').eq('payroll_run_id',_runId!).eq('company_id',widget.companyId!.trim());if(mounted)setState((){_lines=rows.map((x)=>Map<String,dynamic>.from(x)).toList();if(!_lines.any((line)=>_s(line['employee_id'])==_employeeId)){final eligible=_employees.where((e)=>_lines.any((line)=>_s(line['employee_id'])==_s(e['id']))).toList();_employeeId=eligible.isEmpty?null:_s(eligible.first['id']);}});}
-    catch(e){if(mounted)setState(()=>_error='تعذر تحميل تفاصيل مسير القبض: $e');}
+    try{
+      final rows=await Future.wait([
+        _db.from('erp_v_employee_payslips').select('*').eq('payroll_run_id',_runId!).eq('company_id',widget.companyId!.trim()),
+        _db.from('erp_v_payroll_payslip_summary').select('*').eq('payroll_run_id',_runId!).eq('company_id',widget.companyId!.trim()),
+      ]);
+      if(mounted)setState((){
+        _lines=(rows[0] as List).map((x)=>Map<String,dynamic>.from(x)).toList();
+        _summaries=(rows[1] as List).map((x)=>Map<String,dynamic>.from(x)).toList();
+        if(!_lines.any((line)=>_s(line['employee_id'])==_employeeId)){
+          final eligible=_employees.where((e)=>_lines.any((line)=>_s(line['employee_id'])==_s(e['id']))).toList();
+          _employeeId=eligible.isEmpty?null:_s(eligible.first['id']);
+        }
+      });
+    }
+    catch(e){if(mounted)setState(()=>_error='تعذر تحميل تفاصيل مسير القبض من مصادر التقارير الآمنة: $e');}
   }
 
   Map<String,dynamic>? _employee(String id){final a=_employees.where((e)=>_s(e['id'])==id);return a.isEmpty?null:a.first;}
@@ -659,8 +673,18 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
     bool used(Map<String,dynamic> element)=>_lines.any((line){final values=line['element_values'];return values is Map&&_n(values[_s(element['id'])])!=0;});
     final earning=_elements.where((x)=>_s(x['element_type'])=='earning'&&used(x)).toList();
     final deduction=_elements.where((x)=>_s(x['element_type'])=='deduction'&&used(x)).toList();
+    final runEmployeeCount=_summaries.fold<int>(0,(sum,row)=>sum+(_n(row['employee_count']).round()));
+    final runGross=_summaries.fold<double>(0,(sum,row)=>sum+_n(row['gross_total']));
+    final runDeductions=_summaries.fold<double>(0,(sum,row)=>sum+_n(row['deductions_total']));
+    final runNet=_summaries.fold<double>(0,(sum,row)=>sum+_n(row['net_total']));
     return Column(children:[
       _runDropdown(),
+      if(_summaries.isNotEmpty) Padding(padding:const EdgeInsets.fromLTRB(8,8,8,0),child:Card(color:const Color(0xFFF5EFFB),child:Padding(padding:const EdgeInsets.all(10),child:Wrap(spacing:18,runSpacing:8,children:[
+        Text('إجمالي المسير المعتمد • الموظفون: $runEmployeeCount',style:const TextStyle(fontWeight:FontWeight.w900,color:_salaryPurple)),
+        Text('الإجمالي: ${_fmt(runGross)} ${_currencySymbol()}'),
+        Text('الاستقطاعات: ${_fmt(runDeductions)} ${_currencySymbol()}'),
+        Text('الصافي: ${_fmt(runNet)} ${_currencySymbol()}',style:const TextStyle(fontWeight:FontWeight.w900,color:_salaryPurple)),
+      ])))),
       Padding(padding:const EdgeInsets.all(8),child:Wrap(spacing:8,runSpacing:8,children:[
         _filterDropdown('الفرع',_branchId,_branches,'branch_name',(v)=>setState(()=>_branchId=v)),
         _filterDropdown('الإدارة / القسم',_departmentId,_departments,'name_ar',(v)=>setState(()=>_departmentId=v)),
