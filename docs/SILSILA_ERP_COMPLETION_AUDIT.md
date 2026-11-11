@@ -1492,3 +1492,69 @@ Migration:
 
 **نسبة إغلاق الحضور المباشر والانصراف: 100%.**
 هذه النسبة تخص الحضور المباشر والانصراف فقط، ولا تغلق بقية وحدات الموارد البشرية.
+
+
+### استكمال حراسة نطاق المخازن في حركات المخزون والتحويل — 2026-11-11
+
+تم تعديل الإجراءين الأساسيين اللذين يكتبان دفتر حركة المخزون:
+- `erp_record_inventory_movement` يتحقق الآن من صلاحية المستخدم على المخزن المحدد وفرعه بعد حل فرع المخزن ومطابقة `branch_id`.
+- `erp_transfer_inventory_between_warehouses` يتحقق من صلاحية المستخدم على مخزن الصرف ومخزن الاستلام كلٌّ على حدة قبل قراءة الرصيد أو أخذ الأقفال أو إنشاء أي حركة.
+- تبقى حركتا `transfer_out` و`transfer_in` في معاملة PostgreSQL واحدة وبمعرّف مرجعي مشترك، ويستمر فحص الرصيد والتكلفة المتوسطة والتسلسل الزمني والأقفال الثنائية.
+- الدالتان `SECURITY DEFINER` مع `search_path=''` و`row_security=off` لكتابة دفتر الأستاذ المخزني داخليًا، لكن الوصول مقيد بدور الشركة وبنطاق كل مخزن؛ `anon_execute=false`.
+
+Migration:
+- `20261111092052_enforce_warehouse_scope_on_inventory_movements`
+- الملف: `supabase/migrations/20261111092052_enforce_warehouse_scope_on_inventory_movements.sql`
+- Commit: `2c34985dff4cc382c1600438761846fa4094d8a8`
+
+### إغلاق نطاق المخزن عبر دورة إنشاء الجرد وحفظه وترحيله — 2026-11-11
+
+تمت إضافة تحقق المخزن/الفرع إلى:
+- `erp_create_physical_stocktake` عند إنشاء محضر الجرد ولقطة الأرصدة.
+- `erp_create_manual_stock_adjustment` عند إنشاء تسوية يدوية.
+- `erp_save_physical_stocktake_counts` قبل تعديل أي كمية، مع التحقق من أن كل سطر يتبع الشركة والمخزن نفسيهما الموجودين في رأس المحضر.
+- `erp_post_physical_stocktake` قبل إعادة التحقق من اللقطة وإنشاء حركات التسوية؛ يفحص رأس المحضر ومخزنه وخطوطه ونطاق المستخدم.
+- كل الإجراءات ما زالت `SECURITY DEFINER` لأن الجرد يكتب عدة جداول داخل معاملة واحدة، لكنها تستخدم `search_path=''` و`anon_execute=false`، وتتحقق من دور الشركة ونطاق المخزن.
+
+Migration:
+- `20261111092221_enforce_warehouse_scope_on_stocktake_lifecycle`
+- الملف: `supabase/migrations/20261111092221_enforce_warehouse_scope_on_stocktake_lifecycle.sql`
+- Commit: `403852f6d521cdd29f96fadc8fc5cd203a216655`
+
+### استكمال فرع محضر الجرد وتوجيه عجز الموظف — 2026-11-11
+
+في `erp_post_physical_stocktake`:
+- إذا كان محضر قديم يفتقد `branch_id` لكن المخزن له فرع معروف، يثبت الإجراء فرع المخزن في رأس المحضر قبل تسجيل الحركات.
+- عند توجيه قيمة العجز إلى موظف، يتحقق من الموظف النشط ومن نطاق المستخدم لهذا الموظف، إضافة إلى عضوية الشركة.
+- لا يتغير مسار توجيه العجز إلى بند الصرف، ولا يتم خصم رصيد إجازة أو راتب مباشرة؛ ربط عجز الموظف يظل من خلال تسوية الجرد وعنصر الراتب النظامي.
+
+Migration:
+- `20261111092313_strengthen_stocktake_post_branch_attribution_and_shortage_scope`
+- الملف: `supabase/migrations/20261111092313_strengthen_stocktake_post_branch_attribution_and_shortage_scope.sql`
+- Commit: `de2ff043e984d72bc019bc466fa4011924ca6b24`
+
+### حصر حذف التسوية اليدوية في مسودة مخزن مصرح به — 2026-11-11
+
+تم إلغاء DELETE المباشر من `erp_stocktake_screen.dart` واستبداله بـRPC:
+`erp_delete_manual_stock_adjustment_draft(uuid,uuid)`.
+
+الدالة:
+- `SECURITY INVOKER` مع `search_path=''`، وEXECUTE لـauthenticated فقط.
+- تتطلب أن يكون المستند `source='manual'` و`status='draft'`؛ لا تسمح بحذف جرد فعلي أو مستند مرحّل.
+- تتحقق من دور المستخدم ونطاق المخزن/الفرع، وتتحقق من تطابق الشركة والمخزن في كل سطر تابع قبل حذف الرأس.
+- تحذف رأس المسودة في معاملة واحدة، وتُحذف البنود التابعة عبر FK cascade. Trigger دورة حياة المستند يمنع أصلًا حذف جرد فعلي أو مستند مرحّل.
+
+Migration:
+- `20261111092621_guard_manual_stock_adjustment_draft_delete`
+- الملف: `supabase/migrations/20261111092621_guard_manual_stock_adjustment_draft_delete.sql`
+- Commit Migration: `f01de1cd2a2899f448489fd297de1ec17bddc388`
+- Commit Flutter: `abdcfe03c8dcaa81a020ca9edb1c4f67bc5ee373`
+
+التحقق البنيوي:
+- الدالة موجودة بـ`prosecdef=false`، و`search_path` فارغ، `anon_execute=false`, `authenticated_execute=true`.
+- شاشة الجرد لم تعد تحتوي DELETE مباشرًا إلى `erp_stocktakes`.
+- شاشة المخزون الرئيسية لا تحتوي كتابات مباشرة على `erp_inventory_movements` أو `erp_stock_balances`؛ تستخدم Repository إجراءَي الحركة والتحويل المعتمدين.
+- لم تُشغّل اختبارات Flutter/Dart أو Web/Android/WebView.
+
+**نسبة إغلاق حزمة نطاق المخزون والجرد والتحويلات وحذف مسودة التسوية: 100% ضمن المسارات التي تمت مراجعتها.**
+لا تمثل هذه النسبة اكتمال الربط الإجمالي للنظام كله؛ ما زال مسار Business Suite العام يحفظ السجل التشغيلي وتوابعه ثم يحفظ `erp_business_suite_records` في طلب منفصل، كما أن بقية الوحدات المباشرة تحتاج مطابقة نهائية.
