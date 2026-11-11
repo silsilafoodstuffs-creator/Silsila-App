@@ -203,3 +203,12 @@
 - Routed the customer-service «التذاكر المفتوحة» report to the open-ticket view and «زمن الاستجابة»/«معدل الاستجابة» reports to the response-metrics view.
 - Applied Supabase migration version `20261111024620` (`add_rls_service_ticket_report_views`). The repository migration file uses the exact applied version prefix.
 - No real ticket rows exist to validate business behavior; no test data was inserted. The working-hours SLA calendar, aggregate response-rate presentation, and independent satisfaction survey model remain open. This is source linkage, not a claim that those report formulas are fully closed.
+
+
+## 14. Customer-service satisfaction and ticket report integration — 2026-11-11
+
+- Added `erp_v_service_customer_satisfaction` as a `security_invoker` aggregate view over ticket satisfaction scores. It returns total tickets, rated tickets, average and median score, minimum/maximum, rating coverage, and last update timestamp.
+- The report is explicit that its population is tickets with recorded satisfaction scores; it is not a substitute for a separate survey/respondent model and does not infer satisfaction for unrated customers.
+- Routed «رضا العملاء» to this aggregate view and mapped its score/count fields into the Business Suite report row.
+- Applied migration version `20261111024700` (`add_service_customer_satisfaction_summary_view`). SELECT is granted only to authenticated after revoking PUBLIC/anon; the view runs with invoker security.
+- No ticket/survey data was inserted. Behavioral aggregation remains unverified because the live company has no ticket sample rows.
