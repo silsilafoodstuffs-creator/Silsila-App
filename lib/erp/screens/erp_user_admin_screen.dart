@@ -1297,7 +1297,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
           .map((x) => Map<String, dynamic>.from(x))
           .toList(growable: false);
       if (projects.isEmpty) {
-        if (mounted) setState(() => _error = 'لا توجد مشروعات مسجلة ونشطة/متاحة لهذه الشركة حتى الآن.');
+        if (mounted) setState(() => _error = 'لا توجد مشروعات مسجلة لهذه الشركة حتى الآن.');
         return;
       }
       final selected = <String>{
