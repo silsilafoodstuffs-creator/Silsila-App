@@ -284,31 +284,52 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    final updated=await _db.from(table).update(data).eq('id',existingId).eq('company_id',co).select('id').maybeSingle();
    if(updated==null)throw Exception('السجل التشغيلي المرتبط غير موجود داخل الشركة؛ أوقف الحفظ لمنع إنشاء سجل عام غير مرتبط.');
    id=updated['id'].toString();
-  }else if(table=='erp_crm_activities'){
-   // activity_code is protected by a company-scoped unique index; UPSERT closes the
-   // select-then-insert race when two CRM activity saves use the same code.
-   final saved=await _db.from(table).upsert(data,onConflict:'company_id,activity_code').select('id').single();
-   id=saved['id'].toString();
-  }else if(table=='erp_manufacturing_boms'){
-   // A BOM revision is identified by company + BOM code + version, not code alone.
-   // The matching unique constraint makes revision creation safe under concurrent saves.
-   final saved=await _db.from(table).upsert(data,onConflict:'company_id,bom_code,version').select('id').single();
-   id=saved['id'].toString();
   }else{
-   final uniqueColumn=switch(table){
-    'erp_asset_categories'=>'category_code','erp_fixed_assets'=>'asset_code','erp_asset_depreciation_runs'=>'run_code','erp_asset_disposals'=>'disposal_code','erp_asset_movements'=>'suite_record_code',
-    'erp_manufacturing_work_centers'=>'center_code','erp_production_orders'=>'order_code','erp_production_variances'=>'variance_code','erp_production_quality_checks'=>'inspection_code',
-    'erp_construction_projects'=>'project_code','erp_construction_material_requests'=>'request_code','erp_construction_material_movements'=>'movement_code','erp_construction_boq_lines'=>'suite_record_code','erp_construction_costs'=>'suite_record_code','erp_construction_payment_certificates'=>'certificate_number','erp_construction_site_reports'=>'report_code',
-    'erp_crm_leads'=>'lead_code','erp_service_sla_policies'=>'policy_code','erp_service_tickets'=>'ticket_code','erp_service_visits'=>'visit_code','erp_crm_activities'=>'activity_code',_=>null
+   // Use PostgreSQL's real full unique keys for race-safe create/update semantics.
+   // Tables with partial unique indexes stay on the guarded lookup path below.
+   final conflictColumns=switch(table){
+    'erp_asset_categories'=>'company_id,category_code',
+    'erp_fixed_assets'=>'company_id,asset_code',
+    'erp_asset_depreciation_runs'=>'company_id,run_code',
+    'erp_asset_disposals'=>'company_id,disposal_code',
+    'erp_manufacturing_boms'=>'company_id,bom_code,version',
+    'erp_manufacturing_work_centers'=>'company_id,center_code',
+    'erp_production_orders'=>'company_id,order_code',
+    'erp_production_variances'=>'company_id,variance_code',
+    'erp_construction_projects'=>'company_id,project_code',
+    'erp_construction_material_requests'=>'company_id,request_code',
+    'erp_construction_material_movements'=>'company_id,movement_code',
+    'erp_construction_payment_certificates'=>'company_id,certificate_number',
+    'erp_construction_site_reports'=>'company_id,report_code',
+    'erp_crm_leads'=>'company_id,lead_code',
+    'erp_service_sla_policies'=>'company_id,policy_code',
+    'erp_service_tickets'=>'company_id,ticket_code',
+    'erp_service_visits'=>'company_id,visit_code',
+    'erp_crm_activities'=>'company_id,activity_code',
+    _=>null
    };
-   final existing=uniqueColumn==null?[]:
-    table=='erp_manufacturing_boms'
-     ?await _db.from(table).select('id').eq('company_id',co).eq(uniqueColumn,code).eq('version',data['version']).limit(1)
-     :await _db.from(table).select('id').eq('company_id',co).eq(uniqueColumn,code).limit(1);
-   if(existing.isNotEmpty){id=existing.first['id'].toString();await _db.from(table).update(data).eq('id',id).eq('company_id',co);}
-   else{final inserted=await _db.from(table).insert(data).select('id').single();id=inserted['id'].toString();}
-  }
-  if(table=='erp_construction_material_requests'&&(d['materials']??'').toString().trim().isNotEmpty){
+   if(conflictColumns!=null){
+    final saved=await _db.from(table).upsert(data,onConflict:conflictColumns).select('id').single();
+    id=saved['id'].toString();
+   }else{
+    final uniqueColumn=switch(table){
+     'erp_asset_movements'=>'suite_record_code',
+     'erp_production_quality_checks'=>'inspection_code',
+     'erp_construction_boq_lines'=>'suite_record_code',
+     'erp_construction_costs'=>'suite_record_code',
+     _=>null
+    };
+    final existing=uniqueColumn==null?[]:await _db.from(table).select('id').eq('company_id',co).eq(uniqueColumn,code).limit(1);
+    if(existing.isNotEmpty){
+     id=existing.first['id'].toString();
+     final updated=await _db.from(table).update(data).eq('id',id).eq('company_id',co).select('id').maybeSingle();
+     if(updated==null)throw Exception('السجل التشغيلي الموجود لم يعد متاحًا للتعديل؛ أعد المحاولة.');
+    }else{
+     final inserted=await _db.from(table).insert(data).select('id').single();
+     id=inserted['id'].toString();
+    }
+   }
+  }  if(table=='erp_construction_material_requests'&&(d['materials']??'').toString().trim().isNotEmpty){
    await _db.from('erp_construction_material_request_lines').delete().eq('company_id',co).eq('request_id',id);
    final parsed=<Map<String,dynamic>>[];for(final line in (d['materials']??'').toString().split(RegExp(r'[\n;]+'))){final parts=line.split('|').map((x)=>x.trim()).toList();if(parts.length<2)continue;final q=_n(parts[1]);if(parts[0].isEmpty||q<=0)continue;
     final byCode=await _db.from('erp_items').select('id,item_code,item_name,base_unit').eq('company_id',co).eq('item_code',parts[0]).limit(1);
