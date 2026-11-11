@@ -1106,3 +1106,29 @@ Migration:
 
 التحقق: Trigger موجود، والدالة `SECURITY INVOKER` و`search_path` فارغ، `anon_execute=false`, `authenticated_execute=true`، ولا تظهر في تحذير SECURITY DEFINER.
 **نسبة إغلاق مزامنة نسبة تقدم المشروع: 100%.** إنشاء رأس المقايسة والسجل العام ما زال خارج معاملة واحدة مع بند المقايسة.
+
+
+### تدقيق وحماية إجراءات استبعاد الأصول والترحيل المحاسبي — 2026-11-11
+
+تمت مراجعة إجراء استبعاد الأصل القائم `erp_post_asset_disposal`. الإجراء كان ذريًا بالفعل: يقفل طلب الاستبعاد والأصل، يتحقق من تطابق القيمة الدفترية والحسابات، ينشئ القيد ثم يرحّله، ويحدّث حالة الاستبعاد والأصل إلى `disposed` داخل المعاملة نفسها. لم يُنشأ إجراء مكرر لهذا المسار.
+
+لكن الإجراءات المحاسبية الثلاثة كانت تضبط `search_path` على `public`. تم تشديدها جميعًا إلى `search_path = ''` مع إبقاء صلاحيات المستدعي كما هي:
+- `erp_post_asset_disposal(uuid,uuid)`
+- `erp_save_journal_draft(uuid,date,text,jsonb,uuid)`
+- `erp_post_journal_entry(uuid)`
+
+استمر استخدام مراجع الجداول المؤهلة بمخطط `public`، ومراجع هوية المستخدم عبر `auth.uid()`. لم تتغير منطقية قيود اليومية أو قواعد منع الترحيل غير المتوازن والفترات المالية المغلقة.
+
+Migration:
+- `20261111034733_harden_accounting_posting_search_paths`
+- الملف: `supabase/migrations/20261111034733_harden_accounting_posting_search_paths.sql`
+- Commit: `9ac94917645900673078e5efef532ba4bddfb447`
+
+التحقق البنيوي:
+- الدوال الثلاث `SECURITY INVOKER` (`prosecdef=false`).
+- `search_path` فارغ لكل واحدة.
+- `anon_execute=false` و`authenticated_execute=true` لكل واحدة.
+- إجراء استبعاد الأصل لا يظهر في تحذير Advisor لدوال SECURITY DEFINER.
+
+**نسبة إغلاق حماية مسار استبعاد الأصول والترحيل المحاسبي ضمن هذه الدوال: 100%.**
+الذرية الخاصة برأس الاستبعاد/القيد/تحديث الأصل داخل `erp_post_asset_disposal` قائمة بالفعل؛ هذا التعديل شدد مسار الأمان ولم يغيّر بيانات المستخدم.
