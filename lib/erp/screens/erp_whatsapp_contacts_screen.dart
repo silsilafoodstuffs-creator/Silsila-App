@@ -203,14 +203,13 @@ class _ErpWhatsappContactsScreenState extends State<ErpWhatsappContactsScreen> {
         });
       }
       if (unique.isEmpty) throw const FormatException('لم نعثر على أرقام صالحة. استخدم CSV أو VCF.');
-      final batchId = await _repo.createBatch(
+      await _repo.importBatchAtomically(
         companyId: _company.text.trim(),
         sourceLabel: _source.text.trim().isEmpty ? 'استيراد ملف' : _source.text.trim(),
         fileName: file.name,
         sourceType: (ext == 'vcf' || ext == 'vcard') ? 'vcard' : 'csv',
-        totalContacts: unique.length,
+        contacts: unique.values.toList(),
       );
-      await _repo.insertContacts(companyId: _company.text.trim(), batchId: batchId, contacts: unique.values.toList());
       await _load();
       if (mounted) setState(() => _message = 'تم استيراد ' + unique.length.toString() + ' سجلًا. جميع السجلات بانتظار توثيق الموافقة.');
     } catch (e) {
