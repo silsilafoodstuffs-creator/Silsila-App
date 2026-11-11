@@ -396,7 +396,7 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
   }
 
   Future<void> _loadLines()async{
-    if(_runId==null){if(mounted)setState((){_lines=[];_employeeId=null;});return;}
+    if(_runId==null){if(mounted)setState((){_lines=[];_summaries=[];_employeeId=null;});return;}
     try{
       final rows=await Future.wait([
         _db.from('erp_v_employee_payslips').select('*').eq('payroll_run_id',_runId!).eq('company_id',widget.companyId!.trim()),
@@ -680,7 +680,7 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
     return Column(children:[
       _runDropdown(),
       if(_summaries.isNotEmpty) Padding(padding:const EdgeInsets.fromLTRB(8,8,8,0),child:Card(color:const Color(0xFFF5EFFB),child:Padding(padding:const EdgeInsets.all(10),child:Wrap(spacing:18,runSpacing:8,children:[
-        Text('إجمالي المسير المعتمد • الموظفون: $runEmployeeCount',style:const TextStyle(fontWeight:FontWeight.w900,color:_salaryPurple)),
+        Text('إجمالي المسير ضمن نطاق صلاحياتك • الموظفون: $runEmployeeCount',style:const TextStyle(fontWeight:FontWeight.w900,color:_salaryPurple)),
         Text('الإجمالي: ${_fmt(runGross)} ${_currencySymbol()}'),
         Text('الاستقطاعات: ${_fmt(runDeductions)} ${_currencySymbol()}'),
         Text('الصافي: ${_fmt(runNet)} ${_currencySymbol()}',style:const TextStyle(fontWeight:FontWeight.w900,color:_salaryPurple)),
