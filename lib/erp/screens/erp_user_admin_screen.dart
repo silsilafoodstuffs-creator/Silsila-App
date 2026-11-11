@@ -1257,15 +1257,24 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       if (picked == null) return;
       final keys = (picked['allowed'] as List).cast<String>();
       final defaultKey = picked['default'] as String?;
-      await _db!.from('erp_user_branch_warehouse_access').delete().eq('company_id', _company).eq('user_id', userId);
-      for (final key in keys) {
-        final parts = key.split('|');
-        await _db!.from('erp_user_branch_warehouse_access').insert({
-          'company_id': _company, 'user_id': userId, 'branch_id': parts[0], 'warehouse_id': parts[1],
-          'is_allowed': true, 'is_default': key == defaultKey,
-        });
+      if (keys.isEmpty) {
+        if (mounted) setState(() => _error = 'يجب اختيار مخزن واحد على الأقل قبل حفظ نطاق المستخدم.');
+        return;
       }
-      if (mounted) setState(() => _message = 'تم حفظ صلاحيات الفروع والمخازن والمخزن الافتراضي.');
+      final assignments = keys.map((key) {
+        final parts = key.split('|');
+        return <String, dynamic>{
+          'branch_id': parts[0],
+          'warehouse_id': parts[1],
+          'is_default': key == defaultKey,
+        };
+      }).toList(growable: false);
+      await _db!.rpc('erp_replace_user_branch_warehouse_access', params: {
+        'p_company_id': _company,
+        'p_user_id': userId,
+        'p_assignments': assignments,
+      });
+      if (mounted) setState(() => _message = 'تم حفظ صلاحيات الفروع والمخازن والمخزن الافتراضي دفعة واحدة.');
     } catch (e) {
       if (mounted) setState(() => _error = 'تعذر حفظ صلاحيات الفروع والمخازن: $e');
     }
