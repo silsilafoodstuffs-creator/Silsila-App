@@ -316,17 +316,37 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    final saved=await _db.from(table).upsert(data,onConflict:conflictColumns).select('id').single();
    id=saved['id'].toString();
   }
-  if(table=='erp_construction_material_requests'&&(d['materials']??'').toString().trim().isNotEmpty){
-   await _db.from('erp_construction_material_request_lines').delete().eq('company_id',co).eq('request_id',id);
-   final parsed=<Map<String,dynamic>>[];for(final line in (d['materials']??'').toString().split(RegExp(r'[\n;]+'))){final parts=line.split('|').map((x)=>x.trim()).toList();if(parts.length<2)continue;final q=_n(parts[1]);if(parts[0].isEmpty||q<=0)continue;
-    final byCode=await _db.from('erp_items').select('id,item_code,item_name,base_unit').eq('company_id',co).eq('item_code',parts[0]).limit(1);
-    final items=byCode.isNotEmpty?byCode:await _db.from('erp_items').select('id,item_code,item_name,base_unit').eq('company_id',co).eq('item_name',parts[0]).limit(1);
-    if(items.isEmpty)throw Exception('الصنف '+parts[0]+' غير موجود في دليل الأصناف.');
-    final approved=parts.length>3?_n(parts[3]):0;if(approved>q)throw Exception('الكمية المعتمدة لا يمكن أن تتجاوز الكمية المطلوبة.');
-    parsed.add({'company_id':co,'request_id':id,'item_id':items.first['id'],'item_code':items.first['item_code'],'item_name':items.first['item_name'],'quantity':q,'unit':parts.length>2&&parts[2].isNotEmpty?parts[2]:items.first['base_unit'],'approved_quantity':status=='approved'?approved:0,'notes':parts.length>4?parts[4]:null});
-   }if(parsed.isNotEmpty)await _db.from('erp_construction_material_request_lines').insert(parsed);
+  if(table=='erp_construction_material_requests'){
+   final materialText=(d['materials']??'').toString().trim();
+   final parsed=<Map<String,dynamic>>[];
+   if(materialText.isNotEmpty){
+    for(final line in materialText.split(RegExp(r'[\\n;]+'))){
+     final parts=line.split('|').map((x)=>x.trim()).toList();
+     if(parts.length<2)continue;
+     final q=_n(parts[1]);if(parts[0].isEmpty||q<=0)continue;
+     final byCode=await _db.from('erp_items').select('id,item_code,item_name,base_unit').eq('company_id',co).eq('item_code',parts[0]).limit(1);
+     final items=byCode.isNotEmpty?byCode:await _db.from('erp_items').select('id,item_code,item_name,base_unit').eq('company_id',co).eq('item_name',parts[0]).limit(1);
+     if(items.isEmpty)throw Exception('الصنف '+parts[0]+' غير موجود في دليل الأصناف.');
+     final approved=parts.length>3?_n(parts[3]):0;if(approved>q)throw Exception('الكمية المعتمدة لا يمكن أن تتجاوز الكمية المطلوبة.');
+     parsed.add({
+      'item_id':items.first['id'],
+      'item_code':items.first['item_code'],
+      'item_name':items.first['item_name'],
+      'quantity':q,
+      'unit':parts.length>2&&parts[2].isNotEmpty?parts[2]:items.first['base_unit'],
+      'approved_quantity':status=='approved'?approved:0,
+      'notes':parts.length>4?parts[4]:null
+     });
+    }
+   }
+   await _db.rpc('erp_replace_construction_material_request_lines',params:{
+    'p_company_id':co,
+    'p_request_id':id,
+    'p_parent_record_id':oldRow?['id'],
+    'p_lines':parsed
+   });
   }
-  if(table=='erp_asset_depreciation_runs'&&(status=='approved'||status=='done'||status=='posted')){
+    if(table=='erp_asset_depreciation_runs'&&(status=='approved'||status=='done'||status=='posted')){
    await _db.rpc('erp_calculate_asset_depreciation',params:{'p_company_id':co,'p_run_id':id});
    if(status=='posted')await _db.rpc('erp_post_asset_depreciation_run',params:{'p_company_id':co,'p_run_id':id});
   }
