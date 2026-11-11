@@ -167,7 +167,10 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     if(yes!=true)return;
     setState(()=>saving=true);
     try{
-      await db.from('erp_stocktakes').delete().eq('id',docId!).eq('company_id',widget.companyId).eq('source','manual').eq('status','draft');
+      await db.rpc('erp_delete_manual_stock_adjustment_draft',params:{
+        'p_stocktake_id':docId,
+        'p_company_id':widget.companyId,
+      });
       docId=null;lines=[];for(final c in counts.values){c.dispose();}counts.clear();for(final c in increaseCounts.values){c.dispose();}increaseCounts.clear();for(final c in shortageCounts.values){c.dispose();}shortageCounts.clear();
       await load();
       if(mounted)setState(()=>message='تم إلغاء مسودة التسوية اليدوية.');
