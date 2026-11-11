@@ -182,3 +182,13 @@
 - Registered both views in the generic report reader and added search columns. Updated the report formula dictionary.
 - The live schema inspection confirmed all three underlying tables have RLS enabled; payroll run/line SELECT policies are role-limited, and payroll lines also inherit employee-scope restrictions. The views contain no seeded or fabricated payroll rows.
 - Migration applied as version `20261111023400`, name `create_payroll_payslip_report_views`. No application or behavioral tests were run; this is schema/source linkage only.
+
+
+## 12. Active payroll payslip screen now reads RLS-invoker views — 2026-11-11
+
+- The dedicated `ErpPayslipReportsScreen` is the actual route for both «شريط قبض موظف» and «شريط قبض مجمع»; these names do not use the generic `ErpReportCenterScreen` route.
+- Updated the dedicated screen to load employee payslip rows from `erp_v_employee_payslips` and aggregate run totals from `erp_v_payroll_payslip_summary`, rather than reading payroll lines directly for the payslip report.
+- Aggregate totals are explicitly labelled as within the current user's permitted scope because the views run with invoker security and preserve RLS/employee branch scope.
+- The views include only payroll runs in approved, posted or paid states. No payroll data was inserted or altered.
+- The generic report-center map remains at 52 keys; its documented 45/59 overlap is unchanged. The two payslip reports are handled by their dedicated screen, not counted as generic report-center source coverage.
+- The payroll view migration file is present in main and its applied database version is `20261111023400`.
