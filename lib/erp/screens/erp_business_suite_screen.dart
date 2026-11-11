@@ -376,6 +376,11 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    'customer_service:ticket',
    'customer_service:field_task',
    'customer_service:activity',
+   'fixed_assets:asset',
+   'manufacturing:production_quality_check',
+   'manufacturing:production_variance',
+   'contracting:project',
+   'contracting:site_report',
   };
   if(atomicSimpleTypes.contains(key)){
    final saved=await _db.rpc('erp_save_business_suite_simple_record_atomic',params:{
@@ -555,6 +560,11 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     'customer_service:ticket',
     'customer_service:field_task',
     'customer_service:activity',
+    'fixed_assets:asset',
+    'manufacturing:production_quality_check',
+    'manufacturing:production_variance',
+    'contracting:project',
+    'contracting:site_report',
    };
    final atomicParentSave=atomicSimpleTypes.contains('$_moduleKey:${c.type}');
    try{
