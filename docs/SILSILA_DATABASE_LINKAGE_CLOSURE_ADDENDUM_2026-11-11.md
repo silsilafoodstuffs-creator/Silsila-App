@@ -192,3 +192,14 @@
 - The views include only payroll runs in approved, posted or paid states. No payroll data was inserted or altered.
 - The generic report-center map remains at 52 keys; its documented 45/59 overlap is unchanged. The two payslip reports are handled by their dedicated screen, not counted as generic report-center source coverage.
 - The payroll view migration file is present in main and its applied database version is `20261111023400`.
+
+
+## 13. Service ticket report views — 2026-11-11
+
+- Added `erp_v_service_open_tickets` as a `security_invoker` view over `erp_service_tickets`, excluding closed/resolved/cancelled tickets and exposing age plus timestamp-based first-response/resolution overdue flags.
+- Added `erp_v_service_ticket_response_metrics` as a `security_invoker` view joining the ticket to its SLA policy. It exposes calendar response minutes and an explicit response SLA status.
+- For policies marked `business_hours_only=true`, the view deliberately returns a null SLA pass/fail result and `business_calendar_required`; it does not falsely calculate working-time SLA from wall-clock timestamps.
+- Both views revoke `PUBLIC`/`anon` access and grant SELECT to `authenticated`. Metadata check confirmed `security_invoker=true`, authenticated SELECT=true, anon SELECT=false for both views.
+- Routed the customer-service «التذاكر المفتوحة» report to the open-ticket view and «زمن الاستجابة»/«معدل الاستجابة» reports to the response-metrics view.
+- Applied Supabase migration version `20261111024620` (`add_rls_service_ticket_report_views`). The repository migration file uses the exact applied version prefix.
+- No real ticket rows exist to validate business behavior; no test data was inserted. The working-hours SLA calendar, aggregate response-rate presentation, and independent satisfaction survey model remain open. This is source linkage, not a claim that those report formulas are fully closed.
