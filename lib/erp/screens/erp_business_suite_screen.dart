@@ -281,7 +281,14 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   String id;
   if(rpcCreatedId!=null){id=rpcCreatedId;}
   else if(existingId!=null&&existingId.isNotEmpty){
-   await _db.from(table).update(data).eq('id',existingId).eq('company_id',co);id=existingId;
+   final updated=await _db.from(table).update(data).eq('id',existingId).eq('company_id',co).select('id').maybeSingle();
+   if(updated==null)throw Exception('السجل التشغيلي المرتبط غير موجود داخل الشركة؛ أوقف الحفظ لمنع إنشاء سجل عام غير مرتبط.');
+   id=updated['id'].toString();
+  }else if(table=='erp_crm_activities'){
+   // activity_code is protected by a company-scoped unique index; UPSERT closes the
+   // select-then-insert race when two CRM activity saves use the same code.
+   final saved=await _db.from(table).upsert(data,onConflict:'company_id,activity_code').select('id').single();
+   id=saved['id'].toString();
   }else{
    final uniqueColumn=switch(table){
     'erp_asset_categories'=>'category_code','erp_fixed_assets'=>'asset_code','erp_asset_depreciation_runs'=>'run_code','erp_asset_disposals'=>'disposal_code','erp_asset_movements'=>'suite_record_code',
