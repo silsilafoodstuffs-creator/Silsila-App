@@ -101,7 +101,7 @@ jobs:
         if: always() && !cancelled() && steps.build_web.outcome == 'success'
         run: |
           npm install --no-save --no-package-lock playwright source-map
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
 
       - name: Run real browser WebView tests (desktop + mobile)
         id: webview
