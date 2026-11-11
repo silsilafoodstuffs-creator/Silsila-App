@@ -809,3 +809,36 @@ Commit:
 - `f18aea0acae1fc6b1cd16f22e66b13c2fc8940aa` — database-keyed operational upserts.
 
 هذا التحسين يعالج التزامن على مستوى السجل التشغيلي الرئيسي، لكنه **لا يحوّل** بعد السجل العام في `erp_business_suite_records` وكل التفاصيل متعددة الأسطر والحركات التابعة إلى معاملة واحدة. لا يُعلن اكتمال الحفظ الذري الكامل قبل نقل هذه العمليات إلى RPC متخصصة واختبار التراجع الكامل عند فشل أي خطوة.
+
+
+### توحيد مفاتيح upsert لجميع سجلات Business Suite — 2026-11-11
+
+تم استبدال مسارات البحث ثم الإدخال في إنشاء السجل التشغيلي باستخدام `upsert` على المفاتيح الفريدة المعتمدة فعليًا في قاعدة البيانات لكل الأنواع الـ22 الموجودة في هذا المسار.
+
+**توحيد فهارس أربعة جداول كانت جزئية:**
+- `erp_asset_movements(company_id, suite_record_code)`
+- `erp_production_quality_checks(company_id, inspection_code)`
+- `erp_construction_boq_lines(company_id, suite_record_code)`
+- `erp_construction_costs(company_id, suite_record_code)`
+
+تم استبدال الفهارس الجزئية بفهرس unique كامل على نفس الأعمدة. جداول هذه الأنواع الأربعة كانت خالية وقت التنفيذ، لذلك لم تتطلب معالجة سجلات قائمة. وتسمح قيود UNIQUE في PostgreSQL بتكرار NULL افتراضيًا، فاحتُفظ بدلالة السجلات التي لا تحمل كودًا حتى الآن.
+
+الترحيل المطبق والمسجل:
+- `20261111032722_normalize_business_suite_code_unique_indexes`
+- الملف: `supabase/migrations/20261111032722_normalize_business_suite_code_unique_indexes.sql`
+
+**التحقق البنيوي:**
+- استعلام metadata على 22 نوع سجل أعاد `full_unique_conflict_target = true` لكل مفتاح مستخدم في خريطة Flutter.
+- الفهارس الأربعة الجديدة ظاهرة كفهارس unique كاملة، والقديمة الجزئية لم تعد موجودة.
+- فحص Performance Advisor لم يُظهر تنبيه `duplicate_index` بعد تصحيح فهرس CRM وإزالة التكرار.
+- تم تنظيف التنسيق والتعليقات في مسار الحفظ وتسجيله في commit `072c678e66236f42bb088a10a379c9636527c863`.
+
+Commits أساسية لهذه الحزمة:
+- `a37d3bc07309d0dc955362835d989d8f2ec1882d` — migration index normalization.
+- `42cdb0bd999679eb64c430cc41e30ec4b956b5ba` — Flutter upsert map for all 22 record types.
+- `072c678e66236f42bb088a10a379c9636527c863` — cleanup and verified-key comment.
+
+**نسبة إغلاق حزمة مطابقة مفاتيح السجلات التشغيلية: 100% (22/22)**. هذه نسبة حزمة المفاتيح والتزامن على مستوى السجل التشغيلي الرئيسي فقط.
+
+**لم تُغلق ذرية دورة الحفظ كاملة بعد:** ما زالت تفاصيل طلب المواد وبنود المقايسة والمستخلص وBOM، وحركات المخزون والتكاليف المحسوبة وأحداث التذكرة، ثم سجل `erp_business_suite_records` العام، تُعالج في أكثر من طلب من Flutter. يجب تجميع كل دورة من هذه العمليات في RPC متخصصة واحدة بحيث تتراجع جميع الكتابات معًا عند فشل أي خطوة. ولا تعتبر نسبة 22/22 نسبة المرحلة الثانية الكلية.
+لم تُشغّل اختبارات Flutter أو Dart أو Web أو Android أو WebView في هذه الدفعة؛ الاختبار الشامل ما زال مؤجلًا.
