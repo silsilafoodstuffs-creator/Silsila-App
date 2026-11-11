@@ -1,0 +1,495 @@
+# مصالحة ملفات migrations في GitHub مع Migration History الفعلي — سلسلة
+التاريخ: 2026-11-11
+المستودع: `silsilafoodstuffs-creator/Silsila-App`
+الفرع: `main`
+مشروع Supabase: `teitsopmhruczplwlwgn`
+
+## 1. النتيجة العددية
+
+| المؤشر | العدد |
+|---|---:|
+| ملفات `supabase/migrations` على main | 335 |
+| إصدارات Migration History المطبقة في Supabase | 522 |
+| تطابق اسم migration بعد إزالة prefix التاريخ | 230 |
+| migrations مطبقة أسماؤها غير موجودة في مجلد GitHub الحالي | 292 |
+| ملفات GitHub أسماؤها غير موجودة في Migration History | 105 |
+| ملفات 14 رقمًا تطابق إصدار Supabase حرفيًا | 101 |
+| ملفات 14 رقمًا اسمها موجود في التاريخ لكن بإصدار مختلف | 42 |
+| ملفات legacy ذات prefix من 8 أرقام | 0 |
+
+**تنبيه منهجي:** تطابق الاسم لا يثبت تطابق محتوى SQL. وتطابق الإصدار لا يثبت checksum ما لم نقارن محتوى الملف بما تم تطبيقه. هذه مقارنة أسماء/إصدارات أولية وليست إثباتًا نهائيًا للـschema drift.
+
+## 2. أحدث migration
+- أحدث إصدار في Supabase: `20261110234859` — `set_egypt_geographic_code_20`.
+- الملف نفسه موجود على main: `supabase/migrations/20261110234859_set_egypt_geographic_code_20.sql`.
+- هذه نقطة تطابق إيجابية مؤكدة للإصدار الأحدث فقط، ولا تحل فجوة التاريخ الكامل.
+
+## 3. migrations مطبقة في Supabase ولا يوجد ملف باسمها في main
+عددها **292**. هذه قائمة أسماء/إصدارات من سجل Supabase؛ قد تكون ملفات قديمة أزيلت أو أدمجت في baseline/ترحيلات لاحقة، لكن لا يجوز افتراض ذلك قبل مطابقة المحتوى:
+
+- `20261018192545` — `baseline_compatibility_before_01_core_schema`
+- `20261018192602` — `01_core_schema`
+- `20261018192644` — `02_activity_classifications_compatible`
+- `20261018192657` — `03_secure_checkout_fixed`
+- `20261018192708` — `04_service_compatibility_fixed`
+- `20261018192717` — `05_storage_policies`
+- `20261018192726` — `06_admin_account_approval`
+- `20261018192734` — `07_security_role_hardening`
+- `20261018192804` — `supplier_details_public_view_compatibility`
+- `20261018192806` — `08_supplier_data_privacy`
+- `20261018192815` — `09_approved_marketplace_policies`
+- `20261018192825` — `10_admin_account_queue`
+- `20261018192834` — `11_approved_supplier_details_view`
+- `20261018192843` — `12_wallet_order_payments`
+- `20261018192854` — `13_wallet_order_refunds`
+- `20261018192907` — `14_atomic_multi_supplier_checkout`
+- `20261018192918` — `15_supplier_favorites`
+- `20261018192927` — `16_admin_wallet_topups`
+- `20261018192936` — `17_order_notifications`
+- `20261018192946` — `18_shipping_operations`
+- `20261018192954` — `19_admin_support_tickets`
+- `20261018193003` — `20_profile_privilege_hardening`
+- `20261018193023` — `21_shipping_delivery_creation_hardening`
+- `20261018193038` — `22_atomic_default_address`
+- `20261018193051` — `23_atomic_default_address_save`
+- `20261018193257` — `checkout_product_uuid_compatibility`
+- `20261018193339` — `address_rpc_bigint_compatibility`
+- `20261018193432` — `security_definer_rpc_grants_hardening`
+- `20261018194316` — `24_foreign_key_indexes`
+- `20261018195712` — `25_trigger_function_rpc_hardening`
+- `20261018215052` — `remove_duplicate_performance_indexes`
+- `20261018215126` — `remove_duplicate_participant_read_policies`
+- `20261019090624` — `erp_core_schema_20261019`
+- `20261019091131` — `erp_company_profile_membership_repair`
+- `20261019091411` — `erp_base_master_data_rls_fix`
+- `20261019091853` — `erp_company_membership_owner_guard`
+- `20261019092552` — `erp_updated_at_search_path_hardening`
+- `20261019224125` — `erp_app_management_schema`
+- `20261019232214` — `allow_text_only_stories_20261020`
+- `20261020031037` — `erp_workspace_settings_records_security`
+- `20261020031241` — `erp_performance_foreign_key_indexes`
+- `20261020031354` — `restrict_public_profile_table_grants`
+- `20261020095155` — `optimize_rls_auth_uid_initplan`
+- `20261020095229` — `remove_duplicate_owner_rls_policies`
+- `20261020100007` — `fix_email_signup_profile_phone`
+- `20261020100102` — `revoke_direct_profile_insert`
+- `20261020100126` — `remove_profile_insert_grants`
+- `20261020104110` — `erp_master_data_schema_20261020`
+- `20261020104117` — `erp_price_list_workflow_20261020`
+- `20261020104124` — `erp_operations_schema_20261020`
+- `20261020104154` — `erp_inventory_workflow_20261020`
+- `20261020104200` — `erp_operations_workflow_20261020`
+- `20261020104208` — `erp_journal_workflow_20261020`
+- `20261020104215` — `erp_operational_accounting_20261020`
+- `20261020104221` — `erp_cost_centers_schema_20261020`
+- `20261020104225` — `erp_user_permissions_20261020`
+- `20261020104241` — `erp_company_logo_storage_20261020`
+- `20261020104245` — `erp_company_member_profiles_20261020`
+- `20261020104249` — `erp_cost_centers_standard_template_20261020`
+- `20261020104305` — `erp_price_resolution_20261020`
+- `20261020105424` — `erp_operational_rls_and_indexes_hardening`
+- `20261020105800` — `erp_fk_indexes_batch_one`
+- `20261020105806` — `erp_fk_indexes_batch_two`
+- `20261020105817` — `erp_fk_indexes_batch_three_a`
+- `20261020105821` — `erp_fk_indexes_batch_three_b`
+- `20261020164353` — `erp_operational_units_reservations`
+- `20261020164416` — `erp_reservation_trigger_rpc_hardening`
+- `20261020181906` — `erp_party_warehouse_permissions`
+- `20261020185852` — `repair_sales_invoice_customer_and_rep_schema`
+- `20261020193044` — `erp_sales_invoice_campaigns_and_customer_shortages`
+- `20261020200320` — `erp_sales_campaign_targeting_and_quantities`
+- `20261020200452` — `erp_campaign_line_quantity_tracking`
+- `20261020200507` — `erp_campaign_line_linking_rpc`
+- `20261020200525` — `erp_party_geographic_classification`
+- `20261020200740` — `erp_campaign_line_target_validation`
+- `20261020201007` — `erp_sales_line_shortage_tracking`
+- `20261020203823` — `restore_erp_account_tree_metrics`
+- `20261020203826` — `install_standard_chart_of_accounts_seed`
+- `20261020205237` — `erp_sales_fulfillment_and_sources`
+- `20261020205400` — `erp_sales_fulfillment_global_manual_number`
+- `20261020205501` — `drop_redundant_fulfillment_number_constraint`
+- `20261020223602` — `erp_user_admin_and_permission_templates`
+- `20261020223818` — `secure_default_user_type_seed_trigger`
+- `20261020223910` — `public_login_user_types_read_policy`
+- `20261020224141` — `sync_company_members_to_erp_users`
+- `20261020224343` — `order_default_user_type_codes`
+- `20261020225103` — `enforce_hidden_internal_user_types`
+- `20261021021044` — `erp_user_branch_warehouse_access`
+- `20261021021052` — `erp_user_password_hash_storage`
+- `20261021022746` — `erp_user_classifications`
+- `20261021023036` — `customer_directory_public_view`
+- `20261021023453` — `erp_item_groups_category_fields`
+- `20261021040127` — `erp_trigger_function_execute_hardening_20261021`
+- `20261021040337` — `erp_rls_auth_uid_initplan_optimization_20261021`
+- `20261021040403` — `erp_foreign_key_index_optimization_20261021`
+- `20261021040440` — `read_only_marketplace_directory_views_20261021`
+- `20261021040858` — `erp_seed_inner_item_units_20261021`
+- `20261021041206` — `erp_activity_types_english_names_20261021`
+- `20261021041339` — `erp_item_group_english_names_20261021`
+- `20261021042317` — `erp_rls_authenticated_role_only_20261021`
+- `20261021104650` — `erp_currencies_master_20261021`
+- `20261021104943` — `erp_hr_schema_and_company_policies_20261021`
+- `20261021105047` — `erp_hr_directory_and_leave_decision_20261021`
+- `20261021105101` — `erp_einvoice_storage_role_policies_20261021`
+- `20261021105108` — `erp_ledger_reports_view_20261021`
+- `20261021105204` — `erp_sales_goals_commissions_schema_20261021`
+- `20261021105212` — `erp_delegate_item_assignments_20261021`
+- `20261021105403` — `erp_einvoice_policy_no_overlapping_select_20261021`
+- `20261021105448` — `erp_sales_representative_role_policies_20261021`
+- `20261021105617` — `erp_hr_sales_fk_indexes_20261021`
+- `20261021105714` — `erp_sales_commission_policy_separation_20261021`
+- `20261021105830` — `erp_rbac_policy_separation_20261021`
+- `20261021110023` — `erp_master_data_integrity_20261021`
+- `20261021110027` — `erp_fiscal_period_workflow_20261021`
+- `20261021110126` — `erp_cash_vouchers_schema_fixed_20261021`
+- `20261021110140` — `erp_cash_voucher_workflow_20261021`
+- `20261021110144` — `erp_payroll_workflow_20261021`
+- `20261021110148` — `erp_journal_reversal_20261021`
+- `20261021110151` — `erp_movement_audit_20261021`
+- `20261021110207` — `erp_cash_voucher_member_policies_20261021`
+- `20261021110325` — `erp_hr_attendance_devices_rules_policies_20261021`
+- `20261021110342` — `erp_hr_attendance_link_integrity_20261021`
+- `20261021175024` — `repair_public_leads_staging_and_import_rpc`
+- `20261021175917` — `repair_missing_settings_and_executive_metrics_v2`
+- `20261021180905` — `amazon_eg_catalog_smoke_test`
+- `20261021200641` — `erp_user_codes_prefix_dash`
+- `20261022134831` — `erp_item_name_en_and_pricing_area`
+- `20261022192415` — `selective_clear_scoped_fix`
+- `20261022192533` — `selective_clear_screen_scopes_final`
+- `20261022192557` — `selective_clear_final_screen_scope`
+- `20261022220517` — `erp_canonical_categories_units_geography_branches_warehouses`
+- `20261022220553` — `erp_category_catalog_fields_and_images`
+- `20261022220708` — `seed_unit_catalog_from_existing_base_units`
+- `20261022220830` — `enforce_category_tree_and_item_links`
+- `20261022221050` — `seed_egypt_governorates_for_company_geography`
+- `20261022221212` — `switch_erp_reports_to_canonical_categories`
+- `20261022221242` — `finish_movement_audit_category_migration`
+- `20261022221316` — `guard_warehouse_parent_hierarchy`
+- `20261022224405` — `geographic_data_metadata_and_images`
+- `20261022224443` — `seed_egypt_governorate_districts`
+- `20261022224541` — `seed_egypt_areas_batch_001`
+- `20261022224623` — `seed_egypt_areas_batch_002`
+- `20261022224646` — `seed_egypt_areas_batch_003`
+- `20261022224711` — `seed_egypt_areas_batch_004`
+- `20261022224734` — `seed_egypt_areas_batch_005`
+- `20261022224758` — `seed_egypt_areas_batch_006`
+- `20261022224821` — `seed_egypt_areas_batch_007`
+- `20261022224845` — `seed_egypt_areas_batch_008`
+- `20261022224910` — `seed_egypt_areas_batch_009`
+- `20261022224935` — `seed_egypt_areas_batch_010`
+- `20261022224959` — `seed_egypt_areas_batch_011`
+- `20261022225025` — `seed_egypt_areas_batch_012`
+- `20261022225050` — `seed_egypt_areas_batch_013`
+- `20261022225135` — `seed_egypt_areas_batch_014a`
+- `20261022225151` — `seed_egypt_areas_batch_014b`
+- `20261022225209` — `seed_egypt_areas_batch_015`
+- `20261022225228` — `seed_egypt_areas_batch_016`
+- `20261022225244` — `seed_egypt_areas_batch_017`
+- `20261022225301` — `seed_egypt_areas_batch_018`
+- `20261022225316` — `seed_egypt_areas_batch_019`
+- `20261022225335` — `seed_egypt_areas_batch_020`
+- `20261022225352` — `seed_egypt_areas_batch_021`
+- `20261022225410` — `seed_egypt_areas_batch_022`
+- `20261022225427` — `seed_egypt_areas_batch_023`
+- `20261022225443` — `seed_egypt_areas_batch_024`
+- `20261022225514` — `seed_egypt_areas_batch_025a`
+- `20261022225526` — `seed_egypt_areas_batch_025b`
+- `20261022225537` — `seed_egypt_areas_batch_025c`
+- `20261022225549` — `seed_egypt_areas_batch_025d`
+- `20261022225600` — `seed_egypt_areas_batch_025e`
+- `20261022225613` — `seed_egypt_areas_batch_026`
+- `20261022225741` — `geographic_governorate_logo_sources`
+- `20261023002414` — `seed_known_cairo_localities`
+- `20261023003025` — `correct_misparented_local_geographic_record`
+- `20261023003358` — `seed_heliopolis_korba_locality`
+- `20261023003402` — `seed_more_cairo_localities_verified_parent`
+- `20261023003613` — `seed_more_cairo_localities_for_existing_districts`
+- `20261023003809` — `populate_governorate_logo_source_urls`
+- `20261025142622` — `fix_invoice_audit_deleted_document_handling`
+- `20261025161437` — `erp_employee_national_id_policy`
+- `20261025204435` — `erp_branch_contact_map_fields_20261025`
+- `20261025235024` — `erp_hr_master_data_20261026`
+- `20261025235055` — `erp_hr_master_data_permissions_20261026`
+- `20261026000046` — `erp_sales_document_header_metadata_20261026`
+- `20261026000441` — `erp_sales_document_source_channels_20261026`
+- `20261028005030` — `activity_scoped_ads_and_intro_media`
+- `20261028095139` — `seed_complete_egyptian_activity_category_trees_v2`
+- `20261028095338` — `expand_food_categories_and_restore_item_assignments_v2`
+- `20261028095506` — `secure_category_rebuild_archives`
+- `20261029014235` — `scale_foreign_key_indexes_20261029`
+- `20261029014339` — `optimize_erp_rls_initplans_20261029`
+- `20261029014413` — `scale_query_indexes_20261029`
+- `20261029014943` — `remove_duplicate_workspace_index_20261029`
+- `20261029133219` — `erp_cashbox_bilingual_names_20261029`
+- `20261029133401` — `erp_users_cashbox_assignment_20261029`
+- `20261029133512` — `seed_purchasing_sections_20261029`
+- `20261029133536` — `seed_requested_staff_sections_20261029`
+- `20261029133559` — `seed_staff_jobs_purchase_sales_20261029`
+- `20261029133606` — `seed_staff_jobs_sales_finance_20261029`
+- `20261029133611` — `seed_staff_jobs_finance_warehouse_20261029`
+- `20261029133624` — `seed_main_and_branch_cashboxes_20261029`
+- `20261029233317` — `hr_work_units_employee_documents_20261030`
+- `20261029233441` — `hr_employee_document_manager_permissions_20261030`
+- `20261029233448` — `hr_employee_document_company_integrity_20261030`
+- `20261029233533` — `backfill_employee_work_units_20261030`
+- `20261031232710` — `hide_existing_repeated_factor_one_units`
+- `20261031232830` — `reject_hidden_item_units_in_document_rpc`
+- `20261031232958` — `allow_hidden_implicit_middle_unit`
+- `20261031233044` — `guard_price_list_unit_selection`
+- `20261031233300` — `refresh_unit_selectability_after_rename`
+- `20261101003512` — `seed_default_payroll_elements_catalog`
+- `20261101010731` — `protect_stocktake_lifecycle`
+- `20261101013002` — `seed_default_stocktake_unit`
+- `20261101013701` — `index_sales_representative_foreign_key`
+- `20261101013758` — `link_stocktake_shortage_to_payroll`
+- `20261101013947` — `manual_stock_adjustment_workflow_v2`
+- `20261101015112` — `apply_stocktake_shortages_to_payroll`
+- `20261101020252` — `stocktake_payroll_fk_indexes`
+- `20261101020420` — `stocktake_source_immutable`
+- `20261101180216` — `harden_payment_methods_table_grants`
+- `20261102023557` — `restrict_profile_directory_scope_20261102`
+- `20261102024111` — `add_safe_public_story_profiles_20261102`
+- `20261102061637` — `erp_cash_order_auto_approval_and_checkbook_count_integrity_20261102`
+- `20261102061737` — `erp_cash_movement_to_voucher_atomic_link_20261102`
+- `20261102061848` — `erp_cash_order_approval_and_conversion_workflow_20261102`
+- `20261102061937` — `erp_cheque_edit_before_settlement_permissions_20261102`
+- `20261102062128` — `erp_cash_movement_endpoint_validation_20261102`
+- `20261102062635` — `erp_financial_role_guard_and_sales_order_policy_20261102`
+- `20261102062943` — `erp_checkbook_register_seed_positive_placeholder_amount_20261102`
+- `20261102225638` — `business_workspace_foundation`
+- `20261102225651` — `business_workspace_permission_scopes`
+- `20261102225905` — `business_workspace_tenant_integrity_and_document_permissions`
+- `20261102225921` — `business_workspace_document_line_policy_fix`
+- `20261102230047` — `business_workspace_secure_create_rpc`
+- `20261102230239` — `business_workspace_profile_link`
+- `20261102230311` — `business_workspace_member_management`
+- `20261102230422` — `business_workspace_member_owner_guard`
+- `20261103093702` — `business_workspace_operating_policies`
+- `20261103094450` — `business_workspace_document_location_integrity`
+- `20261103095104` — `business_workspace_self_membership_read`
+- `20261103095304` — `business_workspace_reports_read_access`
+- `20261103095443` — `business_workspace_metrics`
+- `20261103095505` — `business_workspace_metrics_location_guard`
+- `20261103095827` — `business_workspace_metrics_invoker_security`
+- `20261103100007` — `business_workspace_stock_concurrency_guard`
+- `20261103181445` — `business_workspace_counterparties_and_profile_phone_preview`
+- `20261103181452` — `secure_workspace_profile_phone_preview`
+- `20261103181729` — `move_profile_phone_lookup_definer_to_private_schema`
+- `20261104154709` — `central_code_generation`
+- `20261104155101` — `central_code_generation_expansion`
+- `20261104155321` — `central_code_generation_security_hardening`
+- `20261104155353` — `central_code_generation_invoker_price_list`
+- `20261104155844` — `central_code_salary_element`
+- `20261104160535` — `central_code_remove_legacy_identity_triggers`
+- `20261104161434` — `central_code_additional_entity_types`
+- `20261104161644` — `central_code_cash_movement_orders`
+- `20261104161814` — `central_code_remove_generated_cash_numbers`
+- `20261104161957` — `central_code_configure_cash_movement_order_numbers`
+- `20261104162249` — `central_code_display_ids`
+- `20261104162622` — `central_code_preview_user_type_template`
+- `20261104162808` — `central_code_backfill_identity_display_prefixes`
+- `20261104173527` — `central_code_unique_prefixes`
+- `20261104173603` — `central_code_unique_default_prefixes`
+- `20261104174148` — `central_code_checkbooks_and_business_workspaces`
+- `20261104174419` — `workspace_document_auto_code_rpc`
+- `20261104174802` — `workspace_stock_document_auto_codes`
+- `20261105132333` — `20261105153000_configurable_item_code_segments`
+- `20261105164618` — `regenerate_customer_code_when_area_changes`
+- `20261105165455` — `business_suite_records`
+- `20261105165603` — `enterprise_module_records`
+- `20261105165734` — `remove_unused_business_suite_records`
+- `20261105165816` — `remove_unused_enterprise_module_records`
+- `20261105235917` — `erp_four_suites_operational_schema_20261106`
+- `20261106000317` — `erp_inventory_production_issue_type_20261106`
+- `20261106000354` — `erp_atomic_production_stock_movements_20261106`
+- `20261106000433` — `erp_assets_disposals_and_construction_site_reports_20261106`
+- `20261106000706` — `erp_asset_depreciation_calculation_workflow_20261106`
+- `20261106001025` — `erp_post_asset_depreciation_journal_20261106`
+- `20261106001117` — `erp_production_variances_20261106`
+- `20261106001150` — `erp_production_quality_inspection_codes_20261106`
+- `20261106001310` — `erp_construction_certified_and_paid_project_totals_20261106`
+- `20261106001349` — `erp_asset_disposal_journal_posting_20261106`
+- `20261106001421` — `erp_production_actual_hours_20261106`
+- `20261106001905` — `erp_production_stock_ledger_rpc_20261106`
+- `20261106001937` — `erp_four_suite_idempotent_document_codes_20261106`
+- `20261106002027` — `erp_production_stock_date_boundary_20261106`
+- `20261106002127` — `erp_certificate_unique_boq_lines_20261106`
+- `20261106002325` — `erp_service_ticket_escalation_deadline_20261106`
+- `20261106002759` — `erp_construction_material_requests_and_stock_issues_20261106`
+- `20261106002847` — `erp_construction_material_movement_idempotency_20261106`
+- `20261106003041` — `erp_construction_material_return_costing_20261106`
+- `20261106003424` — `erp_asset_units_of_production_depreciation_20261106`
+
+## 4. ملفات migrations في main غير موجودة في Migration History بالاسم
+عددها **105**. قد تكون تغييرات غير مطبقة أو أسماء قديمة/بديلة أو ملفات مدمجة؛ لا تُطبق تلقائيًا:
+
+- `20261020_allow_text_only_stories.sql`
+- `20261021_erp_activity_types_english_names.sql`
+- `20261021_erp_cash_voucher_member_policies.sql`
+- `20261021_erp_cash_voucher_workflow.sql`
+- `20261021_erp_cash_vouchers_schema.sql`
+- `20261021_erp_currencies_master.sql`
+- `20261021_erp_delegate_item_assignments.sql`
+- `20261021_erp_einvoice_storage_role_policies.sql`
+- `20261021_erp_fiscal_period_workflow.sql`
+- `20261021_erp_foreign_key_index_optimization.sql`
+- `20261021_erp_hr_attendance_link_integrity.sql`
+- `20261021_erp_hr_attendance_schema.sql`
+- `20261021_erp_hr_directory_and_leave_decision.sql`
+- `20261021_erp_hr_sales_fk_indexes.sql`
+- `20261021_erp_hr_schema_and_company_policies.sql`
+- `20261021_erp_item_group_english_names.sql`
+- `20261021_erp_journal_reversal.sql`
+- `20261021_erp_ledger_reports_view.sql`
+- `20261021_erp_master_data_integrity.sql`
+- `20261021_erp_movement_audit.sql`
+- `20261021_erp_payroll_workflow.sql`
+- `20261021_erp_rbac_policy_separation.sql`
+- `20261021_erp_rls_auth_uid_initplan_optimization.sql`
+- `20261021_erp_rls_authenticated_role_only.sql`
+- `20261021_erp_sales_commission_policy_separation.sql`
+- `20261021_erp_sales_goals_commissions_schema.sql`
+- `20261021_erp_seed_inner_item_units.sql`
+- `20261021_erp_trigger_function_execute_hardening.sql`
+- `20261021_read_only_marketplace_directory_views.sql`
+- `20261023_erp_canonical_master_data.sql`
+- `20261023_erp_reports_use_categories.sql`
+- `20261023_geographic_data_metadata_and_logos.sql`
+- `20261025_erp_branch_contact_map_fields.sql`
+- `20261025_erp_program_policies_enforcement_and_invoice_audit.sql`
+- `20261025_erp_z_employee_national_id_policy.sql`
+- `20261025_rename_erp_navigation_modules.sql`
+- `20261025_template_quick_access.sql`
+- `20261026_erp_hr_master_data.sql`
+- `20261026_erp_hr_master_data_permissions.sql`
+- `20261026_erp_sales_document_header_metadata.sql`
+- `20261026_erp_sales_document_source_channels.sql`
+- `20261028_add_books_publications_activity_type.sql`
+- `20261028_b_activity_scoped_ads_and_intro_media.sql`
+- `20261028_seed_egyptian_activity_category_catalog.sql`
+- `20261028_sync_activity_catalog_to_erp.sql`
+- `20261029020000_scale_foreign_key_indexes.sql`
+- `20261029021000_optimize_erp_rls_initplans.sql`
+- `20261029022000_scale_query_indexes.sql`
+- `20261029_high_volume_master_data_indexes.sql`
+- `20261029_high_volume_query_indexes.sql`
+- `20261030000002_hr_work_units_employee_documents.sql`
+- `20261030000003_hr_employee_document_manager_permissions.sql`
+- `20261030000004_hr_employee_document_company_integrity.sql`
+- `20261030000005_backfill_employee_work_units.sql`
+- `20261101_enforce_item_warehouse_unit_ownership.sql`
+- `20261101_erp_payment_methods_table_grants.sql`
+- `20261101_manual_stock_adjustment_workflow.sql`
+- `20261101_preserve_operational_line_unit_snapshot.sql`
+- `20261101_protect_system_salary_elements.sql`
+- `20261101_restrict_program_policy_actor_lookup.sql`
+- `20261101_stocktake_payroll_integration.sql`
+- `20261101_unit_selectability_and_price_list_guard.sql`
+- `20261102061637_erp_cash_order_auto_approval_and_checkbook_count_integrity.sql`
+- `20261102061737_erp_cash_movement_to_voucher_atomic_link.sql`
+- `20261102061848_erp_cash_order_approval_and_conversion_workflow.sql`
+- `20261102061937_erp_cheque_edit_before_settlement_permissions.sql`
+- `20261102062128_erp_cash_movement_endpoint_validation.sql`
+- `20261102062635_erp_financial_role_guard_and_sales_order_policy.sql`
+- `20261102062943_erp_checkbook_register_seed_positive_placeholder_amount.sql`
+- `20261102064000_allow_cheque_orders_without_sales_order_link.sql`
+- `20261102_add_safe_public_story_profiles.sql`
+- `20261102_restrict_profile_directory_scope.sql`
+- `20261103182000_business_workspace_counterparties_and_phone_preview.sql`
+- `20261104194200_hr_dashboard_invoker_trigger_and_template_index.sql`
+- `20261105132333_configurable_item_code_segments.sql`
+- `20261106020000_fix_customer_geo_code_preview.sql`
+- `20261106090000_erp_four_suites_operational_schema.sql`
+- `20261106090100_erp_asset_disposals_and_construction_site_reports.sql`
+- `20261106090200_erp_inventory_production_issue_type.sql`
+- `20261106090300_erp_atomic_production_stock_movements.sql`
+- `20261106090400_erp_asset_depreciation_calculation_workflow.sql`
+- `20261106090500_erp_post_asset_depreciation_journal.sql`
+- `20261106090600_erp_asset_disposal_journal_posting.sql`
+- `20261106090700_erp_construction_certified_and_paid_totals.sql`
+- `20261106090800_erp_production_variances.sql`
+- `20261106090900_erp_production_quality_inspection_codes.sql`
+- `20261106091000_erp_production_actual_hours.sql`
+- `20261106091100_erp_production_stock_ledger_rpc.sql`
+- `20261106091200_erp_four_suite_idempotent_document_codes.sql`
+- `20261106091300_erp_production_stock_date_boundary.sql`
+- `20261106091400_erp_certificate_unique_boq_lines.sql`
+- `20261106091500_erp_service_ticket_escalation_deadline.sql`
+- `20261106091600_erp_construction_material_requests_and_stock_issues.sql`
+- `20261106091700_erp_construction_material_movement_idempotency.sql`
+- `20261106091800_erp_construction_material_return_costing.sql`
+- `20261106091900_erp_asset_units_of_production_depreciation.sql`
+- `20261107_allow_blank_cheques_without_placeholder_amount.sql`
+- `20261107_remove_demo_test_seed_records.sql`
+- `20261107_remove_test_financial_opening_data.sql`
+- `20261107_remove_unverified_amazon_reference_items.sql`
+- `20261107_remove_unverified_open_food_facts_seed_items.sql`
+- `20261107_remove_unverified_seed_sales_representatives.sql`
+- `20261108120000_consolidate_visual_identity_into_program_policies.sql`
+- `20261109144500_normalize_item_code_prefix.sql`
+- `20261109150000_add_geographic_program_policies.sql`
+
+## 5. ملفات 14-digit التي تطابق الاسم لكن إصدارها مختلف
+عددها **42**. يلزم مقارنة محتوى كل ملف مع تعريف migration المطبق لتحديد هل هو إعادة تسمية أم تكرار/نسخة معدلة:
+
+- `20261023010000_erp_users_parent_user_id.sql` — اسم DB: `erp_users_parent_user_id`, إصدار DB: `20261023010254`
+- `20261025120000_erp_item_dimensions_for_image_collector.sql` — اسم DB: `erp_item_dimensions_for_image_collector`, إصدار DB: `20261025011038`
+- `20261030000006_hr_salary_elements_and_payslip_values.sql` — اسم DB: `hr_salary_elements_and_payslip_values`, إصدار DB: `20261030025555`
+- `20261102062000_market_story_expiry_read_policies.sql` — اسم DB: `market_story_expiry_read_policies`, إصدار DB: `20261102062309`
+- `20261102062500_erp_policy_read_for_active_company_users.sql` — اسم DB: `erp_policy_read_for_active_company_users`, إصدار DB: `20261102062733`
+- `20261102063000_consolidate_erp_user_policy_read_policies.sql` — اسم DB: `consolidate_erp_user_policy_read_policies`, إصدار DB: `20261102062824`
+- `20261102064500_preserve_owner_market_and_story_history.sql` — اسم DB: `preserve_owner_market_and_story_history`, إصدار DB: `20261102063200`
+- `20261102090000_trader_market_requests_and_story_archive.sql` — اسم DB: `trader_market_requests_and_story_archive`, إصدار DB: `20261102051704`
+- `20261102091000_trader_market_admin_and_owner_contact.sql` — اسم DB: `trader_market_admin_and_owner_contact`, إصدار DB: `20261102051911`
+- `20261102092000_allow_configurable_story_duration_units.sql` — اسم DB: `allow_configurable_story_duration_units`, إصدار DB: `20261102053917`
+- `20261103122500_business_workspace_location_deny_only_rules_security_fix.sql` — اسم DB: `business_workspace_location_deny_only_rules_security_fix`, إصدار DB: `20261103122929`
+- `20261103123200_business_workspace_audit_write_permission.sql` — اسم DB: `business_workspace_audit_write_permission`, إصدار DB: `20261103123249`
+- `20261104130000_erp_crm_facebook_group_leads.sql` — اسم DB: `erp_crm_facebook_group_leads`, إصدار DB: `20261104104102`
+- `20261104170000_erp_crm_facebook_atomic_import.sql` — اسم DB: `erp_crm_facebook_atomic_import`, إصدار DB: `20261104155549`
+- `20261104173000_erp_crm_facebook_import_url_regex_fix.sql` — اسم DB: `erp_crm_facebook_import_url_regex_fix`, إصدار DB: `20261104155627`
+- `20261104193500_hr_dashboard_manager_record_entry_permissions.sql` — اسم DB: `hr_dashboard_manager_record_entry_permissions`, إصدار DB: `20261104173601`
+- `20261104194500_hr_dashboard_standardize_employee_movement_status.sql` — اسم DB: `hr_dashboard_standardize_employee_movement_status`, إصدار DB: `20261104174000`
+- `20261104194600_hr_dashboard_revoke_direct_trigger_function_execution.sql` — اسم DB: `hr_dashboard_revoke_direct_trigger_function_execution`, إصدار DB: `20261104174006`
+- `20261104195000_price_list_codes_database_generated.sql` — اسم DB: `price_list_codes_database_generated`, إصدار DB: `20261104183526`
+- `20261104205500_central_code_generation_reproducible.sql` — اسم DB: `central_code_generation_reproducible`, إصدار DB: `20261104210254`
+- `20261104210500_central_code_duplicate_indexes_cleanup.sql` — اسم DB: `central_code_duplicate_indexes_cleanup`, إصدار DB: `20261104210353`
+- `20261105165500_hr_reference_catalogs.sql` — اسم DB: `hr_reference_catalogs`, إصدار DB: `20261105165536`
+- `20261105170000_create_erp_countries_master.sql` — اسم DB: `create_erp_countries_master`, إصدار DB: `20261105153808`
+- `20261105170500_hr_authenticated_policy_roles.sql` — اسم DB: `hr_authenticated_policy_roles`, إصدار DB: `20261105165746`
+- `20261105173000_add_hierarchical_geo_and_customer_codes.sql` — اسم DB: `add_hierarchical_geo_and_customer_codes`, إصدار DB: `20261105164157`
+- `20261105174000_link_customer_codes_to_geographic_tree.sql` — اسم DB: `link_customer_codes_to_geographic_tree`, إصدار DB: `20261105164427`
+- `20261105203000_business_suite_records_v2.sql` — اسم DB: `business_suite_records_v2`, إصدار DB: `20261105165905`
+- `20261106110000_executive_dashboard_financial_metrics_completion.sql` — اسم DB: `executive_dashboard_financial_metrics_completion`, إصدار DB: `20261106001344`
+- `20261106130000_executive_dashboard_operational_metrics.sql` — اسم DB: `executive_dashboard_operational_metrics`, إصدار DB: `20261106003534`
+- `20261106140000_executive_dashboard_remaining_operational_metrics.sql` — اسم DB: `executive_dashboard_remaining_operational_metrics`, إصدار DB: `20261106010252`
+- `20261106150000_executive_dashboard_master_data_completeness.sql` — اسم DB: `executive_dashboard_master_data_completeness`, إصدار DB: `20261106010457`
+- `20261109143000_customer_category_brand_code_policies.sql` — اسم DB: `customer_category_brand_code_policies`, إصدار DB: `20261109120517`
+- `20261109150000_delegate_category_codes_to_hierarchy.sql` — اسم DB: `delegate_category_codes_to_hierarchy`, إصدار DB: `20261109120724`
+- `20261110190000_user_code_inherits_type_and_employee_suffix.sql` — اسم DB: `user_code_inherits_type_and_employee_suffix`, إصدار DB: `20261110185013`
+- `20261110192000_item_brand_and_policy_aligned_code_generation.sql` — اسم DB: `item_brand_and_policy_aligned_code_generation`, إصدار DB: `20261110191748`
+- `20261110193000_fix_customer_geo_code_policy_column.sql` — اسم DB: `fix_customer_geo_code_policy_column`, إصدار DB: `20261110192212`
+- `20261110195000_recode_existing_user_codes_and_update_trigger.sql` — اسم DB: `recode_existing_user_codes_and_update_trigger`, إصدار DB: `20261110192748`
+- `20261110200000_harden_category_and_customer_code_sequences.sql` — اسم DB: `harden_category_and_customer_code_sequences`, إصدار DB: `20261110194229`
+- `20261110201000_align_geographic_area_prefix_and_policy_lengths.sql` — اسم DB: `align_geographic_area_prefix_and_policy_lengths`, إصدار DB: `20261110195103`
+- `20261110202000_complete_supplier_brand_catalog_groups.sql` — اسم DB: `complete_supplier_brand_catalog_groups`, إصدار DB: `20261110195425`
+- `20261110223000_sync_user_codes_with_source_records.sql` — اسم DB: `sync_user_codes_with_source_records`, إصدار DB: `20261110224249`
+- `20261110224300_index_item_brand_company_fk.sql` — اسم DB: `index_item_brand_company_fk`, إصدار DB: `20261110224323`
+
+## 6. ملف تنظيف بيانات الاختبار
+الملف `supabase/migrations/20261107_remove_demo_test_seed_records.sql` موجود ضمن ملفات GitHub غير المطابقة بالاسم في سجل Supabase. لا يوجد إثبات من Migration History أنه طُبق. لا يُشغّل قبل مراجعة السجلات المستهدفة وموافقة المستخدم؛ يحتوي حذفًا لعميل وحملات بأسماء/أكواد ثابتة لا تشترط دائمًا `is_demo_data=true`. التنفيذ اليدوي خارج سجل migrations لا يمكن استبعاده من هذه المقارنة.
+
+## 7. المخاطر والقرار التصميمي
+
+1. لا يمكن إعادة بناء قاعدة Supabase من مجلد migrations الحالي وحده مع الادعاء بأنه يعيد التاريخ المطبق نفسه؛ هناك **292** اسمًا تاريخيًا غير ممثل في الملفات الحالية، و**105** ملفًا لا يطابق سجل التطبيق.
+2. قد يكون السبب تاريخًا قديمًا أزيل أو baseline مجمع أو ملفات أعيدت تسميتها أو تطبيقًا يدويًا؛ يجب تصنيف كل حالة قبل أي إعادة بناء.
+3. ملف `docs/ERP_DEPLOYMENT_ORDER.md` لا يكفي وحده كـmanifest كامل؛ يجب تحديثه بعد المصالحة، وعدم تطبيق ملفات أكتوبر/نوفمبر القديمة عشوائيًا.
+4. لا تعاد ملفات legacy ذات prefix ثمانية أرقام إلى ترتيب التنفيذ دون تحديد migration version الصحيح ومحتوى التغيير.
+5. لا يتم حذف أي migration قديم أو تعديل ملف مطبق؛ التصحيح يكون بترحيل جديد forward-only بعد اعتماد المخطط النهائي.
+6. المطلوب قبل مرحلة الربط: manifest canonical يحتوي version، filename، content SHA-256، dependencies، حالة التطبيق، وقرار (applied / superseded / not-applied / manual / archived).
+7. يجب تجهيز clean-install baseline منفصل منطقيًا عن سجل التاريخ، ثم إثبات أنه ينشئ نفس الجداول والـViews والـFunctions والـTriggers والـPolicies والـIndexes من قاعدة فارغة، دون إعادة تطبيق ترحيلات تاريخية مدمرة.
+
+## 8. حدود هذه المقارنة
+- القراءة تمت من GitHub directory listing على main ومن Supabase Migration History.
+- لم يتم تنفيذ SQL أو تطبيق/إلغاء أي migration.
+- لم يتم حذف ملفات migrations أو إعادة تسميتها.
+- لم تتم مقارنة checksum للمحتوى مع النسخ المنفذة داخل قاعدة البيانات؛ Supabase Migration History لا يخزن نص SQL الكامل لكل migration.
