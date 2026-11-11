@@ -177,17 +177,40 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
 
   Future<void> postDoc() async {
     if(!isDraft)return;
-    await saveDraft();if(!mounted||error!=null)return;
-    if(shortage>0&&targetId==null){setState(()=>error='توجد قيمة عجز؛ اختر الموظف أو بند الصرف أولاً.');return;}
+    if(_manualCurrentDocument&&lines.any((l)=>n(increaseCounts[s(l['id'])]?.text)<0||n(shortageCounts[s(l['id'])]?.text)<0)){
+      setState(()=>error='حقلا الزيادة والعجز لا يقبلان قيمة سالبة.');
+      return;
+    }
+    if(_manualCurrentDocument&&lines.any((l)=>n(increaseCounts[s(l['id'])]?.text)>0&&n(shortageCounts[s(l['id'])]?.text)>0)){
+      setState(()=>error='اختر زيادة أو عجزًا للصنف الواحد؛ لا يمكن إدخالهما معًا.');
+      return;
+    }
+    final payload=lines.map((l)=>{'line_id':s(l['id']),'counted_quantity':countedBase(l)}).toList();
+    if(payload.any((r)=>(r['counted_quantity'] as double)<0)){
+      setState(()=>error='لا يمكن أن يتجاوز عجز التسوية رصيد الصنف الحالي.');
+      return;
+    }
+    if(shortage>0&&targetId==null){
+      setState(()=>error='توجد قيمة عجز؛ اختر الموظف أو بند الصرف أولاً.');
+      return;
+    }
     setState(()=>saving=true);
     try{
-      final result=await db.rpc('erp_post_physical_stocktake',params:{'p_stocktake_id':docId,'p_target_type':shortage>0?targetType:null,'p_target_id':shortage>0?targetId:null});
-      if(mounted)setState(()=>message='تم ترحيل الجرد وتسجيل حركات التسوية. '+(shortage>0&&targetType=='employee'?' تم ربط العجز بعنصر المرتب النظامي «عجز جرد». ':' ')+result.toString());
-      await load();await loadLines(docId!);
-    }catch(e){if(mounted)setState(()=>error='تعذر ترحيل الجرد: '+e.toString());}
-    finally{if(mounted)setState(()=>saving=false);}
+      final result=await db.rpc('erp_post_physical_stocktake_with_counts',params:{
+        'p_stocktake_id':docId,
+        'p_counts':payload,
+        'p_target_type':shortage>0?targetType:null,
+        'p_target_id':shortage>0?targetId:null,
+      });
+      if(mounted)setState(()=>message='تم حفظ كميات المحضر وترحيل الجرد وحركات التسوية في معاملة واحدة. '+(shortage>0&&targetType=='employee'?' تم ربط العجز بعنصر المرتب النظامي «عجز جرد». ':' ')+result.toString());
+      await load();
+      await loadLines(docId!);
+    }catch(e){
+      if(mounted)setState(()=>error='تعذر ترحيل الجرد؛ لم تُحفظ الكميات أو الحركات جزئيًا: '+e.toString());
+    }finally{
+      if(mounted)setState(()=>saving=false);
+    }
   }
-
 
   void editDraft(){if(!canEditDraft)return;setState(() {editing=true;message='تم تفعيل تعديل كميات الجرد. احفظ المسودة قبل الترحيل.';});}
   void previewDraft(){
