@@ -14,44 +14,66 @@ class ErpWhatsappContactsRepository {
     return rows.map((row) => Map<String, dynamic>.from(row)).toList();
   }
 
-  Future<String> createBatch({
-    required String companyId, required String sourceLabel,
-    required String fileName, required String sourceType, required int totalContacts,
-  }) async {
-    final userId = _db.auth.currentUser?.id;
-    if (userId == null) throw StateError('يجب تسجيل الدخول قبل الاستيراد.');
-    final row = await _db.from('erp_whatsapp_import_batches').insert({
-      'company_id': companyId, 'source_label': sourceLabel,
-      'source_file_name': fileName, 'source_type': sourceType,
-      'total_contacts': totalContacts, 'created_by': userId,
-    }).select('id').single();
-    return row['id'].toString();
-  }
-
-  Future<void> insertContacts({
-    required String companyId, required String batchId,
+  Future<String> importBatchAtomically({
+    required String companyId,
+    required String sourceLabel,
+    required String fileName,
+    required String sourceType,
     required List<Map<String, String>> contacts,
   }) async {
-    final userId = _db.auth.currentUser?.id;
-    if (userId == null) throw StateError('انتهت جلسة الدخول.');
-    const chunkSize = 150;
-    for (var start = 0; start < contacts.length; start += chunkSize) {
-      final end = (start + chunkSize < contacts.length) ? start + chunkSize : contacts.length;
-      final payload = contacts.sublist(start, end).map((contact) {
-        final phone = contact['phone']!.trim();
-        return <String, dynamic>{
-          'company_id': companyId, 'batch_id': batchId,
-          'contact_name': (contact['name'] ?? '').trim(),
-          'phone': phone, 'normalized_phone': normalizePhone(phone),
-          'group_name': (contact['group'] ?? '').trim(),
-          'source_type': contact['source'] ?? 'uploaded_file',
-          'consent_status': 'pending', 'created_by': userId,
-        };
-      }).toList();
-      await _db.from('erp_whatsapp_import_contacts').upsert(
-        payload, onConflict: 'batch_id,normalized_phone', ignoreDuplicates: true,
-      );
+    final normalizedCompany = companyId.trim();
+    if (normalizedCompany.isEmpty) throw ArgumentError('الشركة مطلوبة قبل الاستيراد.');
+    if (!['csv', 'vcard', 'manual', 'official_api'].contains(sourceType)) {
+      throw ArgumentError('مصدر الاستيراد غير معتمد.');
     }
+    if (contacts.isEmpty || contacts.length > 5000) {
+      throw ArgumentError('عدد جهات الاتصال يجب أن يكون من 1 إلى 5000 في الدفعة الواحدة.');
+    }
+    if (_db.auth.currentUser?.id == null) {
+      throw StateError('يجب تسجيل الدخول قبل الاستيراد.');
+    }
+
+    final payload = <Map<String, dynamic>>[];
+    final seenPhones = <String>{};
+    for (final contact in contacts) {
+      final phone = (contact['phone'] ?? '').trim();
+      final normalized = normalizePhone(phone);
+      if (normalized.replaceAll('+', '').length < 7) {
+        throw ArgumentError('يوجد رقم هاتف غير صالح داخل ملف الاستيراد.');
+      }
+      if (!seenPhones.add(normalized)) {
+        throw ArgumentError('يوجد رقم مكرر بعد توحيد صيغة الهاتف.');
+      }
+      final contactSource = (contact['source'] ?? 'uploaded_file').trim();
+      if (!['uploaded_file', 'csv', 'vcard', 'official_api', 'manual'].contains(contactSource)) {
+        throw ArgumentError('مصدر إحدى جهات الاتصال غير معتمد.');
+      }
+      payload.add({
+        'name': (contact['name'] ?? '').trim(),
+        'phone': phone,
+        'normalized_phone': normalized,
+        'group': (contact['group'] ?? '').trim(),
+        'source': contactSource,
+      });
+    }
+
+    final result = await _db.rpc('erp_import_whatsapp_contacts_atomic', params: {
+      'p_company_id': normalizedCompany,
+      'p_source_label': sourceLabel.trim().isEmpty ? 'استيراد ملف' : sourceLabel.trim(),
+      'p_source_file_name': fileName.trim(),
+      'p_source_type': sourceType,
+      'p_contacts': payload,
+    });
+    if (result is! Map) {
+      throw StateError('لم يرجع الخادم نتيجة دفعة الاستيراد الذري.');
+    }
+    final response = Map<String, dynamic>.from(result);
+    final batchId = (response['batch_id'] ?? '').toString();
+    final inserted = int.tryParse((response['inserted_count'] ?? '').toString()) ?? -1;
+    if (batchId.isEmpty || inserted != payload.length) {
+      throw StateError('لم يتطابق عدد جهات الاتصال المحفوظة مع عدد السجلات المستوردة.');
+    }
+    return batchId;
   }
 
   Future<void> updateContact({
