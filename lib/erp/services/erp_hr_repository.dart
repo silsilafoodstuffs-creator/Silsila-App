@@ -91,17 +91,16 @@ class ErpHrRepository {
     required DateTime end,
     required String reason,
   }) async {
-    if (start.isAfter(end)) throw ArgumentError('تاريخ بداية الإجازة يجب ألا يتجاوز نهايتها.');
-    final days = end.difference(DateTime(start.year, start.month, start.day)).inDays + 1;
-    await _db.from('erp_leave_requests').insert({
-      'company_id': companyId.trim(),
-      'employee_id': employeeId,
-      'leave_type': leaveType,
-      'starts_on': _dateOnly(start),
-      'ends_on': _dateOnly(end),
-      'requested_days': days,
-      'reason': _blankToNull(reason),
-      'status': 'pending',
+    if (start.isAfter(end)) {
+      throw ArgumentError('تاريخ بداية الإجازة يجب ألا يتجاوز نهايتها.');
+    }
+    await _db.rpc('erp_create_leave_request', params: {
+      'p_company_id': companyId.trim(),
+      'p_employee_id': employeeId,
+      'p_leave_type': leaveType,
+      'p_starts_on': _dateOnly(start),
+      'p_ends_on': _dateOnly(end),
+      'p_reason': _blankToNull(reason),
     });
   }
 
