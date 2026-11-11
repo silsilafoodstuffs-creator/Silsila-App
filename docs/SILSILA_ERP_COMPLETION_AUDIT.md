@@ -1591,3 +1591,53 @@ Commits:
 
 **نسبة إغلاق إنشاء الموظف داخل Repository وقاعدة البيانات: 100%.**
 تبقى مراجعة شاشة/تدفق إنشاء الموظف end-to-end ضمن إغلاق وحدة الموارد البشرية الكاملة.
+
+
+## 17. Atomic save for selected simple Business Suite records — 2026-11-11
+
+تم إغلاق فجوة حفظ السجل العام والكيان التشغيلي في دفعة محددة من سبعة أنواع لا تحتاج تفاصيل مخزنية أو حركات محاسبية منفصلة.
+
+**الأنواع التي أصبحت ذرية:**
+1. `fixed_assets:asset_category` → `erp_asset_categories`
+2. `manufacturing:work_center` → `erp_manufacturing_work_centers`
+3. `customer_service:opportunity` → `erp_crm_leads`
+4. `customer_service:sla_policy` → `erp_service_sla_policies`
+5. `customer_service:ticket` → `erp_service_tickets`
+6. `customer_service:field_task` → `erp_service_visits`
+7. `customer_service:activity` → `erp_crm_activities`
+
+**التنفيذ:**
+- أضيفت RPC محددة الأنواع `erp_save_business_suite_simple_record_atomic(uuid,jsonb,jsonb)`. لا تستقبل اسم جدول أو اسم عمود من العميل، وتحتوي فروع SQL صريحة للأنواع السبعة فقط.
+- تنشئ/تحدّث الكيان التشغيلي والسجل العام `erp_business_suite_records` في معاملة PostgreSQL واحدة؛ فشل كتابة أي طرف أو فحص RLS/قيد يؤدي إلى rollback للطرفين.
+- عند التعديل، تقفل السجل العام، وتتحقق من أن `_operational_table` المخزن يطابق النوع، وتعدّل الكيان المرتبط بواسطة `_operational_id` داخل الشركة. لا تنشئ سجلًا عامًا منفصلًا إذا فشل تحديث الطفل.
+- تتحقق من الشركة ونطاق العضوية، وتتحقق من تبعية الحسابات/العميل/التذكرة/سياسة SLA/الفرصة للشركة نفسها حيث تنطبق.
+- تستخدم مفاتيح فريدة معتمدة، وتحتفظ بمعرف الكيان التشغيلي الحالي. عند غياب كود فرعي، تستخدم كود السجل العام كقيمة احتياطية بدل NULL في حقول الكود الإلزامية.
+- في التذاكر، تغيير الحالة يستدعي Trigger سجل الأحداث الموجود؛ حدث الحالة وسجل التذكرة والسجل العام أصبحوا في معاملة واحدة.
+- تُرجع RPC تفاصيل السجل مع `_operational_table` و`_operational_id`، وتمنع الشاشة إعادة تنفيذ INSERT/UPDATE منفصل للسجل العام لهذه الأنواع السبعة.
+
+**التحديث في Flutter:**
+- `lib/erp/screens/erp_business_suite_screen.dart` يرسل بيانات السجل العام والكيان التشغيلي إلى RPC واحدة.
+- تمت إزالة خطوة الحفظ المنفصلة للسجل العام للأنواع السبعة فقط؛ بقية الأنواع تظل على مسارها الحالي حتى تُنقل تفاصيلها التابعة بأمان.
+
+**Migrations في Supabase والمستودع:**
+- `20261111113826_atomic_business_suite_simple_record_save`
+- `20261111113905_harden_business_suite_atomic_code_fallbacks`
+- `20261111114304_atomic_business_suite_customer_ticket_save`
+
+**Commits:**
+- `e61c453780106e23f891239539824a88678ea5e5` — RPC typed allowlist للحفظ الذري.
+- `bbd63b362c92aaafc6e8fc27c9da8b04c8b4dd2d` — fallback آمن لأكواد الأنواع الستة.
+- `2b7baaa77e5bbe4f96ffc26d8cd3d59e816955e9` — ربط Flutter بالـRPC وتجاوز الحفظ العام المنفصل.
+- `6cf0e54932b8f8e9cf6ca33f82a623f10fe1f70f` — توثيق تحديث الدالة لإضافة التذاكر.
+
+**التحقق البنيوي:**
+- الترحيلات الثلاثة مسجلة في Supabase history، وملفاتها موجودة في `supabase/migrations`.
+- الدالة `SECURITY INVOKER` (`prosecdef=false`) و`search_path` فارغ.
+- `anon_execute=false` و`authenticated_execute=true`.
+- لا تستخدم الدالة كتابة ديناميكية إلى جدول أو عمود اختاره العميل.
+- سياسات RLS على السجلات العامة والكيانات التشغيلية والأحداث متوافقة مع نطاق الأدوار المستخدمة.
+- لم تُنشأ بيانات اختبار/تجريبية، ولم تُشغّل اختبارات Dart/Flutter/Web/Android/WebView.
+
+**نسبة إغلاق هذه الحزمة: 100% (7/7 أنواع).**
+
+**ما لا يدخل في هذه النسبة:** الأصول نفسها، الإهلاك، استبعاد الأصل، حركة الأصل، BOM وبنوده، أوامر التصنيع والحركات، طلب المواد وبنوده، المقايسات والتكاليف، المستخلصات وبنودها، الحركات المادية للمقاولات، والعمليات الأخرى ذات الآثار التابعة. هذه الأنواع تحتاج RPC متخصصة تجمع كل التفاصيل والحركات والسجل العام في معاملة واحدة؛ لا تُحسب ضمن الأنواع السبعة المغلقة.
