@@ -437,8 +437,11 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    });
   }
   if(table=='erp_asset_depreciation_runs'&&(status=='approved'||status=='done'||status=='posted')){
-   await _db.rpc('erp_calculate_asset_depreciation',params:{'p_company_id':co,'p_run_id':id});
-   if(status=='posted')await _db.rpc('erp_post_asset_depreciation_run',params:{'p_company_id':co,'p_run_id':id});
+   await _db.rpc('erp_finalize_asset_depreciation_run',params:{
+    'p_company_id':co,
+    'p_run_id':id,
+    'p_post':status=='posted'
+   });
   }
   if(table=='erp_construction_payment_certificates'){
    final certificateText=(d['certificate_lines']??'').toString().trim();
