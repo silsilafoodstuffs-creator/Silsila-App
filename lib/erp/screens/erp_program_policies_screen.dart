@@ -47,6 +47,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'category_code.secondary','category':'تكويدية','ar':'تكويد فئات ثانوية ( يرث ك ف فرعية )','en':'Secondary item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":4}','mandatory':true,'all':true},
     {'key':'brand_code','category':'تكويدية','ar':'تكويد البراند','en':'Brand coding policy','value':'{"prefix":"Bra","digits":2,"parent_digits":0}','mandatory':true,'all':true},
     {'key':'item_code','category':'تكويدية','ar':'تكويد الأصناف ( يرث كود الفئة الثانوية )','en':'Item coding policy','value':'{"prefix":"Itm","category_digits":6,"brand_digits":2,"serial_digits":3}','mandatory':true,'all':true},
+    {'key':'code_policy.company','category':'تكويدية','ar':'الشركة','en':'Company','value':'Com + 2 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.program_policy','category':'تكويدية','ar':'البرنامج','en':'Program policies','value':'Pol + 3 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.employee','category':'تكويدية','ar':'الموظفون','en':'Employees','value':'Emp + 5 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.user','category':'تكويدية','ar':'المستخدمون','en':'Users','value':'Usr + الأرقام الموروثة من نوع المستخدم بدون Typ + 5 أرقام تسلسلية مستقلة؛ دون الاعتماد على كود الموظف','mandatory':true,'all':true},
