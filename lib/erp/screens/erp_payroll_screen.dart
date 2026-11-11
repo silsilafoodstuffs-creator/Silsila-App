@@ -181,7 +181,6 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
       await _repo.addLine(companyId: _company.text, runId: _selectedRunId!, employeeId: _employeeId!,
         basic: basic, allowances: allowances, commissions: commission, overtime: overtime, deductions: deductions,
         elementValues: elementValues, elementEarnings: elementEarnings, elementDeductions: elementDeductions);
-      await _repo.recalculate(_selectedRunId!);
       if (!mounted) return;
       _basic.text = '0'; _allowances.text = '0'; _commission.text = '0'; _overtime.text = '0'; _deductions.text = '0';
       for (final element in _salaryElements) { _elementValueControllers[_s(element['id'])]?.text = '0.000'; }
