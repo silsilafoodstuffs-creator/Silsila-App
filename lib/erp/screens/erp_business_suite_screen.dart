@@ -373,6 +373,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    'manufacturing:work_center',
    'customer_service:opportunity',
    'customer_service:sla_policy',
+   'customer_service:ticket',
    'customer_service:field_task',
    'customer_service:activity',
   };
@@ -597,6 +598,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     'manufacturing:work_center',
     'customer_service:opportunity',
     'customer_service:sla_policy',
+    'customer_service:ticket',
     'customer_service:field_task',
     'customer_service:activity',
    };
