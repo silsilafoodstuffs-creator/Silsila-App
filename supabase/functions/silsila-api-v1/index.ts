@@ -57,7 +57,16 @@ Deno.serve(async (req: Request) => {
   if (limitError) return reply(503, { error: "rate_limit_service_unavailable" });
   if (withinLimit !== true) return reply(429, { error: "rate_limit_exceeded", retry_after_seconds: 60 });
   const companyId = credential.company_id as string;
-  if (path === "/v1/company") return reply(200, { data: { company_id: companyId }, meta: { api_version: "v1" } });
+  if (path === "/v1/company") {
+    const { data: company, error: companyError } = await admin
+      .from("erp_companies")
+      .select("id,legal_name,trade_name,tax_number,commercial_register,phone,email,address,base_currency")
+      .eq("id", companyId)
+      .maybeSingle();
+    if (companyError) return reply(500, { error: "company_query_failed" });
+    if (!company) return reply(404, { error: "company_not_found" });
+    return reply(200, { data: company, meta: { api_version: "v1" } });
+  }
   const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? "50") || 50));
   const offset = Math.max(0, Math.min(100000, Number(url.searchParams.get("offset") ?? "0") || 0));
   let table = "";
@@ -73,8 +82,8 @@ Deno.serve(async (req: Request) => {
     query = query.or("is_demo_data.is.null,is_demo_data.eq.false");
   }
   if (path === "/v1/items" || path === "/v1/customers" || path === "/v1/suppliers") query = query.eq("is_active", true);
-  if (path === "/v1/customers") query = query.eq("party_kind", "customer");
-  if (path === "/v1/suppliers") query = query.eq("party_kind", "supplier");
+  if (path === "/v1/customers") query = query.in("party_kind", ["customer", "both"]);
+  if (path === "/v1/suppliers") query = query.in("party_kind", ["supplier", "both"]);
   const { data, error, count } = await query.order(path === "/v1/inventory/balances" ? "item_id" : "created_at", { ascending: false, nullsFirst: false }).range(offset, offset + limit - 1);
   if (error) return reply(500, { error: "data_query_failed" });
   return reply(200, { data: data ?? [], meta: { api_version: "v1", limit, offset, total: count ?? 0 } });
