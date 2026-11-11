@@ -1,8 +1,8 @@
 /// Silsila ERP external API integration primitives.
 ///
-/// This file deliberately contains no hard-coded secrets and performs no network
-/// requests. Production API calls must go through a trusted backend that verifies
-/// credentials, company membership, scopes, rate limits, and audit logging.
+/// This catalog describes the deployed read-only API gateway. API credentials are
+/// issued and revoked through authenticated Supabase RPCs; secret values are never
+/// embedded in this client or persisted by this model.
 class ErpApiEndpoint {
   const ErpApiEndpoint({
     required this.name,
@@ -70,7 +70,7 @@ class ErpApiIntegration {
       };
 }
 
-/// Initial read-only API catalog. These are design-time routes, not live endpoints.
+/// Read-only routes currently deployed by the Silsila API v1 gateway.
 const List<ErpApiEndpoint> erpApiCatalog = [
   ErpApiEndpoint(
     name: 'بيانات الشركة',
@@ -83,7 +83,7 @@ const List<ErpApiEndpoint> erpApiCatalog = [
     name: 'الأصناف',
     path: '/v1/items',
     method: 'GET',
-    description: 'استعراض الأصناف مع الترقيم والبحث.',
+    description: 'قراءة الأصناف النشطة مع الترقيم.',
     requiredScope: 'items:read',
   ),
   ErpApiEndpoint(
