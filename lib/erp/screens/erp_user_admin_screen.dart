@@ -709,6 +709,12 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
                           ),
                           OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4), minimumSize: const Size(0, 30), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                            onPressed: () => _openProjectAccessPicker(id),
+                            icon: const Icon(Icons.assignment_outlined, size: 15),
+                            label: const Text('المشروعات', style: TextStyle(fontSize: 11)),
+                          ),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4), minimumSize: const Size(0, 30), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                             onPressed: () => setState(() { _selectedNodeKind = 'user'; _selectedId = id; _selectedUserId = id; }),
                             icon: const Icon(Icons.person_add_alt_1, size: 15),
                             label: const Text('فرعي', style: TextStyle(fontSize: 11)),
@@ -1280,6 +1286,95 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
     }
   }
 
+
+  Future<void> _openProjectAccessPicker(String userId) async {
+    try {
+      final result = await _db!.rpc('erp_get_user_project_access', params: {
+        'p_company_id': _company,
+        'p_user_id': userId,
+      });
+      final projects = (result as List)
+          .map((x) => Map<String, dynamic>.from(x))
+          .toList(growable: false);
+      if (projects.isEmpty) {
+        if (mounted) setState(() => _error = 'لا توجد مشروعات مسجلة ونشطة/متاحة لهذه الشركة حتى الآن.');
+        return;
+      }
+      final selected = <String>{
+        for (final project in projects)
+          if (project['is_allowed'] == true) _s(project['project_id']),
+      };
+      final picked = await showDialog<Set<String>>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, refresh) => AlertDialog(
+            title: const Text('تخصيص مشروعات المستخدم'),
+            content: SizedBox(
+              width: 620,
+              height: 480,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text('حدد المشروعات التي يسمح لهذا المستخدم بالوصول إليها. إلغاء جميع الاختيارات يسحب نطاق المشروعات منه.'),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: projects.length,
+                      itemBuilder: (context, index) {
+                        final project = projects[index];
+                        final id = _s(project['project_id']);
+                        return CheckboxListTile(
+                          dense: true,
+                          value: selected.contains(id),
+                          title: Text('${_s(project['project_code'])} — ${_s(project['project_name'])}'),
+                          subtitle: Text('الحالة: ${_s(project['project_status'])}'),
+                          onChanged: (value) => refresh(() {
+                            if (value == true) {
+                              selected.add(id);
+                            } else {
+                              selected.remove(id);
+                            }
+                          }),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('إلغاء'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, Set<String>.from(selected)),
+                child: const Text('حفظ التخصيصات'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (picked == null) return;
+      final assignments = picked
+          .map((id) => <String, dynamic>{'project_id': id, 'is_allowed': true})
+          .toList(growable: false);
+      await _db!.rpc('erp_replace_user_project_access', params: {
+        'p_company_id': _company,
+        'p_user_id': userId,
+        'p_access': assignments,
+      });
+      if (mounted) {
+        setState(() {
+          _message = 'تم حفظ نطاق المشروعات للمستخدم دفعة واحدة.';
+          _error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر تحميل أو حفظ تخصيصات المشروعات: $e');
+    }
+  }
+
   String _employeeLabel(String employeeId) {
     if(employeeId.isEmpty)return 'غير مرتبط بموظف';
     final e=_employees.where((x)=>_s(x['id'])==employeeId).firstOrNull;
@@ -1325,7 +1420,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         if(_isUser)const DataColumn(label:Text('كلمة المرور')),if(_isUser)const DataColumn(label:Text('تأكيد كلمة المرور')),if(_isUser)const DataColumn(label:Text('نوع المستخدم')),
         if(_isType)const DataColumn(label:Text('يظهر في التطبيق')),if(!_isUser&&!_isType)const DataColumn(label:Text('الصورة')),
         const DataColumn(label:Text('نشط')),if(_isType)const DataColumn(label:Text('وصف مختصر (10 كلمات)')),
-        if(_isUser)const DataColumn(label:Text('له خزينة فرعية')),if(_isUser)const DataColumn(label:Text('الفروع والمخازن')),if(_isTemplate)const DataColumn(label:Text('قوائم وصلاحيات')),
+        if(_isUser)const DataColumn(label:Text('له خزينة فرعية')),if(_isUser)const DataColumn(label:Text('الفروع والمخازن')),if(_isUser)const DataColumn(label:Text('المشروعات')),if(_isTemplate)const DataColumn(label:Text('قوائم وصلاحيات')),
       ],
       rows:List.generate(_rows.length,(i){final row=_rows[i];final id=_s(row['id']);return DataRow(selected:id==_selectedId,onSelectChanged:(v)async{
         setState(() { _selectedId=v==true?id:null; if(_isUser){_selectedNodeKind=v==true?'user':null;_selectedUserId=v==true?id:null;} });
@@ -1342,6 +1437,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         if(!_isUser&&!_isType)DataCell(_imageCell(row)),DataCell(Checkbox(shape:const CircleBorder(),value:row['is_active']==true,onChanged:_editMode?(v)=>setState(()=>row['is_active']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
         if(_isType)DataCell(_textCell(row,'description',width:220)),if(_isUser)DataCell(Checkbox(shape:const CircleBorder(),value:row['has_sub_warehouse']==true,onChanged:_editMode?(v)=>setState(()=>row['has_sub_warehouse']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
         if(_isUser)DataCell(OutlinedButton.icon(onPressed:_editMode?()=>_openBranchWarehousePicker(id):null,icon:const Icon(Icons.add_location_alt_outlined,size:16),label:const Text('+ فروع'))),
+        if(_isUser)DataCell(OutlinedButton.icon(onPressed:()=>_openProjectAccessPicker(id),icon:const Icon(Icons.assignment_outlined,size:16),label:const Text('تخصيص'))),
         if(_isTemplate)DataCell(OutlinedButton.icon(onPressed:()async{setState(()=>_selectedId=id);await _loadRules();await _openMenuPicker(parentId:id,template:true);},icon:const Icon(Icons.drive_file_move_outlined,size:16),label:const Text('جلب قوائم'))),
       ]);}),
     ));
