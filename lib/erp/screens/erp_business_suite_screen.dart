@@ -238,11 +238,30 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     table='erp_construction_projects';data={'company_id':co,'project_code':code,'name':name,'customer_id':customers.isEmpty?null:customers.first['id'],'site_address':d['site']??d['site_address']??d['location'],'project_type':d['project_type'],'contract_number':d['contract']??d['contract_number'],'contract_value':_n(d['contract_value'],amount),'budget_amount':_n(d['budget']),'actual_cost':_n(d['actual_cost']),'progress_percent':_n(d['progress']),'planned_start':date,'planned_end':due,'status':status=='done'?'completed':status=='active'||status=='in_progress'?'in_progress':status=='tender'?'tender':status=='awarded'?'awarded':status=='suspended'?'suspended':status=='closed'?'closed':status=='cancelled'?'cancelled':'draft','project_manager':d['manager']??d['project_manager'],'retention_percent':_n(d['retention']??d['retention_percent']),'notes':d['notes']};break;
    }
    case 'contracting:certificate':{
-    final pcode=(d['project_code']??d['project']??'').toString();final projects=await _db.from('erp_construction_projects').select('id').eq('company_id',co).eq('project_code',pcode).limit(1);
+    final pcode=(d['project_code']??d['project']??'').toString();
+    final projects=await _db.from('erp_construction_projects').select('id').eq('company_id',co).eq('project_code',pcode).limit(1);
     if(projects.isEmpty)throw Exception('أدخل كود مشروع مسجل في حقل المشروع قبل حفظ المستخلص.');
-    var gross=_n(d['gross'],amount);final certificateText=(d['certificate_lines']??'').toString().trim();
-    if(certificateText.isNotEmpty){gross=0;for(final line in certificateText.split(RegExp(r'[\n;]+'))){final parts=line.split('|').map((x)=>x.trim()).toList();if(parts.length<3)continue;final boq=await _db.from('erp_construction_boq_lines').select('id,unit_rate,planned_quantity,approved_quantity').eq('company_id',co).eq('project_id',projects.first['id']).eq('item_code',parts[0]).limit(1);if(boq.isEmpty)throw Exception('بند المقايسة '+parts[0]+' غير موجود في المشروع.');final currentQty=_n(parts[1]),cumulativeQty=_n(parts[2]),previousApproved=_n(boq.first['approved_quantity']),plannedQty=_n(boq.first['planned_quantity']);if(currentQty<=0||cumulativeQty<previousApproved||cumulativeQty>plannedQty||((cumulativeQty-previousApproved)-currentQty).abs()>0.0001)throw Exception('كميات المستخلص للبند '+parts[0]+' لا تطابق الكمية المعتمدة السابقة أو كمية المقايسة.');final rate=parts.length>3&&parts[3].isNotEmpty?_n(parts[3]):_n(boq.first['unit_rate']);gross+=currentQty*rate;}}
-    table='erp_construction_payment_certificates';data={'company_id':co,'project_id':projects.first['id'],'certificate_number':code,'period_start':date,'period_end':due,'gross_amount':gross,'retention_amount':gross*_n(d['retention'])/100,'advance_recovery':_n(d['advance_recovery']),'deductions':_n(d['deductions'])+_n(d['taxes']),'status':status=='approved'?'approved':status=='paid'?'paid':status=='waiting'?'submitted':'draft','notes':d['certificate_type']??d['notes']};break;
+    var gross=_n(d['gross'],amount);
+    final certificateText=(d['certificate_lines']??'').toString().trim();
+    if(certificateText.isNotEmpty){
+     gross=0;
+     final seenBoqCodes=<String>{};
+     for(final line in certificateText.split(RegExp(r'[\n;]+')).where((x)=>x.trim().isNotEmpty)){
+      final parts=line.split('|').map((x)=>x.trim()).toList();
+      if(parts.length<3||parts[0].isEmpty)throw Exception('بند المستخلص غير مكتمل؛ أدخل كود بند المقايسة والكمية الحالية والكمية التراكمية.');
+      if(!seenBoqCodes.add(parts[0]))throw Exception('بند المقايسة '+parts[0]+' مكرر في المستخلص.');
+      final boq=await _db.from('erp_construction_boq_lines').select('id,unit_rate,planned_quantity,approved_quantity').eq('company_id',co).eq('project_id',projects.first['id']).eq('item_code',parts[0]).limit(1);
+      if(boq.isEmpty)throw Exception('بند المقايسة '+parts[0]+' غير موجود في المشروع.');
+      final currentQty=_n(parts[1]),cumulativeQty=_n(parts[2]),previousApproved=_n(boq.first['approved_quantity']),plannedQty=_n(boq.first['planned_quantity']);
+      if(currentQty<=0||cumulativeQty<previousApproved||cumulativeQty>plannedQty||((cumulativeQty-previousApproved)-currentQty).abs()>0.0001)throw Exception('كميات المستخلص للبند '+parts[0]+' لا تطابق الكمية المعتمدة السابقة أو كمية المقايسة.');
+      final rate=parts.length>3&&parts[3].isNotEmpty?_n(parts[3]):_n(boq.first['unit_rate']);
+      if(rate<0)throw Exception('سعر بند المقايسة لا يمكن أن يكون سالبًا.');
+      gross+=(currentQty*rate*1000).round()/1000;
+     }
+    }
+    table='erp_construction_payment_certificates';
+    data={'company_id':co,'project_id':projects.first['id'],'certificate_number':code,'period_start':date,'period_end':due,'gross_amount':gross,'retention_amount':gross*_n(d['retention'])/100,'advance_recovery':_n(d['advance_recovery']),'deductions':_n(d['deductions'])+_n(d['taxes']),'status':status=='approved'?'approved':status=='paid'?'paid':status=='waiting'?'submitted':'draft','notes':d['certificate_type']??d['notes']};
+    break;
    }
    case 'customer_service:opportunity':{
     final phone=(d['phone']??'').toString(),contact=(d['contact']??'').toString();final byPhone=phone.isEmpty?[]:await _db.from('erp_parties').select('id').eq('company_id',co).eq('phone',phone).limit(1);
@@ -354,15 +373,19 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    final certificateText=(d['certificate_lines']??'').toString().trim();
    final parsed=<Map<String,dynamic>>[];
    if(certificateText.isNotEmpty){
-    for(final line in certificateText.split(RegExp(r'[\\n;]+'))){
+    final seenBoqIds=<String>{};
+    for(final line in certificateText.split(RegExp(r'[\n;]+')).where((x)=>x.trim().isNotEmpty)){
      final parts=line.split('|').map((x)=>x.trim()).toList();
-     if(parts.length<3)throw Exception('بند المستخلص غير مكتمل؛ أدخل كود بند المقايسة والكمية الحالية والكمية التراكمية.');
+     if(parts.length<3||parts[0].isEmpty)throw Exception('بند المستخلص غير مكتمل؛ أدخل كود بند المقايسة والكمية الحالية والكمية التراكمية.');
      final boq=await _db.from('erp_construction_boq_lines').select('id,unit_rate,planned_quantity,approved_quantity').eq('company_id',co).eq('project_id',data['project_id']).eq('item_code',parts[0]).limit(1);
      if(boq.isEmpty)throw Exception('بند المقايسة '+parts[0]+' غير موجود في المشروع.');
+     final boqId=boq.first['id'].toString();
+     if(!seenBoqIds.add(boqId))throw Exception('بند المقايسة '+parts[0]+' مكرر في المستخلص.');
      final currentQty=_n(parts[1]),cumulativeQty=_n(parts[2]),previousApproved=_n(boq.first['approved_quantity']),plannedQty=_n(boq.first['planned_quantity']);
      if(currentQty<=0||cumulativeQty<previousApproved||cumulativeQty>plannedQty||((cumulativeQty-previousApproved)-currentQty).abs()>0.0001)throw Exception('كميات المستخلص للبند '+parts[0]+' لا تطابق الكمية المعتمدة السابقة أو كمية المقايسة.');
      final rate=parts.length>3&&parts[3].isNotEmpty?_n(parts[3]):_n(boq.first['unit_rate']);
-     parsed.add({'boq_line_id':boq.first['id'],'current_quantity':currentQty,'cumulative_quantity':cumulativeQty,'unit_rate':rate});
+     if(rate<0)throw Exception('سعر بند المقايسة لا يمكن أن يكون سالبًا.');
+     parsed.add({'boq_line_id':boqId,'current_quantity':currentQty,'cumulative_quantity':cumulativeQty,'unit_rate':rate});
     }
    }
    await _db.rpc('erp_sync_construction_certificate_lines',params:{
