@@ -381,6 +381,8 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    'manufacturing:production_variance',
    'contracting:project',
    'contracting:site_report',
+   'contracting:boq',
+   'contracting:construction_cost',
   };
   if(atomicSimpleTypes.contains(key)){
    final saved=await _db.rpc('erp_save_business_suite_simple_record_atomic',params:{
@@ -565,6 +567,8 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     'manufacturing:production_variance',
     'contracting:project',
     'contracting:site_report',
+    'contracting:boq',
+    'contracting:construction_cost',
    };
    final atomicParentSave=atomicSimpleTypes.contains('$_moduleKey:${c.type}');
    try{
