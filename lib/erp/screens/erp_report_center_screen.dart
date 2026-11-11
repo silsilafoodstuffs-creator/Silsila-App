@@ -91,6 +91,17 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     'عمولات المندوبين': <String>['erp_commission_runs', 'erp_commission_plans'],
     'أداء العروض': <String>['erp_sales_campaigns', 'erp_sales_campaign_items'],
     'تقارير الفاتورة الإلكترونية': <String>['erp_einvoice_operations'],
+    'الأصناف الراكدة': <String>['erp_stock_balances', 'erp_sales_documents'],
+    'الأصناف قاربت على النفاد': <String>['erp_stock_balances', 'erp_items'],
+    'تنبيهات إعادة الطلب': <String>['erp_stock_balances', 'erp_items'],
+    'مقارنة أسعار الموردين': <String>['erp_party_price_lists', 'erp_price_lists', 'erp_price_list_lines', 'erp_parties', 'erp_items'],
+    'تكلفة الحملات': <String>['erp_sales_campaigns', 'erp_sales_campaign_items'],
+    'شريط قبض موظف': <String>['erp_cash_orders', 'erp_cash_vouchers', 'erp_cash_movements'],
+    'شريط قبض مجمع': <String>['erp_cash_orders', 'erp_cash_vouchers', 'erp_cash_movements'],
+    'معدل الاستجابة': <String>['erp_service_tickets', 'erp_service_ticket_events'],
+    'التذاكر المفتوحة': <String>['erp_service_tickets'],
+    'زمن الاستجابة': <String>['erp_service_tickets', 'erp_service_ticket_events'],
+    'رضا العملاء': <String>['erp_service_tickets'],
   };
 
   static const Map<String, String> _searchColumns = <String, String>{
@@ -103,6 +114,10 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     'erp_workspace_records': 'record_key',
     'erp_sales_representatives': 'rep_name',
     'erp_cash_vouchers': 'voucher_number',
+    'erp_cash_orders': 'order_number',
+    'erp_service_tickets': 'ticket_code',
+    'erp_items': 'item_name',
+    'erp_sales_campaigns': 'title',
   };
 
   @override
