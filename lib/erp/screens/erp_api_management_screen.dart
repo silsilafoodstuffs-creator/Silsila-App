@@ -26,6 +26,7 @@ class _ErpApiManagementScreenState extends State<ErpApiManagementScreen> {
   String? _keysError;
   bool _keysLoading = true;
   bool _issuing = false;
+  DateTime? _keyExpiresAt;
   final _keyLabel = TextEditingController(text: 'تكامل خارجي');
   List<Map<String, dynamic>> _keys = <Map<String, dynamic>>[];
 
@@ -78,6 +79,22 @@ class _ErpApiManagementScreenState extends State<ErpApiManagementScreen> {
     }
   }
 
+  Future<void> _pickKeyExpiry() async {
+    final today = DateTime.now();
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _keyExpiresAt ?? today.add(const Duration(days: 90)),
+      firstDate: today.add(const Duration(days: 1)),
+      lastDate: DateTime(today.year + 10),
+      helpText: 'تاريخ انتهاء مفتاح API',
+      cancelText: 'بدون تغيير',
+      confirmText: 'تحديد',
+    );
+    if (selected != null && mounted) {
+      setState(() => _keyExpiresAt = DateTime(selected.year, selected.month, selected.day, 23, 59, 59));
+    }
+  }
+
   Future<void> _issueKey() async {
     if (_db == null || _companyId == null) return;
     if (_keyLabel.text.trim().length < 2 || _scopes.isEmpty) {
@@ -90,7 +107,7 @@ class _ErpApiManagementScreenState extends State<ErpApiManagementScreen> {
         'p_company_id': _companyId,
         'p_label': _keyLabel.text.trim(),
         'p_scopes': _scopes.toList(),
-        'p_expires_at': null,
+        'p_expires_at': _keyExpiresAt?.toUtc().toIso8601String(),
       });
       final result = Map<String, dynamic>.from(raw as Map);
       final secret = (result['api_key'] ?? '').toString();
@@ -244,6 +261,17 @@ class _ErpApiManagementScreenState extends State<ErpApiManagementScreen> {
             subtitle: const Text('الشركة النشطة ذات صلاحية المالك/المدير'),
           ),
           TextField(controller: _keyLabel, decoration: const InputDecoration(labelText: 'اسم المفتاح الجديد', border: OutlineInputBorder())),
+          const SizedBox(height: 4),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.event_available_outlined, color: _apiPurple),
+            title: const Text('تاريخ انتهاء الصلاحية'),
+            subtitle: Text(_keyExpiresAt == null ? 'بدون تاريخ انتهاء' : '${_keyExpiresAt!.day.toString().padLeft(2, '0')}-${_keyExpiresAt!.month.toString().padLeft(2, '0')}-${_keyExpiresAt!.year}'),
+            trailing: Wrap(spacing: 0, children: [
+              IconButton(tooltip: 'تحديد تاريخ', onPressed: _pickKeyExpiry, icon: const Icon(Icons.calendar_month)),
+              if (_keyExpiresAt != null) IconButton(tooltip: 'إزالة تاريخ الانتهاء', onPressed: () => setState(() => _keyExpiresAt = null), icon: const Icon(Icons.clear)),
+            ]),
+          ),
           const SizedBox(height: 8),
           ...const [
             ('company:read', 'بيانات الشركة'),
