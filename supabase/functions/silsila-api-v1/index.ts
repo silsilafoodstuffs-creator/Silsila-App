@@ -34,7 +34,12 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "GET") return reply(405, { error: "method_not_allowed", message: "استخدم GET فقط؛ واجهة القراءة لا تنفذ تعديلات." });
   const url = new URL(req.url);
-  const path = url.pathname.replace(/\/$/, "");
+  const pathParts = url.pathname.split("/").filter(Boolean);
+  const functionIndex = pathParts.indexOf("silsila-api-v1");
+  const routedPath = functionIndex >= 0
+    ? "/" + pathParts.slice(functionIndex + 1).join("/")
+    : url.pathname;
+  const path = routedPath.replace(/\/$/, "") || "/";
   const requiredScope = scopesByPath[path];
   if (!requiredScope) return reply(404, { error: "not_found" });
   const rawKey = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
