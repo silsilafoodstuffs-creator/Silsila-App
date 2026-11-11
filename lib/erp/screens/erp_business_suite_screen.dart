@@ -285,8 +285,8 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    if(updated==null)throw Exception('السجل التشغيلي المرتبط غير موجود داخل الشركة؛ أوقف الحفظ لمنع إنشاء سجل عام غير مرتبط.');
    id=updated['id'].toString();
   }else{
-   // Use PostgreSQL's real full unique keys for race-safe create/update semantics.
-   // Tables with partial unique indexes stay on the guarded lookup path below.
+   // Use only PostgreSQL full unique keys verified against the live schema.
+   // This gives each mapped operational record a race-safe create/update path.
    final conflictColumns=switch(table){
     'erp_asset_categories'=>'company_id,category_code',
     'erp_fixed_assets'=>'company_id,asset_code',
@@ -315,7 +315,8 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    if(conflictColumns==null)throw Exception('لا يوجد مفتاح فريد معتمد لهذا النوع من السجلات التشغيلية؛ أوقف الحفظ بدل إنشاء سجل غير مضمون التفرد.');
    final saved=await _db.from(table).upsert(data,onConflict:conflictColumns).select('id').single();
    id=saved['id'].toString();
-  }  if(table=='erp_construction_material_requests'&&(d['materials']??'').toString().trim().isNotEmpty){
+  }
+  if(table=='erp_construction_material_requests'&&(d['materials']??'').toString().trim().isNotEmpty){
    await _db.from('erp_construction_material_request_lines').delete().eq('company_id',co).eq('request_id',id);
    final parsed=<Map<String,dynamic>>[];for(final line in (d['materials']??'').toString().split(RegExp(r'[\n;]+'))){final parts=line.split('|').map((x)=>x.trim()).toList();if(parts.length<2)continue;final q=_n(parts[1]);if(parts[0].isEmpty||q<=0)continue;
     final byCode=await _db.from('erp_items').select('id,item_code,item_name,base_unit').eq('company_id',co).eq('item_code',parts[0]).limit(1);
