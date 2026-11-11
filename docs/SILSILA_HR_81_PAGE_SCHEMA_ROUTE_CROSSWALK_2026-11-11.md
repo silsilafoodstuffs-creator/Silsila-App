@@ -142,3 +142,10 @@
 
 ### تصحيح ترتيب شرط أجهزة البصمة
 في `erp_dashboard_screen.dart` يوجد شرط مباشر لفتح `HrFingerprintDevicesScreen`، لكنه يأتي بعد شرط `_module == 'شئون موظفين' || _module == 'موارد بشرية'`. لذلك لا يصل التنفيذ إلى شرط الأجهزة عند اختيار الصفحة من وحدة HR؛ إذ يتم التقاطها أولًا بواسطة `ErpHrAffairsScreen`. يجب نقل شرط الأجهزة قبل شرط الوحدة أو توجيهه صراحة داخل `ErpHrAffairsScreen`.
+
+
+### ملحق Storage الخاص بمستندات الموظفين
+- bucket `erp-company-assets` خاص، لكنه يسمح حاليًا بـJPEG/PNG/WebP/GIF فقط وبحد 8MB.
+- توجد سياسات لمسار `employee_documents` داخل هذا bucket، لكن PDF/DOCX غير مسموح بها من إعداد bucket الحالي.
+- صلاحية إدراج/حذف مستندات الموظفين مبنية على owner/admin/manager؛ لا يظهر HR manager صراحةً ما لم يكن دوره أيضًا manager.
+- القرار التصميمي: فصل مستندات الموظفين إلى bucket خاص يسمح PDF/JPEG/PNG/WebP بحد مناسب، مع RLS حسب employee scope وHR document permission، وروابط signed قصيرة العمر. لا تخزن مستندات الموظفين في buckets عامة.
