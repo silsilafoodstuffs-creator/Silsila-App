@@ -121,7 +121,7 @@
 
 ### 4.1 فجوات Storage
 - سياسات `erp-company-assets` تستخدم `erp_user_has_company_role(owner/admin/manager)` لمستندات الموظفين، ولا تمنح HR manager صراحةً ما لم يكن أيضًا manager.
-- تم إصلاح قيد MIME في bucket `erp-company-assets` عبر migration `expand_hr_employee_document_storage_mime_types`: أصبح يسمح بالصور وPDF وDOC وDOCX مع بقاء الحد 8 MiB والـbucket خاصًا. سياسات Storage لمسار `employee_documents` ما زالت تحصر الرفع والحذف في أدوار `owner/admin/manager`؛ لم أوسّعها إلى HR manager تلقائيًا لأن ذلك يحتاج ربطًا موثوقًا بين صلاحية HR ودور العضوية قبل منح وصول إلى ملفات الموظفين.
+- تم إصلاح قيد MIME في bucket `erp-company-assets` عبر migration `expand_hr_employee_document_storage_mime_types`: أصبح يسمح بالصور وPDF وDOC وDOCX مع بقاء الحد 8 MiB والـbucket خاصًا. تمت أيضًا مواءمة سياسات Storage لمسار `employee_documents` مع سياسات جدول المستندات: تسمح الآن بأدوار `owner/admin/manager` أو مدير الموارد البشرية المعرّف على ملف عضوية الشركة (`job_title = مدير موارد بشرية`) مع تحقق الوصول للشركة. نفذ ذلك migration `allow_hr_manager_storage_employee_documents` دون جعل الـbucket عامًا.
 - لا يوجد bucket خاص للنسخ الاحتياطية أو الشهادات الضريبية.
 - bucket `profiles` عام وسياسة SELECT عامة لكل كائناته؛ يجب التأكد أن الكائنات لا تحتوي وثائق أو صور خاصة غير مخصصة للنشر.
 - `products/offers/stories` عامة؛ يجب أن يكون المسار/البيانات المنشورة فقط هي التي ترفع لهذه buckets، وألا تعتمد خصوصية الطرف على اسم المجلد وحده.
