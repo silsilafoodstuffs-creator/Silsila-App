@@ -76,3 +76,14 @@ Widget/route مستقل مقترح: `ErpCodePoliciesScreen`
 - جميع generators/previews/validators تقرأ مصدر الحقيقة نفسه.
 - اختبار عدم تغيير الأكواد الحالية عند تعديل غير متعلق بالتكويد، واختبار تغيير السياسة بعد وجود بيانات.
 - لم يتم تعديل Flutter أو SQL في هذه المرحلة؛ هذه مواصفة تصميم فقط.
+
+
+## 8. مرجع استعادة الشاشة القديمة من Git history
+- Commit `f654fcc0e465c5ed212430e40e048d9808e7275b` بعنوان **Remove duplicate standalone code policies screen from ERP navigation** أزال import ومسار القائمة لصفحة `سياسات الأكواد` من Dashboard.
+- في parent commit `b42ee37ad8b11961a428b97991624274f0638dd2` كان الملف `lib/erp/screens/erp_code_policy_panel.dart` موجودًا، وحجمه 41,297 حرفًا، ويمكن استعادته من Git history بدل إعادة تصميم الشاشة من الصفر.
+- الشاشة القديمة تتضمن Grid بارتفاع 40px وتباعد 5px، وخانات prefix/digits وauto/composite وحقول مقاطع الأصناف والجغرافيا.
+- لا تُستعاد كما هي دون مراجعة؛ القيم الافتراضية القديمة داخلها تختلف عن registry الحي الحالي في بعض التفاصيل (منها customer serial)، لذلك يجب مواءمتها مع عقد التكويد في `SILSILA_CODE_GENERATION_POLICY_AUDIT_2026-11-11.md` قبل إعادة الربط.
+- رابط commit الذي أزال المسار: https://github.com/silsilafoodstuffs-creator/Silsila-App/commit/f654fcc0e465c5ed212430e40e048d9808e7275b
+- رابط parent المرجعي: https://github.com/silsilafoodstuffs-creator/Silsila-App/commit/b42ee37ad8b11961a428b97991624274f0638dd2
+
+هذا مرجع استعادة فقط؛ لم تتم إعادة إدخال الشاشة أو تعديل المسارات في هذه الدفعة.
