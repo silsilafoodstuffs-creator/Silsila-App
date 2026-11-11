@@ -1558,3 +1558,36 @@ Migration:
 
 **نسبة إغلاق حزمة نطاق المخزون والجرد والتحويلات وحذف مسودة التسوية: 100% ضمن المسارات التي تمت مراجعتها.**
 لا تمثل هذه النسبة اكتمال الربط الإجمالي للنظام كله؛ ما زال مسار Business Suite العام يحفظ السجل التشغيلي وتوابعه ثم يحفظ `erp_business_suite_records` في طلب منفصل، كما أن بقية الوحدات المباشرة تحتاج مطابقة نهائية.
+
+
+### توحيد إنشاء الموظف مع سياسة الرقم القومي ونطاق الفرع — 2026-11-11
+
+تم استبدال INSERT المباشر في `ErpHrRepository.addEmployee` باستدعاء:
+`erp_create_employee(uuid,uuid,text,text,text,text,text,numeric,uuid,uuid,uuid,date)`.
+
+الإجراء:
+- `SECURITY INVOKER` و`search_path=''`؛ يظل خاضعًا لسياسة INSERT في `erp_employees` وسياسة نطاق الفرع، ولا يملك anon التنفيذ.
+- يتحقق من دور الشركة المسموح بإضافة الموظف (المالك/الإداري/مدير الشركة)، ومن أن الفرع نشط ويتبع الشركة وأن المستخدم يملك نطاقه.
+- يتحقق من الإدارة والوظيفة وموقع العمل وأنها سجلات نشطة تابعة للشركة، ويتحقق من توافق إدارة الوظيفة عند اختيار الاثنين.
+- يتحقق من الاسم والراتب والحقول النصية وتاريخ التعيين والرقم القومي.
+- يرسل `national_id` إلى الجدول فعليًا؛ Trigger سياسة الرقم القومي يظل الحارس النهائي، ويملأ `national_id_last4` تلقائيًا.
+- يترك `employee_code` فارغًا عمدًا حتى يولده Trigger التكويد المركزي وفق سياسات الشركة؛ لا يقبل كودًا يدويًا من التطبيق.
+- تم تحويل `erp_program_policy_applies` وTrigger `erp_enforce_employee_national_id_policy` إلى `search_path=''` مع تأهيل مراجع الجداول والدوال.
+
+ملفات:
+- `lib/erp/services/erp_hr_repository.dart` — استبدال INSERT المباشر باستدعاء RPC وتمرير branch_id والرقم القومي والروابط المرجعية.
+- `supabase/migrations/20261111093105_atomic_hr_employee_create_and_national_id_policy.sql`
+
+Commits:
+- `c3f331eba3e6f5888b86c877a8f2b3158876d2e8` — Migration قاعدة البيانات.
+- `3cefc0df1416a5153fc8d7509ba886beaeb016a6` — تحديث Repository.
+
+التحقق:
+- الدالة الجديدة `SECURITY INVOKER`، و`search_path` فارغ.
+- `anon_execute=false`, `authenticated_execute=true`.
+- Repository لم يعد ينفذ INSERT مباشرًا إلى `erp_employees`.
+- البحث في المستودع لم يجد استدعاء حاليًا لـ`ErpHrRepository.addEmployee` خارج تعريفه؛ لذلك إصلاح Repository يحمي مسار الخدمة إذا استُخدم، لكنه لا يثبت وجود شاشة إنشاء موظف مكتملة متصلة به.
+- لم تُشغّل اختبارات Dart/Flutter أو Web/Android/WebView.
+
+**نسبة إغلاق إنشاء الموظف داخل Repository وقاعدة البيانات: 100%.**
+تبقى مراجعة شاشة/تدفق إنشاء الموظف end-to-end ضمن إغلاق وحدة الموارد البشرية الكاملة.
