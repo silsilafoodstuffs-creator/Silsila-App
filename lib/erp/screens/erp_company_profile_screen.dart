@@ -12,6 +12,7 @@ import 'package:excel/excel.dart' as excel;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/erp_company_settings_repository.dart';
 import 'erp_branches_screen.dart';
+import 'erp_company_branches_design_screen.dart';
 
 const _companyPurple = Color(0xFF3E007D);
 
@@ -31,6 +32,9 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
   final _taxNumber = TextEditingController();
   final _commercialRegister = TextEditingController();
   final _companyCode = TextEditingController();
+  final _englishName = TextEditingController();
+  final _phone2 = TextEditingController();
+  final _country = TextEditingController(text: 'مصر');
   final _taxOffice = TextEditingController();
   final _phone = TextEditingController();
   final _email = TextEditingController();
@@ -78,6 +82,9 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
     _taxNumber.dispose();
     _commercialRegister.dispose();
     _companyCode.dispose();
+    _englishName.dispose();
+    _phone2.dispose();
+    _country.dispose();
     _taxOffice.dispose();
     _phone.dispose();
     _email.dispose();
@@ -147,8 +154,11 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
         _tradeName.text = (row['trade_name'] ?? '').toString();
         _taxNumber.text = (row['tax_number'] ?? '').toString();
         _commercialRegister.text = (row['commercial_register'] ?? '').toString();
-        _companyCode.text = (profileSettings?['company_code'] ?? 'SIL-${id.replaceAll('-', '').substring(0, id.replaceAll('-', '').length >= 8 ? 8 : id.replaceAll('-', '').length).toUpperCase()}').toString();
+        _companyCode.text = (profileSettings?['company_code'] ?? 'Com01').toString();
         _taxOffice.text = (profileSettings?['tax_office'] ?? '').toString();
+        _englishName.text = (profileSettings?['english_name'] ?? '').toString();
+        _phone2.text = (profileSettings?['phone2'] ?? '').toString();
+        _country.text = (profileSettings?['country'] ?? 'مصر').toString();
         _logoStoragePath = (profileSettings?['logo_path'] ?? '').toString().trim().isEmpty ? null : profileSettings!['logo_path'].toString();
         _logoPreviewUrl = null;
         _phone.text = (row['phone'] ?? '').toString();
@@ -301,8 +311,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
       // installations remain compatible while the schema is upgraded safely.
       var cleanCode = _companyCode.text.trim();
       if (cleanCode.isEmpty) {
-        final compactId = id.replaceAll('-', '').toUpperCase();
-        cleanCode = 'SIL-${compactId.substring(0, compactId.length >= 8 ? 8 : compactId.length)}';
+        cleanCode = 'Com01';
         _companyCode.text = cleanCode;
       }
       try {
@@ -312,6 +321,9 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
           value: <String, Object?>{
             'company_code': cleanCode,
             'tax_office': _taxOffice.text.trim().isEmpty ? null : _taxOffice.text.trim(),
+            'english_name': _englishName.text.trim(),
+            'phone2': _phone2.text.trim(),
+            'country': _country.text.trim(),
             'logo_path': _logoStoragePath,
           },
         );
@@ -491,7 +503,9 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
     setState(() {
       _isEditing = true;
       _activeCompanyId = null; _company = null; _logoStoragePath = null; _logoPreviewUrl = null;
-      for (final controller in [_legalName, _tradeName, _taxNumber, _commercialRegister, _companyCode, _taxOffice, _phone, _email, _address]) { controller.clear(); }
+      for (final controller in [_legalName, _tradeName, _taxNumber, _commercialRegister, _companyCode, _taxOffice, _phone, _email, _address, _englishName, _phone2]) { controller.clear(); }
+      _companyCode.text = 'Com01';
+      _country.text = 'مصر';
       _currency.text = 'EGP'; _error = null; _message = 'أدخل بيانات الشركة الجديدة ثم اضغط حفظ.';
     });
   }
@@ -606,11 +620,13 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: _companyPurple.withValues(alpha: .14)),
           ),
-          child: Row(children: [
-            Expanded(child: _companyTabButton('بيانات الشركة', 0, Icons.business_outlined)),
-            const SizedBox(width: 6),
-            Expanded(child: _companyTabButton('الفروع', 1, Icons.account_tree_outlined)),
-          ]),
+          child: Align(alignment: AlignmentDirectional.centerStart, child: Row(mainAxisSize: MainAxisSize.min, children: [
+            _companyTabButton('بيانات الشركة', 0, Icons.business_outlined),
+            const SizedBox(width: 4),
+            _companyTabButton('الفروع', 1, Icons.account_tree_outlined),
+            const SizedBox(width: 4),
+            _companyTabButton('فروع الشركة', 2, Icons.account_tree),
+          ])),
         ),
         const SizedBox(height: 8),
         if (_selectedCompanyTab == 0) ...[
@@ -636,48 +652,61 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                       Flexible(child: Text('ID: ${_activeCompanyId ?? widget.companyId ?? '—'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 11))),
                     ]),
                   ),
-                Row(children: [
-                  Expanded(flex: 1, child: _field(_companyCode, 'كود الشركة', Icons.qr_code_2)),
-                  const SizedBox(width: 12),
-                  Expanded(flex: 2, child: _field(_legalName, 'الاسم القانوني *', Icons.business)),
+                // الصف الأول: الكود والأسماء والشعار.
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(flex: 2, child: _field(_companyCode, 'كود الشركة', Icons.qr_code_2)),
+                  const SizedBox(width: 8),
+                  Expanded(flex: 3, child: _field(_tradeName, 'اسم الشركة عربي', Icons.business)),
+                  const SizedBox(width: 8),
+                  Expanded(flex: 3, child: _field(_englishName, 'اسم الشركة إنجليزي', Icons.language)),
+                  const SizedBox(width: 8),
+                  SizedBox(width: 265, child: Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(color: const Color(0xFFF8F4FC), borderRadius: BorderRadius.circular(10), border: Border.all(color: _companyPurple.withValues(alpha: .15))),
+                    child: Row(children: [
+                      Container(width: 54, height: 48, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.black12)), clipBehavior: Clip.antiAlias,
+                        child: _logoPreviewUrl == null ? const Icon(Icons.business, color: _companyPurple, size: 27) : Image.network(_logoPreviewUrl!, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.business, color: _companyPurple))),
+                      const SizedBox(width: 7),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        OutlinedButton.icon(onPressed: _uploadingLogo || !_isEditing ? null : () => _chooseCompanyImage(ImageSource.gallery), icon: const Icon(Icons.upload_file, size: 15), label: const Text('استيراد من الجهاز', style: TextStyle(fontSize: 10)), style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 4))),
+                        OutlinedButton.icon(onPressed: _uploadingLogo || !_isEditing ? null : () => _chooseCompanyImage(ImageSource.camera), icon: const Icon(Icons.camera_alt_outlined, size: 15), label: const Text('كاميرا', style: TextStyle(fontSize: 10)), style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 4))),
+                      ])),
+                    ]),
+                  )),
                 ]),
+                // الصف الثاني: وسائل الاتصال والعملة.
                 Row(children: [
-                  Expanded(child: _field(_tradeName, 'الاسم التجاري', Icons.storefront_outlined)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _field(_taxNumber, 'الرقم الضريبي', Icons.receipt_long_outlined)),
+                  Expanded(child: _field(_phone, 'موبايل الشركة 1', Icons.phone_outlined, keyboard: TextInputType.phone)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _field(_phone2, 'موبايل الشركة 2', Icons.phone_android_outlined, keyboard: TextInputType.phone)),
+                  const SizedBox(width: 8),
+                  Expanded(flex: 2, child: _field(_email, 'البريد الإلكتروني للشركة', Icons.email_outlined, keyboard: TextInputType.emailAddress)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _currencyField()),
                 ]),
+                // الصف الثالث: الدولة والعنوان الرئيسي والخريطة.
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  SizedBox(width: 175, child: _countryField()),
+                  const SizedBox(width: 8),
+                  Expanded(child: _field(_address, 'العنوان الرئيسي', Icons.location_on_outlined)),
+                  const SizedBox(width: 8),
+                  Padding(padding: const EdgeInsets.only(bottom: 10), child: Wrap(spacing: 5, children: [
+                    OutlinedButton.icon(onPressed: () => _showCompanyLocationMessage('استيراد موقع من الخريطة'), icon: const Icon(Icons.map_outlined, size: 17), label: const Text('استيراد موقع من الخريطة')),
+                    OutlinedButton.icon(onPressed: () => _showCompanyLocationMessage('معاينة الموقع'), icon: const Icon(Icons.location_searching, size: 17), label: const Text('معاينة')),
+                  ])),
+                ]),
+                // الصف الرابع: البيانات القانونية.
                 Row(children: [
-                  Expanded(flex: 1, child: _field(_commercialRegister, 'السجل التجاري', Icons.assignment_outlined)),
-                  const SizedBox(width: 12),
-                  Expanded(flex: 2, child: _field(_taxOffice, 'المأمورية الضريبية', Icons.account_balance_outlined)),
+                  Expanded(flex: 2, child: _field(_legalName, 'الاسم القانوني *', Icons.gavel_outlined)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _field(_commercialRegister, 'سجل تجاري', Icons.assignment_outlined)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _field(_taxNumber, 'بطاقة ضريبية', Icons.receipt_long_outlined)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _field(_taxOffice, 'مأمورية', Icons.account_balance_outlined)),
                 ]),
-                Row(children: [
-                  Expanded(child: _field(_phone, 'رقم الهاتف', Icons.phone_outlined, keyboard: TextInputType.phone)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _field(_email, 'البريد الإلكتروني', Icons.email_outlined, keyboard: TextInputType.emailAddress)),
-                ]),
-                _currencyField(),
-                _field(_address, 'العنوان', Icons.location_on_outlined, maxLines: 2),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: const Color(0xFFF8F4FC), borderRadius: BorderRadius.circular(12), border: Border.all(color: _companyPurple.withValues(alpha: .15))),
-                  child: Row(children: [
-                    Container(width: 84, height: 84, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.black12)), clipBehavior: Clip.antiAlias,
-                      child: _logoPreviewUrl == null ? const Icon(Icons.business, size: 38, color: _companyPurple) : Image.network(_logoPreviewUrl!, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.business, size: 38, color: _companyPurple))),
-                    const SizedBox(width: 14),
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('صورة المنشأة / الشعار', style: TextStyle(color: _companyPurple, fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 8),
-                      Wrap(spacing: 8, runSpacing: 8, children: [
-                        OutlinedButton.icon(onPressed: _uploadingLogo || !_isEditing ? null : () => _chooseCompanyImage(ImageSource.gallery), icon: const Icon(Icons.photo_library_outlined, size: 18), label: const Text('استيراد صورة')),
-                        OutlinedButton.icon(onPressed: _uploadingLogo || !_isEditing ? null : () => _chooseCompanyImage(ImageSource.camera), icon: const Icon(Icons.camera_alt_outlined, size: 18), label: const Text('الكاميرا')),
-                      ]),
-                      if (_uploadingLogo) const LinearProgressIndicator(minHeight: 3),
-                    ])),
-                  ]),
-                ),
-                const SizedBox(height: 16),
+                if (_uploadingLogo) const LinearProgressIndicator(minHeight: 3),
+                const SizedBox(height: 8),
                 FilledButton.icon(
                   onPressed: _saving || _loading || !_isEditing ? null : _save,
                   icon: _saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.save_outlined),
@@ -690,6 +719,8 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
         ],
         if (_selectedCompanyTab == 1)
           SizedBox(height: 650, child: ErpBranchesScreen(companyId: _activeCompanyId ?? widget.companyId, embedded: true)),
+        if (_selectedCompanyTab == 2)
+          const SizedBox(height: 650, child: ErpCompanyBranchesDesignScreen()),
       ]),
     );
   }
@@ -716,6 +747,31 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
         ]),
       ),
     );
+  }
+
+  Widget _countryField() => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: DropdownButtonFormField<String>(
+      value: const ['مصر', 'السعودية', 'الإمارات', 'الكويت'].contains(_country.text) ? _country.text : 'مصر',
+      isExpanded: true,
+      itemHeight: 40,
+      decoration: InputDecoration(
+        labelText: 'الدولة',
+        prefixIcon: const Icon(Icons.flag_outlined, size: 19),
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      items: const ['مصر', 'السعودية', 'الإمارات', 'الكويت'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+      onChanged: _isEditing ? (v) { if (v != null) setState(() => _country.text = v); } : null,
+    ),
+  );
+
+  void _showCompanyLocationMessage(String action) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('$action — واجهة التصميم جاهزة وسيتم ربط خدمة الخرائط لاحقًا.'),
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
   Widget _currencyField() => Padding(
