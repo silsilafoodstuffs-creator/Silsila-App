@@ -296,7 +296,10 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     'erp_construction_projects'=>'project_code','erp_construction_material_requests'=>'request_code','erp_construction_material_movements'=>'movement_code','erp_construction_boq_lines'=>'suite_record_code','erp_construction_costs'=>'suite_record_code','erp_construction_payment_certificates'=>'certificate_number','erp_construction_site_reports'=>'report_code',
     'erp_crm_leads'=>'lead_code','erp_service_sla_policies'=>'policy_code','erp_service_tickets'=>'ticket_code','erp_service_visits'=>'visit_code','erp_crm_activities'=>'activity_code',_=>null
    };
-   final existing=uniqueColumn==null?[]:await _db.from(table).select('id').eq('company_id',co).eq(uniqueColumn,code).limit(1);
+   final existing=uniqueColumn==null?[]:
+    table=='erp_manufacturing_boms'
+     ?await _db.from(table).select('id').eq('company_id',co).eq(uniqueColumn,code).eq('version',data['version']).limit(1)
+     :await _db.from(table).select('id').eq('company_id',co).eq(uniqueColumn,code).limit(1);
    if(existing.isNotEmpty){id=existing.first['id'].toString();await _db.from(table).update(data).eq('id',id).eq('company_id',co);}
    else{final inserted=await _db.from(table).insert(data).select('id').single();id=inserted['id'].toString();}
   }
