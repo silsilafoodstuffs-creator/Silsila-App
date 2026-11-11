@@ -346,7 +346,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     'p_lines':parsed
    });
   }
-    if(table=='erp_asset_depreciation_runs'&&(status=='approved'||status=='done'||status=='posted')){
+  if(table=='erp_asset_depreciation_runs'&&(status=='approved'||status=='done'||status=='posted')){
    await _db.rpc('erp_calculate_asset_depreciation',params:{'p_company_id':co,'p_run_id':id});
    if(status=='posted')await _db.rpc('erp_post_asset_depreciation_run',params:{'p_company_id':co,'p_run_id':id});
   }
