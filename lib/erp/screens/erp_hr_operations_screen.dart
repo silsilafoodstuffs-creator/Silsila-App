@@ -241,7 +241,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
       final total=(summary['total'] as num?)?.toInt()??0;
       final inserted=(summary['inserted'] as num?)?.toInt()??0;
       final updated=(summary['updated'] as num?)?.toInt()??0;
-      if(mounted)setState(()=>message='تم حفظ كشف \${date(day)} بالكامل: $total موظفًا (إضافة $inserted، تحديث $updated).');
+      if(mounted)setState(()=>message='تم حفظ كشف ${date(day)} بالكامل: $total موظفًا (إضافة $inserted، تحديث $updated).');
       await load();
     }catch(e){
       if(mounted)setState(()=>error='تعذر حفظ كشف الحضور؛ لم تُحفظ أي مجموعة جزئية: $e');
