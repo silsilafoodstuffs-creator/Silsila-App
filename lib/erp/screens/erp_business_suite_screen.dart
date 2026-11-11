@@ -535,9 +535,6 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     'p_lines':parsed
    });
   }
-  if(table=='erp_service_tickets'&&oldRow!=null&&oldRow['status']!=status){
-   await _db.from('erp_service_ticket_events').insert({'company_id':co,'ticket_id':id,'event_type':'status_change','from_status':_ticketStatus(oldRow['status']),'to_status':_ticketStatus(status),'note':'تغيير حالة التذكرة من شاشة سلسلة'});
-  }
   return {...d,'_operational_table':table,'_operational_id':id};
  }
 
