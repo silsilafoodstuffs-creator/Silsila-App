@@ -159,3 +159,16 @@
 | الفاتورة الإلكترونية | لا يوجد اتصال هيئة مثبت أو إرسال/قبول تجريبي |
 
 لم يتم تشغيل Dart Analyze أو Flutter Test أو Web Build أو Android APK أو WebView/Smoke؛ هذه تظل مرحلة الاختبار النهائية المؤجلة.
+
+
+## 10. Project access UI closure and database audit — 2026-11-11
+
+- Added the authorized read RPC `erp_get_user_project_access(company_id, user_id)`. It requires an authenticated owner/admin/manager, verifies the target ERP user is active and belongs to the same company, and returns the company's projects with the target user's effective allow flag.
+- The RPC is `SECURITY DEFINER`, uses an empty `search_path`, disables row security only inside the function, revokes execution from `PUBLIC` and `anon`, and grants execution only to `authenticated`.
+- Added a project-assignment picker to `erp_user_admin_screen.dart` in both hierarchy and user-grid views. It reads through the authorized RPC and persists the full selection through the existing atomic `erp_replace_user_project_access` RPC. Empty selection clears the user's project assignments.
+- Applied migration version `20261111022227` (migration name `20261111024500_add_project_access_read_rpc`). Repository migration filename is `20261111022227_20261111024500_add_project_access_read_rpc.sql`.
+- Current project data count remains zero, and no user-project assignments exist. Therefore the new assignment flow is implemented but cannot be behaviorally verified against a real project/user pair without creating test data; no test data was inserted.
+- Database metadata audit: all public tables have RLS enabled (0 exceptions); all public views report `security_invoker=true` (0 exceptions).
+- SECURITY DEFINER inventory: 97 total functions, 56 executable by `authenticated`, 3 executable by `anon` (the three public ad-feed RPCs). Twelve authenticated-executable functions do not contain a direct `auth.uid()` reference; the reviewed document-line, price-list, payroll, document-posting and password functions delegate authorization to `erp_user_has_company_role`. This static check is not a substitute for full per-function adversarial testing.
+- Supabase Security Advisor continues to report leaked-password protection disabled. It also reports callable SECURITY DEFINER functions as findings; many are deliberate authenticated RPC endpoints with role checks. Leaked-password protection requires enabling the Auth setting in project configuration.
+- No Dart analyze, Flutter tests, Web build, APK, WebView or smoke tests were run in this linkage pass, in accordance with the requested single final test phase.
