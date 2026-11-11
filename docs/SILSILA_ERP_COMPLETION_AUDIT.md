@@ -1025,3 +1025,40 @@ Commits:
 
 **نسبة إغلاق تسجيل أحداث تغيير حالة التذكرة: 100%.**
 هذه النسبة تخص الحدث المرتبط بتغيير الحالة فقط؛ لا تغطي محادثات التذاكر ومرفقاتها أو دورة الحفظ العامة في Business Suite.
+
+
+### جمع احتساب الإهلاك وترحيله في معاملة واحدة — 2026-11-11
+
+تمت إضافة `erp_finalize_asset_depreciation_run(uuid,uuid,boolean)` لتستدعي احتساب الإهلاك، ثم الترحيل المحاسبي عند طلب الترحيل، داخل معاملة واحدة. إذا فشل إنشاء/ترحيل القيد المحاسبي تتراجع أيضًا أسطر الإهلاك وتعديلات مجمع الإهلاك التي تمت أثناء الاحتساب.
+
+- شاشة Flutter تستدعي إجراء واحدًا، بدل `erp_calculate_asset_depreciation` ثم `erp_post_asset_depreciation_run` في طلبين منفصلين.
+- الدالة الجديدة `SECURITY INVOKER` و`search_path` فارغ، وEXECUTE لـauthenticated فقط.
+
+Migration:
+- `20261111034311_atomic_asset_depreciation_finalize`
+- الملف: `supabase/migrations/20261111034311_atomic_asset_depreciation_finalize.sql`
+- Commit قاعدة الكود: `70510d5fd6b7c923d4aa8dd584a6897447ef7abf`
+- Commit Flutter: `91b0971ae60be0a2385652381fde754471454d23`
+
+التحقق: migration موجود؛ `prosecdef=false`, `search_path` فارغ، `anon_execute=false`, `authenticated_execute=true`، ولا يظهر في تحذير SECURITY DEFINER.
+**نسبة إغلاق احتساب الإهلاك وترحيله كعملية موحدة: 100%.** رأس تشغيل الإهلاك نفسه ما زال يُحفظ قبل هذا الإجراء.
+
+### جعل تطبيق حركة الأصل المعتمدة داخل معاملة الحركة — 2026-11-11
+
+تم إنشاء Trigger `trg_erp_apply_approved_asset_movement` على `erp_asset_movements`. عند إدخال حركة معتمدة أو انتقالها من حالة غير معتمدة إلى معتمدة، يحدّث سجل الأصل في المعاملة نفسها:
+- ينقل الموقع إلى `to_location` عند وجوده.
+- يحدّث العهدة إلى `to_custodian` عند وجودها.
+- يحوّل حالة الأصل إلى `under_maintenance` عند بدء الصيانة، ويعيدها إلى `active` عند إنهاء الصيانة إذا كانت تحت الصيانة.
+- يرفض التطبيق إذا كان الأصل مستبعدًا أو مشطوبًا أو لم يعد متاحًا داخل الشركة.
+- لا يكرر الأثر عند تحديث حركة معتمدة بالفعل.
+
+أزيل التحديث المنفصل للأصل من Flutter. الدالة `SECURITY INVOKER` وتخضع لسياسات RLS الحالية على حركتي الأصل والأصل نفسه.
+
+Migration:
+- `20261111034347_atomic_approved_asset_movement_apply`
+- الملف: `supabase/migrations/20261111034347_atomic_approved_asset_movement_apply.sql`
+- Commit Flutter: `d457af90314e1d3c677937648e60132664a238a0`
+- Commit Migration: `ef66f235461c107781e00a83f12d4e197d016a13`
+
+التحقق: Trigger ظاهر على جدول الحركات، والدالة `prosecdef=false`, `search_path` فارغ، `anon_execute=false`, `authenticated_execute=true`.
+**نسبة إغلاق تطبيق حركة الأصل المعتمدة: 100%.** لا يشمل ذلك ذرية إنشاء رأس الحركة والسجل العام في معاملة واحدة.
