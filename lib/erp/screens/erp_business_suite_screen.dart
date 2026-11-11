@@ -486,13 +486,6 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   if(table=='erp_asset_disposals'&&status=='posted'){
    await _db.rpc('erp_post_asset_disposal',params:{'p_company_id':co,'p_disposal_id':id});
   }
-  if(table=='erp_asset_movements'&&status=='approved'){
-   final updates=<String,dynamic>{'updated_at':DateTime.now().toIso8601String()};
-   if((d['to_location']??'').toString().isNotEmpty)updates['location']=d['to_location'];
-   if((d['custodian']??'').toString().isNotEmpty)updates['custodian']=d['custodian'];
-   if((d['movement_type']??'').toString().contains('صيانة'))updates['status']='under_maintenance';
-   await _db.from('erp_fixed_assets').update(updates).eq('company_id',co).eq('id',data['asset_id']);
-  }
   if(table=='erp_production_orders'){
    await _db.rpc('erp_sync_production_order_execution',params:{
     'p_company_id':co,
