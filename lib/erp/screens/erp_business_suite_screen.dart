@@ -297,7 +297,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   }else{
    final uniqueColumn=switch(table){
     'erp_asset_categories'=>'category_code','erp_fixed_assets'=>'asset_code','erp_asset_depreciation_runs'=>'run_code','erp_asset_disposals'=>'disposal_code','erp_asset_movements'=>'suite_record_code',
-    'erp_manufacturing_boms'=>'bom_code','erp_manufacturing_work_centers'=>'center_code','erp_production_orders'=>'order_code','erp_production_variances'=>'variance_code','erp_production_quality_checks'=>'inspection_code',
+    'erp_manufacturing_work_centers'=>'center_code','erp_production_orders'=>'order_code','erp_production_variances'=>'variance_code','erp_production_quality_checks'=>'inspection_code',
     'erp_construction_projects'=>'project_code','erp_construction_material_requests'=>'request_code','erp_construction_material_movements'=>'movement_code','erp_construction_boq_lines'=>'suite_record_code','erp_construction_costs'=>'suite_record_code','erp_construction_payment_certificates'=>'certificate_number','erp_construction_site_reports'=>'report_code',
     'erp_crm_leads'=>'lead_code','erp_service_sla_policies'=>'policy_code','erp_service_tickets'=>'ticket_code','erp_service_visits'=>'visit_code','erp_crm_activities'=>'activity_code',_=>null
    };
