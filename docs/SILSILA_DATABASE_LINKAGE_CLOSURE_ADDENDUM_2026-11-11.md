@@ -210,5 +210,5 @@
 - Added `erp_v_service_customer_satisfaction` as a `security_invoker` aggregate view over ticket satisfaction scores. It returns total tickets, rated tickets, average and median score, minimum/maximum, rating coverage, and last update timestamp.
 - The report is explicit that its population is tickets with recorded satisfaction scores; it is not a substitute for a separate survey/respondent model and does not infer satisfaction for unrated customers.
 - Routed «رضا العملاء» to this aggregate view and mapped its score/count fields into the Business Suite report row.
-- Applied migration version `20261111024700` (`add_service_customer_satisfaction_summary_view`). SELECT is granted only to authenticated after revoking PUBLIC/anon; the view runs with invoker security.
+- Applied migration version `20261111024712` (`add_service_customer_satisfaction_summary_view`). SELECT is granted only to authenticated after revoking PUBLIC/anon; the view runs with invoker security.
 - No ticket/survey data was inserted. Behavioral aggregation remains unverified because the live company has no ticket sample rows.
