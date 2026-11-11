@@ -110,8 +110,8 @@ const List<ErpApiEndpoint> erpApiCatalog = [
   ErpApiEndpoint(
     name: 'الطلبات',
     path: '/v1/orders',
-    method: 'POST',
-    description: 'إنشاء طلب بعد التحقق من الصلاحيات ومنع التكرار.',
-    requiredScope: 'orders:write',
+    method: 'GET',
+    description: 'قراءة الطلبات المسموح بها مع الترقيم.',
+    requiredScope: 'orders:read',
   ),
 ];
