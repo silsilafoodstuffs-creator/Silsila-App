@@ -19,8 +19,8 @@
 | 8 | المستخدمين | ErpUserAdminScreen | `erp_company_members`, `erp_user_types`, `erp_users`, `erp_user_classifications`, `erp_employees`, `erp_branches`, `erp_warehouses` |
 | 9 | صلاحيات المستخدمين | ErpUserAdminScreen | `erp_user_permissions`, `erp_user_permission_matrix`, `erp_permission_templates`, `erp_permission_template_rules`, `erp_user_branch_warehouse_access` |
 | 10 | قوالب صلاحيات المستخدمين | ErpUserAdminScreen | الجداول السابقة؛ يلزم أن يكون تطبيق القالب ذريًا مع سجل تغيير |
-| 11 | سجل العمليات | ErpActivityLogScreen | الشاشة الحالية تعتمد سجلًا محليًا/إعدادات التطبيق؛ لا تعتبر `erp_app_activity_log` سجلًا مركزيًا ما لم تستخدمه الشاشة فعليًا |
-| 12 | إدارة مفاتيح API | ErpApiManagementScreen | `ErpApiIntegration` نموذج/كتالوج ثابت للتحقق والعرض؛ لا يوجد حفظ مفاتيح أو استدعاء backend ظاهر في هذا المسار |
+| 11 | سجل العمليات | ErpActivityLogScreen | الشاشة تقرأ `erp_app_activity_log` عبر `ErpAppManagementService.listActivity` وتعرض آخر 500 عملية للشركة؛ تغطية كل عمليات ERP بمسارات الكتابة ما زالت تحتاج تدقيقًا مستقلًا |
+| 12 | إدارة مفاتيح API | ErpApiManagementScreen | مكتمل ربط دورة حياة المفاتيح عبر `erp_api_key_issue/list/revoke`، وتخزين بصمة فقط، ونطاقات قراءة، ومصادقة Edge Function، وحد 60 طلبًا/دقيقة؛ بوابة `silsila-api-v1` منشورة Version 3. اختبار HTTP حي وFlutter build مؤجلان لمرحلة الاختبار الشاملة |
 | 14 | مراجعة الحركات | ErpMovementAuditScreen | RPC `erp_run_movement_audit`; يلزم تقرير فروق مصدره الخادمي وتفاصيل قابلة للمراجعة |
 | 15 | قائمة اعتماد القيود | ErpJournalEntriesScreen | `erp_journal_entries`, `erp_journal_lines`; لاحظ أن initialStatus الحالي هو `draft`، ويجب حسم هل قائمة الاعتماد تعرض submitted أم draft |
 | 19 | مسح جميع البيانات | ErpClearDataScreen | RPC `erp_prepare_selective_data_clear`, `erp_complete_selective_data_clear`; موافقة مزدوجة/نطاق شركة/نسخة احتياطية/تأكيد نهائي |
@@ -69,8 +69,8 @@
 | 284 | سحب أرقام جروبات واتساب | ErpWhatsappContactsScreen | `erp_whatsapp_import_batches`, `erp_whatsapp_import_contacts`; يلزم consent/source/provenance وسياسة احتفاظ |
 
 ## 3. نتائج تقنية مهمة من مسارات الربط
-1. **API management ليس إدارة مفاتيح كاملة حاليًا**: `ErpApiIntegration` نموذج بيانات/تحقق وكتالوج ثابت؛ لا يوجد حفظ سر أو backend invocation في الشاشة. يجب تصميم إدارة العملاء/المفاتيح والنطاقات والإلغاء والتدوير والتدقيق عبر خدمة خادمية، دون إعادة السر للعميل.
-2. **سجل العمليات في الواجهة لا يساوي سجل تدقيق مركزي**: الشاشة الحالية تعتمد مصدرًا محليًا؛ `erp_app_activity_log` موجود ويستخدمه App Management Service، لكنه لا يعني أن كل عمليات ERP تكتب فيه.
+1. **إدارة مفاتيح API**: تم ربط إصدار/عرض metadata/إلغاء المفاتيح بقاعدة البيانات، مع تخزين SHA-256 فقط وظهور السر مرة واحدة، وربط بوابة قراءة محددة النطاقات ومحددة المعدل. يظل اختبار HTTP من عميل خارجي واختبار Flutter ضمن مرحلة الاختبار الشاملة.
+2. **سجل العمليات**: الشاشة تستخدم سجل الشركة المركزي `erp_app_activity_log`، كما تسجل دورة مفاتيح API عمليات الإصدار والإلغاء. لا يعني ذلك اكتمال تغطية كل عمليات ERP؛ يلزم تدقيق جميع مسارات الكتابة قبل إعلان اكتمال التدقيق الشامل.
 3. **اعتماد القيود**: route «قائمة اعتماد القيود» يمرر `initialStatus: draft`. يجب تحديد حالات submitted/pending_approval قبل ربط الموافقات.
 4. **الصور والإعلانات**: البيانات الوصفية في `erp_app_assets` والملفات في Storage. يلزم فصل bucket العام للإعلانات عن صور الموظفين/الموردين/العملاء الخاصة، مع signed URLs وانتهاء صلاحية.
 5. **الأستاذ والمخزون**: Views `erp_general_ledger` و`erp_stock_balances` موجودة؛ يجب تثبيت أنها security_invoker وأن صلاحيات المصدر لا تتسرب عبرها.
