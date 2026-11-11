@@ -58,6 +58,8 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     'أداء الفروع': <String>['erp_branches'],
     'أرباح وخسائر الفروع': <String>['erp_sales_documents'],
     'حركة التحويلات': <String>['erp_inventory_movements'],
+    'الأصناف الراكدة': <String>['erp_v_inventory_slow_moving_items'],
+    'الأصناف قاربت على النفاد': <String>['erp_v_inventory_low_stock_items'],
     'كارت الصنف': <String>['erp_inventory_movements'],
     'الجرد والفروق': <String>['erp_stocktakes', 'erp_stocktake_lines'],
     'تواريخ الصلاحية': <String>['erp_inventory_movements'],
@@ -103,6 +105,8 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     'erp_sales_representatives': 'rep_name',
     'erp_cash_vouchers': 'voucher_number',
     'erp_items': 'item_name',
+    'erp_v_inventory_slow_moving_items': 'item_name',
+    'erp_v_inventory_low_stock_items': 'item_name',
   };
 
   @override
