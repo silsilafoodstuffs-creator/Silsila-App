@@ -28,6 +28,9 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
   static const int _pageSize = 500;
   String? _error;
   String? _sourceTable;
+  List<String> _activeSourceTables = <String>[];
+  final Map<String, int> _sourceOffsets = <String, int>{};
+  final Set<String> _sourceHasMore = <String>{};
   List<Map<String, dynamic>> _rows = <Map<String, dynamic>>[];
   String _search = '';
 
@@ -138,6 +141,9 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
       _nextOffset = 0;
       _hasMore = false;
       _sourceTable = null;
+      _activeSourceTables = <String>[];
+      _sourceOffsets.clear();
+      _sourceHasMore.clear();
     });
     final candidates = _sources[widget.reportName] ?? <String>[];
     if (candidates.isEmpty) {
@@ -148,6 +154,8 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
       return;
     }
     Object? lastError;
+    final merged = <Map<String, dynamic>>[];
+    final loadedTables = <String>[];
     for (final table in candidates) {
       try {
         var query = Supabase.instance.client
@@ -160,58 +168,81 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
           query = query.ilike(searchColumn, '%$searchTerm%');
         }
         final raw = await query.range(0, _pageSize - 1);
-        if (!mounted) return;
-        setState(() {
-          _rows = (raw as List)
-              .whereType<Map<String, dynamic>>()
-              .map((row) => Map<String, dynamic>.from(row))
-              .toList();
-          _nextOffset = _rows.length;
-          _hasMore = _rows.length == _pageSize;
-          _sourceTable = table;
-          _loading = false;
-          _error = null;
-        });
-        return;
+        final batch = (raw as List)
+            .whereType<Map<String, dynamic>>()
+            .map((row) => <String, dynamic>{...Map<String, dynamic>.from(row), '_source_table': table})
+            .toList();
+        loadedTables.add(table);
+        _sourceOffsets[table] = batch.length;
+        if (batch.length == _pageSize) {
+          _sourceHasMore.add(table);
+        }
+        merged.addAll(batch);
       } catch (error) {
         lastError = error;
       }
     }
     if (!mounted) return;
+    if (loadedTables.isEmpty) {
+      setState(() {
+        _loading = false;
+        _rows = <Map<String, dynamic>>[];
+        _error = 'تعذر قراءة مصادر التقرير. المصادر التي جرى فحصها: ${candidates.join('، ')}. التفاصيل: $lastError';
+      });
+      return;
+    }
     setState(() {
+      _rows = merged;
+      _activeSourceTables = loadedTables;
+      _nextOffset = merged.length;
+      _hasMore = _sourceHasMore.isNotEmpty;
+      _sourceTable = loadedTables.join(' + ');
       _loading = false;
-      _rows = <Map<String, dynamic>>[];
-      _error = 'تعذر قراءة مصدر التقرير. المصادر التي جرى فحصها: ${candidates.join('، ')}. التفاصيل: $lastError';
+      _error = null;
     });
   }
 
   Future<void> _loadMore() async {
     final company = (widget.companyId ?? '').trim();
-    final table = _sourceTable;
-    if (company.isEmpty || table == null || _loadingMore || !_hasMore) return;
+    if (company.isEmpty || _activeSourceTables.isEmpty || _loadingMore || !_hasMore) return;
     setState(() => _loadingMore = true);
     try {
-      var query = Supabase.instance.client
-          .from(table)
-          .select('*')
-          .eq('company_id', company);
-      final searchColumn = _searchColumns[table];
-      final searchTerm = _search.trim();
-      if (searchTerm.isNotEmpty && searchColumn != null) {
-        query = query.ilike(searchColumn, '%$searchTerm%');
+      final merged = <Map<String, dynamic>>[];
+      final failed = <String>[];
+      for (final table in _activeSourceTables.where(_sourceHasMore.contains)) {
+        try {
+          var query = Supabase.instance.client
+              .from(table)
+              .select('*')
+              .eq('company_id', company);
+          final searchColumn = _searchColumns[table];
+          final searchTerm = _search.trim();
+          if (searchTerm.isNotEmpty && searchColumn != null) {
+            query = query.ilike(searchColumn, '%$searchTerm%');
+          }
+          final offset = _sourceOffsets[table] ?? 0;
+          final raw = await query.range(offset, offset + _pageSize - 1);
+          final batch = (raw as List)
+              .whereType<Map<String, dynamic>>()
+              .map((row) => <String, dynamic>{...Map<String, dynamic>.from(row), '_source_table': table})
+              .toList();
+          merged.addAll(batch);
+          _sourceOffsets[table] = offset + batch.length;
+          if (batch.length < _pageSize) _sourceHasMore.remove(table);
+        } catch (_) {
+          failed.add(table);
+        }
       }
-      final raw = await query.range(_nextOffset, _nextOffset + _pageSize - 1);
       if (!mounted) return;
-      final batch = (raw as List)
-          .whereType<Map<String, dynamic>>()
-          .map((row) => Map<String, dynamic>.from(row))
-          .toList();
       setState(() {
-        _rows = <Map<String, dynamic>>[..._rows, ...batch];
-        _nextOffset += batch.length;
-        _hasMore = batch.length == _pageSize;
+        _rows = <Map<String, dynamic>>[..._rows, ...merged];
+        _nextOffset = _rows.length;
+        _hasMore = _sourceHasMore.isNotEmpty;
         _loadingMore = false;
       });
+      if (failed.isNotEmpty) {
+        ErpCenterToast.show(context, 'تعذر تحميل دفعة من بعض المصادر: ${failed.join('، ')}', isError: true, duration: const Duration(seconds: 3));
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() => _loadingMore = false);
