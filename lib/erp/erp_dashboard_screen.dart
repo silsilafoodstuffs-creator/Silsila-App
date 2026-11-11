@@ -1614,7 +1614,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             Row(children: [
               const Icon(Icons.history_rounded, color: Colors.white),
               const SizedBox(width: 8),
-              Expanded(child: Text(silsilaText('سجل النشاطات'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
+              Expanded(child: Text(silsilaText('آخر إجراءات هذه الجلسة'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
             ]),
             const SizedBox(height: 12),
             ..._activityLog.map((entry) => Padding(
@@ -1650,7 +1650,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       if (_notificationsPanelVisible || _activityPanelVisible)
         Padding(
           padding: EdgeInsets.only(top: 12),
-          child: Text(silsilaText('ملاحظة: تنبيهات محاضر الجرد مرتبطة بقاعدة البيانات، بينما سجل النشاطات ما زال محليًا.'), style: TextStyle(color: Colors.black54, fontSize: 10, height: 1.6)),
+          child: Text(silsilaText('ملاحظة: تنبيهات محاضر الجرد مرتبطة بقاعدة البيانات، أما آخر الإجراءات المعروضة فهي محلية لهذه الجلسة وليست سجل تدقيق مركزيًا.'), style: TextStyle(color: Colors.black54, fontSize: 10, height: 1.6)),
         ),
       if (!_notificationsPanelVisible && !_activityPanelVisible && !_quickAccessPanelVisible)
         Padding(
