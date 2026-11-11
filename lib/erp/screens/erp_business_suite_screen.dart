@@ -373,7 +373,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     'p_replace_lines':certificateText.isNotEmpty
    });
   }
-    if(table=='erp_construction_costs'||table=='erp_construction_material_movements'){
+  if(table=='erp_construction_costs'||table=='erp_construction_material_movements'){
    final projectId=data['project_id'];final costs=await _db.from('erp_construction_costs').select('amount,status').eq('company_id',co).eq('project_id',projectId);
    final approvedCost=(costs as List).where((row)=>['approved','posted'].contains(row['status'])).fold<double>(0,(sum,row)=>sum+_n(row['amount']));
    final materialMoves=await _db.from('erp_construction_material_movements').select('movement_type,quantity,unit_cost').eq('company_id',co).eq('project_id',projectId);
