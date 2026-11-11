@@ -212,3 +212,15 @@
 - Routed «رضا العملاء» to this aggregate view and mapped its score/count fields into the Business Suite report row.
 - Applied migration version `20261111024712` (`add_service_customer_satisfaction_summary_view`). SELECT is granted only to authenticated after revoking PUBLIC/anon; the view runs with invoker security.
 - No ticket/survey data was inserted. Behavioral aggregation remains unverified because the live company has no ticket sample rows.
+
+
+## 15. تقارير المخزون منخفض/راكد — 2026-11-11
+
+أضيفت Migration `20261111025520_add_rls_inventory_report_views` وثلاثة Views بـ`security_invoker=true`:
+- `erp_v_inventory_item_stock_status`: يكوّن صفًا لكل صنف نشط غير تجريبي × مخزن نشط، ويحسب الرصيد من `erp_stock_balances` (حركات المخزون) والحجوزات النشطة `status='active'`، ويعرض المتاح وآخر حركة وقيمة المخزون وحد إعادة الطلب.
+- `erp_v_inventory_low_stock_items`: الأصناف ذات حد إعادة طلب موجب والمتاح لديها أقل من أو يساوي الحد.
+- `erp_v_inventory_slow_moving_items`: الأصناف ذات الرصيد الموجب التي لم تتحرك لأكثر من 90 يومًا. هذه نافذة افتراضية ثابتة حاليًا، وليست اختيارًا زمنيًا من المستخدم.
+
+تم منح `authenticated` صلاحية القراءة وسحبها من `PUBLIC` و`anon`. تحقق المخطط أكد `security_invoker=true` للـ3 Views، و`authenticated_select=true` و`anon_select=false`. قاعدة البيانات الحالية بها 4 صفوف في View الحالة، وصفر صفوف في تقريري الراكد والمنخفض؛ لا توجد بيانات حركة/حجز فعلية حتى وقت التحقق. تم توصيل تقريري «الأصناف الراكدة» و«الأصناف قاربت على النفاد» بمصادرهما في مركز التقارير مع البحث باسم الصنف.
+
+**حدود متبقية:** «تنبيهات إعادة الطلب» لم تُربط؛ يجب أولًا تثبيت حالات أمر الشراء المفتوح واحتساب الكميات المتبقية بعد الاستلام الجزئي. كما أن تقرير الراكد يستخدم 90 يومًا ثابتة، وتقرير الحد الأدنى يعتمد `erp_items.reorder_level` العام لا حدًا خاصًا بالمخزن.
