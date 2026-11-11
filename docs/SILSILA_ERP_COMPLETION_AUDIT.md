@@ -1084,3 +1084,25 @@ Migration:
 
 التحقق: كلا Trigger ظاهر ومفعّل، والدالة `SECURITY INVOKER` و`search_path` فارغ، `anon_execute=false`, `authenticated_execute=true`. لا تظهر في تنبيه SECURITY DEFINER في Advisor.
 **نسبة إغلاق مزامنة إجمالي تكلفة المشروع: 100%.** لا تجعل هذه الحزمة رأس التكلفة أو حركة المواد والسجل العام Business Suite جزءًا من معاملة واحدة معًا.
+
+
+### مزامنة نسبة إنجاز المشروع مع بنود المقايسة — 2026-11-11
+
+تم نقل حساب `progress_percent` من Flutter إلى Trigger على `erp_construction_boq_lines` بعد INSERT/UPDATE/DELETE.
+
+يحسب التقدم من قيمة الأعمال المنفذة إلى الميزانية المخططة:
+`SUM(executed_quantity * unit_rate) / SUM(planned_quantity * unit_rate) * 100`
+مع حصر النسبة بين 0 و100، وإرجاع صفر إذا لم توجد ميزانية موجبة.
+
+- يستخدم Trigger قفلًا ذريًا موحدًا بمفتاح الشركة/المشروع، وهو نفسه المستخدم في إعادة حساب `actual_cost`، لتجنب فقد التعديلات المتزامنة على مؤشرات المشروع.
+- يعيد الحساب للمشروع القديم والجديد إذا تغير ارتباط بند المقايسة بالمشروع.
+- أزيلت القراءة والتجميع والتحديث المنفصل من Flutter؛ كما يستجيب تلقائيًا لتعديلات كميات التنفيذ الناتجة عن أي مسار قاعدة بيانات، بما فيها اعتماد بنود المستخلصات.
+
+Migration:
+- `20261111034525_atomic_construction_project_progress_total`
+- الملف: `supabase/migrations/20261111034525_atomic_construction_project_progress_total.sql`
+- Commit Flutter: `1449ab0a16e6c9d185e575b7df3fb088c36ce471`
+- Commit Migration: `8aa9a06a6a2407424303bea9caddcf80e46950b7`
+
+التحقق: Trigger موجود، والدالة `SECURITY INVOKER` و`search_path` فارغ، `anon_execute=false`, `authenticated_execute=true`، ولا تظهر في تحذير SECURITY DEFINER.
+**نسبة إغلاق مزامنة نسبة تقدم المشروع: 100%.** إنشاء رأس المقايسة والسجل العام ما زال خارج معاملة واحدة مع بند المقايسة.
