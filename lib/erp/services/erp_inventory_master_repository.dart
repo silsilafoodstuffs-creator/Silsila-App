@@ -171,25 +171,31 @@ class ErpInventoryMasterRepository {
       middleInnerQuantity: middleCount,
     );
 
-    final inserted = await _db.from('erp_items').insert({
-      'company_id': companyId.trim(), 'item_code': '', 'item_name': name.trim(), 'category_id': normalizedCategoryId, 'brand_id': brandId,
-      'barcode': _blank(barcode), 'base_unit': hasMinor ? minorName : hasMiddle ? middleName : majorName,
-      'purchase_price': purchasePrice, 'sale_price': salePrice, 'tax_rate': taxRate,
-      'reorder_level': reorderLevel, 'expiry_tracking': expiryTracking,
-      'image_data': imageBytes == null || imageBytes.isEmpty ? null : _byteaHex(imageBytes),
-      'image_mime_type': imageBytes == null || imageBytes.isEmpty ? null : _blank(imageMimeType),
-      'image_url': null, 'is_active': true,
-    }).select('id,item_code').single();
-    final itemId = inserted['id'].toString();
-    try {
-      await _db.from('erp_item_units').insert(units.map((row) => <String, dynamic>{
-        ...row, 'company_id': companyId.trim(), 'item_id': itemId, 'is_active': true,
-      }).toList());
-    } catch (_) {
-      await _db.from('erp_items').delete().eq('id', itemId).eq('company_id', companyId.trim());
-      rethrow;
+    final result = await _db.rpc('erp_create_item_with_units', params: {
+      'p_item': {
+        'company_id': companyId.trim(),
+        'item_name': name.trim(),
+        'category_id': normalizedCategoryId,
+        'brand_id': brandId,
+        'barcode': _blank(barcode),
+        'base_unit': hasMinor ? minorName : hasMiddle ? middleName : majorName,
+        'purchase_price': purchasePrice,
+        'sale_price': salePrice,
+        'tax_rate': taxRate,
+        'reorder_level': reorderLevel,
+        'expiry_tracking': expiryTracking,
+        'image_data': imageBytes == null || imageBytes.isEmpty ? null : _byteaHex(imageBytes),
+        'image_mime_type': imageBytes == null || imageBytes.isEmpty ? null : _blank(imageMimeType),
+      },
+      'p_units': units,
+    });
+    if (result is! List || result.isEmpty || result.first is! Map) {
+      throw StateError('لم يرجع الخادم كود الصنف بعد الحفظ الذري.');
     }
-    return inserted['item_code'].toString();
+    final created = Map<String, dynamic>.from(result.first as Map);
+    final itemCode = (created['item_code'] ?? '').toString();
+    if (itemCode.isEmpty) throw StateError('تم إنشاء الصنف دون إرجاع كوده.');
+    return itemCode;
   }
 
 
