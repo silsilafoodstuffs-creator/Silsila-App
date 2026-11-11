@@ -172,3 +172,13 @@
 - SECURITY DEFINER inventory: 97 total functions, 56 executable by `authenticated`, 3 executable by `anon` (the three public ad-feed RPCs). Twelve authenticated-executable functions do not contain a direct `auth.uid()` reference; the reviewed document-line, price-list, payroll, document-posting and password functions delegate authorization to `erp_user_has_company_role`. This static check is not a substitute for full per-function adversarial testing.
 - Supabase Security Advisor continues to report leaked-password protection disabled. It also reports callable SECURITY DEFINER functions as findings; many are deliberate authenticated RPC endpoints with role checks. Leaked-password protection requires enabling the Auth setting in project configuration.
 - No Dart analyze, Flutter tests, Web build, APK, WebView or smoke tests were run in this linkage pass, in accordance with the requested single final test phase.
+
+
+## 11. Payroll payslip report source views — 2026-11-11
+
+- Added `erp_v_employee_payslips`: one row per employee/payroll line, joining payroll runs, payroll lines and employee master data; only approved, posted or paid payroll runs are included.
+- Added `erp_v_payroll_payslip_summary`: totals grouped by payroll run, branch and department, including employee count, basic pay, allowances, commissions, overtime, deductions, gross and net.
+- Both views use PostgreSQL `security_invoker=true`, so underlying RLS policies on payroll runs, payroll lines and employees remain effective. SELECT is granted to authenticated; no SECURITY DEFINER bypass was added.
+- Registered both views in the generic report reader and added search columns. Updated the report formula dictionary.
+- The live schema inspection confirmed all three underlying tables have RLS enabled; payroll run/line SELECT policies are role-limited, and payroll lines also inherit employee-scope restrictions. The views contain no seeded or fabricated payroll rows.
+- Migration applied as version `20261111023400`, name `create_payroll_payslip_report_views`. No application or behavioral tests were run; this is schema/source linkage only.
