@@ -60,6 +60,7 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     'حركة التحويلات': <String>['erp_inventory_movements'],
     'الأصناف الراكدة': <String>['erp_v_inventory_slow_moving_items'],
     'الأصناف قاربت على النفاد': <String>['erp_v_inventory_low_stock_items'],
+    'تنبيهات إعادة الطلب': <String>['erp_v_inventory_low_stock_items'],
     'كارت الصنف': <String>['erp_inventory_movements'],
     'الجرد والفروق': <String>['erp_stocktakes', 'erp_stocktake_lines'],
     'تواريخ الصلاحية': <String>['erp_inventory_movements'],
