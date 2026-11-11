@@ -109,6 +109,9 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   final key='${_moduleKey}:${payload['record_type']}';
   final oldDetails=Map<String,dynamic>.from(oldRow?['details'] as Map? ?? const {});
   final existingId=oldDetails['_operational_id']?.toString();
+  List<Map<String,dynamic>> productionMaterialPayload=[];
+  bool syncProductionMaterials=false;
+  Map<String,dynamic>? productionQualityPayload;
   if(key=='fixed_assets:asset_disposal'&&oldRow!=null&&oldRow['status']=='posted')throw Exception('استبعاد الأصل المرحّل لا يُعدّل؛ يلزم قيد عكسي وإجراء استبعاد جديد.');
   if(key=='fixed_assets:asset_movement'&&oldRow!=null&&oldRow['status']=='approved')throw Exception('حركة الأصل المعتمدة لا تُعدّل؛ سجّل حركة تصحيحية جديدة.');
   if(key=='contracting:construction_cost'&&oldRow!=null&&['approved','posted'].contains(oldRow['status']))throw Exception('تكلفة المشروع المعتمدة لا تُعدّل؛ سجّل تسوية تكلفة مستقلة.');
@@ -195,16 +198,71 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     table='erp_production_quality_checks';data={'company_id':co,'inspection_code':code,'production_order_id':orders.first['id'],'inspection_stage':d['inspection_stage']??'final','parameter_name':d['parameter_name']??name,'measured_value':_n(d['measured_value']),'minimum_value':_n(d['minimum_value']),'maximum_value':_n(d['maximum_value']),'result':normalized,'inspected_quantity':_n(d['inspected_quantity']),'rejected_quantity':_n(d['rejected_quantity']),'inspector':d['inspector'],'notes':d['notes']};break;
    }
    case 'manufacturing:production_order':{
-    final productKey=(d['product']??name).toString();final productRows=await _db.from('erp_items').select('id,item_name,base_unit,purchase_price').eq('company_id',co).eq('item_code',productKey).limit(1);
+    final productKey=(d['product']??name).toString();
+    final productRows=await _db.from('erp_items').select('id,item_name,base_unit,purchase_price').eq('company_id',co).eq('item_code',productKey).limit(1);
     final productByName=productRows.isEmpty?await _db.from('erp_items').select('id,item_name,base_unit,purchase_price').eq('company_id',co).eq('item_name',productKey).limit(1):productRows;
-    final warehouseKey=(d['warehouse']??'').toString();final warehouseRows=warehouseKey.isEmpty?[]:await _db.from('erp_warehouses').select('id,branch_id,warehouse_code,warehouse_name').eq('company_id',co).eq('warehouse_code',warehouseKey).limit(1);
+    final warehouseKey=(d['warehouse']??'').toString();
+    final warehouseRows=warehouseKey.isEmpty?[]:await _db.from('erp_warehouses').select('id,branch_id,warehouse_code,warehouse_name').eq('company_id',co).eq('warehouse_code',warehouseKey).limit(1);
     final warehouseByName=warehouseKey.isEmpty||warehouseRows.isNotEmpty?warehouseRows:await _db.from('erp_warehouses').select('id,branch_id,warehouse_code,warehouse_name').eq('company_id',co).eq('warehouse_name',warehouseKey).limit(1);
-    final bomKey=(d['bom_code']??'').toString();final bomRows=bomKey.isEmpty?[]:await _db.from('erp_manufacturing_boms').select('id').eq('company_id',co).eq('bom_code',bomKey).order('version',ascending:false).limit(1);
-    final centerKey=(d['work_center']??'').toString();final centerRows=centerKey.isEmpty?[]:await _db.from('erp_manufacturing_work_centers').select('id').eq('company_id',co).eq('center_code',centerKey).limit(1);
-    final materialText=(d['materials']??'').toString().trim();final produced=_n(d['produced_qty']);
+    final bomKey=(d['bom_code']??'').toString();
+    final bomRows=bomKey.isEmpty?[]:await _db.from('erp_manufacturing_boms').select('id').eq('company_id',co).eq('bom_code',bomKey).order('version',ascending:false).limit(1);
+    final centerKey=(d['work_center']??'').toString();
+    final centerRows=centerKey.isEmpty?[]:await _db.from('erp_manufacturing_work_centers').select('id').eq('company_id',co).eq('center_code',centerKey).limit(1);
+    final materialText=(d['materials']??'').toString().trim();
+    final produced=_n(d['produced_qty']);
+    final actualHours=_n(d['actual_hours']);
+    final actualCost=_n(d['actual_cost']);
+    if(actualHours<0||actualCost<0||produced<0)throw Exception('كمية الإنتاج والساعات والتكلفة لا يمكن أن تكون سالبة.');
     if((materialText.isNotEmpty||produced>0)&&warehouseByName.isEmpty)throw Exception('اختر مخزنًا معرفًا بكوده أو اسمه قبل صرف الخامات أو استلام الإنتاج.');
     if(produced>0&&productByName.isEmpty)throw Exception('كود أو اسم المنتج النهائي غير موجود في دليل الأصناف.');
-    table='erp_production_orders';data={'company_id':co,'order_code':code,'product_id':productByName.isEmpty?null:productByName.first['id'],'product_name':name,'planned_quantity':qty>0?qty:1,'produced_quantity':produced,'scrap_quantity':_n(d['scrap_qty']),'planned_start':date,'planned_end':due,'status':status=='done'?'done':status=='in_progress'?'in_progress':status=='approved'?'confirmed':status=='cancelled'?'cancelled':'draft','estimated_cost':amount,'actual_cost':_n(d['actual_cost']),'actual_hours':_n(d['actual_hours']),'lot_number':d['lot'],'notes':d['production_stage'],'warehouse_id':warehouseByName.isEmpty?null:warehouseByName.first['id'],'bom_id':bomRows.isEmpty?null:bomRows.first['id'],'work_center_id':centerRows.isEmpty?null:centerRows.first['id']};break;
+
+    syncProductionMaterials=materialText.isNotEmpty;
+    final required=<String,Map<String,dynamic>>{};
+    if(syncProductionMaterials){
+     for(final line in materialText.split(RegExp(r'[\n;]+')).where((x)=>x.trim().isNotEmpty)){
+      final parts=line.split('|').map((x)=>x.trim()).toList();
+      if(parts.length<2||parts[0].isEmpty)throw Exception('سطر خامة أمر التصنيع غير مكتمل؛ أدخل كود الصنف والكمية.');
+      final q=_n(parts[1]);
+      if(q<=0)throw Exception('كمية خامة '+parts[0]+' يجب أن تكون أكبر من صفر.');
+      final byCode=await _db.from('erp_items').select('id,item_name,base_unit,purchase_price').eq('company_id',co).eq('item_code',parts[0]).limit(1);
+      final itemRows=byCode.isNotEmpty?byCode:await _db.from('erp_items').select('id,item_name,base_unit,purchase_price').eq('company_id',co).eq('item_name',parts[0]).limit(1);
+      if(itemRows.isEmpty)throw Exception('الصنف '+parts[0]+' غير موجود في دليل الأصناف.');
+      final item=itemRows.first;
+      final itemId=item['id'].toString();
+      final unit=parts.length>2&&parts[2].isNotEmpty?parts[2]:(item['base_unit']??'وحدة').toString();
+      final unitCost=parts.length>3&&parts[3].isNotEmpty?_n(parts[3]):_n(item['purchase_price']);
+      if(unitCost<0)throw Exception('تكلفة خامة '+parts[0]+' لا يمكن أن تكون سالبة.');
+      final current=required[itemId];
+      if(current==null){
+       required[itemId]={'item_id':itemId,'item_name':item['item_name'],'quantity':q,'unit':unit,'unit_cost':unitCost};
+      }else{
+       if(current['unit']!=unit||_n(current['unit_cost'])!=unitCost)throw Exception('كررت الصنف '+parts[0]+' بوحدة أو تكلفة مختلفة؛ اجمعه في سطر واحد.');
+       current['quantity']=_n(current['quantity'])+q;
+      }
+     }
+    }
+    productionMaterialPayload=required.values.toList();
+
+    final qualityText=(d['quality']??'').toString();
+    if(qualityText.isNotEmpty&&qualityText!='لم يفحص'){
+     final qualityResult=qualityText.contains('مرفوض')?'fail':qualityText.contains('تحفظ')?'conditional':'pass';
+     final inspected=produced;
+     final rejected=_n(d['scrap_qty']);
+     if(rejected<0||rejected>inspected)throw Exception('كمية الهالك/المرفوض لا يمكن أن تتجاوز الكمية المفحوصة.');
+     productionQualityPayload={
+      'inspection_code':'QC-'+code,
+      'inspection_stage':d['production_stage']??'final',
+      'parameter_name':'نتيجة الجودة النهائية',
+      'result':qualityResult,
+      'inspected_quantity':inspected,
+      'rejected_quantity':rejected,
+      'notes':'نتيجة الفحص من أمر التصنيع'
+     };
+    }
+
+    table='erp_production_orders';
+    data={'company_id':co,'order_code':code,'product_id':productByName.isEmpty?null:productByName.first['id'],'product_name':name,'planned_quantity':qty>0?qty:1,'produced_quantity':produced,'scrap_quantity':_n(d['scrap_qty']),'planned_start':date,'planned_end':due,'status':status=='done'?'done':status=='in_progress'?'in_progress':status=='approved'?'confirmed':status=='cancelled'?'cancelled':'draft','estimated_cost':amount,'actual_cost':actualCost,'actual_hours':actualHours,'lot_number':d['lot'],'notes':d['production_stage'],'warehouse_id':warehouseByName.isEmpty?null:warehouseByName.first['id'],'bom_id':bomRows.isEmpty?null:bomRows.first['id'],'work_center_id':centerRows.isEmpty?null:centerRows.first['id']};
+    break;
    }
    case 'contracting:material_request':{
     final projectCode=(d['project']??'').toString();final projects=await _db.from('erp_construction_projects').select('id').eq('company_id',co).eq('project_code',projectCode).limit(1);
@@ -433,55 +491,17 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    await _db.from('erp_fixed_assets').update(updates).eq('company_id',co).eq('id',data['asset_id']);
   }
   if(table=='erp_production_orders'){
-   final orderRows=await _db.from('erp_production_orders').select('warehouse_id,product_id,lot_number,planned_quantity,estimated_cost,actual_cost').eq('company_id',co).eq('id',id).limit(1);
-   if(orderRows.isEmpty)throw Exception('تعذر قراءة أمر التصنيع بعد الحفظ.');
-   final order=orderRows.first;final warehouseId=order['warehouse_id']?.toString();
-   final materialText=(d['materials']??'').toString().trim();
-   if(materialText.isNotEmpty){
-     if(warehouseId==null)throw Exception('حدد المخزن قبل صرف خامات أمر التصنيع.');
-     final lines=materialText.split(RegExp(r'[\n;]+')).where((x)=>x.trim().isNotEmpty).toList();
-     final required=<String,Map<String,dynamic>>{};
-     for(final line in lines){
-      final parts=line.split('|').map((x)=>x.trim()).toList();if(parts.length<2)continue;
-      final q=_n(parts[1]);if(parts[0].isEmpty||q<=0)continue;
-      final byCode=await _db.from('erp_items').select('id,item_name,base_unit,purchase_price').eq('company_id',co).eq('item_code',parts[0]).limit(1);
-      final itemRows=byCode.isNotEmpty?byCode:await _db.from('erp_items').select('id,item_name,base_unit,purchase_price').eq('company_id',co).eq('item_name',parts[0]).limit(1);
-      if(itemRows.isEmpty)throw Exception('الصنف '+parts[0]+' غير موجود في دليل الأصناف.');
-      final item=itemRows.first, itemId=item['id'].toString();
-      final unit=parts.length>2&&parts[2].isNotEmpty?parts[2]:(item['base_unit']??'وحدة').toString();
-      final unitCost=parts.length>3&&parts[3].isNotEmpty?_n(parts[3]):_n(item['purchase_price']);
-      final current=required[itemId];
-      if(current==null){required[itemId]={'item':item,'quantity':q,'unit':unit,'unit_cost':unitCost};}
-      else{current['quantity']=_n(current['quantity'])+q;current['unit_cost']=unitCost;}
-     }
-     for(final entry in required.entries){
-      final spec=entry.value,item=spec['item'];final alreadyRows=await _db.from('erp_production_material_movements').select('quantity').eq('company_id',co).eq('production_order_id',id).eq('item_id',entry.key);
-      final already=(alreadyRows as List).fold<double>(0,(sum,row)=>sum+_n(row['quantity']));
-      final wanted=_n(spec['quantity']);if(already>wanted)throw Exception('الكمية المسجلة للصنف '+item['item_name']+' أكبر من الكمية المطلوبة في تفاصيل الأمر.');
-      final delta=wanted-already;if(delta<=0)continue;
-      await _db.rpc('erp_record_production_stock_movement',params:{'p_company_id':co,'p_production_order_id':id,'p_warehouse_id':warehouseId,'p_item_id':entry.key,'p_item_name':item['item_name'],'p_quantity':delta,'p_unit':spec['unit'],'p_unit_cost':spec['unit_cost'],'p_movement_date':date,'p_lot_number':order['lot_number'],'p_movement_kind':'issue'});
-     }
-   }
-   final materialRows=await _db.from('erp_production_material_movements').select('quantity,unit_cost,movement_type').eq('company_id',co).eq('production_order_id',id);
-   final materialCost=(materialRows as List).fold<double>(0,(sum,row)=>sum+(_n(row['quantity'])*_n(row['unit_cost'])*(row['movement_type']=='return'?-1:1)));
-   var workCenterCost=0.0;final centerId=data['work_center_id']?.toString();
-   if(centerId!=null){final centers=await _db.from('erp_manufacturing_work_centers').select('hourly_cost').eq('company_id',co).eq('id',centerId).limit(1);if(centers.isNotEmpty)workCenterCost=_n(centers.first['hourly_cost'])*_n(d['actual_hours']);}
-   final computedCost=_n(d['actual_cost'])>0?_n(d['actual_cost']):materialCost+workCenterCost;
-   await _db.from('erp_production_orders').update({'actual_cost':computedCost,'actual_hours':_n(d['actual_hours']),'updated_at':DateTime.now().toIso8601String()}).eq('company_id',co).eq('id',id);
-   final produced=_n(d['produced_qty']);
-   if(produced>0){
-    final productId=order['product_id']?.toString();if(productId==null||warehouseId==null)throw Exception('اختر صنف المنتج النهائي والمخزن قبل استلام الإنتاج.');
-    final receipts=await _db.from('erp_inventory_movements').select('quantity_in').eq('company_id',co).eq('reference_type','production_order').eq('reference_id',id).eq('movement_type','production_receipt');
-    final received=(receipts as List).fold<double>(0,(sum,row)=>sum+_n(row['quantity_in']));
-    if(produced<received)throw Exception('لا يمكن تقليل كمية الإنتاج عن الكمية التي تم استلامها بالمخزون بالفعل.');
-    final delta=produced-received;
-    if(delta>0){
-     final itemRows=await _db.from('erp_items').select('item_name,base_unit').eq('company_id',co).eq('id',productId).limit(1);
-     if(itemRows.isEmpty)throw Exception('تعذر العثور على المنتج النهائي.');
-     final unitCost=computedCost>0?computedCost/produced:_n(order['estimated_cost'])/(_n(order['planned_quantity'],1));
-     await _db.rpc('erp_record_production_stock_movement',params:{'p_company_id':co,'p_production_order_id':id,'p_warehouse_id':warehouseId,'p_item_id':productId,'p_item_name':itemRows.first['item_name'],'p_quantity':delta,'p_unit':itemRows.first['base_unit'],'p_unit_cost':unitCost,'p_movement_date':date,'p_lot_number':order['lot_number'],'p_movement_kind':'receipt'});
-    }
-   }
+   await _db.rpc('erp_sync_production_order_execution',params:{
+    'p_company_id':co,
+    'p_production_order_id':id,
+    'p_movement_date':date,
+    'p_sync_materials':syncProductionMaterials,
+    'p_materials':productionMaterialPayload,
+    'p_produced_quantity':_n(d['produced_qty']),
+    'p_actual_hours':_n(d['actual_hours']),
+    'p_actual_cost':_n(d['actual_cost']),
+    'p_quality':productionQualityPayload
+   });
   }
   if(table=='erp_manufacturing_boms'){
    final componentText=(d['components']??'').toString().trim();
@@ -514,17 +534,6 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     'p_parent_record_id':oldRow?['id'],
     'p_lines':parsed
    });
-  }
-  if(table=='erp_production_orders'){
-   final quality=(d['quality']??'').toString();
-   if(quality.isNotEmpty&&quality!='لم يفحص'){
-    final result=quality.contains('مرفوض')?'fail':quality.contains('تحفظ')?'conditional':'pass';
-    final inspectionCode='QC-'+code;
-    final qualityData={'company_id':co,'inspection_code':inspectionCode,'production_order_id':id,'inspection_stage':d['production_stage']??'final','parameter_name':'نتيجة الجودة النهائية','result':result,'inspected_quantity':_n(d['produced_qty']),'rejected_quantity':_n(d['scrap_qty']),'notes':'نتيجة الفحص من أمر التصنيع'};
-    final existingQuality=await _db.from('erp_production_quality_checks').select('id').eq('company_id',co).eq('inspection_code',inspectionCode).limit(1);
-    if(existingQuality.isEmpty)await _db.from('erp_production_quality_checks').insert(qualityData);
-    else await _db.from('erp_production_quality_checks').update(qualityData).eq('company_id',co).eq('id',existingQuality.first['id']);
-   }
   }
   if(table=='erp_service_tickets'&&oldRow!=null&&oldRow['status']!=status){
    await _db.from('erp_service_ticket_events').insert({'company_id':co,'ticket_id':id,'event_type':'status_change','from_status':_ticketStatus(oldRow['status']),'to_status':_ticketStatus(status),'note':'تغيير حالة التذكرة من شاشة سلسلة'});
