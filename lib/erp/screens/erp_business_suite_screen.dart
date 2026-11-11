@@ -135,7 +135,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    if((already.isNotEmpty||receipts.isNotEmpty)&&oldRow!=null&&_day(oldRow['record_date'])!=_day(payload['record_date']))throw Exception('لا يمكن تغيير تاريخ أمر التصنيع بعد ترحيل حركات مخزنية.');
    if(receipts.isNotEmpty&&((_n(oldDetails['actual_cost'])!=_n(d['actual_cost']))||(_n(oldDetails['actual_hours'])!=_n(d['actual_hours']))))throw Exception('لا يمكن تغيير تكلفة أو ساعات أمر التصنيع بعد استلام المنتج النهائي؛ سجّل تسوية تكلفة مستقلة.');
   }
-  String? table;Map<String,dynamic>? data;String? rpcCreatedId;
+  String? table;Map<String,dynamic>? data;
   if(key=='contracting:material_movement'&&existingId!=null){final same=['project','movement_type','warehouse','item','quantity','unit','unit_cost','movement_date'];if(same.any((field)=>(oldDetails[field]??'')!=(d[field]??'')))throw Exception('حركة المخزون المُرحّلة لا تُعدّل؛ سجّل حركة عكسية أو حركة جديدة.');}
   switch(key){
    case 'fixed_assets:asset_category':{
@@ -282,7 +282,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     final kindText=(d['movement_type']??'').toString();final kind=kindText.contains('إرجاع')||widget.page.contains('إرجاع')?'return':'issue';
     final q=_n(d['quantity'],qty);if(q<=0)throw Exception('أدخل كمية أكبر من صفر.');
     final unit=(d['unit']??items.first['base_unit']??'وحدة').toString();final unitCost=_n(d['unit_cost'],_n(items.first['purchase_price']));
-    table='erp_construction_material_movements';rpcCreatedId=(await _db.rpc('erp_record_construction_stock_movement',params:{'p_company_id':co,'p_project_id':projects.first['id'],'p_warehouse_id':warehouses.first['id'],'p_item_id':items.first['id'],'p_item_name':items.first['item_name'],'p_quantity':q,'p_unit':unit,'p_unit_cost':unitCost,'p_movement_date':_day(d['movement_date']??date),'p_movement_kind':kind,'p_movement_code':code,'p_notes':d['notes']})).toString();
+    table='erp_construction_material_movements';
     data={'company_id':co,'movement_code':code,'project_id':projects.first['id'],'item_id':items.first['id'],'item_name':items.first['item_name'],'warehouse_id':warehouses.first['id'],'movement_type':kind,'quantity':q,'unit':unit,'unit_cost':unitCost,'movement_date':_day(d['movement_date']??date),'notes':d['notes']};break;
    }
    case 'contracting:boq':{
@@ -367,7 +367,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    }
    default: break;
   }
-  if(table==null||data==null)return d;
+  if(table==null||data==null)return {...d,'_save_plan':<String,dynamic>{}};
   const atomicSimpleTypes=<String>{
    'fixed_assets:asset_category',
    'manufacturing:work_center',
@@ -385,44 +385,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    });
    return Map<String,dynamic>.from(saved as Map);
   }
-  String id;
-  if(rpcCreatedId!=null){id=rpcCreatedId;}
-  else if(existingId!=null&&existingId.isNotEmpty){
-   final updated=await _db.from(table).update(data).eq('id',existingId).eq('company_id',co).select('id').maybeSingle();
-   if(updated==null)throw Exception('السجل التشغيلي المرتبط غير موجود داخل الشركة؛ أوقف الحفظ لمنع إنشاء سجل عام غير مرتبط.');
-   id=updated['id'].toString();
-  }else{
-   // Use only PostgreSQL full unique keys verified against the live schema.
-   // This gives each mapped operational record a race-safe create/update path.
-   final conflictColumns=switch(table){
-    'erp_asset_categories'=>'company_id,category_code',
-    'erp_fixed_assets'=>'company_id,asset_code',
-    'erp_asset_depreciation_runs'=>'company_id,run_code',
-    'erp_asset_disposals'=>'company_id,disposal_code',
-    'erp_asset_movements'=>'company_id,suite_record_code',
-    'erp_manufacturing_boms'=>'company_id,bom_code,version',
-    'erp_manufacturing_work_centers'=>'company_id,center_code',
-    'erp_production_orders'=>'company_id,order_code',
-    'erp_production_variances'=>'company_id,variance_code',
-    'erp_production_quality_checks'=>'company_id,inspection_code',
-    'erp_construction_projects'=>'company_id,project_code',
-    'erp_construction_material_requests'=>'company_id,request_code',
-    'erp_construction_material_movements'=>'company_id,movement_code',
-    'erp_construction_boq_lines'=>'company_id,suite_record_code',
-    'erp_construction_costs'=>'company_id,suite_record_code',
-    'erp_construction_payment_certificates'=>'company_id,certificate_number',
-    'erp_construction_site_reports'=>'company_id,report_code',
-    'erp_crm_leads'=>'company_id,lead_code',
-    'erp_service_sla_policies'=>'company_id,policy_code',
-    'erp_service_tickets'=>'company_id,ticket_code',
-    'erp_service_visits'=>'company_id,visit_code',
-    'erp_crm_activities'=>'company_id,activity_code',
-    _=>null
-   };
-   if(conflictColumns==null)throw Exception('لا يوجد مفتاح فريد معتمد لهذا النوع من السجلات التشغيلية؛ أوقف الحفظ بدل إنشاء سجل غير مضمون التفرد.');
-   final saved=await _db.from(table).upsert(data,onConflict:conflictColumns).select('id').single();
-   id=saved['id'].toString();
-  }
+  final actions=<Map<String,dynamic>>[];
   if(table=='erp_construction_material_requests'){
    final materialText=(d['materials']??'').toString().trim();
    final parsed=<Map<String,dynamic>>[];
@@ -446,19 +409,10 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
      });
     }
    }
-   await _db.rpc('erp_replace_construction_material_request_lines',params:{
-    'p_company_id':co,
-    'p_request_id':id,
-    'p_parent_record_id':oldRow?['id'],
-    'p_lines':parsed
-   });
+   actions.add({'type':'replace_construction_material_request_lines','p_lines':parsed});
   }
   if(table=='erp_asset_depreciation_runs'&&(status=='approved'||status=='done'||status=='posted')){
-   await _db.rpc('erp_finalize_asset_depreciation_run',params:{
-    'p_company_id':co,
-    'p_run_id':id,
-    'p_post':status=='posted'
-   });
+   actions.add({'type':'finalize_asset_depreciation_run','p_post':status=='posted'});
   }
   if(table=='erp_construction_payment_certificates'){
    final certificateText=(d['certificate_lines']??'').toString().trim();
@@ -479,21 +433,18 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
      parsed.add({'boq_line_id':boqId,'current_quantity':currentQty,'cumulative_quantity':cumulativeQty,'unit_rate':rate});
     }
    }
-   await _db.rpc('erp_sync_construction_certificate_lines',params:{
-    'p_company_id':co,
-    'p_certificate_id':id,
-    'p_parent_record_id':oldRow?['id'],
+   actions.add({
+    'type':'sync_construction_certificate_lines',
     'p_lines':parsed,
     'p_replace_lines':certificateText.isNotEmpty
    });
   }
   if(table=='erp_asset_disposals'&&status=='posted'){
-   await _db.rpc('erp_post_asset_disposal',params:{'p_company_id':co,'p_disposal_id':id});
+   actions.add({'type':'post_asset_disposal'});
   }
   if(table=='erp_production_orders'){
-   await _db.rpc('erp_sync_production_order_execution',params:{
-    'p_company_id':co,
-    'p_production_order_id':id,
+   actions.add({
+    'type':'sync_production_order_execution',
     'p_movement_date':date,
     'p_sync_materials':syncProductionMaterials,
     'p_materials':productionMaterialPayload,
@@ -528,14 +479,17 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
      });
     }
    }
-   await _db.rpc('erp_replace_manufacturing_bom_lines',params:{
-    'p_company_id':co,
-    'p_bom_id':id,
-    'p_parent_record_id':oldRow?['id'],
-    'p_lines':parsed
-   });
+   actions.add({'type':'replace_manufacturing_bom_lines','p_lines':parsed});
   }
-  return {...d,'_operational_table':table,'_operational_id':id};
+  return {
+   ...d,
+   '_save_plan':<String,dynamic>{
+    'table':table,
+    'id':existingId,
+    'data':data,
+    'actions':actions,
+   }
+  };
  }
 
  String get _reportTable {
@@ -604,14 +558,18 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    };
    final atomicParentSave=atomicSimpleTypes.contains('$_moduleKey:${c.type}');
    try{
-    payload['details']=await _syncOperationalRecord(payload,oldRow:row);
-    if(!atomicParentSave){
-     if(row==null){
-      payload['created_by']=_db.auth.currentUser?.id;
-      await _db.from('erp_business_suite_records').insert(payload);
-     }else{
-      await _db.from('erp_business_suite_records').update(payload).eq('id',row['id']).eq('company_id',widget.companyId!);
-     }
+    final preparedDetails=await _syncOperationalRecord(payload,oldRow:row);
+    if(atomicParentSave){
+     payload['details']=preparedDetails;
+    }else{
+     final details=Map<String,dynamic>.from(preparedDetails);
+     final plan=Map<String,dynamic>.from(details.remove('_save_plan') as Map? ?? const <String,dynamic>{});
+     payload['details']=details;
+     if(row!=null)payload['id']=row['id'];
+     await _db.rpc('erp_save_business_suite_record',params:{
+      'p_parent':payload,
+      'p_plan':plan,
+     });
     }
     if(ctx.mounted)Navigator.pop(ctx,true);
    }catch(e){
