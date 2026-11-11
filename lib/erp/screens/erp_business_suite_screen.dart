@@ -470,12 +470,6 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     'p_replace_lines':certificateText.isNotEmpty
    });
   }
-  if(table=='erp_construction_boq_lines'){
-   final projectId=data['project_id'];final lines=await _db.from('erp_construction_boq_lines').select('planned_quantity,executed_quantity,unit_rate').eq('company_id',co).eq('project_id',projectId);
-   double budget=0,executed=0;for(final line in (lines as List)){final rate=_n(line['unit_rate']);budget+=_n(line['planned_quantity'])*rate;executed+=_n(line['executed_quantity'])*rate;}
-   final progress=budget<=0?0:(executed/budget*100).clamp(0,100);
-   await _db.from('erp_construction_projects').update({'progress_percent':progress,'updated_at':DateTime.now().toIso8601String()}).eq('company_id',co).eq('id',projectId);
-  }
   if(table=='erp_asset_disposals'&&status=='posted'){
    await _db.rpc('erp_post_asset_disposal',params:{'p_company_id':co,'p_disposal_id':id});
   }
