@@ -70,3 +70,92 @@
 
 ## 6. حدود المراجعة
 هذه مراجعة قراءة فقط للقيم والـtriggers والواجهات. لم يتم تغيير `code_generation_registry` أو أكواد السجلات أو triggers أو migrations. لم يتم إنشاء بيانات أو إعادة ترقيم سجلات موجودة.
+
+
+## 7. سجل الـ80 نوعًا الفعلي في code_generation_registry
+
+تم استخراج المفاتيح مباشرة من JSONB الحي. هذه هي قائمة أنواع الكود المخزنة حاليًا؛ لا تعني أن كل trigger/preview مربوط بها بالكامل.
+
+| type_key | prefix | digits | automatic | composite |
+|---|---|---:|---|---|
+| `account` | `Acc` | 5 |  |  |
+| `asset_category` | `Aca` | 3 |  |  |
+| `asset_depreciation_run` | `Adr` | 5 |  |  |
+| `asset_disposal` | `Adp` | 5 |  |  |
+| `branch` | `Brn` | 3 |  |  |
+| `brand` | `Bra` | 2 | true | false |
+| `business_suite_record` | `Bsr` | 5 |  |  |
+| `cash_movement` | `Cmv` | 5 |  |  |
+| `cash_order` | `Cso` | 5 |  |  |
+| `cash_payment` | `Cpy` | 5 |  |  |
+| `cash_receipt` | `Rcp` | 5 |  |  |
+| `cash_transfer` | `Trf` | 5 |  |  |
+| `cashbox` | `Csh` | 5 |  |  |
+| `category` | `Cat` | 6 | true | true |
+| `checkbook` | `Ckb` | 5 |  |  |
+| `commission_plan` | `Com` | 5 |  |  |
+| `construction_material_movement` | `Cmm` | 5 |  |  |
+| `construction_material_request` | `Cmr` | 5 |  |  |
+| `construction_payment_certificate` | `Cpc` | 5 |  |  |
+| `construction_project` | `Cpj` | 5 |  |  |
+| `construction_site_report` | `Csr` | 5 |  |  |
+| `cost_center` | `Cst` | 5 |  |  |
+| `crm_activity` | `Act` | 5 |  |  |
+| `crm_lead` | `Led` | 5 |  |  |
+| `customer` | `Cus` | 4 | true | true |
+| `delegate` | `Rep` | 5 |  |  |
+| `department` | `Dep` | 3 |  |  |
+| `employee` | `Emp` | 5 |  |  |
+| `fixed_asset` | `Ast` | 5 |  |  |
+| `grade` | `Grd` | 3 |  |  |
+| `hr_advance` | `Hav` | 5 |  |  |
+| `hr_contract` | `Hct` | 5 |  |  |
+| `hr_custody` | `Hcy` | 5 |  |  |
+| `job` | `Job` | 5 |  |  |
+| `journal_entry` | `Jrn` | 5 |  |  |
+| `manufacturing_bom` | `Mfb` | 5 |  |  |
+| `manufacturing_work_center` | `Mwc` | 4 |  |  |
+| `payment_method` | `PAY` | 4 |  |  |
+| `payroll_run` | `Prl` | 5 |  |  |
+| `permission_template` | `Tpl` | 5 |  |  |
+| `price_list` | `Pli` | 5 |  |  |
+| `production_order` | `Pdo` | 5 |  |  |
+| `production_quality_check` | `Pqc` | 5 |  |  |
+| `production_variance` | `Pvr` | 5 |  |  |
+| `purchase_invoice` | `Piv` | 5 |  |  |
+| `purchase_order` | `Por` | 5 |  |  |
+| `purchase_receipt` | `Prr` | 5 |  |  |
+| `purchase_return` | `Prt` | 5 |  |  |
+| `quotation` | `Qot` | 5 |  |  |
+| `salary_element` | `Elm` | 3 |  |  |
+| `sales_delivery` | `Dlv` | 5 |  |  |
+| `sales_fulfillment` | `Ful` | 5 |  |  |
+| `sales_invoice` | `Siv` | 5 |  |  |
+| `sales_order` | `Sor` | 5 |  |  |
+| `sales_return` | `Srt` | 5 |  |  |
+| `service_sla_policy` | `Slp` | 4 |  |  |
+| `service_ticket` | `Svt` | 5 |  |  |
+| `service_visit` | `Svs` | 5 |  |  |
+| `shift` | `Shf` | 5 |  |  |
+| `supplier` | `Ven` | 5 |  |  |
+| `unit` | `UNT` | 4 |  |  |
+| `user` | `Usr` | 5 |  |  |
+| `user_classification` | `Cls` | 5 |  |  |
+| `user_type` | `Typ` | 2 |  |  |
+| `warehouse` | `Whs` | 5 |  |  |
+| `work_location` | `Plc` | 3 |  |  |
+| `workspace_adjustment` | `Wad` | 5 |  |  |
+| `workspace_branch` | `Wbr` | 5 |  |  |
+| `workspace_cash_movement` | `Wcm` | 5 |  |  |
+| `workspace_customer` | `Wcu` | 5 |  |  |
+| `workspace_department` | `Wdp` | 5 |  |  |
+| `workspace_employee` | `Wem` | 5 |  |  |
+| `workspace_item_link` | `Wil` | 5 |  |  |
+| `workspace_purchase` | `Wpi` | 5 |  |  |
+| `workspace_purchase_return` | `Wpr` | 5 |  |  |
+| `workspace_sale` | `Wsi` | 5 |  |  |
+| `workspace_sale_return` | `Wsr` | 5 |  |  |
+| `workspace_supplier` | `Wsu` | 5 |  |  |
+| `workspace_transfer` | `Wtr` | 5 |  |  |
+| `workspace_warehouse` | `Wwh` | 5 |  |  |
+
