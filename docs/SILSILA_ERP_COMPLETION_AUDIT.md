@@ -1062,3 +1062,25 @@ Migration:
 
 التحقق: Trigger ظاهر على جدول الحركات، والدالة `prosecdef=false`, `search_path` فارغ، `anon_execute=false`, `authenticated_execute=true`.
 **نسبة إغلاق تطبيق حركة الأصل المعتمدة: 100%.** لا يشمل ذلك ذرية إنشاء رأس الحركة والسجل العام في معاملة واحدة.
+
+
+### جعل إجمالي التكلفة الفعلية للمشروع يتحدث مع الحركة/التكلفة نفسها — 2026-11-11
+
+أضيف Trigger واحد يعاد استخدامه على:
+- `erp_construction_costs` بعد INSERT/UPDATE/DELETE.
+- `erp_construction_material_movements` بعد INSERT/UPDATE/DELETE.
+
+يقوم باحتساب `erp_construction_projects.actual_cost` من مجموع التكاليف المعتمدة/المرحلة مضافًا إليه صافي تكلفة حركات المواد (الصرف موجب والإرجاع سالب)، ثم يحدث المشروع ضمن معاملة السجل الأصلي نفسه.
+
+لمنع فقد التحديث عند حفظ عدة تكاليف/حركات في الوقت نفسه، تستخدم الدالة advisory transaction lock موحدًا بمفتاح الشركة والمشروع نفسه، ثم تعيد قراءة المجاميع بعد أخذ القفل. وتتعامل مع نقل السجل بين مشروعين بإعادة حساب كليهما.
+
+أزيلت إعادة الحساب المنفصلة من Flutter؛ لم يعد التطبيق يجلب جميع صفوف التكاليف والحركات ليحسب المجموع ثم يرسل UPDATE منفصلًا للمشروع.
+
+Migration:
+- `20261111034446_atomic_construction_project_actual_cost_totals`
+- الملف: `supabase/migrations/20261111034446_atomic_construction_project_actual_cost_totals.sql`
+- Commit Flutter: `d737861e85444d5c4440067ca1c12eac9d18869c`
+- Commit Migration: `3286e5ce72aee1a57f8c8e3feb8493d9d0261db9`
+
+التحقق: كلا Trigger ظاهر ومفعّل، والدالة `SECURITY INVOKER` و`search_path` فارغ، `anon_execute=false`, `authenticated_execute=true`. لا تظهر في تنبيه SECURITY DEFINER في Advisor.
+**نسبة إغلاق مزامنة إجمالي تكلفة المشروع: 100%.** لا تجعل هذه الحزمة رأس التكلفة أو حركة المواد والسجل العام Business Suite جزءًا من معاملة واحدة معًا.
