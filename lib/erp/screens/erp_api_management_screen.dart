@@ -5,8 +5,7 @@ import '../services/erp_api_integration.dart';
 const _apiPurple = Color(0xFF3E007D);
 const _apiOrange = Color(0xFFFFA015);
 
-/// One workspace for API interface, external connections, and API-key management.
-/// Secrets are intentionally never generated or displayed by this client-only screen.
+/// One workspace for the deployed read-only API gateway and server-managed API keys.
 class ErpApiManagementScreen extends StatefulWidget {
   const ErpApiManagementScreen({super.key});
 
@@ -29,6 +28,13 @@ class _ErpApiManagementScreenState extends State<ErpApiManagementScreen> {
   bool _issuing = false;
   final _keyLabel = TextEditingController(text: 'تكامل خارجي');
   List<Map<String, dynamic>> _keys = <Map<String, dynamic>>[];
+
+  @override
+  void initState() {
+    super.initState();
+    try { _db = Supabase.instance.client; } catch (_) {}
+    _loadApiKeys();
+  }
 
   @override
   void dispose() {
@@ -162,7 +168,7 @@ class _ErpApiManagementScreenState extends State<ErpApiManagementScreen> {
         children: [
           _sectionTitle('واجهة API والربط الخارجي', 'كتالوج المسارات وتعريف النظام الخارجي والتحقق من بيانات الربط.'),
           Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('مسارات API المتاحة للتصميم', style: TextStyle(fontWeight: FontWeight.w900, color: _apiPurple)),
+            const Text('مسارات API المنشورة فعليًا', style: TextStyle(fontWeight: FontWeight.w900, color: _apiPurple)),
             const SizedBox(height: 6),
             ...erpApiCatalog.map((endpoint) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(children: [
               SizedBox(width: 52, child: Text(endpoint.method, style: const TextStyle(fontWeight: FontWeight.w800, color: _apiPurple))),
@@ -170,7 +176,7 @@ class _ErpApiManagementScreenState extends State<ErpApiManagementScreen> {
               Text(endpoint.requiredScope, style: const TextStyle(fontSize: 11, color: Colors.black54)),
             ]))),
             const SizedBox(height: 4),
-            const Text('المسارات تعريفية وليست منشورة كخدمة فعلية بعد.', style: TextStyle(color: Colors.black54, fontSize: 12)),
+            const Text('الخدمة منشورة وتقبل GET فقط مع التحقق من المفتاح والصلاحيات.', style: TextStyle(color: Colors.black54, fontSize: 12)),
           ]))),
           TextField(controller: _name, decoration: const InputDecoration(labelText: 'اسم النظام المتصل', border: OutlineInputBorder())),
           const SizedBox(height: 10),
