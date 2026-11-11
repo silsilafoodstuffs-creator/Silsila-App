@@ -368,6 +368,22 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    default: break;
   }
   if(table==null||data==null)return d;
+  const atomicSimpleTypes=<String>{
+   'fixed_assets:asset_category',
+   'manufacturing:work_center',
+   'customer_service:opportunity',
+   'customer_service:sla_policy',
+   'customer_service:field_task',
+   'customer_service:activity',
+  };
+  if(atomicSimpleTypes.contains(key)){
+   final saved=await _db.rpc('erp_save_business_suite_simple_record_atomic',params:{
+    'p_parent_record_id':oldRow?['id'],
+    'p_parent':payload,
+    'p_operational':data,
+   });
+   return Map<String,dynamic>.from(saved as Map);
+  }
   String id;
   if(rpcCreatedId!=null){id=rpcCreatedId;}
   else if(existingId!=null&&existingId.isNotEmpty){
@@ -576,7 +592,29 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   ])))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(style:FilledButton.styleFrom(backgroundColor:_p),onPressed:()async{
    if(!key.currentState!.validate())return;final payload=<String,dynamic>{'company_id':widget.companyId,'module_key':_moduleKey,'record_type':c.type,'record_code':code.text.trim(),'name':name.text.trim(),'status':status,'counterparty':counter.text.trim().isEmpty?null:counter.text.trim(),'details':{for(final f in c.fields)if(ctrls[f.key]!.text.trim().isNotEmpty)f.key:ctrls[f.key]!.text.trim()}};
    if(date.text.trim().isNotEmpty)payload['record_date']=date.text.trim();if(due.text.trim().isNotEmpty)payload['due_date']=due.text.trim();if(amount.text.trim().isNotEmpty)payload['amount']=num.tryParse(amount.text.trim().replaceAll(',','.'))??0;if(qty.text.trim().isNotEmpty)payload['quantity']=num.tryParse(qty.text.trim().replaceAll(',','.'))??0;
-   try{payload['details']=await _syncOperationalRecord(payload,oldRow:row);if(row==null){payload['created_by']=_db.auth.currentUser?.id;await _db.from('erp_business_suite_records').insert(payload);}else{await _db.from('erp_business_suite_records').update(payload).eq('id',row['id']).eq('company_id',widget.companyId!);}if(ctx.mounted)Navigator.pop(ctx,true);}catch(e){if(mounted)ErpCenterToast.show(context, 'تعذر الحفظ في السجل التشغيلي: $e', isError: true, duration: const Duration(seconds: 3));}
+   const atomicSimpleTypes=<String>{
+    'fixed_assets:asset_category',
+    'manufacturing:work_center',
+    'customer_service:opportunity',
+    'customer_service:sla_policy',
+    'customer_service:field_task',
+    'customer_service:activity',
+   };
+   final atomicParentSave=atomicSimpleTypes.contains('$_moduleKey:${c.type}');
+   try{
+    payload['details']=await _syncOperationalRecord(payload,oldRow:row);
+    if(!atomicParentSave){
+     if(row==null){
+      payload['created_by']=_db.auth.currentUser?.id;
+      await _db.from('erp_business_suite_records').insert(payload);
+     }else{
+      await _db.from('erp_business_suite_records').update(payload).eq('id',row['id']).eq('company_id',widget.companyId!);
+     }
+    }
+    if(ctx.mounted)Navigator.pop(ctx,true);
+   }catch(e){
+    if(mounted)ErpCenterToast.show(context, 'تعذر الحفظ في السجل التشغيلي: $e', isError: true, duration: const Duration(seconds: 3));
+   }
   },child:const Text('حفظ'))])));
   for(final x in [code,name,counter,amount,qty,date,due,...ctrls.values]){x.dispose();}if(ok==true)await _load();
  }
