@@ -257,7 +257,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
         'p_employee_id':e['id'],
         'p_notes':'تسجيل حضور مباشر فقط',
       });
-      if(mounted)setState(()=>message='تم تسجيل حضور مباشر فقط للموظف \${s(e['full_name'])}.');
+      if(mounted)setState(()=>message='تم تسجيل حضور مباشر فقط للموظف ${s(e['full_name'])}.');
       await load();
     }catch(err){
       if(mounted)setState(()=>error='تعذر تسجيل الحضور المباشر دون استبدال سجل سابق: $err');
