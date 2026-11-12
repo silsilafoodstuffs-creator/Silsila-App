@@ -3,12 +3,14 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/erp_app_asset_storage.dart';
 import '../../services/activity_service.dart';
 import '../services/erp_app_management_service.dart';
 import '../services/erp_app_settings.dart';
 import 'erp_app_ticker_ads_tab.dart';
+import '../widgets/erp_quick_task_button.dart';
 
 const _adsPurple = Color(0xFF3E007D);
 const _adsOrange = Color(0xFFFFA015);
@@ -38,6 +40,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
   final Map<String, Future<String>> _urls = {};
   List<ErpAppAssetRecord> _assets = const [];
   bool _loading = false;
+  bool _editMode = false;
   String? _error;
   String? _message;
   String? _busySlot;
@@ -295,22 +298,55 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
     }
   }
 
+  Future<void> _saveAllMetadata() async {
+    if (_busySlot != null || !_editMode) return;
+    final pending = _adSlots.map((slot) => _forSlot(slot)).whereType<ErpAppAssetRecord>().toList();
+    setState(() { _busySlot = 'all'; _error = null; _message = null; });
+    try {
+      for (final asset in pending) {
+        if (asset.id == null) continue;
+        final key = _keyFor(asset.displayName, asset.activityCode);
+        final type = _targetTypes[key] ?? asset.targetType;
+        final code = (_targetCodes[key] ?? asset.targetCode ?? '').trim();
+        if (type != 'none' && code.isEmpty) {
+          throw ArgumentError('اكتب كود الوجهة لإعلان «${asset.displayName}» قبل الحفظ.');
+        }
+        await _repository.updateAssetRecord(assetId: asset.id!, asset: ErpAppAssetRecord(
+          id: asset.id, appId: asset.appId, assetType: asset.assetType,
+          storagePath: asset.storagePath, displayName: asset.displayName,
+          entityId: asset.entityId, mimeType: asset.mimeType,
+          fileSizeBytes: asset.fileSizeBytes, altText: asset.altText,
+          targetType: type, targetCode: type == 'none' ? null : code,
+          durationSeconds: _durations[key] ?? asset.durationSeconds,
+          activityCode: asset.activityCode,
+        ));
+      }
+      if (mounted) setState(() { _message = 'تم حفظ إعدادات الإعلانات بنجاح.'; _editMode = false; });
+      await _load();
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر حفظ إعدادات الإعلانات: $error');
+    } finally {
+      if (mounted) setState(() => _busySlot = null);
+    }
+  }
+
   Future<void> _deleteSlot(String slot) async {
     final old = _forSlot(slot);
     if (old == null || old.id == null || _busySlot != null) return;
     final yes = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('حذف $slot'),
-        content: const Text('هل تريد إزالة هذا الإعلان من واجهة التطبيق؟'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No / لا')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Yes / نعم، احذف الإعلان'),
-          ),
-        ],
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: Text('حذف $slot'),
+          content: const Text('هل ترغب في حذف هذا الإعلان؟'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('إلغاء الأمر')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('لأ')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red), child: const Text('نعم')),
+          ],
+        ),
       ),
     );
     if (yes != true) return;
@@ -371,23 +407,24 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(children: [
-          Container(
-            width: 48, height: 48,
-            decoration: BoxDecoration(color: _adsPurple.withValues(alpha: .09), borderRadius: BorderRadius.circular(14)),
-            child: const Icon(Icons.view_carousel_outlined, color: _adsPurple),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('إدارة إعلانات التطبيق', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _adsPurple)),
-            SizedBox(height: 4),
-            Text('إعلانات الهيدر والمنبثق والبداية، مع تخصيصها حسب النشاط أو جميع الأنشطة.', style: TextStyle(color: Colors.black54, height: 1.4)),
-          ])),
-          IconButton(tooltip: 'تحديث الإعلانات', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
+          const Icon(Icons.view_carousel_outlined, color: _adsPurple, size: 20),
+          const SizedBox(width: 6),
+          const Expanded(child: Text('إدارة إعلانات التطبيق',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _adsPurple))),
         ]),
-        const SizedBox(height: 14),
-        DropdownButtonFormField<String>(itemHeight: 48, 
+        const SizedBox(height: 3),
+        Wrap(spacing: 2.5, runSpacing: 2.5, children: [
+          ErpQuickTaskButton(label: 'تحديث', icon: Icons.refresh, compact: true,
+            onPressed: _loading || _busySlot != null ? null : _load),
+          ErpQuickTaskButton(label: 'تعديل', icon: Icons.edit_outlined, compact: true,
+            onPressed: _busySlot != null || _loading ? null : () => setState(() => _editMode = !_editMode)),
+          ErpQuickTaskButton(label: 'حفظ', icon: Icons.save_outlined, compact: true,
+            onPressed: !_editMode || _busySlot != null || _loading ? null : _saveAllMetadata),
+        ]),
+        const SizedBox(height: 5),
+        SizedBox(height: 40, child: DropdownButtonFormField<String>(itemHeight: 40, 
           value: _selectedActivityCode,
-          decoration: const InputDecoration(labelText: 'نطاق عرض الإعلانات حسب النشاط', border: OutlineInputBorder(), isDense: true),
+          decoration: const InputDecoration(labelText: 'نطاق عرض الإعلانات حسب النشاط', border: OutlineInputBorder(), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7)),
           items: [
             const DropdownMenuItem(value: _allActivities, child: Text('كل الأنشطة (الإعلانات العامة)')),
             ..._activities.map((a) => DropdownMenuItem(value: a['code'], child: Text('${a['name']} — ${a['code']}'))),
@@ -396,13 +433,13 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
             setState(() { _selectedActivityCode = value ?? _allActivities; _message = null; _error = null; });
             _load();
           },
-        ),
-        const SizedBox(height: 14),
+        )),
+        const SizedBox(height: 5),
         Card(
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey.shade300)),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(8),
             child: Text(_isGlobalScope
               ? 'هذه الإعلانات عامة لكل الأنشطة. عند اختيار نشاط محدد يمكنك رفع إعلانات خاصة به؛ وتكون له الأولوية، ثم تُستكمل إعلانات الهيدر الناقصة من أول إعلانات النطاق العام. إعلان البداية الخاص بالنشاط يتقدم على إعلان البداية العام.'
               : 'هذه الإعلانات مخصصة للنشاط المحدد. ما ترفعه هنا يتقدم على الإعلان العام، وأي خانات هيدر غير محددة ستُستكمل تلقائيًا من الإعلانات العامة. إعلان البداية أيضًا له أولوية النشاط ثم العام.',
@@ -411,7 +448,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
         ),
         if (_message != null) _notice(_message!, Colors.green),
         if (_error != null) _notice(_error!, Colors.red),
-        const SizedBox(height: 12),
+        const SizedBox(height: 5),
         if (_loading) const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
         else ..._adSlots.map((slot) {
           final asset = _forSlot(slot);
@@ -422,101 +459,113 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
           final targetType = _targetTypes[key] ?? asset?.targetType ?? 'none';
           return Card(
             elevation: 0,
-            margin: const EdgeInsets.only(bottom: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: Colors.grey.shade300)),
+            margin: const EdgeInsets.only(bottom: 5),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: Colors.grey.shade300)),
             child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Row(children: [
-                  Expanded(child: Text(slot, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: _adsPurple))),
-                  Text(asset != null ? 'محفوظ لهذا النشاط' : inherited ? 'موروث من كل الأنشطة' : 'غير محدد', style: TextStyle(color: asset != null ? Colors.green : inherited ? _adsOrange : Colors.black54, fontWeight: FontWeight.w700)),
-                ]),
-                const SizedBox(height: 10),
-                AspectRatio(
-                  aspectRatio: 16 / 6,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: effectiveAsset == null
-                        ? Container(color: const Color(0xFFF4EFF9), child: Center(child: Icon(slot == _introSlot ? Icons.movie_creation_outlined : Icons.add_photo_alternate_outlined, color: _adsPurple, size: 42)))
-                        : effectiveAsset.mimeType == 'video/mp4'
-                            ? Container(color: const Color(0xFFF4EFF9), child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.play_circle_outline, color: _adsPurple, size: 42), Text('فيديو MP4 محفوظ', style: TextStyle(color: _adsPurple))])))
+              padding: const EdgeInsets.all(5),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                SizedBox(
+                  width: 150,
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    AspectRatio(
+                      aspectRatio: 16 / 6,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(7),
+                        child: effectiveAsset == null
+                          ? Material(color: const Color(0xFFF4EFF9), child: InkWell(
+                              onTap: () => launchUrl(Uri.parse('https://wa.me/201019617100'), mode: LaunchMode.externalApplication),
+                              child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                                Image.asset('assets/images/silsila_logo.png', width: 42, height: 20, fit: BoxFit.contain),
+                                const Text('ضع إعلانك هنا', style: TextStyle(color: _adsPurple, fontWeight: FontWeight.w900, fontSize: 10)),
+                                const Text('01019617100', style: TextStyle(color: _adsPurple, fontSize: 9)),
+                                const Text('واتساب سلسلة', style: TextStyle(color: _adsPurple, fontSize: 9)),
+                              ])),
+                            ))
+                          : effectiveAsset.mimeType == 'video/mp4'
+                            ? Container(color: const Color(0xFFF4EFF9), child: const Center(child: Icon(Icons.play_circle_outline, color: _adsPurple, size: 28)))
                             : FutureBuilder<String>(
                                 future: _signedUrl(effectiveAsset.storagePath),
                                 builder: (context, snap) => snap.hasData
-                                    ? Image.network(snap.data!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined)))
-                                    : const Center(child: CircularProgressIndicator()),
+                                  ? Image.network(snap.data!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined)))
+                                  : const Center(child: CircularProgressIndicator()),
                               ),
-                  ),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(slot, maxLines: 1, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: _adsPurple)),
+                    Text(asset != null ? 'محفوظ' : inherited ? 'موروث' : 'غير محدد',
+                      style: TextStyle(fontSize: 9, color: asset != null ? Colors.green : inherited ? _adsOrange : Colors.black54)),
+                  ]),
                 ),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(itemHeight: 48, 
-                  value: targetType,
-                  decoration: const InputDecoration(labelText: 'التوجه عند الضغط على الصورة', border: OutlineInputBorder(), isDense: true),
-                  items: const [
-                    DropdownMenuItem(value: 'none', child: Text('بدون توجيه')),
-                    DropdownMenuItem(value: 'category', child: Text('فتح فئة أصناف')),
-                    DropdownMenuItem(value: 'supplier', child: Text('فتح مورد')),
-                  ],
-                  onChanged: _busySlot != null ? null : (value) => setState(() => _targetTypes[key] = value ?? 'none'),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  key: ValueKey('target-code-$key'),
-                  initialValue: _targetCodes[key] ?? asset?.targetCode ?? '',
-                  decoration: InputDecoration(labelText: targetType == 'category' ? 'كود الفئة' : targetType == 'supplier' ? 'كود المورد / معرّف حساب المورد' : 'كود الوجهة (اختياري)', hintText: 'اختياري عند اختيار بدون توجيه', border: const OutlineInputBorder(), isDense: true),
-                  onChanged: (value) => _targetCodes[key] = value,
-                ),
-                if (slot == _popupSlot || slot == _introSlot) ...[
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    key: ValueKey('duration-$key'),
-                    initialValue: (_durations[key] ?? asset?.durationSeconds ?? (slot == _introSlot ? 4 : 5)).toString(),
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(labelText: slot == _introSlot ? 'مدة فيديو / صورة البداية بالثواني' : 'مدة ظهور الإعلان المنبثق بالثواني', border: const OutlineInputBorder(), isDense: true),
-                    onChanged: (value) => _durations[key] = int.tryParse(value) ?? 5,
-                  ),
-                ],
-                const SizedBox(height: 10),
-                Wrap(spacing: 8, runSpacing: 8, children: [
-                  FilledButton.icon(
-                    onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: false),
-                    icon: const Icon(Icons.folder_open_outlined),
-                    label: Text(slot == _introSlot ? 'صورة من الجهاز' : 'استيراد صورة من الجهاز'),
-                    style: FilledButton.styleFrom(backgroundColor: _adsPurple),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: true),
-                    icon: const Icon(Icons.photo_camera_outlined),
-                    label: Text(slot == _introSlot ? 'تصوير صورة بالكاميرا' : 'تصوير بالكاميرا'),
-                  ),
-                  if (slot == _introSlot) ...[
-                    FilledButton.icon(
-                      onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: false, video: true),
-                      icon: const Icon(Icons.video_library_outlined),
-                      label: const Text('فيديو من الجهاز (MP4)'),
-                      style: FilledButton.styleFrom(backgroundColor: _adsOrange, foregroundColor: _adsPurple),
+                const SizedBox(width: 6),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                  Wrap(spacing: 4, runSpacing: 3, children: [
+                    OutlinedButton.icon(
+                      onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: false),
+                      icon: const Icon(Icons.folder_open_outlined, size: 15),
+                      label: const Text('من الجهاز'),
+                      style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5)),
                     ),
                     OutlinedButton.icon(
-                      onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: true, video: true),
-                      icon: const Icon(Icons.videocam_outlined),
-                      label: const Text('تصوير فيديو بالكاميرا'),
+                      onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: true),
+                      icon: const Icon(Icons.photo_camera_outlined, size: 15),
+                      label: const Text('كاميرا'),
+                      style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5)),
                     ),
+                    if (slot == _introSlot)
+                      OutlinedButton.icon(
+                        onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: false, video: true),
+                        icon: const Icon(Icons.video_library_outlined, size: 15),
+                        label: const Text('فيديو'),
+                        style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5)),
+                      ),
+                  ]),
+                  const SizedBox(height: 4),
+                  SizedBox(height: 38, child: DropdownButtonFormField<String>(
+                    value: targetType,
+                    itemHeight: 40,
+                    decoration: const InputDecoration(labelText: 'التوجه عند الضغط', border: OutlineInputBorder(), isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 5)),
+                    items: const [
+                      DropdownMenuItem(value: 'none', child: Text('بدون توجيه')),
+                      DropdownMenuItem(value: 'category', child: Text('فتح فئة أصناف')),
+                      DropdownMenuItem(value: 'supplier', child: Text('فتح مورد')),
+                    ],
+                    onChanged: !_editMode || _busySlot != null ? null : (value) => setState(() => _targetTypes[key] = value ?? 'none'),
+                  )),
+                  if (targetType != 'none') ...[
+                    const SizedBox(height: 3),
+                    SizedBox(height: 38, child: TextFormField(
+                      key: ValueKey('target-code-$key'),
+                      initialValue: _targetCodes[key] ?? asset?.targetCode ?? '',
+                      decoration: const InputDecoration(labelText: 'كود الوجهة', border: OutlineInputBorder(), isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 5)),
+                      enabled: _editMode,
+                      onChanged: (value) => _targetCodes[key] = value,
+                    )),
                   ],
-
-                  if (asset != null)
-                    OutlinedButton.icon(
-                      onPressed: _busySlot != null ? null : () => _saveMetadata(slot, asset),
-                      icon: const Icon(Icons.save_outlined),
-                      label: const Text('حفظ إعدادات الإعلان'),
-                    ),
-                  if (asset != null)
-                    TextButton.icon(
-                      onPressed: _busySlot != null ? null : () => _deleteSlot(slot),
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      label: const Text('حذف الإعلان', style: TextStyle(color: Colors.red)),
-                    ),
-                  if (busy) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                ]),
+                  if (slot == _popupSlot || slot == _introSlot) ...[
+                    const SizedBox(height: 3),
+                    SizedBox(height: 38, child: TextFormField(
+                      key: ValueKey('duration-$key'),
+                      initialValue: (_durations[key] ?? asset?.durationSeconds ?? (slot == _introSlot ? 4 : 5)).toString(),
+                      keyboardType: TextInputType.number,
+                      enabled: _editMode,
+                      decoration: InputDecoration(labelText: slot == _introSlot ? 'مدة البداية بالثواني' : 'مدة المنبثق بالثواني', border: const OutlineInputBorder(), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5)),
+                      onChanged: (value) => _durations[key] = int.tryParse(value) ?? 5,
+                    )),
+                  ],
+                  Row(children: [
+                    Expanded(child: Text(_editMode ? 'وضع التعديل نشط' : 'فعّل تعديل من الهيدر لتغيير الإعدادات',
+                      style: const TextStyle(fontSize: 10, color: Colors.black54))),
+                    if (asset != null)
+                      TextButton.icon(
+                        onPressed: _busySlot != null ? null : () => _deleteSlot(slot),
+                        icon: const Icon(Icons.delete_outline, color: Colors.red, size: 16),
+                        label: const Text('حذف الإعلان', style: TextStyle(color: Colors.red, fontSize: 11)),
+                        style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 5)),
+                      ),
+                    if (busy) const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                  ]),
+                ])),
               ]),
             ),
           );
