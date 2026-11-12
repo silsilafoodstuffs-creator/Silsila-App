@@ -1038,7 +1038,7 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
   Widget build(BuildContext context) {
     if (_ads.isEmpty) return const SizedBox.shrink();
     return SizedBox(
-      height: 38,
+      height: 34,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _ads.length,
@@ -1057,8 +1057,8 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
             child: Row(
               children: [
                 SizedBox(
-                  width: 27,
-                  height: 27,
+                  width: 24,
+                  height: 24,
                   child: logo == null
                       ? const Icon(Icons.storefront_outlined, color: purple, size: 20)
                       : Image.memory(
