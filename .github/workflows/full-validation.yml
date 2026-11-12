@@ -1,8 +1,10 @@
 name: Silsila Full Validation - All Recent Changes
 
-# Run the complete validation manually at planned milestones and final delivery.
+# Run full validation on the completed feature branch and on explicit milestones.
 on:
-  # Run once at planned milestones and final delivery, not after every commit.
+  push:
+    branches:
+      - feature/ticker-ads-15-slots
   workflow_dispatch:
 
 permissions:
