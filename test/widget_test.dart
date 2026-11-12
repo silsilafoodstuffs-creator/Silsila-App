@@ -7,7 +7,7 @@ import 'package:silsila_app/widgets/silsila_white_logo.dart';
 void main() {
   testWidgets('welcome screen displays Silsila branding and primary action',
       (tester) async {
-    await tester.pumpWidget(const SilsilaApp());
+    await tester.pumpWidget(SilsilaApp(startupFuture: Future<void>.value()));
     await tester.pump();
 
     expect(find.text('سلسلة Silsila'), findsOneWidget);
@@ -34,7 +34,7 @@ void main() {
   testWidgets('English selection translates app labels and switches layout direction',
       (tester) async {
     SilsilaLanguage.locale.value = const Locale('en');
-    await tester.pumpWidget(const SilsilaApp());
+    await tester.pumpWidget(SilsilaApp(startupFuture: Future<void>.value()));
     await tester.pump();
 
     expect(SilsilaLanguage.isEnglish, isTrue);
@@ -54,7 +54,7 @@ void main() {
 
   testWidgets('primary action uses the Silsila color identity',
       (tester) async {
-    await tester.pumpWidget(const SilsilaApp());
+    await tester.pumpWidget(SilsilaApp(startupFuture: Future<void>.value()));
     await tester.pump();
 
     final context = tester.element(find.text('ابدأ'));
@@ -90,7 +90,7 @@ void main() {
 
   testWidgets('login screen uses the white-background Silsila logo variant',
       (tester) async {
-    await tester.pumpWidget(const SilsilaApp());
+    await tester.pumpWidget(SilsilaApp(startupFuture: Future<void>.value()));
     await tester.tap(find.text('ابدأ'));
     await tester.pumpAndSettle();
 
@@ -100,7 +100,7 @@ void main() {
 
   testWidgets('login flow requests email and password, not phone OTP',
       (tester) async {
-    await tester.pumpWidget(const SilsilaApp());
+    await tester.pumpWidget(SilsilaApp(startupFuture: Future<void>.value()));
     await tester.tap(find.text('ابدأ'));
     await tester.pumpAndSettle();
 
