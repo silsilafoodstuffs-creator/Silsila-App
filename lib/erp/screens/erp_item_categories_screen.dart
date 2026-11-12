@@ -5,6 +5,7 @@ import '../widgets/erp_keyboard_navigation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_standard_data_table.dart';
 import '../services/erp_workspace_records_service.dart';
 import 'erp_brands_tab.dart';
 
@@ -744,11 +745,9 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                   : SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: SingleChildScrollView(
-                        child: DataTable(
-                          headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
-                          headingRowHeight: 40,
-                          dataRowMinHeight: 40,
-                          dataRowMaxHeight: 40,
+                        child: ErpStandardDataTable(
+                          horizontalMargin: 8,
+                          columnSpacing: 16,
                           columns: const [
                             DataColumn(label: Text('كود الفئة')),
                             DataColumn(label: Text('اسم الفئة عربي')),
