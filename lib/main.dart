@@ -5173,6 +5173,8 @@ class _OffersScreenState extends State<OffersScreen> {
     final selectedCustomerTypes = <String>{};
     String magazineColor = '#FFA015';
     int durationDays = 7;
+    DateTime scheduledStart = DateTime.now();
+    bool scheduleLater = false;
     String selectedMainCategory = 'الكل';
     String selectedSubcategory = 'الكل';
     String selectedBrand = 'الكل';
@@ -5347,7 +5349,43 @@ class _OffersScreenState extends State<OffersScreen> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(silsilaText(silsilaText('إلغاء')))),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(silsilaText(silsilaText('نشر العرض')))),
+          OutlinedButton.icon(
+            onPressed: () async {
+              final previewAction = await showDialog<bool>(
+                context: dialogContext,
+                builder: (previewContext) => AlertDialog(
+                  title: const Text('معاينة العرض قبل النشر'),
+                  content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Text(title.text.trim().isEmpty ? 'مجلة عروض سلسلة' : title.text.trim(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                    if (description.text.trim().isNotEmpty) Text(description.text.trim()),
+                    Text('عدد الأصناف المحددة: ${selectedProductIds.length}'),
+                    Text('موعد النشر: ${scheduleLater ? scheduledStart.toString().substring(0,16) : 'فورًا'}'),
+                    if (selectedOfferImage != null) Text('الصورة: ${selectedOfferImage!.name}'),
+                  ]),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(previewContext, false), child: const Text('تعديل')),
+                    FilledButton(onPressed: () => Navigator.pop(previewContext, true), child: const Text('حفظ ونشر')),
+                  ],
+                ),
+              );
+              if (previewAction == true) Navigator.pop(dialogContext, true);
+            },
+            icon: const Icon(Icons.visibility_outlined, size: 17),
+            label: const Text('معاينة'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () async {
+              final day = await showDatePicker(context: dialogContext, initialDate: scheduledStart.isBefore(DateTime.now()) ? DateTime.now() : scheduledStart, firstDate: DateTime.now(), lastDate: DateTime(2100));
+              if (day == null) return;
+              final time = await showTimePicker(context: dialogContext, initialTime: TimeOfDay.fromDateTime(scheduledStart));
+              if (time == null) return;
+              setDialogState(() { scheduledStart = DateTime(day.year, day.month, day.day, time.hour, time.minute); scheduleLater = true; });
+              if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+            },
+            icon: const Icon(Icons.schedule, size: 17),
+            label: const Text('جدولة'),
+          ),
+          FilledButton(onPressed: () { scheduleLater = false; Navigator.pop(dialogContext, true); }, child: Text(silsilaText(silsilaText('حفظ ونشر')))),
         ],
       ),
     );
@@ -5357,7 +5395,7 @@ class _OffersScreenState extends State<OffersScreen> {
         if (discount.text.trim().isNotEmpty && discountValue == null) {
           throw ArgumentError('أدخل نسبة خصم صحيحة.');
         }
-        final now = DateTime.now();
+        final now = scheduleLater ? scheduledStart : DateTime.now();
         final uploadedOfferImageUrl = selectedOfferImage != null ? await _uploadSupplierOfferImage(selectedOfferImage!) : (imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim());
         if (selectedProductIds.isEmpty) {
           await supplierService.createOffer(
