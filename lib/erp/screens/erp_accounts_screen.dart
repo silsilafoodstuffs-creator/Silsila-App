@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_standard_data_table.dart';
 import '../services/erp_accounts_repository.dart';
 
 class ErpAccountsScreen extends StatefulWidget {
@@ -486,8 +487,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
           const Padding(padding: EdgeInsets.all(24), child: Text('أدخل معرّف الشركة واضغط تحديث لعرض الحسابات.')),
         if (rows.isNotEmpty && _viewMode == 'tree') Expanded(child: ListView(padding: const EdgeInsets.symmetric(vertical: 4), children: _childrenOf('').where(_branchMatches).map((row) => _buildTreeNode(row, 0)).toList())),
         if (rows.isNotEmpty && _viewMode == 'grid')
-          Expanded(child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
-            headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+          Expanded(child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: ErpStandardDataTable(
             columns: const [DataColumn(label: Text('كود الحساب')), DataColumn(label: Text('اسم الحساب')), DataColumn(label: Text('نوع الحساب')), DataColumn(label: Text('طبيعة الرصيد')), DataColumn(label: Text('المستوى')), DataColumn(label: Text('الحالة')), DataColumn(label: Text('إجراءات'))],
             rows: rows.map((r) => DataRow(color: WidgetStateProperty.all(_value(r, 'parent_id').isEmpty ? const Color(0xFFEDE1F8) : const Color(0xFFFFE4BE)), cells: [
               DataCell(Text(_value(r, 'account_code'))), DataCell(Text(_value(r, 'account_name'))), DataCell(Text(_value(r, 'account_type'))),
@@ -495,8 +495,8 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
               DataCell(Text(_value(r, 'parent_id').isEmpty ? 'رئيسي' : 'فرعي')),
               DataCell(Text(r['is_active'] == true ? 'نشط' : 'معطل')),
               DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
-                IconButton(tooltip: 'تعديل', onPressed: () => _openAccountEditor(account: r), icon: const Icon(Icons.edit_outlined, color: Color(0xFFFFA015))),
-                IconButton(tooltip: 'إيقاف', onPressed: () => _confirmDeactivate(r), icon: const Icon(Icons.delete_outline, color: Colors.red)),
+                IconButton(tooltip: 'تعديل', visualDensity: VisualDensity.compact, constraints: const BoxConstraints.tightFor(width: 32, height: 32), padding: EdgeInsets.zero, onPressed: () => _openAccountEditor(account: r), icon: const Icon(Icons.edit_outlined, color: Color(0xFFFFA015))),
+                IconButton(tooltip: 'إيقاف', visualDensity: VisualDensity.compact, constraints: const BoxConstraints.tightFor(width: 32, height: 32), padding: EdgeInsets.zero, onPressed: () => _confirmDeactivate(r), icon: const Icon(Icons.delete_outline, color: Colors.red)),
               ])),
             ])).toList(),
           )))),

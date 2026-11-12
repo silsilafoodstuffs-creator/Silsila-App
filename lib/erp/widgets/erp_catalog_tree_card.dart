@@ -15,6 +15,7 @@ class ErpCatalogTreeCard extends StatelessWidget {
     required this.borderColor,
     required this.selectedBorderColor,
     this.onTap,
+    this.onDoubleTap,
     this.padding = const EdgeInsets.all(8),
     this.indentPerLevel = 18,
     this.bottomSpacing = 6,
@@ -28,6 +29,7 @@ class ErpCatalogTreeCard extends StatelessWidget {
   final Color borderColor;
   final Color selectedBorderColor;
   final VoidCallback? onTap;
+  final VoidCallback? onDoubleTap;
   final EdgeInsetsGeometry padding;
   final double indentPerLevel;
   final double bottomSpacing;
@@ -45,6 +47,7 @@ class ErpCatalogTreeCard extends StatelessWidget {
         borderRadius: radius,
         child: InkWell(
           onTap: onTap,
+          onDoubleTap: onDoubleTap,
           borderRadius: radius,
           child: Container(
             padding: padding,

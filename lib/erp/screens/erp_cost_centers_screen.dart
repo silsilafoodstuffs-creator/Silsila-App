@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_standard_data_table.dart';
 
 const _costPurple = Color(0xFF3E007D);
 const _costOrange = Color(0xFFFFA015);
@@ -309,8 +310,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
   Future<void> _preview() async {
     await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('معاينة مراكز التكلفة'),
-      content: SizedBox(width: 750, child: SingleChildScrollView(child: DataTable(
-        headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40,
+      content: SizedBox(width: 750, child: SingleChildScrollView(child: ErpStandardDataTable(
         columns: const [DataColumn(label: Text('الكود')), DataColumn(label: Text('الاسم العربي')), DataColumn(label: Text('الاسم الإنجليزي')), DataColumn(label: Text('النوع')), DataColumn(label: Text('الفرع')), DataColumn(label: Text('الحالة'))],
         rows: _tree.map((r) => DataRow(cells: [
           DataCell(Text(_s(r['center_code']))), DataCell(Text('${_child(r) ? '↳ ' : ''}${_ar(r)}')),
@@ -382,9 +382,8 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
       if (!(_loading && _centers.isEmpty) && _viewMode == 'grid')
         Expanded(child: Scrollbar(child: SingleChildScrollView(child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          child: DataTable(
-            headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40,
-            horizontalMargin: 5, columnSpacing: 5, dividerThickness: .7,
+          child: ErpStandardDataTable(
+            dividerThickness: .7,
             headingTextStyle: const TextStyle(fontWeight: FontWeight.w800, color: _costPurple, fontSize: 12),
             columns: const [
               DataColumn(label: Text('تحديد')), DataColumn(label: Text('م')),

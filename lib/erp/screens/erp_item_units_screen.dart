@@ -8,6 +8,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_standard_data_table.dart';
 
 class ErpItemUnitsScreen extends StatefulWidget {
   const ErpItemUnitsScreen({super.key, this.companyId});
@@ -175,7 +176,7 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
     final rows = _activityRows;
     showDialog<void>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('معاينة وحدات النشاط'),
-      content: SizedBox(width: 650, child: SingleChildScrollView(child: DataTable(
+      content: SizedBox(width: 650, child: SingleChildScrollView(child: ErpStandardDataTable(
         columns: const [DataColumn(label: Text('الكود')), DataColumn(label: Text('الوحدة عربي')), DataColumn(label: Text('English')), DataColumn(label: Text('الحالة'))],
         rows: rows.map((r) => DataRow(cells: [
           DataCell(Text(_s(r['unit_code']))), DataCell(Text(_s(r['unit_name_ar']))),
@@ -295,8 +296,7 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
       Expanded(child: _activityRows.isEmpty
         ? const Center(child: Text('لا توجد وحدات مسجلة لهذا النشاط. اضغط إضافة لإنشاء أول وحدة.'))
         : SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(
-          child: DataTable(
-            headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+          child: ErpStandardDataTable(
             showCheckboxColumn: false,
             columns: const [
               DataColumn(label: Text('م')),
@@ -331,11 +331,18 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
                     decoration: const InputDecoration(isDense: true, hintText: 'Unit name'),
                   ))),
                   DataCell(Checkbox(
-                    shape: const CircleBorder(), value: row['is_active'] == true,
+                    shape: const CircleBorder(),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    value: row['is_active'] == true,
                     onChanged: !_editMode ? null : (v) => setState(() => row['is_active'] = v ?? false),
                   )),
                   DataCell(IconButton(
-                    tooltip: 'حذف الوحدة المحددة', onPressed: () { setState(() => _selectedId = key); _removeSelected(); },
+                    tooltip: 'حذف الوحدة المحددة',
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                    padding: EdgeInsets.zero,
+                    onPressed: () { setState(() => _selectedId = key); _removeSelected(); },
                     icon: const Icon(Icons.delete_forever, color: Colors.red),
                   )),
                 ],

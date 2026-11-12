@@ -15,8 +15,13 @@ class ErpStandardDataTable extends StatelessWidget {
     this.headingColor = const Color(0xFFF5EFFB),
     this.headingHeight = 40,
     this.rowHeight = 40,
-    this.horizontalMargin = 8,
-    this.columnSpacing = 16,
+    this.horizontalMargin = 5,
+    this.columnSpacing = 5,
+    this.dividerThickness = 0.7,
+    this.headingTextStyle,
+    this.dataTextStyle,
+    this.checkboxHorizontalMargin,
+    this.onSelectAll,
     this.showCheckboxColumn = true,
     this.sortColumnIndex,
     this.sortAscending = true,
@@ -29,6 +34,11 @@ class ErpStandardDataTable extends StatelessWidget {
   final double rowHeight;
   final double horizontalMargin;
   final double columnSpacing;
+  final double dividerThickness;
+  final TextStyle? headingTextStyle;
+  final TextStyle? dataTextStyle;
+  final double? checkboxHorizontalMargin;
+  final ValueChanged<bool?>? onSelectAll;
   final bool showCheckboxColumn;
   final int? sortColumnIndex;
   final bool sortAscending;
@@ -42,6 +52,11 @@ class ErpStandardDataTable extends StatelessWidget {
       dataRowMaxHeight: rowHeight,
       horizontalMargin: horizontalMargin,
       columnSpacing: columnSpacing,
+      dividerThickness: dividerThickness,
+      headingTextStyle: headingTextStyle,
+      dataTextStyle: dataTextStyle,
+      checkboxHorizontalMargin: checkboxHorizontalMargin,
+      onSelectAll: onSelectAll,
       showCheckboxColumn: showCheckboxColumn,
       sortColumnIndex: sortColumnIndex,
       sortAscending: sortAscending,
