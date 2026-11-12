@@ -49,18 +49,37 @@ const supabaseKey =
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SilsilaLanguage.load();
+
+  // Start the first frame immediately. Secure-storage reads and network
+  // initialization must never block Flutter's initial render on mobile.
+  unawaited(SilsilaLanguage.load());
+  final startupFuture = _initializeSupabase();
+  runApp(SilsilaApp(startupFuture: startupFuture));
+}
+
+Future<void> _initializeSupabase() async {
   try {
     await Supabase.initialize(
       url: supabaseUrl,
       publishableKey: supabaseKey,
     );
+    // Activity metadata is non-critical for the first frame; load it in the
+    // background after the client is ready.
+    unawaited(_loadActivityTypes());
+  } catch (_) {
+    // The login gate reports connection errors when the user reaches it.
+  }
+}
+
+Future<void> _loadActivityTypes() async {
+  try {
     final sharedActivities = await ActivityService().getActivityNames();
     // The database is the single source of truth, including an intentionally
     // empty list when all activities are hidden or inactive.
     activityTypes = List<String>.unmodifiable(sharedActivities);
-  } catch (_) {}
-  runApp(const SilsilaApp());
+  } catch (_) {
+    activityTypes = const <String>[];
+  }
 }
 
 SupabaseClient? get database {
@@ -261,7 +280,9 @@ const suppliers = [
 ];
 
 class SilsilaApp extends StatelessWidget {
-  const SilsilaApp({super.key});
+  const SilsilaApp({super.key, required this.startupFuture});
+
+  final Future<void> startupFuture;
 
   @override
   Widget build(BuildContext context) {
@@ -495,11 +516,47 @@ class SilsilaApp extends StatelessWidget {
         ),
       ),
       home: kIsWeb
-          ? const ErpLoginGate()
+          ? FutureBuilder<void>(
+              future: startupFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const _StartupLoadingScreen();
+                }
+                return const ErpLoginGate();
+              },
+            )
           : Directionality(
               textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
-              child: WelcomeScreen(),
+              child: const WelcomeScreen(),
             ),
+      ),
+    );
+  }
+}
+
+class _StartupLoadingScreen extends StatelessWidget {
+  const _StartupLoadingScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: purple,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image(image: AssetImage('assets/images/silsila_logo.png'), width: 150),
+            SizedBox(height: 24),
+            SizedBox(
+              width: 26,
+              height: 26,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: orange,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
