@@ -5,6 +5,8 @@ import '../widgets/erp_keyboard_navigation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_standard_data_table.dart';
+import '../widgets/erp_catalog_tree_card.dart';
 import '../services/erp_workspace_records_service.dart';
 import 'erp_brands_tab.dart';
 
@@ -452,8 +454,26 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     } catch(e) { setState(()=>_error='تعذر حذف الفئة: $e'); }
   }
 
-  Widget _task(String label, IconData icon, VoidCallback? action) =>
-    SizedBox(width:112, child: ErpQuickTaskButton(label:label,icon:icon,onPressed:action,compact:true));
+  Widget _task(
+    String label,
+    IconData icon,
+    VoidCallback? action, {
+    ErpQuickTaskKind? kind,
+    bool? confirmAction,
+    bool? showSuccessToast,
+  }) =>
+      SizedBox(
+        width: 112,
+        child: ErpQuickTaskButton(
+          label: label,
+          icon: icon,
+          kind: kind,
+          confirmAction: confirmAction,
+          showSuccessToast: showSuccessToast,
+          onPressed: action,
+          compact: true,
+        ),
+      );
 
   List<Map<String,dynamic>> _childrenOf(Map<String,dynamic> parent) =>
       _all.where((r) => _s(r['parent_id']) == _s(parent['id'])).toList()
@@ -471,39 +491,88 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     return _childrenOf(row).any(_branchMatches);
   }
 
-  Widget _treeNode(Map<String,dynamic> row, int depth) {
+  Widget _treeNode(Map<String, dynamic> row, int depth) {
     final id = _s(row['id']);
     final children = _childrenOf(row);
     final expanded = _expandedIds.contains(id);
-    final ar = _ar.putIfAbsent(id, () => TextEditingController(text: _s(row['category_name'])));
-    final en = _en.putIfAbsent(id, () => TextEditingController(text: _s(row['category_name_en'])));
+    final ar = _ar.putIfAbsent(
+      id,
+      () => TextEditingController(text: _s(row['category_name'])),
+    );
+    final en = _en.putIfAbsent(
+      id,
+      () => TextEditingController(text: _s(row['category_name_en'])),
+    );
     final level = _rowLevel(row);
     final active = row['is_active'] == true;
     final visible = row['show_in_app'] == true;
-    return Padding(
-      padding: EdgeInsetsDirectional.only(start: depth * 18, bottom: 6),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
-        decoration: BoxDecoration(
-          color: _selectedId == id ? const Color(0xFFF0E7FA) : level == 0 ? const Color(0xFFEDE1F8) : level == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: _selectedId == id ? _catPurple : const Color(0xFFE8E1EF)),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+
+    return ErpCatalogTreeCard(
+      depth: depth,
+      selected: _selectedId == id,
+      backgroundColor: level == 0
+          ? const Color(0xFFEDE1F8)
+          : level == 1
+              ? const Color(0xFFFFE4BE)
+              : const Color(0xFFFFDDF3),
+      selectedColor: const Color(0xFFF0E7FA),
+      borderColor: const Color(0xFFE8E1EF),
+      selectedBorderColor: _catPurple,
+      padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
+      onTap: () => setState(() => _selectedId = id),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           Row(children: [
-            SizedBox(width: 34, child: IconButton(
-              padding: EdgeInsets.zero, visualDensity: VisualDensity.compact,
-              tooltip: expanded ? 'طي الفئات التابعة' : 'عرض الفئات التابعة',
-              onPressed: children.isEmpty ? null : () => setState(() {
-                if (expanded) { _expandedIds.remove(id); } else { _expandedIds.add(id); }
-              }),
-              icon: Icon(children.isEmpty ? Icons.circle_outlined : expanded ? Icons.keyboard_arrow_down : Icons.chevron_left, color: _catPurple),
-            )),
-            SizedBox(width: 105, child: Text(_s(row['category_code']), overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w900, color: _catPurple, fontSize: 12))),
-            Expanded(child: TextField(controller: ar, enabled: _editing,
-              decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'اسم الفئة عربي'),
-              onTap: () => setState(() => _selectedId = id))),
+            SizedBox(
+              width: 34,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+                tooltip: expanded ? 'طي الفئات التابعة' : 'عرض الفئات التابعة',
+                onPressed: children.isEmpty
+                    ? null
+                    : () => setState(() {
+                          if (expanded) {
+                            _expandedIds.remove(id);
+                          } else {
+                            _expandedIds.add(id);
+                          }
+                        }),
+                icon: Icon(
+                  children.isEmpty
+                      ? Icons.circle_outlined
+                      : expanded
+                          ? Icons.keyboard_arrow_down
+                          : Icons.chevron_left,
+                  color: _catPurple,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 105,
+              child: Text(
+                _s(row['category_code']),
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: _catPurple,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            Expanded(
+              child: TextField(
+                controller: ar,
+                enabled: _editing,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  hintText: 'اسم الفئة عربي',
+                ),
+                onTap: () => setState(() => _selectedId = id),
+              ),
+            ),
             const SizedBox(width: 8),
             _imagePreview(row, size: 48),
           ]),
@@ -511,48 +580,140 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
             padding: const EdgeInsetsDirectional.only(start: 34, top: 4),
             child: Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 4, runSpacing: 2,
+              spacing: 4,
+              runSpacing: 2,
               children: [
-                SizedBox(width: 165, child: TextField(controller: en, enabled: _editing,
-                  decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'English category name'),
-                  onTap: () => setState(() => _selectedId = id))),
-                Tooltip(message: 'نشط', child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Checkbox(shape: const CircleBorder(), value: active, activeColor: _catPurple,
+                SizedBox(
+                  width: 165,
+                  child: TextField(
+                    controller: en,
+                    enabled: _editing,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: InputBorder.none,
+                      hintText: 'English category name',
+                    ),
+                    onTap: () => setState(() => _selectedId = id),
+                  ),
+                ),
+                Tooltip(
+                  message: 'نشط',
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Checkbox(
+                        shape: const CircleBorder(),
+                        value: active,
+                        activeColor: _catPurple,
+                        visualDensity: VisualDensity.compact,
+                        onChanged: _editing
+                            ? (value) => setState(() {
+                                  row['is_active'] = value == true;
+                                })
+                            : null,
+                      ),
+                      const Text('نشط', style: TextStyle(fontSize: 11)),
+                    ],
+                  ),
+                ),
+                Tooltip(
+                  message: 'ظهور في التطبيق',
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Checkbox(
+                        shape: const CircleBorder(),
+                        value: visible,
+                        activeColor: _catOrange,
+                        visualDensity: VisualDensity.compact,
+                        onChanged: _editing
+                            ? (value) => setState(() {
+                                  row['show_in_app'] = value == true;
+                                })
+                            : null,
+                      ),
+                      const Text('في التطبيق', style: TextStyle(fontSize: 11)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'استيراد صورة حقيقية من الجهاز',
+                  onPressed: _editing
+                      ? () => _pickImage(row, source: ImageSource.gallery)
+                      : null,
+                  icon: const Icon(
+                    Icons.photo_library_outlined,
+                    color: _catPurple,
+                  ),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'التقاط صورة بالكاميرا',
+                  onPressed: _editing
+                      ? () => _pickImage(row, source: ImageSource.camera)
+                      : null,
+                  icon: const Icon(
+                    Icons.photo_camera_outlined,
+                    color: _catOrange,
+                  ),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'حذف الصورة',
+                  onPressed: _editing && _categoryImageBytes(row) != null
+                      ? () => _removeImage(row)
+                      : null,
+                  icon: const Icon(
+                    Icons.hide_image_outlined,
+                    color: Colors.redAccent,
+                  ),
+                ),
+                if (level < 2)
+                  IconButton(
                     visualDensity: VisualDensity.compact,
-                    onChanged: _editing ? (v) => setState(() => row['is_active'] = v == true) : null),
-                  const Text('نشط', style: TextStyle(fontSize: 11)),
-                ])),
-                Tooltip(message: 'ظهور في التطبيق', child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Checkbox(shape: const CircleBorder(), value: visible, activeColor: _catOrange,
-                    visualDensity: VisualDensity.compact,
-                    onChanged: _editing ? (v) => setState(() => row['show_in_app'] = v == true) : null),
-                  const Text('في التطبيق', style: TextStyle(fontSize: 11)),
-                ])),
-                IconButton(visualDensity: VisualDensity.compact, tooltip: 'استيراد صورة حقيقية من الجهاز',
-                  onPressed: _editing ? () => _pickImage(row, source: ImageSource.gallery) : null,
-                  icon: const Icon(Icons.photo_library_outlined, color: _catPurple)),
-                IconButton(visualDensity: VisualDensity.compact, tooltip: 'التقاط صورة بالكاميرا',
-                  onPressed: _editing ? () => _pickImage(row, source: ImageSource.camera) : null,
-                  icon: const Icon(Icons.photo_camera_outlined, color: _catOrange)),
-                IconButton(visualDensity: VisualDensity.compact, tooltip: 'حذف الصورة',
-                  onPressed: _editing && _categoryImageBytes(row) != null ? () => _removeImage(row) : null,
-                  icon: const Icon(Icons.hide_image_outlined, color: Colors.redAccent)),
-                if (level < 2) IconButton(visualDensity: VisualDensity.compact,
-                  tooltip: level == 0 ? 'إضافة فئة فرعية' : 'إضافة فئة ثانوية',
-                  onPressed: _saving ? null : () { setState(() { _level = level + 1; _editing = true; }); _add(parentIdOverride: id); },
-                  icon: const Icon(Icons.add_circle_outline, color: _catPurple)),
-                IconButton(visualDensity: VisualDensity.compact, tooltip: 'تحديد الفئة',
+                    tooltip: level == 0
+                        ? 'إضافة فئة فرعية'
+                        : 'إضافة فئة ثانوية',
+                    onPressed: _saving
+                        ? null
+                        : () {
+                            setState(() {
+                              _level = level + 1;
+                              _editing = true;
+                            });
+                            _add(parentIdOverride: id);
+                          },
+                    icon: const Icon(
+                      Icons.add_circle_outline,
+                      color: _catPurple,
+                    ),
+                  ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'تحديد الفئة',
                   onPressed: () => setState(() => _selectedId = id),
-                  icon: Icon(Icons.radio_button_checked, color: _selectedId == id ? _catPurple : Colors.black26)),
+                  icon: Icon(
+                    Icons.radio_button_checked,
+                    color: _selectedId == id ? _catPurple : Colors.black26,
+                  ),
+                ),
               ],
             ),
           ),
           if (children.isNotEmpty)
-            Padding(padding: const EdgeInsetsDirectional.only(start: 42, top: 1),
-              child: Text('${children.length} فئة تابعة • ${level == 0 ? 'رئيسية' : level == 1 ? 'فرعية' : 'ثانوية'}',
-                style: const TextStyle(fontSize: 10, color: Colors.black54))),
-          if (expanded) ...children.where(_branchMatches).map((child) => _treeNode(child, depth + 1)),
-        ]),
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: 42, top: 1),
+              child: Text(
+                '${children.length} فئة تابعة • ${level == 0 ? 'رئيسية' : level == 1 ? 'فرعية' : 'ثانوية'}',
+                style: const TextStyle(fontSize: 10, color: Colors.black54),
+              ),
+            ),
+          if (expanded)
+            ...children.where(_branchMatches).map(
+                  (child) => _treeNode(child, depth + 1),
+                ),
+        ],
       ),
     );
   }
@@ -626,15 +787,15 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(children: [
-                  _task('تحديث', Icons.refresh, _loading ? null : _load),
-                  _task('عرض شجرة', Icons.account_tree_outlined, () => setState(() => _viewMode = 'tree')),
-                  _task('عرض جدول', Icons.table_rows_outlined, () => setState(() => _viewMode = 'grid')),
-                  _task('نقل الصور للقاعدة', Icons.cloud_download_outlined, _saving || _loading ? null : _migrateImages),
-                  _task('صور حقيقية', Icons.photo_library_outlined, _saving || _loading ? null : _importRealCategoryImages),
-                  _task('إضافة جديد', Icons.add, _saving ? null : _add),
-                  _task('حفظ', Icons.save, _saving || !_editing ? null : _save),
-                  _task('تعديل', Icons.edit, _saving || _editing ? null : () => setState(() => _editing = true)),
-                  _task('حذف', Icons.delete, _saving ? null : _delete),
+                  _task('تحديث', Icons.refresh, _loading ? null : _load, kind: ErpQuickTaskKind.update, showSuccessToast: true),
+                  _task('عرض شجرة', Icons.account_tree_outlined, () => setState(() => _viewMode = 'tree'), kind: ErpQuickTaskKind.treeView),
+                  _task('عرض جدول', Icons.table_rows_outlined, () => setState(() => _viewMode = 'grid'), kind: ErpQuickTaskKind.tableView),
+                  _task('نقل الصور للقاعدة', Icons.cloud_download_outlined, _saving || _loading ? null : _migrateImages, kind: ErpQuickTaskKind.custom),
+                  _task('صور حقيقية', Icons.photo_library_outlined, _saving || _loading ? null : _importRealCategoryImages, kind: ErpQuickTaskKind.image),
+                  _task('إضافة جديد', Icons.add, _saving ? null : _add, kind: ErpQuickTaskKind.add),
+                  _task('حفظ', Icons.save, _saving || !_editing ? null : _save, kind: ErpQuickTaskKind.save, confirmAction: false),
+                  _task('تعديل', Icons.edit, _saving || _editing ? null : () => setState(() => _editing = true), kind: ErpQuickTaskKind.edit),
+                  _task('حذف', Icons.delete, _saving ? null : _delete, kind: ErpQuickTaskKind.delete, confirmAction: false),
                   _task('معاينة', Icons.preview, () => showDialog<void>(
                     context: context,
                     builder: (dialogContext) => AlertDialog(
@@ -642,10 +803,10 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                       content: Text('عدد الفئات في هذا المستوى: ${_all.where((r) => _rowLevel(r) == _catalogTab).length}'),
                       actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
                     ),
-                  )),
-                  _task('استيراد', Icons.upload_file, null),
-                  _task('طباعة', Icons.print, null),
-                  _task('PDF', Icons.picture_as_pdf, null),
+                  ), kind: ErpQuickTaskKind.preview),
+                  _task('استيراد', Icons.upload_file, null, kind: ErpQuickTaskKind.custom),
+                  _task('طباعة', Icons.print, null, kind: ErpQuickTaskKind.print),
+                  _task('PDF', Icons.picture_as_pdf, null, kind: ErpQuickTaskKind.exportPdf),
                 ]),
               ),
             ),
@@ -730,8 +891,9 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                   : SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: SingleChildScrollView(
-                        child: DataTable(
-                          headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                        child: ErpStandardDataTable(
+                          horizontalMargin: 8,
+                          columnSpacing: 16,
                           columns: const [
                             DataColumn(label: Text('كود الفئة')),
                             DataColumn(label: Text('اسم الفئة عربي')),

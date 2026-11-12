@@ -256,8 +256,8 @@ class _ErpActivityBranchesScreenState extends State<ErpActivityBranchesScreen> {
   Widget _actions(VoidCallback edit, VoidCallback delete) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      IconButton(tooltip: 'تعديل', onPressed: edit, icon: const Icon(Icons.edit_outlined, size: 17, color: _activityPurple), visualDensity: VisualDensity.compact),
-      IconButton(tooltip: 'حذف', onPressed: delete, icon: const Icon(Icons.delete_outline, size: 17, color: Colors.red), visualDensity: VisualDensity.compact),
+      IconButton(tooltip: 'تعديل', onPressed: edit, icon: const Icon(Icons.edit_outlined, size: 17, color: _activityPurple), visualDensity: VisualDensity.compact, constraints: const BoxConstraints.tightFor(width: 32, height: 32), padding: EdgeInsets.zero),
+      IconButton(tooltip: 'حذف', onPressed: delete, icon: const Icon(Icons.delete_outline, size: 17, color: Colors.red), visualDensity: VisualDensity.compact, constraints: const BoxConstraints.tightFor(width: 32, height: 32), padding: EdgeInsets.zero),
     ],
   );
 
@@ -270,8 +270,8 @@ class _ErpActivityBranchesScreenState extends State<ErpActivityBranchesScreen> {
         TextButton.icon(onPressed: _busy ? null : () => _addBranch(workspace), icon: const Icon(Icons.add, size: 17), label: const Text('إضافة فرع')),
       ]),
       if (branches.isEmpty) const Padding(padding: EdgeInsets.all(8), child: Text('لا توجد فروع لهذا النشاط بعد.', style: TextStyle(fontSize: 11, color: Colors.black54))),
-      if (branches.isNotEmpty) SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
-        headingRowHeight: 34, dataRowMinHeight: 38, dataRowMaxHeight: 42, columnSpacing: 14,
+      if (branches.isNotEmpty) SingleChildScrollView(scrollDirection: Axis.horizontal, child: ErpStandardDataTable(
+        
         columns: const [
           DataColumn(label: Text('م')), DataColumn(label: Text('كود')),
           DataColumn(label: Text('اسم الفرع عربي')), DataColumn(label: Text('English')),
@@ -306,8 +306,8 @@ class _ErpActivityBranchesScreenState extends State<ErpActivityBranchesScreen> {
           TextButton.icon(onPressed: _busy ? null : () => _addWarehouse(workspace, branch), icon: const Icon(Icons.add, size: 16), label: const Text('إضافة مخزن')),
         ]),
         if (warehouses.isEmpty) const Text('لا توجد مخازن مسجلة لهذا الفرع.', style: TextStyle(fontSize: 10, color: Colors.black54)),
-        if (warehouses.isNotEmpty) SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
-          headingRowHeight: 30, dataRowMinHeight: 36, dataRowMaxHeight: 40, columnSpacing: 14,
+        if (warehouses.isNotEmpty) SingleChildScrollView(scrollDirection: Axis.horizontal, child: ErpStandardDataTable(
+          
           columns: const [
             DataColumn(label: Text('م')), DataColumn(label: Text('كود')),
             DataColumn(label: Text('اسم المخزن عربي')), DataColumn(label: Text('English')),

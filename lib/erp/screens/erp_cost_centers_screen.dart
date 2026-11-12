@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_standard_data_table.dart';
+import '../widgets/erp_catalog_tree_card.dart';
 
 const _costPurple = Color(0xFF3E007D);
 const _costOrange = Color(0xFFFFA015);
@@ -309,8 +311,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
   Future<void> _preview() async {
     await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('معاينة مراكز التكلفة'),
-      content: SizedBox(width: 750, child: SingleChildScrollView(child: DataTable(
-        headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40,
+      content: SizedBox(width: 750, child: SingleChildScrollView(child: ErpStandardDataTable(
         columns: const [DataColumn(label: Text('الكود')), DataColumn(label: Text('الاسم العربي')), DataColumn(label: Text('الاسم الإنجليزي')), DataColumn(label: Text('النوع')), DataColumn(label: Text('الفرع')), DataColumn(label: Text('الحالة'))],
         rows: _tree.map((r) => DataRow(cells: [
           DataCell(Text(_s(r['center_code']))), DataCell(Text('${_child(r) ? '↳ ' : ''}${_ar(r)}')),
@@ -382,9 +383,8 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
       if (!(_loading && _centers.isEmpty) && _viewMode == 'grid')
         Expanded(child: Scrollbar(child: SingleChildScrollView(child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          child: DataTable(
-            headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40,
-            horizontalMargin: 5, columnSpacing: 5, dividerThickness: .7,
+          child: ErpStandardDataTable(
+            dividerThickness: .7,
             headingTextStyle: const TextStyle(fontWeight: FontWeight.w800, color: _costPurple, fontSize: 12),
             columns: const [
               DataColumn(label: Text('تحديد')), DataColumn(label: Text('م')),
@@ -463,53 +463,113 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
 
   Widget _treeNode(Map<String, dynamic> row, int depth, Set<String> visited) {
     final id = _s(row['id']);
-    // Protect the tree view from malformed legacy parent links and cycles.
     if (id.isNotEmpty && !visited.add(id)) return const SizedBox.shrink();
     final children = _childrenOfCenter(row).where((item) {
       final childId = _s(item['id']);
       return childId.isEmpty || !visited.contains(childId);
     }).toList();
     final child = _child(row);
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Padding(
-        padding: EdgeInsetsDirectional.only(start: depth * 18, bottom: 5),
-        child: Card(
-          color: depth == 0 ? const Color(0xFFEDE1F8) : depth == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3),
+    final selected = id.isNotEmpty && _selectedIds.contains(id);
+    final background = depth == 0
+        ? const Color(0xFFEDE1F8)
+        : depth == 1
+            ? const Color(0xFFFFE4BE)
+            : const Color(0xFFFFDDF3);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ErpCatalogTreeCard(
+          depth: depth,
+          selected: selected,
+          backgroundColor: background,
+          selectedColor: const Color(0xFFF0E7FA),
+          borderColor: const Color(0xFFE8E1EF),
+          selectedBorderColor: _costPurple,
+          padding: EdgeInsets.zero,
+          bottomSpacing: 5,
+          onTap: id.isEmpty
+              ? null
+              : () => setState(() {
+                    if (_selectedIds.contains(id)) {
+                      _selectedIds.remove(id);
+                    } else {
+                      _selectedIds
+                        ..clear()
+                        ..add(id);
+                    }
+                  }),
           child: ListTile(
             dense: true,
-            leading: Icon(child ? Icons.subdirectory_arrow_left : Icons.account_tree_outlined, color: _costPurple),
-            title: Text('${_s(row['center_code'])} — ${_ar(row)}', style: const TextStyle(fontWeight: FontWeight.w800)),
-            subtitle: Text('${_s(row['center_name_en'])} • ${_branchName(row['branch_id'])} • ${row['is_active'] == true ? 'نشط' : 'غير نشط'}'),
-            selected: id.isNotEmpty && _selectedIds.contains(id),
-            onTap: id.isEmpty ? null : () => setState(() { if (_selectedIds.contains(id)) { _selectedIds.remove(id); } else { _selectedIds..clear()..add(id); } }),
-            trailing: Wrap(spacing: 0, children: [
-              if (!child && id.isNotEmpty) IconButton(tooltip: 'إضافة مركز فرعي', onPressed: _saving ? null : () => _addChild(row), icon: const Icon(Icons.add_circle_outline, color: _costPurple)),
-              IconButton(tooltip: 'حذف المركز', onPressed: _saving ? null : () => _delete(row), icon: const Icon(Icons.delete_outline, color: Colors.red)),
-            ]),
-          ),
-        ),
-      ),
-      if (id.isNotEmpty && children.isNotEmpty)
-        Padding(
-          padding: EdgeInsetsDirectional.only(start: depth * 18 + 12),
-          child: Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: TextButton.icon(
-              onPressed: () => setState(() {
-                if (_expandedIds.contains(id)) {
-                  _expandedIds.remove(id);
-                } else {
-                  _expandedIds.add(id);
-                }
-              }),
-              icon: Icon(_expandedIds.contains(id) ? Icons.expand_less : Icons.expand_more, size: 17),
-              label: Text(_expandedIds.contains(id) ? 'طي الفروع' : 'عرض الفروع (${children.length})'),
+            visualDensity: VisualDensity.compact,
+            minVerticalPadding: 0,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+            leading: Icon(
+              child ? Icons.subdirectory_arrow_left : Icons.account_tree_outlined,
+              color: _costPurple,
+            ),
+            title: Text(
+              '${_s(row['center_code'])} — ${_ar(row)}',
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+            subtitle: Text(
+              '${_s(row['center_name_en'])} • ${_branchName(row['branch_id'])} • ${row['is_active'] == true ? 'نشط' : 'غير نشط'}',
+            ),
+            selected: false,
+            onTap: null,
+            trailing: Wrap(
+              spacing: 0,
+              children: [
+                if (!child && id.isNotEmpty)
+                  IconButton(
+                    tooltip: 'إضافة مركز فرعي',
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                    padding: EdgeInsets.zero,
+                    onPressed: _saving ? null : () => _addChild(row),
+                    icon: const Icon(Icons.add_circle_outline, color: _costPurple),
+                  ),
+                IconButton(
+                  tooltip: 'حذف المركز',
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                  padding: EdgeInsets.zero,
+                  onPressed: _saving ? null : () => _delete(row),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                ),
+              ],
             ),
           ),
         ),
-      if (id.isEmpty || _expandedIds.contains(id))
-        ...children.where(_branchMatches).map((item) => _treeNode(item, depth + 1, visited)),
-    ]);
+        if (id.isNotEmpty && children.isNotEmpty)
+          Padding(
+            padding: EdgeInsetsDirectional.only(start: depth * 18 + 12),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton.icon(
+                onPressed: () => setState(() {
+                  if (_expandedIds.contains(id)) {
+                    _expandedIds.remove(id);
+                  } else {
+                    _expandedIds.add(id);
+                  }
+                }),
+                icon: Icon(
+                  _expandedIds.contains(id) ? Icons.expand_less : Icons.expand_more,
+                  size: 17,
+                ),
+                label: Text(
+                  _expandedIds.contains(id) ? 'طي الفروع' : 'عرض الفروع (${children.length})',
+                ),
+              ),
+            ),
+          ),
+        if (id.isEmpty || _expandedIds.contains(id))
+          ...children.where(_branchMatches).map(
+                (item) => _treeNode(item, depth + 1, visited),
+              ),
+      ],
+    );
   }
 
   Widget _notice(String text, Color color) => Container(
