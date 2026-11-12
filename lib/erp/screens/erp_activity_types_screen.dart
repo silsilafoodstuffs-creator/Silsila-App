@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_standard_data_table.dart';
 import '../services/erp_print_support.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_keyboard_navigation.dart';
@@ -321,13 +322,13 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       ]))),
       if (_message != null) Container(color: const Color(0xFFF7F2FC), padding: const EdgeInsets.all(7), child: Text(_message!, style: const TextStyle(fontSize: 11, color: Color(0xFF3E007D)))),
       const SizedBox(height: 8),
-      Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40, horizontalMargin: 5, columnSpacing: 5, headingRowColor: WidgetStateProperty.all(const Color(0xFFF1EAF9)), columns: const [DataColumn(label: Text('م')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط عربي')), DataColumn(label: Text('اسم النشاط إنجليزي')), DataColumn(label: Text('نشط')), DataColumn(label: Text('يظهر في التطبيق'))], rows: [
+      Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: ErpStandardDataTable(headingColor: const Color(0xFFF1EAF9), columns: const [DataColumn(label: Text('م')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط عربي')), DataColumn(label: Text('اسم النشاط إنجليزي')), DataColumn(label: Text('نشط')), DataColumn(label: Text('يظهر في التطبيق'))], rows: [
         for (var i = 0; i < _rows.length; i++) DataRow(selected: _rows[i]['كود النشاط'] == _selected, onSelectChanged: (_) => setState(() => _selected = _rows[i]['كود النشاط']), cells: [
           DataCell(SizedBox(width: 38, child: Text('${i + 1}', textAlign: TextAlign.center))),
           DataCell(SizedBox(width: 130, child: Align(alignment: AlignmentDirectional.centerStart, child: Text(_rows[i]['كود النشاط'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6F42C1)))))),
           DataCell(SizedBox(width: 220, child: TextFormField(initialValue: _rows[i]['اسم النشاط عربي'] ?? '', key: ValueKey('activity-ar-$i-${_rows[i]['كود النشاط']}'), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4)), onTap: () => setState(() => _selected = _rows[i]['كود النشاط']), onChanged: (v) => _rows[i]['اسم النشاط عربي'] = v))),
           DataCell(SizedBox(width: 220, child: TextFormField(initialValue: _rows[i]['اسم النشاط إنجليزي'] ?? '', key: ValueKey('activity-en-$i-${_rows[i]['كود النشاط']}'), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4)), onTap: () => setState(() => _selected = _rows[i]['كود النشاط']), onChanged: (v) => _rows[i]['اسم النشاط إنجليزي'] = v))),
-          DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: (_rows[i]['نشط'] ?? 'true') == 'true', onChanged: _editing ? (v) => setState(() { final active = v ?? false; _rows[i]['نشط'] = active.toString(); if (!active) _rows[i]['يظهر في التطبيق'] = 'false'; }) : null)),
+          DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, value: (_rows[i]['نشط'] ?? 'true') == 'true', onChanged: _editing ? (v) => setState(() { final active = v ?? false; _rows[i]['نشط'] = active.toString(); if (!active) _rows[i]['يظهر في التطبيق'] = 'false'; }) : null)),
           DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: (_rows[i]['يظهر في التطبيق'] ?? 'true') == 'true' && (_rows[i]['نشط'] ?? 'true') == 'true', onChanged: _editing && (_rows[i]['نشط'] ?? 'true') == 'true' ? (v) => setState(() => _rows[i]['يظهر في التطبيق'] = (v ?? false).toString()) : null)),
         ]),
       ]))),

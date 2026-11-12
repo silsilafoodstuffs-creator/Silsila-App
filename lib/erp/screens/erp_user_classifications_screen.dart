@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_standard_data_table.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
@@ -191,10 +192,8 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
   Widget _grid() {
     if (_types.isEmpty) return const Padding(padding: EdgeInsets.all(22), child: Text('لا توجد أنواع مستخدمين.'));
     final canEdit = _editing && _activeTypeEnabled;
-    return DataTable(
-      headingRowColor: WidgetStateProperty.all(const Color(0xFFEDE4F8)),
-      dataRowMinHeight: 40, dataRowMaxHeight: 40, headingRowHeight: 40,
-      columnSpacing: 5, horizontalMargin: 5,
+    return ErpStandardDataTable(
+      headingColor: const Color(0xFFEDE4F8),
       columns: const [
         DataColumn(label: Text('م')),
         DataColumn(label: Text('كود التصنيف')),
@@ -217,9 +216,9 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
             DataCell(SizedBox(width: 190, child: TextField(controller: _enControllers[id], enabled: canEdit,
               decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'Classification name'),
               onTap: () => _select(row)))),
-            DataCell(Checkbox(value: row['is_active'] == true, activeColor: _classPurple,
+            DataCell(Checkbox(value: row['is_active'] == true, activeColor: _classPurple, visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               onChanged: canEdit ? (v) => setState(() { row['is_active'] = v == true; _selectedId = id; }) : null)),
-            DataCell(Checkbox(value: row['show_in_app'] == true, activeColor: _classOrange,
+            DataCell(Checkbox(value: row['show_in_app'] == true, activeColor: _classOrange, visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               onChanged: canEdit ? (v) => setState(() { row['show_in_app'] = v == true; _selectedId = id; }) : null)),
           ],
         );

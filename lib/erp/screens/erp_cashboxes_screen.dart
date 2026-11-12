@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_standard_data_table.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
@@ -320,7 +321,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
         Card(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: DataTable(
+            child: ErpStandardDataTable(
               columns: [
                 DataColumn(label: Text('م')),
                 DataColumn(label: Text('كود الخزينة')),
@@ -339,10 +340,10 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
                   DataCell(Text(_s(r['cashbox_name']))),
                   DataCell(Text(_s(r['cashbox_name_en']))),
                   if (widget.initialBankOnly) DataCell(Text(_s(r['checkbook_sheet_count']))),
-                  if (widget.initialBankOnly) DataCell(IconButton(tooltip:'تعديل عدد الأوراق',onPressed:_saving?null:()=>_editSheetCount(r),icon:const Icon(Icons.edit,color:Color(0xFFFFA015)))),
+                  if (widget.initialBankOnly) DataCell(IconButton(tooltip:'تعديل عدد الأوراق',visualDensity: VisualDensity.compact,constraints: const BoxConstraints.tightFor(width: 32, height: 32),padding: EdgeInsets.zero,onPressed:_saving?null:()=>_editSheetCount(r),icon:const Icon(Icons.edit,color:Color(0xFFFFA015)))),
                   DataCell(SizedBox(
                     width: 210,
-                    child: DropdownButton<String>(itemHeight: 48, 
+                    child: DropdownButton<String>(itemHeight: 48, isDense: true,
                       isExpanded: true,
                       value: _s(r['branch_id']).isEmpty ? '' : _s(r['branch_id']),
                       items: [
@@ -359,6 +360,8 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
                     value: r['is_active'] == true,
                     onChanged: _saving ? null : (_) => _toggle(r),
                     shape: const CircleBorder(),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   )),
                 ]);
               }),

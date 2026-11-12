@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_standard_data_table.dart';
 import '../services/erp_print_support.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
@@ -388,8 +389,7 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
           const SizedBox(height: 8),
           Expanded(child: _loading ? const Center(child: CircularProgressIndicator()) :
             _filtered.isEmpty ? Center(child: Text(_error ?? 'لا توجد طرق دفع مطابقة.')) :
-            Card(clipBehavior: Clip.antiAlias, child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
-              headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+            Card(clipBehavior: Clip.antiAlias, child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: ErpStandardDataTable(
               columns: const [
                 DataColumn(label: Text('م')), DataColumn(label: Text('الكود')),
                 DataColumn(label: Text('اسم الطريقة')), DataColumn(label: Text('النوع')),
@@ -410,8 +410,8 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
                     DataCell(Text(_filtered[i]['requires_reference'] == true ? 'نعم' : 'لا')),
                     DataCell(Text(_filtered[i]['is_active'] == true ? 'نشطة' : 'موقوفة')),
                     DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
-                      IconButton(tooltip: 'تعديل', onPressed: () => _edit(_filtered[i]), icon: const Icon(Icons.edit_outlined, color: _paymentPurple)),
-                      IconButton(tooltip: 'تفعيل/إيقاف', onPressed: () => _toggle(_filtered[i]), icon: Icon(_filtered[i]['is_active'] == true ? Icons.toggle_on : Icons.toggle_off, color: _paymentOrange)),
+                      IconButton(tooltip: 'تعديل', visualDensity: VisualDensity.compact, constraints: const BoxConstraints.tightFor(width: 32, height: 32), padding: EdgeInsets.zero, onPressed: () => _edit(_filtered[i]), icon: const Icon(Icons.edit_outlined, color: _paymentPurple)),
+                      IconButton(tooltip: 'تفعيل/إيقاف', visualDensity: VisualDensity.compact, constraints: const BoxConstraints.tightFor(width: 32, height: 32), padding: EdgeInsets.zero, onPressed: () => _toggle(_filtered[i]), icon: Icon(_filtered[i]['is_active'] == true ? Icons.toggle_on : Icons.toggle_off, color: _paymentOrange)),
                     ])),
                   ]),
               ],
