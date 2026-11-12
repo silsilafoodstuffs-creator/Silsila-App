@@ -24,7 +24,7 @@ class StudioComponentRegistry {
           (p['text'] ?? 'نص جديد').toString(),
           textAlign: _align(p['align']),
           style: TextStyle(
-            fontSize: _number(p['size'], 14).clamp(8, 48),
+            fontSize: _number(p['size'], 14).clamp(8, 48).toDouble(),
             fontWeight: p['bold'] == true ? FontWeight.bold : FontWeight.normal,
             color: Color(_integer(p['color'], 0xFF241735)),
           ),
@@ -64,12 +64,12 @@ class StudioComponentRegistry {
       case 'divider':
         return const Divider(height: 10);
       case 'spacer':
-        return SizedBox(height: _number(p['height'], 10).clamp(1, 100));
+        return SizedBox(height: _number(p['height'], 10).clamp(1, 100).toDouble());
       case 'grid':
         return GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: _number(p['columns'], 2).round().clamp(1, 6),
+          crossAxisCount: _number(p['columns'], 2).round().clamp(1, 6).toInt(),
           mainAxisSpacing: 5,
           crossAxisSpacing: 5,
           childAspectRatio: 2.4,
