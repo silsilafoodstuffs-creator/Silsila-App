@@ -182,7 +182,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
       return;
     }
     setState(() {
-      for (var slot = 1; slot <= 15; slot++) {
+      for (var slot = 1; slot <= 25; slot++) {
         if (checked) {
           _slotOwners[slot] = brandId;
         } else if (_slotOwners[slot] == brandId) {
