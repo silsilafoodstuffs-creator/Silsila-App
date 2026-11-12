@@ -5245,17 +5245,34 @@ class _OffersScreenState extends State<OffersScreen> {
       }
       return path;
     }
+    final countsByGovernorate = <String,int>{};
+    final countsByDistrict = <String,int>{};
+    final countsByArea = <String,int>{};
+    for (final row in countRows) {
+      final governorate = (row['governorate'] ?? '').toString();
+      final district = (row['district'] ?? '').toString();
+      final area = (row['area'] ?? '').toString();
+      final count = (row['customer_count'] as num?)?.toInt() ?? 0;
+      if (governorate.isEmpty) continue;
+      countsByGovernorate.update(governorate, (value) => value + count, ifAbsent: () => count);
+      if (district.isNotEmpty) {
+        final key = '${governorate}::${district}';
+        countsByDistrict.update(key, (value) => value + count, ifAbsent: () => count);
+        if (area.isNotEmpty) {
+          final areaKey = '${governorate}::${district}::${area}';
+          countsByArea.update(areaKey, (value) => value + count, ifAbsent: () => count);
+        }
+      }
+    }
     int countFor(Map<String,dynamic> row) {
       final path = pathOf(row);
       final level = (row['level'] ?? '').toString();
-      return countRows.where((r) {
-        final gov = (r['governorate'] ?? '').toString();
-        final district = (r['district'] ?? '').toString();
-        final area = (r['area'] ?? '').toString();
-        if (level == 'governorate') return gov == path['governorate'];
-        if (level == 'district') return gov == path['governorate'] && district == path['district'];
-        return gov == path['governorate'] && district == path['district'] && area == path['area'];
-      }).fold<int>(0, (sum, r) => sum + ((r['customer_count'] as num?)?.toInt() ?? 0));
+      final governorate = path['governorate'] ?? '';
+      final district = path['district'] ?? '';
+      final area = path['area'] ?? '';
+      if (level == 'governorate') return countsByGovernorate[governorate] ?? 0;
+      if (level == 'district') return countsByDistrict['${governorate}::${district}'] ?? 0;
+      return countsByArea['${governorate}::${district}::${area}'] ?? 0;
     }
     Widget geoNode(Map<String,dynamic> row, void Function(void Function()) refresh) {
       final id = (row['id'] ?? '').toString();
