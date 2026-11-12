@@ -477,7 +477,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       List<String> sitePages = <String>[];
       try {
         if (mounted) setState(() => _status = 'جارٍ استكشاف بنية الموقع بسرعة وتجهيز قائمة الصفحات قبل تنزيل الصور...');
-        final discovery = await _invoke({'action': 'discover', 'url': parsed.toString(), 'maxPages': 40});
+        final discovery = await _invoke({'action': 'discover', 'url': parsed.toString(), 'maxPages': 120});
         sitePages = (discovery['pages'] as List? ?? const []).map((x) => x.toString()).where((x) => x.isNotEmpty).toSet().toList();
         if (mounted) setState(() => _status = 'انتهى الاستكشاف الأولي: تم العثور على ${sitePages.length + 1} صفحة مرشحة. جارٍ تجهيز أول دفعة صور...');
       } catch (_) {
