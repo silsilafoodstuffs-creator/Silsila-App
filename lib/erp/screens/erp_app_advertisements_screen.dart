@@ -300,26 +300,32 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
 
   Future<void> _saveAllMetadata() async {
     if (_busySlot != null || !_editMode) return;
-    final pending = _adSlots.map((slot) => _forSlot(slot)).whereType<ErpAppAssetRecord>().toList();
     setState(() { _busySlot = 'all'; _error = null; _message = null; });
     try {
-      for (final asset in pending) {
-        if (asset.id == null) continue;
-        final key = _keyFor(asset.displayName, asset.activityCode);
-        final type = _targetTypes[key] ?? asset.targetType;
-        final code = (_targetCodes[key] ?? asset.targetCode ?? '').trim();
+      for (final slot in _adSlots) {
+        final localAsset = _forSlot(slot);
+        final sourceAsset = localAsset ?? _effectiveSlot(slot);
+        if (sourceAsset == null) continue;
+        final key = _keyFor(slot, _scopeCode);
+        final type = _targetTypes[key] ?? sourceAsset.targetType;
+        final code = (_targetCodes[key] ?? sourceAsset.targetCode ?? '').trim();
         if (type != 'none' && code.isEmpty) {
-          throw ArgumentError('اكتب كود الوجهة لإعلان «${asset.displayName}» قبل الحفظ.');
+          throw ArgumentError('اكتب كود الوجهة لإعلان «$slot» قبل الحفظ.');
         }
-        await _repository.updateAssetRecord(assetId: asset.id!, asset: ErpAppAssetRecord(
-          id: asset.id, appId: asset.appId, assetType: asset.assetType,
-          storagePath: asset.storagePath, displayName: asset.displayName,
-          entityId: asset.entityId, mimeType: asset.mimeType,
-          fileSizeBytes: asset.fileSizeBytes, altText: asset.altText,
+        final updated = ErpAppAssetRecord(
+          id: localAsset?.id, appId: sourceAsset.appId, assetType: sourceAsset.assetType,
+          storagePath: sourceAsset.storagePath, displayName: slot,
+          entityId: sourceAsset.entityId, mimeType: sourceAsset.mimeType,
+          fileSizeBytes: sourceAsset.fileSizeBytes, altText: sourceAsset.altText,
           targetType: type, targetCode: type == 'none' ? null : code,
-          durationSeconds: _durations[key] ?? asset.durationSeconds,
-          activityCode: asset.activityCode,
-        ));
+          durationSeconds: _durations[key] ?? sourceAsset.durationSeconds,
+          activityCode: _scopeCode,
+        );
+        if (localAsset?.id != null) {
+          await _repository.updateAssetRecord(assetId: localAsset!.id!, asset: updated);
+        } else if (_scopeCode != null) {
+          await _repository.registerAsset(updated);
+        }
       }
       if (mounted) setState(() { _message = 'تم حفظ إعدادات الإعلانات بنجاح.'; _editMode = false; });
       await _load();
