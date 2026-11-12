@@ -95,7 +95,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           .select('slot_no,brand_id')
           .eq('app_id', widget.appId!);
       query = _activityCode == 'ALL'
-          ? query.isFilter('activity_code', 'is', null)
+          ? query.isFilter('activity_code', null)
           : query.eq('activity_code', _activityCode);
       final assignedRows = await query.order('slot_no');
       if (!mounted) return;
