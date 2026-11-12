@@ -5164,194 +5164,312 @@ class _OffersScreenState extends State<OffersScreen> {
     final title = TextEditingController();
     final description = TextEditingController();
     final discount = TextEditingController();
-    final imageUrl = TextEditingController();
-    final offerImagePicker = ImagePicker();
-    XFile? selectedOfferImage;
-    final districts = TextEditingController();
-    final areas = TextEditingController();
-    final selectedGovernorates = <String>{};
+    final imagePicker = ImagePicker();
+    XFile? selectedImage;
+    bool showProducts = false;
+    final selectedGeoIds = <String>{};
     final selectedCustomerTypes = <String>{};
+    final allowedCustomerTypes = <String>{};
     String magazineColor = '#FFA015';
     int durationDays = 7;
     DateTime scheduledStart = DateTime.now();
     bool scheduleLater = false;
-    String selectedMainCategory = 'الكل';
-    String selectedSubcategory = 'الكل';
-    String selectedBrand = 'الكل';
-    List<Product> filterOfferProducts() => widget.availableProducts.where((product) =>
-      (selectedMainCategory == 'الكل' || product.category == selectedMainCategory) &&
-      (selectedSubcategory == 'الكل' || (product.subcategory ?? 'أصناف عامة') == selectedSubcategory) &&
-      (selectedBrand == 'الكل' || (product.brand ?? 'بدون ماركة') == selectedBrand)
-    ).toList();
+    final db = database;
+    final userId = db?.auth.currentUser?.id ?? '';
+    final activityCode = (widget.activityType ?? '').trim();
+    List<Map<String,dynamic>> geoRows = [];
+    List<Map<String,dynamic>> countRows = [];
+    List<Map<String,dynamic>> categoryRows = [];
+    if (db != null) {
+      try {
+        final values = await Future.wait<dynamic>([
+          db.rpc('get_offer_geo_tree'),
+          db.rpc('get_offer_geo_customer_counts'),
+          db.rpc('get_activity_customer_categories', params: {'p_activity_type': activityCode}),
+        ]);
+        geoRows = (values[0] as List).whereType<Map>().map((e) => Map<String,dynamic>.from(e)).toList();
+        countRows = (values[1] as List).whereType<Map>().map((e) => Map<String,dynamic>.from(e)).toList();
+        categoryRows = (values[2] as List).whereType<Map>().map((e) => Map<String,dynamic>.from(e)).toList();
+        if (userId.isNotEmpty && activityCode.isNotEmpty) {
+          final settings = await db.from('supplier_offer_customer_categories')
+              .select('customer_category,is_active')
+              .eq('supplier_id', userId).eq('activity_type', activityCode);
+          allowedCustomerTypes.addAll((settings as List).whereType<Map>()
+              .where((e) => e['is_active'] == true)
+              .map((e) => (e['customer_category'] ?? '').toString()).where((e) => e.isNotEmpty));
+        }
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تحميل بيانات الاستهداف: $e')));
+      }
+    }
+    final geoById = <String,Map<String,dynamic>>{
+      for (final row in geoRows) (row['id'] ?? '').toString(): row,
+    };
+    final childrenByParent = <String,List<Map<String,dynamic>>>{};
+    for (final row in geoRows) {
+      childrenByParent.putIfAbsent((row['parent_id'] ?? '').toString(), () => []).add(row);
+    }
+    Set<String> descendants(String id) {
+      final result = <String>{id};
+      for (final child in childrenByParent[id] ?? const <Map<String,dynamic>>[]) {
+        result.addAll(descendants((child['id'] ?? '').toString()));
+      }
+      return result;
+    }
+    Map<String,String> pathOf(Map<String,dynamic> row) {
+      final path = <String,String>{};
+      Map<String,dynamic>? current = row;
+      while (current != null) {
+        path[(current['level'] ?? '').toString()] = (current['name_ar'] ?? '').toString();
+        final parent = (current['parent_id'] ?? '').toString();
+        current = parent.isEmpty ? null : geoById[parent];
+      }
+      return path;
+    }
+    int countFor(Map<String,dynamic> row) {
+      final path = pathOf(row);
+      final level = (row['level'] ?? '').toString();
+      return countRows.where((r) {
+        final gov = (r['governorate'] ?? '').toString();
+        final district = (r['district'] ?? '').toString();
+        final area = (r['area'] ?? '').toString();
+        if (level == 'governorate') return gov == path['governorate'];
+        if (level == 'district') return gov == path['governorate'] && district == path['district'];
+        return gov == path['governorate'] && district == path['district'] && area == path['area'];
+      }).fold<int>(0, (sum, r) => sum + ((r['customer_count'] as num?)?.toInt() ?? 0));
+    }
+    Widget geoNode(Map<String,dynamic> row, void Function(void Function()) refresh) {
+      final id = (row['id'] ?? '').toString();
+      final children = childrenByParent[id] ?? const <Map<String,dynamic>>[];
+      return ExpansionTile(
+        key: PageStorageKey<String>('offer-geo-$id'),
+        tilePadding: const EdgeInsetsDirectional.only(start: 4, end: 8),
+        leading: Checkbox(
+          shape: const CircleBorder(),
+          value: selectedGeoIds.contains(id),
+          onChanged: (value) => refresh(() {
+            final ids = descendants(id);
+            if (value == true) { selectedGeoIds.addAll(ids); } else { selectedGeoIds.removeAll(ids); }
+          }),
+        ),
+        title: Row(children: [
+          Expanded(child: Text((row['name_ar'] ?? '').toString(), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
+          Text(countFor(row).toString(), style: const TextStyle(fontSize: 11, color: purple, fontWeight: FontWeight.w700)),
+        ]),
+        children: children.map((child) => geoNode(child, refresh)).toList(),
+      );
+    }
+    Future<void> manageAllowedCategories(void Function(void Function()) refresh) async {
+      if (db == null || userId.isEmpty || activityCode.isEmpty) return;
+      final draft = Set<String>.from(allowedCustomerTypes);
+      final names = categoryRows.map((r) => (r['customer_category'] ?? '').toString())
+          .where((e) => e.isNotEmpty).toSet().toList()..sort();
+      if (names.isEmpty) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('أضف فئات العملاء أولًا من بيانات أساسية > عملاء النشاطات.')));
+        return;
+      }
+      final saved = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(builder: (ctx, setSettings) => AlertDialog(
+          title: const Text('إعدادات فئات العملاء المسموحة للمورد'),
+          content: SizedBox(width: 420, child: SingleChildScrollView(child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: names.map((name) => CheckboxListTile(
+              dense: true,
+              value: draft.contains(name),
+              title: Text(name),
+              controlAffinity: ListTileControlAffinity.leading,
+              onChanged: (value) => setSettings(() {
+                if (value == true) { draft.add(name); } else { draft.remove(name); }
+              }),
+            )).toList(),
+          ))),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حفظ الإعدادات')),
+          ],
+        )),
+      );
+      if (saved != true) return;
+      try {
+        for (final name in names) {
+          await db.from('supplier_offer_customer_categories').upsert({
+            'supplier_id': userId,
+            'activity_type': activityCode,
+            'customer_category': name,
+            'is_active': draft.contains(name),
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          }, onConflict: 'supplier_id,activity_type,customer_category');
+        }
+        refresh(() {
+          allowedCustomerTypes..clear()..addAll(draft);
+          selectedCustomerTypes.removeWhere((e) => !allowedCustomerTypes.contains(e));
+        });
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ إعدادات المورد: $e')));
+      }
+    }
+
     final accepted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(silsilaText(silsilaText('إنشاء عرض جديد'))),
-        content: StatefulBuilder(
-          builder: (context, setDialogState) {
-            final visibleOfferProducts = widget.availableProducts;
-            final productGroups = <String, List<Product>>{};
-            for (final product in visibleOfferProducts) { productGroups.putIfAbsent(product.category, () => <Product>[]).add(product); }
-            final mainCategories = <String>{'الكل', ...widget.availableProducts.map((p) => p.category)}.toList();
-            final subcategories = <String>{'الكل', ...widget.availableProducts.where((p) => selectedMainCategory == 'الكل' || p.category == selectedMainCategory).map((p) => p.subcategory ?? 'أصناف عامة')}.toList();
-            final brands = <String>{'الكل', ...widget.availableProducts.where((p) => (selectedMainCategory == 'الكل' || p.category == selectedMainCategory) && (selectedSubcategory == 'الكل' || (p.subcategory ?? 'أصناف عامة') == selectedSubcategory)).map((p) => p.brand ?? 'بدون ماركة')}.toList();
-            return SizedBox(
-            width: 520,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(controller: title, decoration: const InputDecoration(labelText: 'عنوان العرض / المجلة')),
-                  TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'تفاصيل العرض')),
-                  TextField(controller: discount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'نسبة الخصم (اختياري)')),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: OutlinedButton.icon(
-                      onPressed: () => setDialogState(() {}),
-                      icon: const Icon(Icons.account_tree_outlined, size: 18),
-                      label: Text('اختيار الأصناف (${selectedProductIds.length})'),
-                    ),
-                  ),
-                  Row(children: [
-                    Expanded(child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final file = await offerImagePicker.pickImage(source: ImageSource.gallery, imageQuality: 86, maxWidth: 1800);
-                        if (file != null) setDialogState(() => selectedOfferImage = file);
-                      },
-                      icon: const Icon(Icons.photo_library_outlined, size: 17),
-                      label: const Text('اختيار من الجهاز', maxLines: 1, overflow: TextOverflow.ellipsis),
-                    )),
-                    const SizedBox(width: 8),
-                    Expanded(child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final file = await offerImagePicker.pickImage(source: ImageSource.camera, imageQuality: 86, maxWidth: 1800);
-                        if (file != null) setDialogState(() => selectedOfferImage = file);
-                      },
-                      icon: const Icon(Icons.camera_alt_outlined, size: 17),
-                      label: const Text('استيراد كاميرا', maxLines: 1, overflow: TextOverflow.ellipsis),
-                    )),
-                  ]),
-                  DropdownButtonFormField<String>(
-                    value: magazineColor,
-                    decoration: const InputDecoration(labelText: 'لون مجلة العرض'),
-                    items: [
-                      DropdownMenuItem(value: '#FFA015', child: Text(silsilaText(silsilaText('برتقالي')))),
-                      DropdownMenuItem(value: '#3E007D', child: Text(silsilaText(silsilaText('بنفسجي')))),
-                      DropdownMenuItem(value: '#168A4A', child: Text(silsilaText(silsilaText('أخضر')))),
-                      DropdownMenuItem(value: '#E53935', child: Text(silsilaText(silsilaText('أحمر')))),
-                      DropdownMenuItem(value: '#1976D2', child: Text(silsilaText(silsilaText('أزرق')))),
-                    ],
-                    onChanged: (value) => setDialogState(() => magazineColor = value ?? '#FFA015'),
-                  ),
-                  DropdownButtonFormField<int>(
-                    value: durationDays,
-                    decoration: const InputDecoration(labelText: 'مدة العرض'),
-                    items: [
-                      DropdownMenuItem(value: 1, child: Text(silsilaText(silsilaText('يوم واحد')))),
-                      DropdownMenuItem(value: 7, child: Text(silsilaText(silsilaText('أسبوع')))),
-                      DropdownMenuItem(value: 14, child: Text(silsilaText(silsilaText('أسبوعان')))),
-                      DropdownMenuItem(value: 30, child: Text(silsilaText(silsilaText('شهر')))),
-                    ],
-                    onChanged: (value) => setDialogState(() => durationDays = value ?? 7),
-                  ),
-                  TextField(controller: districts, decoration: const InputDecoration(labelText: 'المراكز / الأحياء (افصل بينها بفاصلة)')),
-                  TextField(controller: areas, decoration: const InputDecoration(labelText: 'المناطق (افصل بينها بفاصلة)')),
-                  ExpansionTile(
-                    tilePadding: EdgeInsets.zero,
-                    title: Text('استهداف المحافظات (${selectedGovernorates.length})'),
-                    children: [
-                      Wrap(
-                        spacing: 5,
-                        runSpacing: 4,
-                        children: egyptGovernorates.map((name) => FilterChip(
-                          label: Text(name, style: const TextStyle(fontSize: 11)),
-                          selected: selectedGovernorates.contains(name),
-                          onSelected: (selected) => setDialogState(() {
-                            if (selected) { selectedGovernorates.add(name); } else { selectedGovernorates.remove(name); }
-                          }),
-                        )).toList(),
-                      ),
-                    ],
-                  ),
-                  ExpansionTile(
-                    tilePadding: EdgeInsets.zero,
-                    title: Text('أنواع العملاء المستهدفة (${selectedCustomerTypes.length})'),
-                    children: [
-                      Wrap(
-                        spacing: 5,
-                        runSpacing: 4,
-                        children: customerTypes.map((name) => FilterChip(
-                          label: Text(name, style: const TextStyle(fontSize: 11)),
-                          selected: selectedCustomerTypes.contains(name),
-                          onSelected: (selected) => setDialogState(() {
-                            if (selected) { selectedCustomerTypes.add(name); } else { selectedCustomerTypes.remove(name); }
-                          }),
-                        )).toList(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(children: [
-                    Expanded(child: Text(silsilaText(silsilaText('الأصناف الداخلة في العرض')), style: TextStyle(fontWeight: FontWeight.bold))),
-                    TextButton(
-                      onPressed: () => setDialogState(() {
-                        if (selectedProductIds.length == visibleOfferProducts.length) {
-                          selectedProductIds.clear();
-                        } else {
-                          selectedProductIds.addAll(visibleOfferProducts.map((p) => p.cartKey));
-                        }
-                      }),
-                      child: Text(selectedProductIds.length == visibleOfferProducts.length ? 'إلغاء الكل' : 'تحديد الكل'),
-                    ),
-                  ]),
-                  ...productGroups.entries.map((group) => ExpansionTile(
-                    tilePadding: EdgeInsets.zero,
-                    initiallyExpanded: true,
+        title: const Text('إنشاء عرض جديد'),
+        content: StatefulBuilder(builder: (context, refresh) {
+          final groups = <String,List<Product>>{};
+          for (final product in widget.availableProducts) {
+            groups.putIfAbsent(product.category, () => []).add(product);
+          }
+          final categoryGroups = <String,List<String>>{};
+          for (final row in categoryRows) {
+            final activityName = (row['activity_name'] ?? activityCode).toString();
+            final name = (row['customer_category'] ?? '').toString();
+            if (name.isNotEmpty) categoryGroups.putIfAbsent(activityName, () => []).add(name);
+          }
+          return SizedBox(width: 560, child: SingleChildScrollView(child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: title, decoration: const InputDecoration(labelText: 'عنوان العرض / المجلة')),
+              TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'تفاصيل العرض')),
+              TextField(controller: discount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'نسبة الخصم (اختياري)')),
+              Align(alignment: Alignment.centerRight, child: OutlinedButton.icon(
+                onPressed: () => refresh(() => showProducts = !showProducts),
+                icon: const Icon(Icons.account_tree_outlined, size: 18),
+                label: Text(showProducts ? 'إخفاء الأصناف (${selectedProductIds.length})' : 'اختيار الأصناف (${selectedProductIds.length})'),
+              )),
+              if (showProducts) ...[
+                Row(children: [
+                  const Expanded(child: Text('فئات الأصناف والأصناف', style: TextStyle(fontWeight: FontWeight.w800))),
+                  TextButton(onPressed: () => refresh(() {
+                    if (selectedProductIds.length == widget.availableProducts.length) {
+                      selectedProductIds.clear();
+                    } else {
+                      selectedProductIds.addAll(widget.availableProducts.map((p) => p.cartKey));
+                    }
+                  }), child: const Text('تحديد / إلغاء الكل')),
+                ]),
+                Theme(data: Theme.of(context).copyWith(checkboxTheme: CheckboxThemeData(shape: const CircleBorder())),
+                  child: Column(children: groups.entries.map((group) => ExpansionTile(
+                    initiallyExpanded: false,
                     title: Text('${group.key} (${group.value.length})', style: const TextStyle(fontWeight: FontWeight.w800)),
                     children: group.value.map((p) {
                       offerPrices.putIfAbsent(p.cartKey, () => TextEditingController(text: p.price.toStringAsFixed(2)));
                       minimumQuantities.putIfAbsent(p.cartKey, () => TextEditingController(text: p.minQuantity.toString()));
-                      final offerValue = double.tryParse(offerPrices[p.cartKey]!.text) ?? p.price;
-                      final difference = p.price - offerValue;
+                      final value = double.tryParse(offerPrices[p.cartKey]!.text) ?? p.price;
+                      final diff = p.price - value;
                       return CheckboxListTile(
                         dense: true,
                         controlAffinity: ListTileControlAffinity.leading,
                         value: selectedProductIds.contains(p.cartKey),
-                        secondary: SizedBox(
-                          width: 42, height: 42,
-                          child: p.imageUrl != null
-                            ? ClipRRect(borderRadius: BorderRadius.circular(7), child: Image.network(p.imageUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(p.icon, color: purple)))
-                            : Icon(p.icon, color: purple),
-                        ),
+                        secondary: SizedBox(width: 40, height: 40, child: p.imageUrl != null
+                          ? ClipRRect(borderRadius: BorderRadius.circular(7), child: Image.network(p.imageUrl!, fit: BoxFit.cover))
+                          : Icon(p.icon, color: purple)),
                         title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700)),
                         subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text('السعر الحالي عند المورد: ${p.price.toStringAsFixed(2)} ج.م'),
-                          Row(children: [
-                            Expanded(child: TextField(controller: offerPrices[p.cartKey], keyboardType: const TextInputType.numberWithOptions(decimal: true), onChanged: (_) => setDialogState(() {}), decoration: const InputDecoration(isDense: true, labelText: 'سعر العرض'))),
-                            const SizedBox(width: 8),
-                            Expanded(child: TextField(controller: minimumQuantities[p.cartKey], keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(isDense: true, labelText: 'أقل كمية'))),
-                          ]),
-                          Text(difference >= 0 ? 'فرق السعر: توفير ${difference.toStringAsFixed(2)} ج.م' : 'زيادة عن السعر الحالي: ${difference.abs().toStringAsFixed(2)} ج.م',
-                            style: TextStyle(fontSize: 11, color: difference >= 0 ? Colors.green.shade700 : Colors.red.shade700, fontWeight: FontWeight.w700)),
+                          TextField(controller: offerPrices[p.cartKey], keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            onChanged: (_) => refresh(() {}),
+                            decoration: const InputDecoration(isDense: true, labelText: 'سعر العرض')),
+                          Text('فرق السعر: ${diff >= 0 ? 'توفير' : 'زيادة'} ${diff.abs().toStringAsFixed(2)} ج.م',
+                            style: TextStyle(fontSize: 11, color: diff >= 0 ? Colors.green.shade700 : Colors.red.shade700, fontWeight: FontWeight.w700)),
+                          TextField(controller: minimumQuantities[p.cartKey], keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(isDense: true, labelText: 'أقل كمية')),
                         ]),
-                        onChanged: (v) => setDialogState(() {
-                          if (v == true) { selectedProductIds.add(p.cartKey); } else { selectedProductIds.remove(p.cartKey); }
+                        onChanged: (value) => refresh(() {
+                          if (value == true) { selectedProductIds.add(p.cartKey); } else { selectedProductIds.remove(p.cartKey); }
                         }),
                       );
                     }).toList(),
+                  )).toList())),
+              ],
+              Row(children: [
+                const Expanded(child: Text('صورة العرض', style: TextStyle(fontWeight: FontWeight.w700))),
+                if (selectedImage != null) Expanded(child: Text(selectedImage!.name, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end)),
+              ]),
+              Row(children: [
+                Expanded(child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final file = await imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 86, maxWidth: 1800);
+                    if (file != null) refresh(() => selectedImage = file);
+                  },
+                  icon: const Icon(Icons.photo_library_outlined, size: 17),
+                  label: const Text('اختيار من الجهاز'),
+                )),
+                const SizedBox(width: 8),
+                Expanded(child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final file = await imagePicker.pickImage(source: ImageSource.camera, imageQuality: 86, maxWidth: 1800);
+                    if (file != null) refresh(() => selectedImage = file);
+                  },
+                  icon: const Icon(Icons.camera_alt_outlined, size: 17),
+                  label: const Text('استيراد كاميرا'),
+                )),
+              ]),
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: Text('استهداف مناطق (${selectedGeoIds.length})'),
+                children: geoRows.isEmpty
+                  ? [const Padding(padding: EdgeInsets.all(10), child: Text('لا تتوفر شجرة جغرافية في قاعدة البيانات.'))]
+                  : geoRows.where((r) => (r['level'] ?? '').toString() == 'governorate').map((r) => geoNode(r, refresh)).toList(),
+              ),
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: Row(children: [
+                  const Expanded(child: Text('فئات العملاء المسموحة لهذا المورد')),
+                  IconButton(tooltip: 'إعدادات المورد', onPressed: () => manageAllowedCategories(refresh),
+                    icon: const Icon(Icons.settings_outlined, color: purple)),
+                ]),
+                children: [
+                  if (categoryGroups.isEmpty)
+                    const Padding(padding: EdgeInsets.all(10), child: Text('لا توجد فئات معرفة لهذا النشاط. أضفها من بيانات أساسية > عملاء النشاطات.'))
+                  else ...categoryGroups.entries.map((group) => ExpansionTile(
+                    tilePadding: const EdgeInsetsDirectional.only(start: 8, end: 8),
+                    title: Text(group.key, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    children: group.value.toSet().map((name) => CheckboxListTile(
+                      dense: true,
+                      value: selectedCustomerTypes.contains(name),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: Text(name),
+                      onChanged: allowedCustomerTypes.contains(name) ? (value) => refresh(() {
+                        if (value == true) { selectedCustomerTypes.add(name); } else { selectedCustomerTypes.remove(name); }
+                      }) : null,
+                    )).toList(),
                   )),
-                  if (visibleOfferProducts.isEmpty) Text(silsilaText(silsilaText('لا توجد أصناف محملة لهذا النشاط.'))),
+                  if (allowedCustomerTypes.isEmpty)
+                    const Padding(padding: EdgeInsets.all(8), child: Text('اضبط الفئات المسموحة من زر الإعدادات أولًا.')),
                 ],
               ),
-            ),
-          );
-          },
-        ),
+              DropdownButtonFormField<String>(
+                value: magazineColor,
+                decoration: const InputDecoration(labelText: 'لون مجلة العرض'),
+                items: const [
+                  DropdownMenuItem(value: '#FFA015', child: Text('برتقالي')),
+                  DropdownMenuItem(value: '#3E007D', child: Text('بنفسجي')),
+                  DropdownMenuItem(value: '#168A4A', child: Text('أخضر')),
+                  DropdownMenuItem(value: '#E53935', child: Text('أحمر')),
+                  DropdownMenuItem(value: '#1976D2', child: Text('أزرق')),
+                ],
+                onChanged: (value) => refresh(() => magazineColor = value ?? '#FFA015'),
+              ),
+              DropdownButtonFormField<int>(
+                value: durationDays,
+                decoration: const InputDecoration(labelText: 'مدة العرض'),
+                items: const [
+                  DropdownMenuItem(value: 1, child: Text('يوم واحد')),
+                  DropdownMenuItem(value: 7, child: Text('أسبوع')),
+                  DropdownMenuItem(value: 14, child: Text('أسبوعان')),
+                  DropdownMenuItem(value: 30, child: Text('شهر')),
+                ],
+                onChanged: (value) => refresh(() => durationDays = value ?? 7),
+              ),
+            ],
+          )));
+        }),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(silsilaText(silsilaText('إلغاء')))),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
           OutlinedButton.icon(
             onPressed: () async {
-              final previewAction = await showDialog<bool>(
+              final preview = await showDialog<bool>(
                 context: dialogContext,
                 builder: (previewContext) => AlertDialog(
                   title: const Text('معاينة العرض قبل النشر'),
@@ -5359,8 +5477,10 @@ class _OffersScreenState extends State<OffersScreen> {
                     Text(title.text.trim().isEmpty ? 'مجلة عروض سلسلة' : title.text.trim(), style: const TextStyle(fontWeight: FontWeight.bold)),
                     if (description.text.trim().isNotEmpty) Text(description.text.trim()),
                     Text('عدد الأصناف المحددة: ${selectedProductIds.length}'),
+                    Text('عدد المناطق المستهدفة: ${selectedGeoIds.length}'),
+                    Text('فئات العملاء: ${selectedCustomerTypes.join('، ')}'),
                     Text('موعد النشر: ${scheduleLater ? scheduledStart.toString().substring(0,16) : 'فورًا'}'),
-                    if (selectedOfferImage != null) Text('الصورة: ${selectedOfferImage!.name}'),
+                    if (selectedImage != null) Text('الصورة: ${selectedImage!.name}'),
                   ]),
                   actions: [
                     TextButton(onPressed: () => Navigator.pop(previewContext, false), child: const Text('تعديل')),
@@ -5368,86 +5488,80 @@ class _OffersScreenState extends State<OffersScreen> {
                   ],
                 ),
               );
-              if (previewAction == true) Navigator.pop(dialogContext, true);
+              if (preview == true) Navigator.pop(dialogContext, true);
             },
             icon: const Icon(Icons.visibility_outlined, size: 17),
             label: const Text('معاينة'),
           ),
           OutlinedButton.icon(
             onPressed: () async {
-              final day = await showDatePicker(context: dialogContext, initialDate: scheduledStart.isBefore(DateTime.now()) ? DateTime.now() : scheduledStart, firstDate: DateTime.now(), lastDate: DateTime(2100));
+              final day = await showDatePicker(context: dialogContext,
+                initialDate: scheduledStart.isBefore(DateTime.now()) ? DateTime.now() : scheduledStart,
+                firstDate: DateTime.now(), lastDate: DateTime(2100));
               if (day == null) return;
               final time = await showTimePicker(context: dialogContext, initialTime: TimeOfDay.fromDateTime(scheduledStart));
               if (time == null) return;
-              setDialogState(() { scheduledStart = DateTime(day.year, day.month, day.day, time.hour, time.minute); scheduleLater = true; });
+              scheduleLater = true;
+              scheduledStart = DateTime(day.year, day.month, day.day, time.hour, time.minute);
+              refresh(() {});
+              /*
+                scheduledStart = DateTime(day.year, day.month, day.day, time.hour, time.minute);
+                scheduleLater = true;
+              }); */
               if (dialogContext.mounted) Navigator.pop(dialogContext, true);
             },
             icon: const Icon(Icons.schedule, size: 17),
             label: const Text('جدولة'),
           ),
-          FilledButton(onPressed: () { scheduleLater = false; Navigator.pop(dialogContext, true); }, child: Text(silsilaText(silsilaText('حفظ ونشر')))),
+          FilledButton(onPressed: () { scheduleLater = false; Navigator.pop(dialogContext, true); }, child: const Text('حفظ ونشر')),
         ],
       ),
     );
+
     if (accepted == true) {
       try {
+        if (title.text.trim().isEmpty) throw ArgumentError('أدخل عنوان العرض.');
         final discountValue = discount.text.trim().isEmpty ? null : double.tryParse(discount.text.trim());
-        if (discount.text.trim().isNotEmpty && discountValue == null) {
-          throw ArgumentError('أدخل نسبة خصم صحيحة.');
+        if (discount.text.trim().isNotEmpty && discountValue == null) throw ArgumentError('أدخل نسبة خصم صحيحة.');
+        if (discountValue != null && (!discountValue.isFinite || discountValue <= 0 || discountValue > 100)) {
+          throw ArgumentError('نسبة الخصم يجب أن تكون أكبر من صفر وحتى 100%.');
         }
-        final now = scheduleLater ? scheduledStart : DateTime.now();
-        final uploadedOfferImageUrl = selectedOfferImage != null ? await _uploadSupplierOfferImage(selectedOfferImage!) : (imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim());
+        if (selectedCustomerTypes.isEmpty) throw ArgumentError('حدد فئات العملاء المستهدفة من الفئات المسموحة للمورد.');
+        final startsAt = scheduleLater ? scheduledStart : DateTime.now();
+        final endsAt = startsAt.add(Duration(days: durationDays));
+        final imageUrl = selectedImage == null ? null : await _uploadSupplierOfferImage(selectedImage!);
+        final selectedGeoRows = geoRows.where((r) => selectedGeoIds.contains((r['id'] ?? '').toString())).toList();
+        List<String> namesFor(String level) => selectedGeoRows.where((r) => (r['level'] ?? '').toString() == level)
+            .map((r) => (r['name_ar'] ?? '').toString()).where((e) => e.isNotEmpty).toSet().toList();
+        final geoIds = selectedGeoIds.toList();
         if (selectedProductIds.isEmpty) {
           await supplierService.createOffer(
-            title: title.text,
-            description: description.text,
-            startsAt: now,
-            endsAt: now.add(Duration(days: durationDays)),
-            imageUrl: uploadedOfferImageUrl,
-            activityType: widget.activityType,
-            discountPercentage: discountValue,
-            magazineColor: magazineColor,
-            targetGovernorates: selectedGovernorates.toList(),
-            targetDistricts: districts.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(),
-            targetAreas: areas.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(),
-            targetCustomerTypes: selectedCustomerTypes.toList(),
+            title: title.text.trim(), description: description.text, startsAt: startsAt, endsAt: endsAt,
+            imageUrl: imageUrl, activityType: widget.activityType, discountPercentage: discountValue,
+            magazineColor: magazineColor, targetGovernorates: namesFor('governorate'),
+            targetDistricts: namesFor('district'), targetAreas: namesFor('area'),
+            targetCustomerTypes: selectedCustomerTypes.toList(), targetGeoIds: geoIds,
           );
         } else {
-          final selectedItems = <Map<String, dynamic>>[];
+          final items = <Map<String,dynamic>>[];
           for (final p in widget.availableProducts.where((p) => selectedProductIds.contains(p.cartKey))) {
             final price = double.tryParse(offerPrices[p.cartKey]?.text.trim() ?? '');
-            if (price == null || !price.isFinite || price < 0) {
-              throw ArgumentError('سعر العرض غير صحيح للصنف ${p.name}');
-            }
-            final minimumQuantity = double.tryParse(minimumQuantities[p.cartKey]?.text.trim() ?? '');
-            if (minimumQuantity == null || !minimumQuantity.isFinite || minimumQuantity <= 0) {
-              throw ArgumentError('أقل كمية غير صحيحة للصنف ${p.name}');
-            }
-            selectedItems.add({
-              'product_id': p.id,
-              'product_name': p.name,
-              'original_price': p.price,
-              'offer_price': price,
-              'min_quantity': minimumQuantity,
-            });
+            if (price == null || !price.isFinite || price < 0) throw ArgumentError('سعر العرض غير صحيح للصنف ${p.name}');
+            final minimum = double.tryParse(minimumQuantities[p.cartKey]?.text.trim() ?? '');
+            if (minimum == null || !minimum.isFinite || minimum <= 0) throw ArgumentError('أقل كمية غير صحيحة للصنف ${p.name}');
+            items.add({'product_id': p.id, 'product_name': p.name, 'original_price': p.price, 'offer_price': price, 'min_quantity': minimum});
           }
           await supplierService.createOfferWithItems(
-            title: title.text.trim().isEmpty ? 'مجلة عروض سلسلة' : title.text.trim(),
-            items: selectedItems,
-            description: description.text,
-            startsAt: now,
-            endsAt: now.add(Duration(days: durationDays)),
-            imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(),
-            activityType: widget.activityType,
-            discountPercentage: discountValue,
-            magazineColor: magazineColor,
-            targetGovernorates: selectedGovernorates.toList(),
-            targetDistricts: districts.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(),
-            targetAreas: areas.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(),
-            targetCustomerTypes: selectedCustomerTypes.toList(),
+            title: title.text.trim(), items: items, description: description.text, startsAt: startsAt, endsAt: endsAt,
+            imageUrl: imageUrl, activityType: widget.activityType, discountPercentage: discountValue,
+            magazineColor: magazineColor, targetGovernorates: namesFor('governorate'),
+            targetDistricts: namesFor('district'), targetAreas: namesFor('area'),
+            targetCustomerTypes: selectedCustomerTypes.toList(), targetGeoIds: geoIds,
           );
         }
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تم حفظ العرض. عدد الأصناف: ${selectedProductIds.length}')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم حفظ العرض ${scheduleLater ? 'مجدولًا' : 'ونشره'} بنجاح. عدد الأصناف: ${selectedProductIds.length}')),
+        );
         await loadOffers();
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر نشر العرض: $e')));
@@ -5456,10 +5570,8 @@ class _OffersScreenState extends State<OffersScreen> {
     title.dispose();
     description.dispose();
     discount.dispose();
-    imageUrl.dispose();
-    districts.dispose();
-    areas.dispose();
   }
+
   String _csvCell(Object? value) =>
       '"${(value ?? '').toString().replaceAll('"', '""')}"';
 
