@@ -126,4 +126,196 @@ grant select, insert on public.erp_studio_design_versions to authenticated;
 grant select, insert on public.erp_studio_audit_log to authenticated;
 grant usage, select on sequence public.erp_studio_audit_log_id_seq to authenticated;
 
+-- All design mutations are transactional and use optimistic revision checks.
+create or replace function public.erp_studio_save_draft(
+  p_company_id uuid,
+  p_design_id uuid,
+  p_design_key text,
+  p_name text,
+  p_design_kind text,
+  p_schema_version integer,
+  p_design_json jsonb,
+  p_binding_json jsonb,
+  p_expected_revision integer default null,
+  p_change_note text default null
+) returns uuid
+language plpgsql
+set search_path = public
+as $
+declare
+  v_id uuid;
+  v_revision integer;
+begin
+  if auth.uid() is null or not public.erp_user_has_company_role(
+    p_company_id, array['owner','admin']::text[]
+  ) then
+    raise exception 'غير مصرح بحفظ تصميمات الاستوديو لهذه الشركة';
+  end if;
+  if p_name is null or length(trim(p_name)) not between 1 and 160
+     or p_design_key is null or length(trim(p_design_key)) not between 1 and 120
+     or p_schema_version < 1
+     or jsonb_typeof(p_design_json) <> 'object'
+     or jsonb_typeof(p_binding_json) <> 'object' then
+    raise exception 'بيانات التصميم غير صالحة';
+  end if;
+
+  if p_design_id is null then
+    insert into public.erp_studio_designs(
+      company_id, design_key, name, design_kind, schema_version,
+      status, design_json, binding_json, revision, created_by, updated_by
+    ) values (
+      p_company_id, trim(p_design_key), trim(p_name), p_design_kind,
+      p_schema_version, 'draft', p_design_json, p_binding_json, 1,
+      auth.uid(), auth.uid()
+    ) returning id, revision into v_id, v_revision;
+  else
+    update public.erp_studio_designs
+       set name = trim(p_name),
+           design_kind = p_design_kind,
+           schema_version = p_schema_version,
+           status = 'draft',
+           design_json = p_design_json,
+           binding_json = p_binding_json,
+           revision = revision + 1,
+           updated_by = auth.uid(),
+           updated_at = now()
+     where id = p_design_id
+       and company_id = p_company_id
+       and revision = p_expected_revision
+     returning id, revision into v_id, v_revision;
+    if v_id is null then
+      raise exception 'تعارض إصدار: أعد تحميل التصميم قبل الحفظ' using errcode = '40001';
+    end if;
+  end if;
+
+  insert into public.erp_studio_design_versions(
+    design_id, company_id, revision, design_json, binding_json,
+    change_note, created_by
+  ) values (
+    v_id, p_company_id, v_revision, p_design_json, p_binding_json,
+    p_change_note, auth.uid()
+  );
+
+  insert into public.erp_studio_audit_log(company_id, design_id, action_key, details, actor_user_id)
+  values (p_company_id, v_id, 'save_draft', jsonb_build_object('revision', v_revision), auth.uid());
+
+  return v_id;
+end;
+$;
+
+create or replace function public.erp_studio_approve_design(
+  p_company_id uuid,
+  p_design_id uuid,
+  p_expected_revision integer
+) returns boolean
+language plpgsql
+set search_path = public
+as $
+declare v_revision integer;
+begin
+  if auth.uid() is null or not public.erp_user_has_company_role(
+    p_company_id, array['owner','admin']::text[]
+  ) then raise exception 'غير مصرح باعتماد التصميم'; end if;
+
+  update public.erp_studio_designs
+     set status = 'approved', updated_by = auth.uid(), updated_at = now()
+   where id = p_design_id and company_id = p_company_id
+     and revision = p_expected_revision and status in ('draft','review')
+   returning revision into v_revision;
+  if v_revision is null then raise exception 'تعذر الاعتماد: الإصدار تغير أو الحالة غير مناسبة'; end if;
+
+  insert into public.erp_studio_audit_log(company_id, design_id, action_key, details, actor_user_id)
+  values (p_company_id, p_design_id, 'approve', jsonb_build_object('revision', v_revision), auth.uid());
+  return true;
+end;
+$;
+
+create or replace function public.erp_studio_publish_design(
+  p_company_id uuid,
+  p_design_id uuid,
+  p_tested_revision integer
+) returns boolean
+language plpgsql
+set search_path = public
+as $
+declare v_revision integer;
+begin
+  if auth.uid() is null or not public.erp_user_has_company_role(
+    p_company_id, array['owner','admin']::text[]
+  ) then raise exception 'غير مصرح بنشر التصميم'; end if;
+
+  update public.erp_studio_designs
+     set status = 'published', published_revision = revision,
+         updated_by = auth.uid(), updated_at = now()
+   where id = p_design_id and company_id = p_company_id
+     and revision = p_tested_revision and status = 'approved'
+   returning revision into v_revision;
+  if v_revision is null then
+    raise exception 'لا يمكن النشر: يجب اعتماد الإصدار الحالي واختباره أولاً';
+  end if;
+
+  insert into public.erp_studio_audit_log(company_id, design_id, action_key, details, actor_user_id)
+  values (p_company_id, p_design_id, 'publish', jsonb_build_object('revision', v_revision), auth.uid());
+  return true;
+end;
+$;
+
+create or replace function public.erp_studio_restore_version(
+  p_company_id uuid,
+  p_design_id uuid,
+  p_target_revision integer,
+  p_expected_revision integer
+) returns integer
+language plpgsql
+set search_path = public
+as $
+declare
+  v_json jsonb;
+  v_binding jsonb;
+  v_new_revision integer;
+begin
+  if auth.uid() is null or not public.erp_user_has_company_role(
+    p_company_id, array['owner','admin']::text[]
+  ) then raise exception 'غير مصرح باستعادة إصدار'; end if;
+
+  select design_json, binding_json into v_json, v_binding
+    from public.erp_studio_design_versions
+   where design_id = p_design_id and company_id = p_company_id
+     and revision = p_target_revision;
+  if v_json is null then raise exception 'الإصدار المطلوب غير موجود'; end if;
+
+  update public.erp_studio_designs
+     set design_json = v_json, binding_json = v_binding,
+         revision = revision + 1, status = 'draft',
+         updated_by = auth.uid(), updated_at = now()
+   where id = p_design_id and company_id = p_company_id
+     and revision = p_expected_revision
+   returning revision into v_new_revision;
+  if v_new_revision is null then
+    raise exception 'تعارض إصدار أثناء الاستعادة؛ أعد تحميل التصميم' using errcode = '40001';
+  end if;
+
+  insert into public.erp_studio_design_versions(
+    design_id, company_id, revision, design_json, binding_json, change_note, created_by
+  ) values (
+    p_design_id, p_company_id, v_new_revision, v_json, v_binding,
+    'استعادة من الإصدار ' || p_target_revision, auth.uid()
+  );
+
+  insert into public.erp_studio_audit_log(company_id, design_id, action_key, details, actor_user_id)
+  values (p_company_id, p_design_id, 'restore_version',
+    jsonb_build_object('source_revision', p_target_revision, 'new_revision', v_new_revision), auth.uid());
+  return v_new_revision;
+end;
+$;
+
+revoke all on function public.erp_studio_save_draft(uuid,uuid,text,text,text,integer,jsonb,jsonb,integer,text) from public, anon;
+revoke all on function public.erp_studio_approve_design(uuid,uuid,integer) from public, anon;
+revoke all on function public.erp_studio_publish_design(uuid,uuid,integer) from public, anon;
+revoke all on function public.erp_studio_restore_version(uuid,uuid,integer,integer) from public, anon;
+grant execute on function public.erp_studio_save_draft(uuid,uuid,text,text,text,integer,jsonb,jsonb,integer,text) to authenticated;
+grant execute on function public.erp_studio_approve_design(uuid,uuid,integer) to authenticated;
+grant execute on function public.erp_studio_publish_design(uuid,uuid,integer) to authenticated;
+grant execute on function public.erp_studio_restore_version(uuid,uuid,integer,integer) to authenticated;
+
 commit;
