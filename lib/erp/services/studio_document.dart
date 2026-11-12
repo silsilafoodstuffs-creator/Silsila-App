@@ -44,8 +44,7 @@ class StudioDocument {
     if (rawNodes is! List || rawNodes.length > 500) {
       throw const FormatException('قائمة المكونات غير صالحة أو تجاوزت الحد المسموح.');
     }
-    return StudioDocument(
-      id: _requiredString(json['id'], 'id'),
+    final parsedNodes = rawNodes.map((e) {\n        if (e is! Map) throw const FormatException('تعريف مكون غير صالح.');\n        return StudioNode.fromJson(Map<String, dynamic>.from(e));\n      }).toList();\n    final ids = parsedNodes.map((e) => e.id).toSet();\n    if (ids.length != parsedNodes.length) throw const FormatException('معرّفات المكونات يجب أن تكون فريدة.');\n    return StudioDocument(\n      id: _requiredString(json['id'], 'id'),
       name: _requiredString(json['name'], 'name'),
       schemaVersion: 1,
       updatedAt: DateTime.tryParse(json['updatedAt']?.toString() ?? ''),
