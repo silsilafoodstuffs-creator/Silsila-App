@@ -47,6 +47,7 @@ class _ErpActivityCustomersScreenState extends State<ErpActivityCustomersScreen>
           .select('id,workspace_name,activity_type,account_kind,is_active')
           .eq('platform_company_id', companyId)
           .eq('is_active', true)
+          .eq('account_kind', 'supplier')
           .order('activity_type')
           .order('workspace_name');
       final workspaces = (result as List)
