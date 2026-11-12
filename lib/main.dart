@@ -5174,7 +5174,7 @@ class _OffersScreenState extends State<OffersScreen> {
     final allowedCustomerTypes = <String>{};
     String magazineColor = '#FFA015';
     int durationDays = 7;
-    DateTime scheduledStart = DateTime.now();
+    DateTime scheduledStart = DateTime.now().add(const Duration(hours: 1));
     bool scheduleLater = false;
     final db = database;
     final userId = db?.auth.currentUser?.id ?? '';
