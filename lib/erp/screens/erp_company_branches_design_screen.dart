@@ -580,6 +580,13 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
         padding: const EdgeInsets.all(11),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
+            Checkbox(
+              value: selected,
+              onChanged: editing ? null : (value) => _selectBranch(id, value == true),
+              shape: const CircleBorder(),
+              visualDensity: VisualDensity.compact,
+              activeColor: _branchPurple,
+            ),
             Container(width: 27, height: 27, alignment: Alignment.center,
               decoration: BoxDecoration(color: _branchPurple.withValues(alpha: .08), borderRadius: BorderRadius.circular(7)),
               child: Text('${index + 1}', style: const TextStyle(color: _branchPurple, fontWeight: FontWeight.w900))),
