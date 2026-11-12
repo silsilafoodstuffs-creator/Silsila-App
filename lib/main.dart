@@ -5528,7 +5528,7 @@ class _OffersScreenState extends State<OffersScreen> {
             icon: const Icon(Icons.schedule, size: 17),
             label: Text(scheduleLater ? 'إلغاء الجدولة' : 'جدولة'),
           ),
-          FilledButton(onPressed: () { scheduleLater = false; Navigator.pop(dialogContext, true); }, child: const Text('حفظ ونشر')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حفظ ونشر')),
         ],
       )),
     );
