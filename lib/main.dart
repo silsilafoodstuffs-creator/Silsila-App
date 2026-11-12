@@ -4934,6 +4934,15 @@ class _StoriesScreenState extends State<StoriesScreen> {
     );
   }
 
+  Future<void> _markStoryGroupViewed(List<Map<String, dynamic>> items) async {
+    for (final item in items) {
+      final id = (item['id'] ?? '').toString();
+      if (id.isNotEmpty && !viewedStoryIds.contains(id)) {
+        await _markViewed(id);
+      }
+    }
+  }
+
   Future<void> _hideStory(String id) async {
     try {
       await storyService.hideStoryForMe(id);
@@ -5061,7 +5070,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
                       Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)),
                       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                         InkWell(
-                          onTap: () => _markViewed((first['id'] ?? '').toString()),
+                          onTap: () => _markStoryGroupViewed(items),
                           child: const Padding(padding: EdgeInsets.all(3), child: Icon(Icons.done, size: 16, color: Colors.grey)),
                         ),
                         InkWell(
