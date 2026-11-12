@@ -4589,6 +4589,8 @@ class _StoriesScreenState extends State<StoriesScreen> {
   XFile? selectedMedia;
   List<Map<String, dynamic>> stories = [];
   final Set<String> viewedStoryIds = <String>{};
+  final Set<String> hiddenStoryIds = <String>{};
+  final Set<String> favoriteStoryOwnerIds = <String>{};
   bool loading = true;
   String? error;
 
@@ -4790,17 +4792,17 @@ class _StoriesScreenState extends State<StoriesScreen> {
     try {
       final rows = await storyService.getActiveStories(activityType: widget.activityType);
       Set<String> viewed = <String>{};
-      try {
-        viewed = await storyService.getViewedStoryIds();
-      } catch (_) {
-        // يمكن عرض القصص حتى لو تعذر تحميل سجل المشاهدات.
-      }
+      Set<String> hidden = <String>{};
+      Set<String> favorites = <String>{};
+      try { viewed = await storyService.getViewedStoryIds(); } catch (_) {}
+      try { hidden = await storyService.getHiddenStoryIds(); } catch (_) {}
+      try { favorites = await storyService.getFavoriteStoryOwnerIds(); } catch (_) {}
       if (!mounted) return;
       setState(() {
         stories = rows;
-        viewedStoryIds
-          ..clear()
-          ..addAll(viewed);
+        viewedStoryIds..clear()..addAll(viewed);
+        hiddenStoryIds..clear()..addAll(hidden);
+        favoriteStoryOwnerIds..clear()..addAll(favorites);
       });
     } catch (_) {
       if (!mounted) return;
@@ -4818,143 +4820,297 @@ class _StoriesScreenState extends State<StoriesScreen> {
     super.dispose();
   }
 
+  Future<void> _markViewed(String storyId) async {
+    if (storyId.isEmpty) return;
+    try {
+      await storyService.markStoryViewed(storyId);
+      if (mounted) setState(() => viewedStoryIds.add(storyId));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر تسجيل مشاهدة القصة: $e')),
+      );
+    }
+  }
+
+  Future<void> _openStoryGroup(List<Map<String, dynamic>> group, int initialIndex) async {
+    if (group.isEmpty) return;
+    var current = initialIndex.clamp(0, group.length - 1);
+    await _markViewed((group[current]['id'] ?? '').toString());
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, updateDialog) {
+          final active = group[current];
+          final mediaType = (active['media_type'] ?? 'image').toString();
+          final mediaUrl = (active['media_url'] ?? '').toString();
+          final caption = (active['caption'] ?? '').toString();
+          return Dialog.fullscreen(
+            backgroundColor: Colors.black,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  Row(children: [
+                    IconButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: const Icon(Icons.close, color: Colors.white),
+                    ),
+                    Expanded(child: Text(
+                      (active['display_name'] ?? active['full_name'] ?? 'مستخدم سلسلة').toString(),
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    )),
+                    Text('${current + 1}/${group.length}',
+                      style: const TextStyle(color: Colors.white70)),
+                    const SizedBox(width: 14),
+                  ]),
+                  Expanded(
+                    child: PageView.builder(
+                      controller: PageController(initialPage: current),
+                      itemCount: group.length,
+                      onPageChanged: (index) {
+                        current = index;
+                        updateDialog(() {});
+                        _markViewed((group[index]['id'] ?? '').toString());
+                      },
+                      itemBuilder: (context, index) {
+                        final item = group[index];
+                        final type = (item['media_type'] ?? 'image').toString();
+                        final url = (item['media_url'] ?? '').toString();
+                        final text = (item['caption'] ?? '').toString();
+                        Widget media;
+                        if (type == 'video' && url.isNotEmpty) {
+                          media = Center(child: StoryVideoPlayer(url: url));
+                        } else if (type == 'text') {
+                          media = Center(child: Padding(
+                            padding: const EdgeInsets.all(28),
+                            child: Text(text, textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w600)),
+                          ));
+                        } else if (url.isNotEmpty) {
+                          media = InteractiveViewer(
+                            child: Center(child: Image.network(url, fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.white, size: 60))),
+                          );
+                        } else {
+                          media = const Center(child: Icon(Icons.image_outlined, color: Colors.white, size: 60));
+                        }
+                        return Stack(
+                          children: [
+                            Positioned.fill(child: media),
+                            if (text.isNotEmpty && type != 'text')
+                              Positioned(left: 16, right: 16, bottom: 22,
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(12)),
+                                  child: Text(text, style: const TextStyle(color: Colors.white), textAlign: TextAlign.center),
+                                )),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      IconButton(
+                        onPressed: current > 0 ? () => updateDialog(() => current--) : null,
+                        icon: const Icon(Icons.chevron_left, color: Colors.white, size: 34),
+                      ),
+                      Text('اضغط للتنقل بين الحالات', style: const TextStyle(color: Colors.white70)),
+                      IconButton(
+                        onPressed: current < group.length - 1 ? () => updateDialog(() => current++) : null,
+                        icon: const Icon(Icons.chevron_right, color: Colors.white, size: 34),
+                      ),
+                    ]),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _hideStory(String id) async {
+    try {
+      await storyService.hideStoryForMe(id);
+      if (mounted) setState(() => hiddenStoryIds.add(id));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إخفاء القصة: $e')));
+    }
+  }
+
+  Future<void> _toggleFavoriteOwner(String ownerId) async {
+    final next = !favoriteStoryOwnerIds.contains(ownerId);
+    try {
+      await storyService.setFavoriteStoryOwner(ownerId, next);
+      if (mounted) setState(() {
+        if (next) { favoriteStoryOwnerIds.add(ownerId); } else { favoriteStoryOwnerIds.remove(ownerId); }
+      });
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تحديث المفضلة: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (loading) return const Center(child: CircularProgressIndicator(color: purple));
     final filtered = stories.where((story) {
+      if (hiddenStoryIds.contains((story['id'] ?? '').toString())) return false;
       final role = (story['user_role'] ?? story['role'] ?? '').toString().toLowerCase();
       if (storyFilter == 'الموردين') return role == 'supplier' || role == 'مورد';
       if (storyFilter == 'العملاء') return role == 'customer' || role == 'client' || role == 'عميل';
       if (storyFilter == 'شركات الشحن') return role == 'shipping_company' || role == 'شركة شحن';
       return true;
-    }).toList()
+    }).toList();
+
+    final grouped = <String, List<Map<String, dynamic>>>{};
+    for (final story in filtered) {
+      final owner = (story['user_id'] ?? '').toString();
+      if (owner.isEmpty) continue;
+      grouped.putIfAbsent(owner, () => <Map<String, dynamic>>[]).add(story);
+    }
+    final groups = grouped.entries.toList()
       ..sort((a, b) {
-        final aSeen = viewedStoryIds.contains((a['id'] ?? '').toString());
-        final bSeen = viewedStoryIds.contains((b['id'] ?? '').toString());
-        if (aSeen != bSeen) return aSeen ? 1 : -1;
-        return (b['created_at'] ?? '').toString().compareTo((a['created_at'] ?? '').toString());
+        final af = favoriteStoryOwnerIds.contains(a.key);
+        final bf = favoriteStoryOwnerIds.contains(b.key);
+        if (af != bf) return af ? -1 : 1;
+        final au = a.value.any((s) => !viewedStoryIds.contains((s['id'] ?? '').toString()));
+        final bu = b.value.any((s) => !viewedStoryIds.contains((s['id'] ?? '').toString()));
+        if (au != bu) return au ? -1 : 1;
+        return (b.value.first['created_at'] ?? '').toString().compareTo((a.value.first['created_at'] ?? '').toString());
       });
+
     return RefreshIndicator(
       onRefresh: loadStories,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Row(children: [
-            Expanded(child: Text(silsilaText(silsilaText('القصص')), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
-            IconButton(tooltip:'سجل القصص',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyStoryHistoryScreen())),icon:const Icon(Icons.history,color:purple)),
-            FilledButton.icon(onPressed: createStory, icon: const Icon(Icons.add), label: Text(silsilaText(silsilaText('إضافة قصة')))),
+            Expanded(child: Text(silsilaText('القصص'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
+            IconButton(tooltip: 'سجل القصص', onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyStoryHistoryScreen())), icon: const Icon(Icons.history, color: purple)),
+            FilledButton.icon(onPressed: createStory, icon: const Icon(Icons.add), label: Text(silsilaText('إضافة قصة'))),
           ]),
           const SizedBox(height: 10),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Row(children: ['الكل', 'الموردين', 'العملاء', 'شركات الشحن'].map((filter) =>
-              Padding(
-                padding: const EdgeInsetsDirectional.only(end: 7),
-                child: ChoiceChip(
-                  label: Text(filter),
-                  selected: storyFilter == filter,
-                  selectedColor: purple,
-                  labelStyle: TextStyle(color: storyFilter == filter ? Colors.white : purple),
-                  onSelected: (_) => setState(() => storyFilter = filter),
-                ),
-              )).toList()),
+            child: Row(children: ['الكل', 'الموردين', 'العملاء', 'شركات الشحن'].map((filter) => Padding(
+              padding: const EdgeInsetsDirectional.only(end: 7),
+              child: ChoiceChip(
+                label: Text(filter), selected: storyFilter == filter,
+                selectedColor: purple,
+                labelStyle: TextStyle(color: storyFilter == filter ? Colors.white : purple),
+                onSelected: (_) => setState(() => storyFilter = filter),
+              ),
+            )).toList()),
           ),
           const SizedBox(height: 8),
-          Text(silsilaText(silsilaText('تختفي القصة تلقائيًا عند انتهاء مدتها، بحد أقصى 60 دقيقة.'))),
+          Text(silsilaText('تختفي القصة تلقائيًا عند انتهاء مدتها.')),
           if (error != null) Padding(padding: const EdgeInsets.all(16), child: Text(error!, textAlign: TextAlign.center)),
-          if (filtered.isEmpty && error == null)
-            Padding(padding: EdgeInsets.all(28), child: Text(silsilaText(silsilaText('لا توجد قصص نشطة حاليًا.')), textAlign: TextAlign.center)),
-          ...filtered.map((story) {
-            final url = (story['media_url'] ?? '').toString();
-            final type = (story['media_type'] ?? 'image').toString();
-            final caption = (story['caption'] ?? '').toString();
-            final created = DateTime.tryParse((story['created_at'] ?? '').toString());
-            final expires = DateTime.tryParse((story['expires_at'] ?? '').toString());
-            final remaining = expires == null ? null : expires.difference(DateTime.now());
-            final remainingText = remaining == null ? '' : remaining.isNegative ? 'انتهت' : 'متبقي ${remaining.inMinutes} دقيقة';
-            return Card(
-              clipBehavior: Clip.antiAlias,
-              margin: const EdgeInsets.only(bottom: 10),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                ListTile(
-                  onTap: () async {
-                    final storyId = (story['id'] ?? '').toString();
-                    if (storyId.isEmpty) return;
-                    try {
-                      await storyService.markStoryViewed(storyId);
-                      if (mounted) setState(() => viewedStoryIds.add(storyId));
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('تعذر تسجيل مشاهدة القصة: $e')),
-                        );
-                      }
-                    }
-                  },
-                  leading: Container(
-                    width: 46,
-                    height: 46,
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: viewedStoryIds.contains((story['id'] ?? '').toString())
-                            ? Colors.grey
-                            : orange,
-                        width: 2.5,
-                      ),
-                    ),
-                    child: CircleAvatar(
-                      backgroundColor: orange.withValues(alpha: .18),
-                      backgroundImage: (story['avatar_url'] ?? '').toString().trim().isNotEmpty
-                          ? NetworkImage((story['avatar_url'] ?? '').toString())
-                          : null,
-                      child: (story['avatar_url'] ?? '').toString().trim().isEmpty
-                          ? const Icon(Icons.person_outline, color: purple)
-                          : null,
-                    ),
-                  ),
-                  title: Text((story['display_name'] ?? story['full_name'] ?? 'مستخدم سلسلة').toString()),
-                  subtitle: Text(remainingText.isEmpty ? 'قصة نشطة' : remainingText),
-                  trailing: Icon(
-                    Icons.circle,
-                    color: viewedStoryIds.contains((story['id'] ?? '').toString())
-                        ? Colors.grey
-                        : orange,
-                    size: 14,
-                  ),
-                ),
-                if (type == 'text')
-                  Padding(padding: const EdgeInsets.all(18), child: Text(caption, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)))
-                else if (type == 'video' && url.isNotEmpty)
-                  StoryVideoPlayer(url: url)
-                else if (type == 'video')
-                  const SizedBox(height: 170, child: Center(child: Icon(Icons.play_circle_outline, size: 68, color: purple)))
-                else if (url.isNotEmpty)
-                  Image.network(url, height: 180, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox(height: 150, child: Center(child: Icon(Icons.broken_image_outlined, size: 44))))
-                else
-                  const SizedBox(height: 100, child: Center(child: Icon(Icons.image_outlined, size: 42))),
-                if (caption.isNotEmpty && type != 'text') Padding(padding: const EdgeInsets.all(12), child: Text(caption)),
-                if (created != null) Padding(padding: const EdgeInsetsDirectional.only(start: 12, end: 12, bottom: 10), child: Text('نُشرت: ${created.toLocal().toString().substring(0, 16)}', style: const TextStyle(fontSize: 11, color: Colors.black54))),
-                if (database?.auth.currentUser?.id != (story['user_id'] ?? '').toString())
-                  Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: Padding(
-                      padding: const EdgeInsetsDirectional.only(end: 10, bottom: 8),
-                      child: OutlinedButton.icon(
-                        onPressed: () => _replyToStory(story),
-                        icon: const Icon(Icons.message_outlined, size: 17),
-                        label: Text(silsilaText(silsilaText('رد / إرسال رسالة'))),
-                      ),
-                    ),
-                  ),
-              ]),
-            );
-          }),
+          if (groups.isEmpty && error == null)
+            Padding(padding: const EdgeInsets.all(28), child: Text(silsilaText('لا توجد قصص نشطة حاليًا.'), textAlign: TextAlign.center)),
+          if (groups.isNotEmpty)
+            SizedBox(
+              height: 126,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: groups.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  final owner = groups[index].key;
+                  final items = groups[index].value;
+                  final first = items.first;
+                  final allSeen = items.every((s) => viewedStoryIds.contains((s['id'] ?? '').toString()));
+                  final avatar = (first['avatar_url'] ?? '').toString();
+                  final name = (first['display_name'] ?? first['full_name'] ?? 'مستخدم سلسلة').toString();
+                  return SizedBox(
+                    width: 78,
+                    child: Column(children: [
+                      Stack(clipBehavior: Clip.none, children: [
+                        GestureDetector(
+                          onTap: () => _openStoryGroup(items, 0),
+                          child: CustomPaint(
+                            painter: _StoryRingPainter(segmentCount: items.length, viewed: allSeen),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4),
+                              child: CircleAvatar(
+                                radius: 29,
+                                backgroundColor: orange.withValues(alpha: .16),
+                                backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
+                                child: avatar.isEmpty ? const Icon(Icons.person_outline, color: purple, size: 28) : null,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: -5, right: -7,
+                          child: Material(
+                            color: Colors.white, shape: const CircleBorder(),
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: () => _hideStory((first['id'] ?? '').toString()),
+                              child: const Padding(padding: EdgeInsets.all(3), child: Icon(Icons.close, color: Colors.red, size: 16)),
+                            ),
+                          ),
+                        ),
+                      ]),
+                      const SizedBox(height: 4),
+                      Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)),
+                      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        InkWell(
+                          onTap: () => _markViewed((first['id'] ?? '').toString()),
+                          child: const Padding(padding: EdgeInsets.all(3), child: Icon(Icons.done, size: 16, color: Colors.grey)),
+                        ),
+                        InkWell(
+                          onTap: () => _toggleFavoriteOwner(owner),
+                          child: Padding(
+                            padding: const EdgeInsets.all(3),
+                            child: Icon(favoriteStoryOwnerIds.contains(owner) ? Icons.star : Icons.star_border,
+                              size: 16, color: favoriteStoryOwnerIds.contains(owner) ? orange : Colors.grey),
+                          ),
+                        ),
+                      ]),
+                    ]),
+                  );
+                },
+              ),
+            ),
+          const SizedBox(height: 8),
+          Text(silsilaText('اضغط على صورة صاحب القصة لفتح الحالات. علامة الصح تجعل القصة مقروءة، وX تخفيها لديك فقط.')),
         ],
       ),
     );
   }
+}
+
+class _StoryRingPainter extends CustomPainter {
+  const _StoryRingPainter({required this.segmentCount, required this.viewed});
+  final int segmentCount;
+  final bool viewed;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final count = segmentCount.clamp(1, 30);
+    final rect = Offset.zero & size;
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.2
+      ..strokeCap = StrokeCap.round
+      ..color = viewed ? Colors.grey.shade400 : orange;
+    const full = 6.283185307179586;
+    const gap = .10;
+    for (var i = 0; i < count; i++) {
+      canvas.drawArc(rect.deflate(1.6), -1.5707963267948966 + i * full / count,
+        full / count - gap, false, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _StoryRingPainter oldDelegate) =>
+      oldDelegate.segmentCount != segmentCount || oldDelegate.viewed != viewed;
 }
 
 
