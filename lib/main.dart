@@ -5043,9 +5043,9 @@ class _StoriesScreenState extends State<StoriesScreen> {
     final filtered = stories.where((story) {
       if (hiddenStoryIds.contains((story['id'] ?? '').toString())) return false;
       final role = (story['user_role'] ?? story['role'] ?? '').toString().toLowerCase();
-      if (storyFilter == 'الموردين') return role == 'supplier' || role == 'مورد';
+      if (storyFilter == 'الموردون') return role == 'supplier' || role == 'مورد';
       if (storyFilter == 'العملاء') return role == 'customer' || role == 'client' || role == 'عميل';
-      if (storyFilter == 'شركات الشحن') return role == 'shipping_company' || role == 'شركة شحن';
+      if (storyFilter == 'شركات شحن') return role == 'shipping_company' || role == 'شركة شحن';
       return true;
     }).toList();
 
@@ -5079,7 +5079,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
           const SizedBox(height: 10),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Row(children: ['الكل', 'الموردين', 'العملاء', 'شركات الشحن'].map((filter) => Padding(
+            child: Row(children: ['الكل', 'الموردون', 'العملاء', 'شركات شحن'].map((filter) => Padding(
               padding: const EdgeInsetsDirectional.only(end: 7),
               child: ChoiceChip(
                 label: Text(filter), selected: storyFilter == filter,
