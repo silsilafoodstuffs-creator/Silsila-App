@@ -452,8 +452,22 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     } catch(e) { setState(()=>_error='تعذر حذف الفئة: $e'); }
   }
 
-  Widget _task(String label, IconData icon, VoidCallback? action) =>
-    SizedBox(width:112, child: ErpQuickTaskButton(label:label,icon:icon,onPressed:action,compact:true));
+  Widget _task(
+    String label,
+    IconData icon,
+    VoidCallback? action, {
+    ErpQuickTaskKind? kind,
+  }) =>
+      SizedBox(
+        width: 112,
+        child: ErpQuickTaskButton(
+          label: label,
+          icon: icon,
+          kind: kind,
+          onPressed: action,
+          compact: true,
+        ),
+      );
 
   List<Map<String,dynamic>> _childrenOf(Map<String,dynamic> parent) =>
       _all.where((r) => _s(r['parent_id']) == _s(parent['id'])).toList()
@@ -626,15 +640,15 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(children: [
-                  _task('تحديث', Icons.refresh, _loading ? null : _load),
-                  _task('عرض شجرة', Icons.account_tree_outlined, () => setState(() => _viewMode = 'tree')),
-                  _task('عرض جدول', Icons.table_rows_outlined, () => setState(() => _viewMode = 'grid')),
-                  _task('نقل الصور للقاعدة', Icons.cloud_download_outlined, _saving || _loading ? null : _migrateImages),
-                  _task('صور حقيقية', Icons.photo_library_outlined, _saving || _loading ? null : _importRealCategoryImages),
-                  _task('إضافة جديد', Icons.add, _saving ? null : _add),
-                  _task('حفظ', Icons.save, _saving || !_editing ? null : _save),
-                  _task('تعديل', Icons.edit, _saving || _editing ? null : () => setState(() => _editing = true)),
-                  _task('حذف', Icons.delete, _saving ? null : _delete),
+                  _task('تحديث', Icons.refresh, _loading ? null : _load, kind: ErpQuickTaskKind.update),
+                  _task('عرض شجرة', Icons.account_tree_outlined, () => setState(() => _viewMode = 'tree'), kind: ErpQuickTaskKind.treeView),
+                  _task('عرض جدول', Icons.table_rows_outlined, () => setState(() => _viewMode = 'grid'), kind: ErpQuickTaskKind.tableView),
+                  _task('نقل الصور للقاعدة', Icons.cloud_download_outlined, _saving || _loading ? null : _migrateImages, kind: ErpQuickTaskKind.custom),
+                  _task('صور حقيقية', Icons.photo_library_outlined, _saving || _loading ? null : _importRealCategoryImages, kind: ErpQuickTaskKind.image),
+                  _task('إضافة جديد', Icons.add, _saving ? null : _add, kind: ErpQuickTaskKind.add),
+                  _task('حفظ', Icons.save, _saving || !_editing ? null : _save, kind: ErpQuickTaskKind.save),
+                  _task('تعديل', Icons.edit, _saving || _editing ? null : () => setState(() => _editing = true), kind: ErpQuickTaskKind.edit),
+                  _task('حذف', Icons.delete, _saving ? null : _delete, kind: ErpQuickTaskKind.delete),
                   _task('معاينة', Icons.preview, () => showDialog<void>(
                     context: context,
                     builder: (dialogContext) => AlertDialog(
@@ -642,10 +656,10 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                       content: Text('عدد الفئات في هذا المستوى: ${_all.where((r) => _rowLevel(r) == _catalogTab).length}'),
                       actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
                     ),
-                  )),
-                  _task('استيراد', Icons.upload_file, null),
-                  _task('طباعة', Icons.print, null),
-                  _task('PDF', Icons.picture_as_pdf, null),
+                  ), kind: ErpQuickTaskKind.preview),
+                  _task('استيراد', Icons.upload_file, null, kind: ErpQuickTaskKind.custom),
+                  _task('طباعة', Icons.print, null, kind: ErpQuickTaskKind.print),
+                  _task('PDF', Icons.picture_as_pdf, null, kind: ErpQuickTaskKind.exportPdf),
                 ]),
               ),
             ),
@@ -732,6 +746,9 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                       child: SingleChildScrollView(
                         child: DataTable(
                           headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                          headingRowHeight: 40,
+                          dataRowMinHeight: 40,
+                          dataRowMaxHeight: 40,
                           columns: const [
                             DataColumn(label: Text('كود الفئة')),
                             DataColumn(label: Text('اسم الفئة عربي')),
