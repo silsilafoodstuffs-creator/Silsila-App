@@ -18,6 +18,7 @@ class _ErpActivityCustomersScreenState extends State<ErpActivityCustomersScreen>
   bool _saving = false;
   String? _error;
   List<Map<String, dynamic>> _workspaces = [];
+  final Map<String, String> _activityNames = {};
   final Map<String, List<Map<String, dynamic>>> _categories = {};
 
   String _s(Object? value) => (value ?? '').toString();
@@ -54,6 +55,12 @@ class _ErpActivityCustomersScreenState extends State<ErpActivityCustomersScreen>
           .whereType<Map>()
           .map((row) => Map<String, dynamic>.from(row))
           .toList();
+      final activityRows = await _db.from('activity_types')
+          .select('code,name').eq('is_active', true);
+      final activityNames = <String, String>{
+        for (final row in (activityRows as List).whereType<Map>())
+          _s(row['code']): _s(row['name']),
+      };
       final categories = <String, List<Map<String, dynamic>>>{};
       for (final workspace in workspaces) {
         final workspaceId = _s(workspace['id']);
@@ -71,6 +78,7 @@ class _ErpActivityCustomersScreenState extends State<ErpActivityCustomersScreen>
       if (!mounted) return;
       setState(() {
         _workspaces = workspaces;
+        _activityNames..clear()..addAll(activityNames);
         _categories
           ..clear()
           ..addAll(categories);
@@ -95,7 +103,7 @@ class _ErpActivityCustomersScreenState extends State<ErpActivityCustomersScreen>
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Align(
                 alignment: Alignment.centerRight,
-                child: Text('نوع النشاط: ${_s(workspace['activity_type'])}'),
+                child: Text('نوع النشاط: ${_activityNames[_s(workspace['activity_type'])] ?? _s(workspace['activity_type'])}'),
               ),
               Align(
                 alignment: Alignment.centerRight,
@@ -218,7 +226,7 @@ class _ErpActivityCustomersScreenState extends State<ErpActivityCustomersScreen>
                         margin: const EdgeInsets.only(bottom: 10),
                         child: ExpansionTile(
                           initiallyExpanded: true,
-                          title: Text(group.key, style: const TextStyle(
+                          title: Text(_activityNames[group.key] ?? group.key, style: const TextStyle(
                             color: _customerActivityPurple, fontWeight: FontWeight.w800,
                           )),
                           subtitle: Text('${group.value.length} نشاط'),
