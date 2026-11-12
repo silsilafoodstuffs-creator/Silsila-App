@@ -1,8 +1,19 @@
 name: Silsila Full Validation - All Recent Changes
 
-# Run the complete validation manually at planned milestones and final delivery.
+# Run the complete validation manually at planned milestones and whenever
+# application code affecting the shipped app changes on main.
 on:
-  # Run once at planned milestones and final delivery, not after every commit.
+  push:
+    branches:
+      - main
+    paths:
+      - "lib/**"
+      - "test/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "android/**"
+      - "tools/web_view_test.mjs"
+      - ".github/workflows/full-validation.yml"
   workflow_dispatch:
 
 permissions:
