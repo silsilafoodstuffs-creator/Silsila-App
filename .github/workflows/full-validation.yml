@@ -46,6 +46,12 @@ jobs:
           python -m py_compile tools/catalog_import/import_real_product_images.py
           python -m unittest discover -s tools/catalog_import -p 'test_*.py' -v
 
+      - name: Set up Java 17 for Android Gradle
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
       - name: Set up Flutter
         uses: subosito/flutter-action@fd55f4c5af5b953cc57a2be44cb082c8f6635e8e
         with:
@@ -143,7 +149,7 @@ jobs:
       - name: Build Android debug APK
         id: android_debug
         if: always() && !cancelled()
-        run: flutter build apk --debug
+        run: flutter build apk --debug --verbose
 
       - name: Verify Android APK output
         id: verify_android
