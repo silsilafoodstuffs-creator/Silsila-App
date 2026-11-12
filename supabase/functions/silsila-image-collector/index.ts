@@ -379,7 +379,9 @@ function pageImages(html: string, base: URL) {
   }
   // Open Graph images are deliberately not collected: they commonly represent
   // the site logo, page banner, or social preview rather than an individual item.
-  return [...found.values()].slice(0, 160);
+  // Return every validated product image found on the page; the previous 160-item cap
+  // silently hid products on large category pages.
+  return [...found.values()];
 }
 
 Deno.serve(async (req: Request) => {
@@ -391,7 +393,7 @@ Deno.serve(async (req: Request) => {
     if (action === "discover") {
       const start = safeUrl(String(body.url ?? ""));
       const origin = start.origin;
-      const maxPages = Math.min(80, Math.max(20, Number(body.maxPages ?? 60) || 60));
+      const maxPages = Math.min(120, Math.max(20, Number(body.maxPages ?? 100) || 100));
       const discovered = new Set<string>([start.href]);
       let frontier: string[] = [start.href];
       const canonical = (raw: string, base: URL): string | null => {
