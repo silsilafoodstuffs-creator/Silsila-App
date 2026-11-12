@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 /// Versioned, data-only document format consumed by the Studio renderer.
-/// Executable Dart, callbacks and arbitrary expressions are intentionally excluded.
 class StudioDocument {
   StudioDocument({
     required this.id,
@@ -9,12 +8,16 @@ class StudioDocument {
     required this.nodes,
     this.schemaVersion = 1,
     this.updatedAt,
+    this.remoteId,
+    this.remoteRevision = 0,
   });
 
   final String id;
   final String name;
   final int schemaVersion;
   final DateTime? updatedAt;
+  final String? remoteId;
+  final int remoteRevision;
   final List<StudioNode> nodes;
 
   factory StudioDocument.create(String name) => StudioDocument(
@@ -30,7 +33,9 @@ class StudioDocument {
         'schemaVersion': schemaVersion,
         'id': id,
         'name': name,
-        'updatedAt': (updatedAt ?? DateTime.now()).toUtc().toIso8601String(),\n        'remoteId': remoteId,\n        'remoteRevision': remoteRevision,
+        'updatedAt': (updatedAt ?? DateTime.now()).toUtc().toIso8601String(),
+        'remoteId': remoteId,
+        'remoteRevision': remoteRevision,
         'nodes': nodes.map((e) => e.toJson()).toList(),
       };
 
@@ -44,14 +49,22 @@ class StudioDocument {
     if (rawNodes is! List || rawNodes.length > 500) {
       throw const FormatException('قائمة المكونات غير صالحة أو تجاوزت الحد المسموح.');
     }
-    final parsedNodes = rawNodes.map((e) {\n        if (e is! Map) throw const FormatException('تعريف مكون غير صالح.');\n        return StudioNode.fromJson(Map<String, dynamic>.from(e));\n      }).toList();\n    final ids = parsedNodes.map((e) => e.id).toSet();\n    if (ids.length != parsedNodes.length) throw const FormatException('معرّفات المكونات يجب أن تكون فريدة.');\n    return StudioDocument(\n      id: _requiredString(json['id'], 'id'),
+    final parsedNodes = rawNodes.map((e) {
+      if (e is! Map) throw const FormatException('تعريف مكون غير صالح.');
+      return StudioNode.fromJson(Map<String, dynamic>.from(e));
+    }).toList();
+    final ids = parsedNodes.map((e) => e.id).toSet();
+    if (ids.length != parsedNodes.length) {
+      throw const FormatException('معرّفات المكونات يجب أن تكون فريدة.');
+    }
+    return StudioDocument(
+      id: _requiredString(json['id'], 'id'),
       name: _requiredString(json['name'], 'name'),
       schemaVersion: 1,
       updatedAt: DateTime.tryParse(json['updatedAt']?.toString() ?? ''),
-      nodes: rawNodes.map((e) {
-        if (e is! Map) throw const FormatException('تعريف مكون غير صالح.');
-        return StudioNode.fromJson(Map<String, dynamic>.from(e));
-      }).toList(),
+      remoteId: json['remoteId'] is String ? json['remoteId'] as String : null,
+      remoteRevision: json['remoteRevision'] is int ? json['remoteRevision'] as int : 0,
+      nodes: parsedNodes,
     );
   }
 
@@ -62,12 +75,20 @@ class StudioDocument {
     return value;
   }
 
-  StudioDocument copyWith({String? name, List<StudioNode>? nodes, String? remoteId, int? remoteRevision}) => StudioDocument(
+  StudioDocument copyWith({
+    String? name,
+    List<StudioNode>? nodes,
+    String? remoteId,
+    int? remoteRevision,
+  }) =>
+      StudioDocument(
         id: id,
         name: name ?? this.name,
         schemaVersion: schemaVersion,
         nodes: nodes ?? this.nodes,
         updatedAt: DateTime.now(),
+        remoteId: remoteId ?? this.remoteId,
+        remoteRevision: remoteRevision ?? this.remoteRevision,
       );
 }
 
