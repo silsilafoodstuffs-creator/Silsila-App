@@ -2,6 +2,24 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'erp_center_toast.dart';
 
+/// Semantic action kinds keep button styling independent from localized labels.
+enum ErpQuickTaskKind {
+  update,
+  add,
+  save,
+  edit,
+  delete,
+  preview,
+  exportExcel,
+  exportPdf,
+  print,
+  cancel,
+  treeView,
+  tableView,
+  image,
+  custom,
+}
+
 /// One consistent visual system for ERP task actions across every screen.
 class ErpQuickTaskButton extends StatelessWidget {
   const ErpQuickTaskButton({
@@ -11,6 +29,7 @@ class ErpQuickTaskButton extends StatelessWidget {
     required this.onPressed,
     this.fallbackColor = const Color(0xFF3E007D),
     this.compact = false,
+    this.kind,
   });
 
   final String label;
@@ -18,8 +37,38 @@ class ErpQuickTaskButton extends StatelessWidget {
   final FutureOr<void> Function()? onPressed;
   final Color fallbackColor;
   final bool compact;
+  final ErpQuickTaskKind? kind;
 
   Color get _color {
+    switch (kind) {
+      case ErpQuickTaskKind.update:
+        return const Color(0xFF2475B8);
+      case ErpQuickTaskKind.add:
+        return const Color(0xFF18865A);
+      case ErpQuickTaskKind.save:
+        return const Color(0xFF6F42C1);
+      case ErpQuickTaskKind.edit:
+        return const Color(0xFFFFA015);
+      case ErpQuickTaskKind.delete:
+        return const Color(0xFFB42318);
+      case ErpQuickTaskKind.preview:
+      case ErpQuickTaskKind.treeView:
+      case ErpQuickTaskKind.tableView:
+        return const Color(0xFF6E2BA6);
+      case ErpQuickTaskKind.exportExcel:
+        return const Color(0xFF16834A);
+      case ErpQuickTaskKind.exportPdf:
+        return const Color(0xFFD32F2F);
+      case ErpQuickTaskKind.print:
+        return const Color(0xFFFF27C3);
+      case ErpQuickTaskKind.cancel:
+        return const Color(0xFF64748B);
+      case ErpQuickTaskKind.image:
+      case ErpQuickTaskKind.custom:
+        return fallbackColor;
+      case null:
+        break;
+    }
     final value = label.trim().toLowerCase();
     if (value.contains('تحديث') || value.contains('تحميل') || value.contains('إعادة تحميل')) {
       return const Color(0xFF2475B8);
@@ -55,6 +104,37 @@ class ErpQuickTaskButton extends StatelessWidget {
   }
 
   IconData get _icon {
+    switch (kind) {
+      case ErpQuickTaskKind.update:
+        return Icons.refresh_rounded;
+      case ErpQuickTaskKind.add:
+        return Icons.add_circle_outline_rounded;
+      case ErpQuickTaskKind.save:
+        return Icons.save_outlined;
+      case ErpQuickTaskKind.edit:
+        return Icons.edit_outlined;
+      case ErpQuickTaskKind.delete:
+        return Icons.delete_outline_rounded;
+      case ErpQuickTaskKind.preview:
+        return Icons.preview_outlined;
+      case ErpQuickTaskKind.exportExcel:
+        return Icons.file_upload_outlined;
+      case ErpQuickTaskKind.exportPdf:
+        return Icons.picture_as_pdf_outlined;
+      case ErpQuickTaskKind.print:
+        return Icons.print_outlined;
+      case ErpQuickTaskKind.cancel:
+        return Icons.clear_all_rounded;
+      case ErpQuickTaskKind.treeView:
+        return Icons.account_tree_outlined;
+      case ErpQuickTaskKind.tableView:
+        return Icons.table_rows_outlined;
+      case ErpQuickTaskKind.image:
+      case ErpQuickTaskKind.custom:
+        return icon;
+      case null:
+        break;
+    }
     final value = label.trim().toLowerCase();
     if (value.contains('تحديث') || value.contains('تحميل')) return Icons.refresh_rounded;
     if (value == 'إضافة' || value.contains('إضافة ') || value.contains('إضافة/')) return Icons.add_circle_outline_rounded;
