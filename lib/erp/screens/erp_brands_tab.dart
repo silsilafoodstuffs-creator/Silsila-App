@@ -183,8 +183,8 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     }
   }
 
-  Future<void> _uploadLogo() async {
-    final row = _selectedRow();
+  Future<void> _uploadLogo([Map<String,dynamic>? target]) async {
+    final row = target ?? _selectedRow();
     if (row == null) {
       ErpCenterToast.show(context, 'اختر براندًا أولًا.', isError: true);
       return;
@@ -443,7 +443,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 ErpQuickTaskButton(label:'عرض جدول', icon:Icons.table_rows_outlined, onPressed:() => setState(() => _viewMode = 'grid')),
                 ErpQuickTaskButton(label:'إضافة جديد', icon:Icons.add_circle_outline, onPressed:_saving ? null : () => _edit()),
                 ErpQuickTaskButton(label:'تعديل', icon:Icons.edit_outlined, onPressed:_saving || selected == null || selected['is_system'] == true ? null : () => _edit(row:selected)),
-                ErpQuickTaskButton(label:'شعار البراند', icon:Icons.image_outlined, onPressed:_saving || selected == null ? null : _uploadLogo),
+                ErpQuickTaskButton(label:'شعار البراند', icon:Icons.image_outlined, onPressed:_saving || selected == null ? null : () => _uploadLogo(selected)),
                 ErpQuickTaskButton(label:'حذف', icon:Icons.delete_outline, onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
               ]),
             ),
@@ -545,5 +545,4 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       ),
     );
   }
-}
 }
