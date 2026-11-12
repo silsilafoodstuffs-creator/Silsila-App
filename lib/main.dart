@@ -5181,7 +5181,7 @@ class _OffersScreenState extends State<OffersScreen> {
     // Offers may only reference products actually listed by this supplier.
     // ERP master-catalog rows have no products-table supplier_id and cannot
     // satisfy offer_items.product_id's foreign key.
-    final offerableProducts = offerableProducts
+    final offerableProducts = widget.availableProducts
         .where((product) => product.id != null && product.supplierId == userId)
         .toList(growable: false);
     var activityCode = widget.activityType.trim();
