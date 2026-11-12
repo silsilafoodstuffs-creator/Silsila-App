@@ -23,8 +23,8 @@ permissions:
 
 concurrency:
   # Isolate each branch so an unrelated feature-branch run cannot cancel main validation.
-  group: silsila-full-validation-${{ github.ref }}
-  cancel-in-progress: true
+  group: silsila-full-validation-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   validate-all:
