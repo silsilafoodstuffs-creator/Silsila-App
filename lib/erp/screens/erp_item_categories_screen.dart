@@ -459,6 +459,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     IconData icon,
     VoidCallback? action, {
     ErpQuickTaskKind? kind,
+    bool? confirmAction,
+    bool? showSuccessToast,
   }) =>
       SizedBox(
         width: 112,
@@ -466,6 +468,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           label: label,
           icon: icon,
           kind: kind,
+          confirmAction: confirmAction,
+          showSuccessToast: showSuccessToast,
           onPressed: action,
           compact: true,
         ),
@@ -783,15 +787,15 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(children: [
-                  _task('تحديث', Icons.refresh, _loading ? null : _load, kind: ErpQuickTaskKind.update),
+                  _task('تحديث', Icons.refresh, _loading ? null : _load, kind: ErpQuickTaskKind.update, showSuccessToast: true),
                   _task('عرض شجرة', Icons.account_tree_outlined, () => setState(() => _viewMode = 'tree'), kind: ErpQuickTaskKind.treeView),
                   _task('عرض جدول', Icons.table_rows_outlined, () => setState(() => _viewMode = 'grid'), kind: ErpQuickTaskKind.tableView),
                   _task('نقل الصور للقاعدة', Icons.cloud_download_outlined, _saving || _loading ? null : _migrateImages, kind: ErpQuickTaskKind.custom),
                   _task('صور حقيقية', Icons.photo_library_outlined, _saving || _loading ? null : _importRealCategoryImages, kind: ErpQuickTaskKind.image),
                   _task('إضافة جديد', Icons.add, _saving ? null : _add, kind: ErpQuickTaskKind.add),
-                  _task('حفظ', Icons.save, _saving || !_editing ? null : _save, kind: ErpQuickTaskKind.save),
+                  _task('حفظ', Icons.save, _saving || !_editing ? null : _save, kind: ErpQuickTaskKind.save, confirmAction: false),
                   _task('تعديل', Icons.edit, _saving || _editing ? null : () => setState(() => _editing = true), kind: ErpQuickTaskKind.edit),
-                  _task('حذف', Icons.delete, _saving ? null : _delete, kind: ErpQuickTaskKind.delete),
+                  _task('حذف', Icons.delete, _saving ? null : _delete, kind: ErpQuickTaskKind.delete, confirmAction: false),
                   _task('معاينة', Icons.preview, () => showDialog<void>(
                     context: context,
                     builder: (dialogContext) => AlertDialog(
