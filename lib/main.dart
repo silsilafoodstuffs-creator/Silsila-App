@@ -5503,11 +5503,6 @@ class _OffersScreenState extends State<OffersScreen> {
               if (time == null) return;
               scheduleLater = true;
               scheduledStart = DateTime(day.year, day.month, day.day, time.hour, time.minute);
-              refresh(() {});
-              /*
-                scheduledStart = DateTime(day.year, day.month, day.day, time.hour, time.minute);
-                scheduleLater = true;
-              }); */
               if (dialogContext.mounted) Navigator.pop(dialogContext, true);
             },
             icon: const Icon(Icons.schedule, size: 17),
