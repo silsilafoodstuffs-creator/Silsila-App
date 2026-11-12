@@ -418,47 +418,42 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
   Widget build(BuildContext context) => Directionality(
     textDirection: TextDirection.rtl,
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (!widget.embedded)
-        Card(color: _branchPurple, child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text('فروع الشركة', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _singleSelectedBranch == null
-                      ? null
-                      : () => _openBranchInGoogleMaps(_singleSelectedBranch!),
-                  icon: const Icon(Icons.map_outlined, size: 18),
-                  label: const Text('خرائط Google'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white70),
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                  ),
-                ),
-              ],
+      Card(
+        color: _branchPurple,
+        margin: const EdgeInsets.only(bottom: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          child: Row(children: [
+            const Icon(Icons.account_tree_outlined, color: Color(0xFFFFA015), size: 25),
+            const SizedBox(width: 9),
+            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('فروع الشركة', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
+              Text('إدارة بيانات الفروع الفعلية ومواقعها ووسائل الاتصال والمخازن التابعة',
+                style: TextStyle(color: Colors.white70, fontSize: 11)),
+            ])),
+            FilledButton.icon(
+              onPressed: _loading ? null : () => _edit(),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('إضافة فرع'),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: Colors.black87),
             ),
-            const Text('إدارة الفروع الفعلية والمخازن التابعة لكل فرع.', style: TextStyle(color: Colors.white70)),
-            const SizedBox(height: 6), _branchActions(),
           ]),
-        ))
-      else
-        Padding(padding: const EdgeInsets.only(bottom: 6), child: _branchActions()),
+        ),
+      ),
+      _branchActions(),
       if (_error != null) _notice(_error!, Colors.red),
       if (_message != null) _notice(_message!, Colors.green),
       if (_loading)
         const Expanded(child: Center(child: CircularProgressIndicator()))
       else if (_rows.isEmpty)
-        const Expanded(child: Center(child: Card(child: Padding(padding: EdgeInsets.all(24), child: Text('لا توجد فروع مسجلة بعد.')))))
+        const Expanded(child: Center(child: Card(child: Padding(
+          padding: EdgeInsets.all(24), child: Text('لا توجد فروع مسجلة بعد. اضغط «إضافة فرع» لإنشاء أول فرع.')))))
       else
         Expanded(child: ListView.separated(
           padding: const EdgeInsets.only(bottom: 8),
           itemCount: _rows.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 4),
+          separatorBuilder: (_, __) => const SizedBox(height: 8),
           itemBuilder: (context, index) => _branchCard(_rows[index], index),
         )),
     ]),
@@ -483,84 +478,125 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
     final id = _s(row['id']);
     final editing = _editingBranchId == id;
     final selected = _selectedBranchIds.contains(id);
-    Widget textCell(String label, String value, {double width = 190}) => SizedBox(
+    Widget valueField(String label, String value, {double width = 190}) => SizedBox(
       width: width,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label, style: const TextStyle(fontSize: 10, color: Colors.black54, fontWeight: FontWeight.w700)),
         const SizedBox(height: 3),
-        Text(value.trim().isEmpty ? '—' : value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        Text(value.trim().isEmpty ? '—' : value, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
       ]),
     );
-    Widget inputCell(String label, String key, {double width = 190, TextInputType? keyboard}) => SizedBox(
+    Widget editField(String label, String key, {double width = 190, TextInputType? keyboard}) => SizedBox(
       width: width,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label, style: const TextStyle(fontSize: 10, color: Colors.black54, fontWeight: FontWeight.w700)),
         const SizedBox(height: 3), _inlineField(key, width: width, keyboardType: keyboard),
       ]),
     );
-    Widget geoDropdown(String label, String? value, String level, ValueChanged<String?> onChanged, {String? parent, double width = 200}) =>
-      SizedBox(width: width, child: DropdownButtonFormField<String>(itemHeight: 40, 
-        value: value, isExpanded: true, isDense: true, menuMaxHeight: 280,
-        decoration: InputDecoration(labelText: label, isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8), border: OutlineInputBorder(borderRadius: BorderRadius.circular(9))),
+    Widget section(int number, String title, List<Widget> children) => Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(width: 25, height: 25, alignment: Alignment.center,
+          decoration: BoxDecoration(color: _branchPurple.withValues(alpha: .08), borderRadius: BorderRadius.circular(7)),
+          child: Text('$number', style: const TextStyle(color: _branchPurple, fontWeight: FontWeight.w900, fontSize: 12))),
+        const SizedBox(width: 8),
+        Expanded(child: Wrap(spacing: 9, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: children)),
+      ]),
+    );
+    Widget geoDropdown(String label, String? value, String level, ValueChanged<String?> onChanged,
+        {String? parent, double width = 190}) => SizedBox(
+      width: width,
+      child: DropdownButtonFormField<String>(
+        itemHeight: 40, value: value, isExpanded: true, isDense: true, menuMaxHeight: 280,
+        decoration: InputDecoration(labelText: label, isDense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
         items: [
           DropdownMenuItem<String>(value: null, child: Text('اختر $label')),
           ..._geoRows.where((g) => g['level'] == level && (parent == null || _s(g['parent_id']) == parent))
-            .map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']), overflow: TextOverflow.ellipsis))),
+              .map((g) => DropdownMenuItem<String>(value: _s(g['id']),
+                child: Text(_s(g['name_ar']), overflow: TextOverflow.ellipsis))),
         ],
         onChanged: onChanged,
-      ));
+      ),
+    );
     return Card(
-      margin: EdgeInsets.zero, elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13), side: BorderSide(color: selected || editing ? _branchPurple.withValues(alpha: .65) : _branchPurple.withValues(alpha: .18), width: selected || editing ? 1.4 : 1)),
-      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          SizedBox(width: 28, child: Text('${index + 1}', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w800, color: _branchPurple))),
-          Checkbox(shape: const CircleBorder(), value: selected, onChanged: (v) => _selectBranch(id, v == true), visualDensity: VisualDensity.compact, activeColor: _branchPurple),
-          const SizedBox(width: 6),
-          Expanded(child: Wrap(spacing: 10, runSpacing: 7, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            textCell('كود الفرع', _s(row['branch_code']), width: 135),
-            editing ? inputCell('اسم الفرع عربي', 'branch_name', width: 210) : textCell('اسم الفرع عربي', _s(row['branch_name']), width: 210),
-            editing ? inputCell('اسم الفرع إنجليزي', 'branch_name_en', width: 210) : textCell('اسم الفرع إنجليزي', _s(row['branch_name_en']), width: 210),
-          ])),
-          if (editing) ...[
-            IconButton(tooltip: 'حفظ الصف', onPressed: () => _saveInlineEdit(row), icon: const Icon(Icons.save_rounded, color: Colors.green)),
-            IconButton(tooltip: 'إلغاء التعديل', onPressed: _cancelInlineEdit, icon: const Icon(Icons.close_rounded, color: Colors.grey)),
-          ] else ...[
-            IconButton(tooltip: 'تعديل الفرع', onPressed: () => _edit(row), icon: const Icon(Icons.edit_outlined, color: _branchPurple)),
-            IconButton(tooltip: 'حذف الفرع', onPressed: () => _delete(row), icon: const Icon(Icons.delete_outline, color: Colors.red)),
-          ],
-        ]),
-        const Divider(height: 5),
-        Padding(padding: const EdgeInsetsDirectional.only(start: 34), child: Wrap(spacing: 6, runSpacing: 4, children: [
-          editing ? geoDropdown('المحافظة', _editGovernorateId, 'governorate', (v) => setState(() { _editGovernorateId=v; _editDistrictId=null; _editAreaId=null; }), width: 220) : textCell('المحافظة', _geoName(row['governorate_id']), width: 220),
-          editing ? geoDropdown('الحي / المركز', _editDistrictId, 'district', (v) => setState(() { _editDistrictId=v; _editAreaId=null; }), parent: _editGovernorateId, width: 220) : textCell('الحي / المركز', _geoName(row['district_id']), width: 220),
-          editing ? geoDropdown('المنطقة / القرية', _editAreaId, 'area', (v) => setState(() => _editAreaId=v), parent: _editDistrictId, width: 220) : textCell('المنطقة / القرية', _geoName(row['area_id']), width: 220),
-        ])),
-        const Divider(height: 8),
-        Padding(padding: const EdgeInsetsDirectional.only(start: 34), child: Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          editing ? inputCell('العنوان', 'address', width: 300) : textCell('العنوان', _s(row['address']), width: 300),
-          editing ? inputCell('علامة مميزة', 'location', width: 220) : textCell('علامة مميزة', _s(row['location']), width: 220),
-
-        ])),
-        const Divider(height: 8),
-        Padding(padding: const EdgeInsetsDirectional.only(start: 34), child: Wrap(spacing: 6, runSpacing: 4, children: [
-          textCell('المخازن التابعة', _warehouseSummary(id), width: 520),
-        ])),
-        const Divider(height: 8),
-        Padding(padding: const EdgeInsetsDirectional.only(start: 34), child: Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          editing ? inputCell('إيميل الفرع', 'email', width: 235, keyboard: TextInputType.emailAddress) : textCell('إيميل الفرع', _s(row['email']), width: 235),
-          editing ? inputCell('موبايل', 'phone', width: 165, keyboard: TextInputType.phone) : textCell('موبايل', _s(row['phone']), width: 165),
-          editing ? inputCell('أرضي', 'landline1', width: 165, keyboard: TextInputType.phone) : textCell('أرضي', _s(row['landline1']), width: 165),
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            Checkbox(shape: const CircleBorder(), value: row['is_main'] == true, onChanged: editing ? null : (v) => _setMain(row, v == true), activeColor: _branchPurple, visualDensity: VisualDensity.compact),
-            const Text('رئيسي', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(13),
+        side: BorderSide(color: selected || editing ? _branchPurple.withValues(alpha: .7) : _branchPurple.withValues(alpha: .18),
+          width: selected || editing ? 1.5 : 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(11),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Container(width: 27, height: 27, alignment: Alignment.center,
+              decoration: BoxDecoration(color: _branchPurple.withValues(alpha: .08), borderRadius: BorderRadius.circular(7)),
+              child: Text('${index + 1}', style: const TextStyle(color: _branchPurple, fontWeight: FontWeight.w900))),
             const SizedBox(width: 8),
-            Checkbox(shape: const CircleBorder(), value: row['is_main'] != true, onChanged: editing ? null : (v) { if (v == true && row['is_main'] == true) return; }, activeColor: _branchPurple, visualDensity: VisualDensity.compact),
-            const Text('عادي', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+            Expanded(child: Text(_s(row['branch_name']).isEmpty ? 'فرع بدون اسم' : _s(row['branch_name']),
+              style: const TextStyle(color: _branchPurple, fontWeight: FontWeight.w900, fontSize: 15))),
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              const Text('رئيسي', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+              Checkbox(value: row['is_main'] == true, onChanged: editing ? null : (v) => _setMain(row, v == true),
+                visualDensity: VisualDensity.compact, activeColor: _branchPurple),
+              const SizedBox(width: 4),
+              const Text('نشط', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+              Checkbox(value: row['is_active'] == true, onChanged: editing ? null : (_) => _toggle(row),
+                visualDensity: VisualDensity.compact, activeColor: _branchPurple),
+            ]),
+            if (editing) ...[
+              IconButton(tooltip: 'حفظ التعديلات', onPressed: () => _saveInlineEdit(row),
+                icon: const Icon(Icons.save_rounded, color: Colors.green)),
+              IconButton(tooltip: 'إلغاء', onPressed: _cancelInlineEdit, icon: const Icon(Icons.close_rounded)),
+            ] else ...[
+              IconButton(tooltip: 'تعديل الفرع', onPressed: () => _edit(row), icon: const Icon(Icons.edit_outlined, color: _branchPurple)),
+              IconButton(tooltip: 'حذف الفرع', onPressed: () => _delete(row), icon: const Icon(Icons.delete_outline, color: Colors.red)),
+            ],
           ]),
-          if (!editing) IconButton(tooltip: row['is_active'] == true ? 'إيقاف الفرع' : 'تفعيل الفرع', onPressed: () => _toggle(row), icon: Icon(row['is_active'] == true ? Icons.check_circle : Icons.pause_circle_outline, color: row['is_active'] == true ? Colors.green : Colors.grey)),
-        ])),
-      ])),
+          const Divider(height: 12),
+          section(1, 'البيانات الأساسية', [
+            valueField('كود الفرع', _s(row['branch_code']), width: 125),
+            editing ? editField('اسم الفرع عربي', 'branch_name', width: 210) : valueField('اسم الفرع عربي', _s(row['branch_name']), width: 210),
+            editing ? editField('اسم الفرع إنجليزي', 'branch_name_en', width: 210) : valueField('اسم الفرع إنجليزي', _s(row['branch_name_en']), width: 210),
+          ]),
+          section(2, 'الموقع الجغرافي', [
+            editing
+              ? geoDropdown('المحافظة', _editGovernorateId, 'governorate',
+                  (v) => setState(() { _editGovernorateId = v; _editDistrictId = null; _editAreaId = null; }), width: 190)
+              : valueField('المحافظة', _geoName(row['governorate_id']), width: 190),
+            editing
+              ? geoDropdown('الحي / المركز', _editDistrictId, 'district',
+                  (v) => setState(() { _editDistrictId = v; _editAreaId = null; }), parent: _editGovernorateId, width: 190)
+              : valueField('الحي / المركز', _geoName(row['district_id']), width: 190),
+            editing
+              ? geoDropdown('المنطقة / القرية', _editAreaId, 'area',
+                  (v) => setState(() => _editAreaId = v), parent: _editDistrictId, width: 190)
+              : valueField('المنطقة / القرية', _geoName(row['area_id']), width: 190),
+          ]),
+          section(3, 'العنوان والموقع', [
+            editing ? editField('عنوان الفرع', 'address', width: 350) : valueField('عنوان الفرع', _s(row['address']), width: 350),
+            editing ? editField('علامة مميزة / وصف الموقع', 'location', width: 250) : valueField('علامة مميزة / وصف الموقع', _s(row['location']), width: 250),
+            OutlinedButton.icon(
+              onPressed: () => _openBranchInGoogleMaps(row),
+              icon: const Icon(Icons.map_outlined, size: 17),
+              label: const Text('معاينة الموقع'),
+              style: OutlinedButton.styleFrom(foregroundColor: _branchPurple,
+                visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8)),
+            ),
+          ]),
+          section(4, 'بيانات الاتصال والمخازن التابعة', [
+            editing ? editField('موبايل الفرع', 'phone', width: 155, keyboard: TextInputType.phone) : valueField('موبايل الفرع', _s(row['phone']), width: 155),
+            editing ? editField('موبايل إضافي', 'phone2', width: 155, keyboard: TextInputType.phone) : valueField('موبايل إضافي', _s(row['phone2']), width: 155),
+            editing ? editField('تليفون أرضي', 'landline1', width: 155, keyboard: TextInputType.phone) : valueField('تليفون أرضي', _s(row['landline1']), width: 155),
+            editing ? editField('البريد الإلكتروني', 'email', width: 220, keyboard: TextInputType.emailAddress) : valueField('البريد الإلكتروني', _s(row['email']), width: 220),
+            valueField('المخازن المرتبطة بهذا الفرع', _warehouseSummary(id), width: 380),
+          ]),
+        ]),
+      ),
     );
   }
 
