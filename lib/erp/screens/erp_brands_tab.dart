@@ -163,7 +163,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   Uint8List? _logoBytes(dynamic value) {
     if (value == null) return null;
     final raw = value.toString();
-    final hex = raw.startsWith(r'\\x') ? raw.substring(2) : raw;
+    final hex = raw.startsWith(r'\x') ? raw.substring(2) : raw;
     if (hex.isEmpty || hex.length.isOdd) return null;
     try {
       return Uint8List.fromList(List<int>.generate(
@@ -209,7 +209,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     }
     setState(() => _saving = true);
     try {
-      final hex = r'\\x' + bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+      final hex = r'\x' + bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
       await _db.from('erp_brands').update({
         'logo_data': hex,
         'logo_mime_type': mime,
