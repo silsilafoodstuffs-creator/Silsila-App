@@ -158,8 +158,10 @@ class ErpQuickTaskButton extends StatelessWidget {
       child: FilledButton.icon(
         onPressed: onPressed == null ? null : () async {
           final action = label.trim();
-          final isSave = action.contains('حفظ');
-          final isDelete = action.contains('حذف');
+          final isSave = kind == ErpQuickTaskKind.save ||
+              (kind == null && action.contains('حفظ'));
+          final isDelete = kind == ErpQuickTaskKind.delete ||
+              (kind == null && action.contains('حذف'));
           if (isSave || isDelete) {
             final confirmed = await showDialog<bool>(
               context: context,
@@ -183,11 +185,11 @@ class ErpQuickTaskButton extends StatelessWidget {
           try {
             await Future<void>.sync(onPressed!);
             if (!context.mounted) return;
-            final successMessage = isSave
+            final successMessage = kind == ErpQuickTaskKind.save || (kind == null && isSave)
                 ? 'تم الحفظ'
-                : isDelete
+                : kind == ErpQuickTaskKind.delete || (kind == null && isDelete)
                     ? 'تم الحذف'
-                    : action.contains('تحديث')
+                    : kind == ErpQuickTaskKind.update || (kind == null && action.contains('تحديث'))
                         ? 'تم التحديث'
                         : null;
             if (successMessage != null) {
