@@ -3,8 +3,9 @@ import 'studio_document.dart';
 
 /// Supabase persistence for Studio metadata. RLS and RPC role checks are authoritative.
 class ErpStudioRepository {
-  ErpStudioRepository({SupabaseClient? client}) : _client = client ?? Supabase.instance.client;
-  final SupabaseClient _client;
+  ErpStudioRepository({SupabaseClient? client}) : _providedClient = client;
+  final SupabaseClient? _providedClient;
+  SupabaseClient get _client => _providedClient ?? Supabase.instance.client;
 
   void _requireCompany(String companyId) {
     if (companyId.trim().isEmpty) throw ArgumentError('معرّف الشركة مطلوب.');
