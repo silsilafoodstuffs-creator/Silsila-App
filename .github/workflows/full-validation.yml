@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - feature/silsila-offer-targeting-complete
     paths:
       - "lib/**"
       - "test/**"
@@ -13,6 +14,7 @@ on:
       - "pubspec.lock"
       - "android/**"
       - "tools/web_view_test.mjs"
+      - "supabase/**"
       - ".github/workflows/full-validation.yml"
   workflow_dispatch:
 
@@ -85,18 +87,13 @@ jobs:
 
       - name: Analyze all application and test Dart code
         id: analyze
-        run: flutter analyze lib test --no-fatal-infos --no-fatal-warnings
+        run: flutter analyze lib test --no-fatal-infos
 
       # Run independent checks even if analysis or another check fails.
       - name: Run all Flutter tests
         id: flutter_tests
         if: always() && !cancelled()
         run: flutter test
-
-      - name: Run focused company branches screen test
-        id: branch_tests
-        if: always() && !cancelled()
-        run: flutter test test/erp_company_branches_screen_test.dart
 
       - name: Build production-path web app with Dart source maps
         id: build_web
@@ -180,7 +177,6 @@ jobs:
             echo "| اختبارات أدوات Python | $(status_icon '${{ steps.python_tests.outcome }}') |"
             echo "| تحليل Dart وFlutter | $(status_icon '${{ steps.analyze.outcome }}') |"
             echo "| اختبارات Flutter | $(status_icon '${{ steps.flutter_tests.outcome }}') |"
-            echo "| اختبار شاشة فروع الشركة | $(status_icon '${{ steps.branch_tests.outcome }}') |"
             echo "| بناء نسخة Web | $(status_icon '${{ steps.build_web.outcome }}') |"
             echo "| التحقق من ملفات Web | $(status_icon '${{ steps.verify_web.outcome }}') |"
             echo "| اختبار WebView — كمبيوتر وموبايل | $(status_icon '${{ steps.webview.outcome }}') |"
