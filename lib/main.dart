@@ -5189,14 +5189,26 @@ class _OffersScreenState extends State<OffersScreen> {
         if (activityRow != null && (activityRow['code'] ?? '').toString().isNotEmpty) {
           activityCode = activityRow['code'].toString();
         }
+        final geoPages = <Map<String,dynamic>>[];
+        var geoOffset = 0;
+        while (true) {
+          final page = await db.rpc('get_offer_geo_tree', params: {
+            'p_offset': geoOffset,
+            'p_limit': 1000,
+          });
+          final pageRows = (page as List).whereType<Map>()
+              .map((e) => Map<String,dynamic>.from(e)).toList();
+          geoPages.addAll(pageRows);
+          if (pageRows.length < 1000) break;
+          geoOffset += 1000;
+        }
         final values = await Future.wait<dynamic>([
-          db.rpc('get_offer_geo_tree'),
           db.rpc('get_offer_geo_customer_counts'),
           db.rpc('get_activity_customer_categories', params: {'p_activity_type': activityCode}),
         ]);
-        geoRows = (values[0] as List).whereType<Map>().map((e) => Map<String,dynamic>.from(e)).toList();
-        countRows = (values[1] as List).whereType<Map>().map((e) => Map<String,dynamic>.from(e)).toList();
-        categoryRows = (values[2] as List).whereType<Map>().map((e) => Map<String,dynamic>.from(e)).toList();
+        geoRows = geoPages;
+        countRows = (values[0] as List).whereType<Map>().map((e) => Map<String,dynamic>.from(e)).toList();
+        categoryRows = (values[1] as List).whereType<Map>().map((e) => Map<String,dynamic>.from(e)).toList();
         if (userId.isNotEmpty && activityCode.isNotEmpty) {
           final settings = await db.from('supplier_offer_customer_categories')
               .select('customer_category,is_active')
