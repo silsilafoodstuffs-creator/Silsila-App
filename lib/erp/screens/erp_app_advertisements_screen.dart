@@ -356,7 +356,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
           Expanded(
             child: TabBarView(
               children: [
-                _buildPosterTab(),
+                SingleChildScrollView(child: _buildPosterTab()),
                 ErpAppTickerAdsTab(companyId: widget.companyId, appId: widget.appId),
               ],
             ),
