@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_standard_data_table.dart';
+import '../widgets/erp_catalog_tree_card.dart';
 import '../services/erp_accounts_repository.dart';
 
 class ErpAccountsScreen extends StatefulWidget {
@@ -321,81 +322,115 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
     final hasChildren = children.isNotEmpty;
     final expanded = _expandedAccounts.contains(id);
     final isPostable = row['is_postable'] == true;
+    final background = depth == 0
+        ? const Color(0xFFEDE1F8)
+        : depth == 1
+            ? const Color(0xFFFFE4BE)
+            : const Color(0xFFFFDDF3);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Card(
-          color: depth == 0 ? const Color(0xFFEDE1F8) : depth == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3),
-          margin: EdgeInsets.only(left: depth * 20.0, bottom: 5),
-          child: InkWell(
-            onDoubleTap: () {
-              if (!hasChildren) return;
-              setState(() {
-                if (expanded) { _expandedAccounts.remove(id); }
-                else { _expandedAccounts.add(id); }
-              });
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 34,
-                    child: IconButton(
-                      tooltip: hasChildren ? (expanded ? 'طي الحسابات الفرعية' : 'عرض الحسابات الفرعية') : 'لا توجد حسابات فرعية',
-                      visualDensity: VisualDensity.compact,
-                      onPressed: hasChildren ? () => setState(() {
-                        if (expanded) { _expandedAccounts.remove(id); }
-                        else { _expandedAccounts.add(id); }
-                      }) : null,
-                      icon: Icon(
-                        hasChildren ? (expanded ? Icons.remove_circle_outline : Icons.add_circle_outline) : Icons.circle,
-                        size: hasChildren ? 21 : 8,
-                        color: hasChildren ? const Color(0xFF3E007D) : Colors.black26,
-                      ),
-                    ),
+        ErpCatalogTreeCard(
+          depth: depth,
+          selected: false,
+          backgroundColor: background,
+          selectedColor: background,
+          borderColor: Colors.transparent,
+          selectedBorderColor: Colors.transparent,
+          indentPerLevel: 20,
+          bottomSpacing: 5,
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+          onDoubleTap: () {
+            if (!hasChildren) return;
+            setState(() {
+              if (expanded) {
+                _expandedAccounts.remove(id);
+              } else {
+                _expandedAccounts.add(id);
+              }
+            });
+          },
+          child: Row(
+            children: [
+              SizedBox(
+                width: 34,
+                child: IconButton(
+                  tooltip: hasChildren
+                      ? (expanded ? 'طي الحسابات الفرعية' : 'عرض الحسابات الفرعية')
+                      : 'لا توجد حسابات فرعية',
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                  padding: EdgeInsets.zero,
+                  onPressed: hasChildren
+                      ? () => setState(() {
+                            if (expanded) {
+                              _expandedAccounts.remove(id);
+                            } else {
+                              _expandedAccounts.add(id);
+                            }
+                          })
+                      : null,
+                  icon: Icon(
+                    hasChildren
+                        ? (expanded ? Icons.remove_circle_outline : Icons.add_circle_outline)
+                        : Icons.circle,
+                    size: hasChildren ? 21 : 8,
+                    color: hasChildren ? const Color(0xFF3E007D) : Colors.black26,
                   ),
-                  Icon(isPostable ? Icons.account_balance_wallet_outlined : Icons.account_tree_outlined,
-                    color: const Color(0xFF3E007D), size: 21),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('${_value(row, 'account_code')} — ${_value(row, 'account_name')}',
-                          style: const TextStyle(fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 3),
-                        Text(
-                          '${_value(row, 'account_type')} • ${_value(row, 'normal_balance') == 'debit' ? 'مدين' : 'دائن'} • ${isPostable ? 'تحليلي' : 'تجميعي'} • ${row['is_active'] == true ? 'نشط' : 'معطل'}',
-                          style: const TextStyle(fontSize: 11, color: Colors.black54),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'إضافة حساب فرعي تحت هذا الحساب',
-                    visualDensity: VisualDensity.compact,
-                    onPressed: _loading || isPostable ? null : () => _openAccountEditor(initialParentId: id),
-                    icon: const Icon(Icons.add_box_outlined, color: Color(0xFF2E7D32)),
-                  ),
-                  IconButton(
-                    tooltip: 'تعطيل الحساب',
-                    visualDensity: VisualDensity.compact,
-                    onPressed: _loading || row['is_active'] != true ? null : () => _confirmDeactivate(row),
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  ),
-                  IconButton(
-                    tooltip: 'تعديل الحساب',
-                    visualDensity: VisualDensity.compact,
-                    onPressed: _loading ? null : () => _openAccountEditor(account: row),
-                    icon: const Icon(Icons.edit_outlined, color: Color(0xFFFFA015)),
-                  ),
-                ],
+                ),
               ),
-            ),
+              Icon(
+                isPostable ? Icons.account_balance_wallet_outlined : Icons.account_tree_outlined,
+                color: const Color(0xFF3E007D),
+                size: 21,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${_value(row, 'account_code')} — ${_value(row, 'account_name')}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${_value(row, 'account_type')} • ${_value(row, 'normal_balance') == 'debit' ? 'مدين' : 'دائن'} • ${isPostable ? 'تحليلي' : 'تجميعي'} • ${row['is_active'] == true ? 'نشط' : 'معطل'}',
+                      style: const TextStyle(fontSize: 11, color: Colors.black54),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'إضافة حساب فرعي تحت هذا الحساب',
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                padding: EdgeInsets.zero,
+                onPressed: _loading || isPostable ? null : () => _openAccountEditor(initialParentId: id),
+                icon: const Icon(Icons.add_box_outlined, color: Color(0xFF2E7D32)),
+              ),
+              IconButton(
+                tooltip: 'تعطيل الحساب',
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                padding: EdgeInsets.zero,
+                onPressed: _loading || row['is_active'] != true ? null : () => _confirmDeactivate(row),
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+              ),
+              IconButton(
+                tooltip: 'تعديل الحساب',
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                padding: EdgeInsets.zero,
+                onPressed: _loading ? null : () => _openAccountEditor(account: row),
+                icon: const Icon(Icons.edit_outlined, color: Color(0xFFFFA015)),
+              ),
+            ],
           ),
         ),
-        if (hasChildren && expanded) ...children.map((child) => _buildTreeNode(child, depth + 1, path)),
+        if (hasChildren && expanded)
+          ...children.map((child) => _buildTreeNode(child, depth + 1, path)),
       ],
     );
   }

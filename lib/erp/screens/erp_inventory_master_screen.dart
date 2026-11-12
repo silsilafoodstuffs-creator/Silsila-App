@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_standard_data_table.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -1218,9 +1219,8 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
         const SizedBox(height: 4),
         const Text('الوحدة الكبرى هي الافتراضية للشراء والبيع والتحويل والجرد، ويمكن تخصيص كل مخزن بصورة مستقلة.'),
         const SizedBox(height: 8),
-        SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
-          columnSpacing: 5,
-          headingRowColor: WidgetStateProperty.all(const Color(0xFFE9DDF5)),
+        SingleChildScrollView(scrollDirection: Axis.horizontal, child: ErpStandardDataTable(
+          headingColor: const Color(0xFFE9DDF5),
           columns: const [
             DataColumn(label: Text('م')),
             DataColumn(label: Text('كود فرع')),
@@ -1241,7 +1241,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             final warehouse = row['warehouse'] as Map<String,dynamic>;
             final branch = _branches.where((b) => _s(b['id']) == _s(warehouse['branch_id']));
             final branchRow = branch.isEmpty ? <String,dynamic>{} : branch.first;
-            Widget unitPicker(String key) => SizedBox(width: 145, child: DropdownButton<String>(itemHeight: 48, 
+            Widget unitPicker(String key) => SizedBox(width: 145, child: DropdownButton<String>(itemHeight: 48, isDense: true,
               value: units.any((u) => _s(u['id']) == _s(row[key])) ? _s(row[key]) : _s(largest['id']),
               isExpanded: true,
               items: units.map((u) => DropdownMenuItem(value: _s(u['id']), child: Text(_s(u['unit_name']) + ' • ' + _s(u['conversion_factor']), overflow: TextOverflow.ellipsis))).toList(),
@@ -1250,6 +1250,8 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             Widget stopPicker(String key) => Checkbox(
               value: row[key] == true,
               shape: const CircleBorder(),
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               onChanged: _saving ? null : (v) => refresh(() => row[key] = v == true),
             );
             return DataRow(cells: [
@@ -1267,6 +1269,9 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
               DataCell(stopPicker('stop_transfer')),
               DataCell(IconButton(
                 tooltip: 'حفظ إعدادات هذا المخزن',
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                padding: EdgeInsets.zero,
                 onPressed: _saving ? null : () => _saveWarehouseUnitSetting(itemId, _s(warehouse['id']), row),
                 icon: const Icon(Icons.save_outlined, color: Color(0xFF168447)),
               )),
