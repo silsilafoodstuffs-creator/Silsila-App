@@ -191,8 +191,8 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       ErpCenterToast.show(context, 'تعذر قراءة ملف الشعار.', isError: true);
       return;
     }
-    if (bytes.length > 4 * 1024 * 1024) {
-      ErpCenterToast.show(context, 'الحد الأقصى لحجم شعار البراند 4 ميجابايت.', isError: true);
+    if (bytes.length > 256 * 1024) {
+      ErpCenterToast.show(context, 'الحد الأقصى لحجم شعار البراند 256 كيلوبايت.', isError: true);
       return;
     }
     final ext = file.extension?.toLowerCase() ?? '';
