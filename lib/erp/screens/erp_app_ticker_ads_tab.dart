@@ -301,7 +301,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Text(
-              'حدد مواضع كل براند من 1 إلى 15. لا يمكن تخصيص الموضع نفسه لأكثر من براند في النطاق الواحد.',
+              'حدد مواضع كل براند من 1 إلى 15. لا يمكن تخصيص الموضع نفسه لأكثر من براند في النطاق الواحد. المواضع غير المحددة في النشاط تستكمل من إعدادات كل الأنشطة.',
               style: TextStyle(color: Colors.grey.shade700, height: 1.4),
             ),
           ),
