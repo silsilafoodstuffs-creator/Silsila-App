@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/erp_studio_draft_store.dart';
+import '../services/erp_studio_repository.dart';
 import '../services/studio_document.dart';
 import '../services/studio_renderer.dart';
 
@@ -9,12 +10,14 @@ const _studioPurple = Color(0xFF3E007D);
 const _studioOrange = Color(0xFFFFA015);
 
 class SilsilaStudioScreen extends StatefulWidget {
-  const SilsilaStudioScreen({super.key});
+  const SilsilaStudioScreen({super.key, this.companyId});
+  final String? companyId;
   @override State<SilsilaStudioScreen> createState() => _SilsilaStudioScreenState();
 }
 
 class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   final _store = StudioDraftStore();
+  final _repository = ErpStudioRepository();
   StudioDocument _doc = StudioDocument.create('شاشة جديدة');
   String? _selectedId;
   bool _preview = false;
@@ -61,6 +64,36 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ المسودة محلياً.')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر الحفظ: $e')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+
+  Future<void> _saveCloud() async {
+    final company = widget.companyId;
+    if (company == null || company.trim().isEmpty) {
+      _notice('يجب اختيار شركة نشطة قبل الحفظ المركزي.');
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final remoteId = await _repository.saveDraft(
+        companyId: company,
+        document: _doc,
+        designKey: 'studio_${_doc.id}',
+        remoteId: _doc.remoteId,
+        expectedRevision: _doc.remoteRevision == 0 ? null : _doc.remoteRevision,
+      );
+      _doc = _doc.copyWith(remoteId: remoteId, remoteRevision: _doc.remoteRevision + 1);
+      await _store.save(_doc);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تم حفظ التصميم مركزياً — الإصدار ${_doc.remoteRevision}.')),
+      );
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر الحفظ المركزي: $e')),
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -157,7 +190,8 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
                   try { StudioDocument.fromJson(_doc.toJson()); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('مخطط التصميم سليم.'))); }
                   catch (e) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e'))); }
                 }),
-                _command('ربط بقاعدة البيانات', Icons.link, () => _notice('الربط غير مفعل بعد: يلزم إعداد مصدر آمن ومراجعة صلاحيات RLS.')),
+                _command('حفظ سحابياً', Icons.cloud_upload_outlined, _busy ? () {} : _saveCloud),
+                _command('ربط بقاعدة البيانات', Icons.link, () => _notice('تعريف مصادر البيانات ومراجعة الحقول واختبار العمليات لم يُفعّل بعد.')),
                 _command('نشر التصميم', Icons.publish, () => _notice('النشر معطل حتى اكتمال التخزين المركزي والإصدارات والاختبارات.')),
               ]),
             ),
