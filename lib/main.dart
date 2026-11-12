@@ -5145,12 +5145,28 @@ class _OffersScreenState extends State<OffersScreen> {
     super.dispose();
   }
 
+  Future<String> _uploadSupplierOfferImage(XFile file) async {
+    final client = database;
+    final user = client?.auth.currentUser;
+    if (client == null || user == null) throw StateError('سجّل الدخول أولًا لإرفاق صورة العرض.');
+    final extension = file.name.contains('.') ? file.name.split('.').last.toLowerCase() : 'jpg';
+    const allowed = {'jpg', 'jpeg', 'png', 'webp'};
+    if (!allowed.contains(extension)) throw ArgumentError('صيغة الصورة يجب أن تكون JPG أو PNG أو WEBP.');
+    final path = '${user.id}/${DateTime.now().millisecondsSinceEpoch}.$extension';
+    final mime = extension == 'png' ? 'image/png' : extension == 'webp' ? 'image/webp' : 'image/jpeg';
+    await client.storage.from('supplier-offers').uploadBinary(path, await file.readAsBytes(),
+      fileOptions: FileOptions(contentType: mime, upsert: false));
+    return client.storage.from('supplier-offers').getPublicUrl(path);
+  }
+
   Future<void> createOffer() async {
     selectedProductIds.clear();
     final title = TextEditingController();
     final description = TextEditingController();
     final discount = TextEditingController();
     final imageUrl = TextEditingController();
+    final offerImagePicker = ImagePicker();
+    XFile? selectedOfferImage;
     final districts = TextEditingController();
     final areas = TextEditingController();
     final selectedGovernorates = <String>{};
@@ -5209,7 +5225,25 @@ class _OffersScreenState extends State<OffersScreen> {
                     items: brands.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
                     onChanged: (v) => setDialogState(() => selectedBrand = v ?? 'الكل'),
                   ),
-                  TextField(controller: imageUrl, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'رابط صورة العرض (اختياري)')),
+                  Row(children: [
+                    Expanded(child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final file = await offerImagePicker.pickImage(source: ImageSource.gallery, imageQuality: 86, maxWidth: 1800);
+                        if (file != null) setDialogState(() => selectedOfferImage = file);
+                      },
+                      icon: const Icon(Icons.photo_library_outlined, size: 17),
+                      label: const Text('اختيار من الجهاز', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    )),
+                    const SizedBox(width: 8),
+                    Expanded(child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final file = await offerImagePicker.pickImage(source: ImageSource.camera, imageQuality: 86, maxWidth: 1800);
+                        if (file != null) setDialogState(() => selectedOfferImage = file);
+                      },
+                      icon: const Icon(Icons.camera_alt_outlined, size: 17),
+                      label: const Text('استيراد كاميرا', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    )),
+                  ]),
                   DropdownButtonFormField<String>(
                     value: magazineColor,
                     decoration: const InputDecoration(labelText: 'لون مجلة العرض'),
@@ -5335,13 +5369,14 @@ class _OffersScreenState extends State<OffersScreen> {
           throw ArgumentError('أدخل نسبة خصم صحيحة.');
         }
         final now = DateTime.now();
+        final uploadedOfferImageUrl = selectedOfferImage != null ? await _uploadSupplierOfferImage(selectedOfferImage!) : (imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim());
         if (selectedProductIds.isEmpty) {
           await supplierService.createOffer(
             title: title.text,
             description: description.text,
             startsAt: now,
             endsAt: now.add(Duration(days: durationDays)),
-            imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(),
+            imageUrl: uploadedOfferImageUrl,
             activityType: widget.activityType,
             discountPercentage: discountValue,
             magazineColor: magazineColor,
