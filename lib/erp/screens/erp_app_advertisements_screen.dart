@@ -386,12 +386,13 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
           Material(
             color: Colors.white,
             child: TabBar(
+              labelPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
               labelColor: _adsPurple,
               unselectedLabelColor: Colors.black54,
               indicatorColor: _adsOrange,
               tabs: const [
-                Tab(text: 'إعلانات بوسترات التمرير', icon: Icon(Icons.view_carousel_outlined)),
-                Tab(text: 'إعلانات شريط التمرير', icon: Icon(Icons.horizontal_distribute_outlined)),
+                Tab(text: 'بوسترات التمرير', icon: Icon(Icons.view_carousel_outlined, size: 18)),
+                Tab(text: 'شريط التمرير', icon: Icon(Icons.horizontal_distribute_outlined, size: 18)),
               ],
             ),
           ),
