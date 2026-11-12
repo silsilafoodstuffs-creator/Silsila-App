@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_center_toast.dart';
 import '../widgets/erp_standard_data_table.dart';
+import '../widgets/erp_catalog_tree_card.dart';
 
 const _brandPurple = Color(0xFF3E007D);
 const _brandCanvas = Color(0xFFF7F5FA);
@@ -327,44 +328,70 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     }
   }
 
-  Widget _treeBrandRow(Map<String,dynamic> row) {
+  Widget _treeBrandRow(Map<String, dynamic> row) {
     final id = _s(row['id']);
     final selected = _selectedId == id;
     final system = row['is_system'] == true;
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(start: 18, bottom: 6),
-      child: Material(
-        color: selected ? const Color(0xFFF0E7FA) : Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: () => setState(() => _selectedId = id),
-          child: Container(
-            padding: const EdgeInsetsDirectional.fromSTEB(8, 2, 8, 2),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: selected ? _brandPurple : _brandBorder),
+    return ErpCatalogTreeCard(
+      depth: 1,
+      selected: selected,
+      backgroundColor: Colors.white,
+      selectedColor: const Color(0xFFF0E7FA),
+      borderColor: _brandBorder,
+      selectedBorderColor: _brandPurple,
+      padding: const EdgeInsetsDirectional.fromSTEB(8, 2, 8, 2),
+      onTap: () => setState(() => _selectedId = id),
+      child: Row(children: [
+        const SizedBox(
+          width: 34,
+          child: Icon(Icons.subdirectory_arrow_left, color: _brandPurple, size: 18),
+        ),
+        SizedBox(
+          width: 105,
+          child: Text(
+            _s(row['brand_code']),
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              color: _brandPurple,
+              fontSize: 12,
             ),
-            child: Row(children: [
-              const SizedBox(width: 34, child: Icon(Icons.subdirectory_arrow_left, color: _brandPurple, size: 18)),
-              SizedBox(width: 105, child: Text(_s(row['brand_code']), overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple, fontSize: 12))),
-              Expanded(flex: 3, child: Text(_s(row['brand_name']), overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w700))),
-              Expanded(flex: 2, child: Text(_s(row['brand_name_en']), overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: Colors.black54))),
-              Checkbox(shape: const CircleBorder(), value: row['is_active'] == true,
-                activeColor: _brandPurple, visualDensity: VisualDensity.compact,
-                onChanged: system ? null : (_) => _toggle(row)),
-              const SizedBox(width: 6),
-              _logoPreview(row, size: 32),
-              IconButton(tooltip: 'اختيار/تغيير الشعار', visualDensity: VisualDensity.compact,
-                onPressed: _saving ? null : () => _uploadLogo(row),
-                icon: const Icon(Icons.photo_library_outlined, color: _brandPurple)),
-            ]),
           ),
         ),
-      ),
+        Expanded(
+          flex: 3,
+          child: Text(
+            _s(row['brand_name']),
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+        Expanded(
+          flex: 2,
+          child: Text(
+            _s(row['brand_name_en']),
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, color: Colors.black54),
+          ),
+        ),
+        Checkbox(
+          shape: const CircleBorder(),
+          value: row['is_active'] == true,
+          activeColor: _brandPurple,
+          visualDensity: VisualDensity.compact,
+          onChanged: system ? null : (_) => _toggle(row),
+        ),
+        const SizedBox(width: 6),
+        _logoPreview(row, size: 32),
+        IconButton(
+          tooltip: 'اختيار/تغيير الشعار',
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+          padding: EdgeInsets.zero,
+          onPressed: _saving ? null : () => _uploadLogo(row),
+          icon: const Icon(Icons.photo_library_outlined, color: _brandPurple),
+        ),
+      ]),
     );
   }
 
