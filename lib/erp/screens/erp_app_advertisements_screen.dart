@@ -8,6 +8,7 @@ import '../services/erp_app_asset_storage.dart';
 import '../../services/activity_service.dart';
 import '../services/erp_app_management_service.dart';
 import '../services/erp_app_settings.dart';
+import 'erp_app_ticker_ads_tab.dart';
 
 const _adsPurple = Color(0xFF3E007D);
 const _adsOrange = Color(0xFFFFA015);
@@ -336,6 +337,36 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
 
   @override
   Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          Material(
+            color: Colors.white,
+            child: TabBar(
+              labelColor: _adsPurple,
+              unselectedLabelColor: Colors.black54,
+              indicatorColor: _adsOrange,
+              tabs: const [
+                Tab(text: 'إعلانات بوسترات التمرير', icon: Icon(Icons.view_carousel_outlined)),
+                Tab(text: 'إعلانات شريط التمرير', icon: Icon(Icons.horizontal_distribute_outlined)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                SingleChildScrollView(child: _buildPosterTab()),
+                ErpAppTickerAdsTab(companyId: widget.companyId, appId: widget.appId),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPosterTab() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -354,7 +385,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
           IconButton(tooltip: 'تحديث الإعلانات', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
         ]),
         const SizedBox(height: 14),
-        DropdownButtonFormField<String>(itemHeight: 40, 
+        DropdownButtonFormField<String>(itemHeight: 48, 
           value: _selectedActivityCode,
           decoration: const InputDecoration(labelText: 'نطاق عرض الإعلانات حسب النشاط', border: OutlineInputBorder(), isDense: true),
           items: [
@@ -418,7 +449,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
                   ),
                 ),
                 const SizedBox(height: 10),
-                DropdownButtonFormField<String>(itemHeight: 40, 
+                DropdownButtonFormField<String>(itemHeight: 48, 
                   value: targetType,
                   decoration: const InputDecoration(labelText: 'التوجه عند الضغط على الصورة', border: OutlineInputBorder(), isDense: true),
                   items: const [

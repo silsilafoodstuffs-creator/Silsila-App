@@ -156,7 +156,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
                   TextField(controller: code, readOnly: true, decoration: const InputDecoration(labelText: 'كود الحساب (تلقائي)', helperText: 'يُنشأ عند الحفظ وفق سياسات التكويد', prefixIcon: Icon(Icons.auto_awesome))),
                   TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم الحساب *')),
                   const SizedBox(height: 10),
-                  DropdownButtonFormField<String>(itemHeight: 40, 
+                  DropdownButtonFormField<String>(itemHeight: 48, 
                     value: type,
                     decoration: const InputDecoration(labelText: 'نوع الحساب'),
                     items: const [
@@ -168,7 +168,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
                     ],
                     onChanged: (v) { if (v != null) refresh(() => type = v); },
                   ),
-                  DropdownButtonFormField<String>(itemHeight: 40, 
+                  DropdownButtonFormField<String>(itemHeight: 48, 
                     value: nature,
                     decoration: const InputDecoration(labelText: 'طبيعة الرصيد'),
                     items: const [
@@ -177,7 +177,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
                     ],
                     onChanged: (v) { if (v != null) refresh(() => nature = v); },
                   ),
-                  DropdownButtonFormField<String>(itemHeight: 40, 
+                  DropdownButtonFormField<String>(itemHeight: 48, 
                     value: parent,
                     decoration: const InputDecoration(labelText: 'الحساب الأب'),
                     items: [

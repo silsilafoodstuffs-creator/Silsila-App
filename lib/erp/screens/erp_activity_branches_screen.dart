@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _activityPurple = Color(0xFF3E007D);
-const _activityOrange = Color(0xFFFFA015);
 
 class ErpActivityBranchesScreen extends StatefulWidget {
   const ErpActivityBranchesScreen({super.key, required this.companyId});
