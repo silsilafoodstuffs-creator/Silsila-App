@@ -5313,7 +5313,8 @@ class _OffersScreenState extends State<OffersScreen> {
 
     final accepted = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
         title: const Text('إنشاء عرض جديد'),
         content: StatefulBuilder(builder: (context, refresh) {
           final groups = <String,List<Product>>{};
@@ -5451,6 +5452,35 @@ class _OffersScreenState extends State<OffersScreen> {
                 ],
                 onChanged: (value) => refresh(() => magazineColor = value ?? '#FFA015'),
               ),
+              if (scheduleLater) ...[
+                Row(children: [
+                  Expanded(child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final day = await showDatePicker(
+                        context: context,
+                        initialDate: scheduledStart.isBefore(DateTime.now()) ? DateTime.now() : scheduledStart,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime(2100),
+                      );
+                      if (day != null) refresh(() => scheduledStart = DateTime(
+                        day.year, day.month, day.day, scheduledStart.hour, scheduledStart.minute));
+                    },
+                    icon: const Icon(Icons.calendar_today_outlined, size: 16),
+                    label: Text('${scheduledStart.day.toString().padLeft(2,'0')}/${scheduledStart.month.toString().padLeft(2,'0')}/${scheduledStart.year}'),
+                  )),
+                  const SizedBox(width: 8),
+                  Expanded(child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(scheduledStart));
+                      if (time != null) refresh(() => scheduledStart = DateTime(
+                        scheduledStart.year, scheduledStart.month, scheduledStart.day, time.hour, time.minute));
+                    },
+                    icon: const Icon(Icons.access_time, size: 16),
+                    label: Text(TimeOfDay.fromDateTime(scheduledStart).format(context)),
+                  )),
+                ]),
+                const Align(alignment: Alignment.centerRight, child: Text('سيظهر العرض للعملاء تلقائيًا في الموعد المحدد.', style: TextStyle(fontSize: 11, color: Colors.black54))),
+              ],
               DropdownButtonFormField<int>(
                 value: durationDays,
                 decoration: const InputDecoration(labelText: 'مدة العرض'),
@@ -5494,23 +5524,13 @@ class _OffersScreenState extends State<OffersScreen> {
             label: const Text('معاينة'),
           ),
           OutlinedButton.icon(
-            onPressed: () async {
-              final day = await showDatePicker(context: dialogContext,
-                initialDate: scheduledStart.isBefore(DateTime.now()) ? DateTime.now() : scheduledStart,
-                firstDate: DateTime.now(), lastDate: DateTime(2100));
-              if (day == null) return;
-              final time = await showTimePicker(context: dialogContext, initialTime: TimeOfDay.fromDateTime(scheduledStart));
-              if (time == null) return;
-              scheduleLater = true;
-              scheduledStart = DateTime(day.year, day.month, day.day, time.hour, time.minute);
-              if (dialogContext.mounted) Navigator.pop(dialogContext, true);
-            },
+            onPressed: () => setDialogState(() => scheduleLater = !scheduleLater),
             icon: const Icon(Icons.schedule, size: 17),
-            label: const Text('جدولة'),
+            label: Text(scheduleLater ? 'إلغاء الجدولة' : 'جدولة'),
           ),
           FilledButton(onPressed: () { scheduleLater = false; Navigator.pop(dialogContext, true); }, child: const Text('حفظ ونشر')),
         ],
-      ),
+      )),
     );
 
     if (accepted == true) {
