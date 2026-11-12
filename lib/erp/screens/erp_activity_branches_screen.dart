@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../widgets/erp_standard_data_table.dart';
 
 const _activityPurple = Color(0xFF3E007D);
 

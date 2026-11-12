@@ -150,7 +150,11 @@ void main() {
       ),
     );
 
-    await tester.doubleTap(find.text('حساب رئيسي'));
+    final node = find.text('حساب رئيسي');
+    await tester.tap(node);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(node);
+    await tester.pumpAndSettle();
     expect(expanded, isTrue);
   });
 
