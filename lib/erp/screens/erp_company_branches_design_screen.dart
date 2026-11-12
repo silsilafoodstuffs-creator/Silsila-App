@@ -73,7 +73,7 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
       // a failed geography query must not prevent the branch directory from loading.
       final result = await _db!
           .from('erp_branches')
-          .select('id, branch_code, branch_name, branch_name_en, email, phone, phone2, landline1, landline2, location, address, governorate_id, district_id, area_id, is_main, is_active')
+          .select('id, branch_code, branch_name, branch_name_en, email, phone, phone2, landline1, landline2, location, address, governorate_id, district_id, area_id, latitude, longitude, is_main, is_active')
           .eq('company_id', companyId)
           .order('branch_code');
       List<Map<String, dynamic>> geoRows = [];
@@ -128,6 +128,8 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
           'landline2': TextEditingController(text: _s(row['landline2'])),
           'location': TextEditingController(text: _s(row['location'])),
           'address': TextEditingController(text: _s(row['address'])),
+          'latitude': TextEditingController(text: _s(row['latitude'])),
+          'longitude': TextEditingController(text: _s(row['longitude'])), 
         });
       setState(() {
         _editingBranchId = _s(row['id']);
@@ -156,6 +158,8 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
     String? areaId = _s(row?['area_id']).isEmpty ? null : _s(row?['area_id']);
     final phone = TextEditingController(text: _s(row?['phone']));
     final address = TextEditingController(text: _s(row?['address']));
+    final latitude = TextEditingController(text: _s(row?['latitude']));
+    final longitude = TextEditingController(text: _s(row?['longitude']));
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -198,6 +202,12 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
                 onChanged: (v) => setState(() => areaId = v)),
               const SizedBox(height: 10),
               TextField(controller: address, maxLines: 2, decoration: const InputDecoration(labelText: 'العنوان', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(child: TextField(controller: latitude, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'خط العرض Latitude', border: OutlineInputBorder()))),
+                const SizedBox(width: 8),
+                Expanded(child: TextField(controller: longitude, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'خط الطول Longitude', border: OutlineInputBorder()))),
+              ]),
             ]),
           ),
         ),
@@ -208,7 +218,7 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
       ),
     );
     if (result != true) {
-      code.dispose(); name.dispose(); nameEn.dispose(); email.dispose(); phone.dispose(); phone2.dispose(); landline1.dispose(); landline2.dispose(); location.dispose(); address.dispose();
+      code.dispose(); name.dispose(); nameEn.dispose(); email.dispose(); phone.dispose(); phone2.dispose(); landline1.dispose(); landline2.dispose(); location.dispose(); address.dispose(); latitude.dispose(); longitude.dispose();
       return;
     }
     try {
@@ -230,6 +240,8 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
         'governorate_id': governorateId, 'district_id': districtId, 'area_id': areaId,
         'phone': phone.text.trim().isEmpty ? null : phone.text.trim(),
         'address': address.text.trim().isEmpty ? null : address.text.trim(),
+        'latitude': latitude.text.trim().isEmpty ? null : double.tryParse(latitude.text.trim()),
+        'longitude': longitude.text.trim().isEmpty ? null : double.tryParse(longitude.text.trim()),
         'is_main': row?['is_main'] == true,
         'is_active': row?['is_active'] != false,
       };
@@ -246,7 +258,7 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
     } catch (error) {
       if (mounted) setState(() => _error = 'تعذر حفظ الفرع: $error');
     } finally {
-      code.dispose(); name.dispose(); nameEn.dispose(); phone.dispose(); phone2.dispose(); landline1.dispose(); landline2.dispose(); location.dispose(); address.dispose();
+      code.dispose(); name.dispose(); nameEn.dispose(); phone.dispose(); phone2.dispose(); landline1.dispose(); landline2.dispose(); location.dispose(); address.dispose(); latitude.dispose(); longitude.dispose();
     }
   }
 
@@ -290,6 +302,8 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
         'landline2': _editFields['landline2']!.text.trim().isEmpty ? null : _editFields['landline2']!.text.trim(),
         'location': _editFields['location']!.text.trim().isEmpty ? null : _editFields['location']!.text.trim(),
         'address': _editFields['address']!.text.trim().isEmpty ? null : _editFields['address']!.text.trim(),
+        'latitude': _editFields['latitude']!.text.trim().isEmpty ? null : double.tryParse(_editFields['latitude']!.text.trim()),
+        'longitude': _editFields['longitude']!.text.trim().isEmpty ? null : double.tryParse(_editFields['longitude']!.text.trim()),
         'governorate_id': _editGovernorateId,
         'district_id': _editDistrictId,
         'area_id': _editAreaId,
@@ -445,17 +459,17 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
       if (_error != null) _notice(_error!, Colors.red),
       if (_message != null) _notice(_message!, Colors.green),
       if (_loading)
-        const Expanded(child: Center(child: CircularProgressIndicator()))
+        SizedBox(height: 540, child: Center(child: CircularProgressIndicator()))
       else if (_rows.isEmpty)
-        const Expanded(child: Center(child: Card(child: Padding(
+        SizedBox(height: 540, child: Center(child: Card(child: Padding(
           padding: EdgeInsets.all(24), child: Text('لا توجد فروع مسجلة بعد. اضغط «إضافة فرع» لإنشاء أول فرع.')))))
       else
-        Expanded(child: ListView.separated(
+        SizedBox(height: 540, child: ListView.separated(
           padding: const EdgeInsets.only(bottom: 8),
           itemCount: _rows.length,
           separatorBuilder: (_, __) => const SizedBox(height: 8),
           itemBuilder: (context, index) => _branchCard(_rows[index], index),
-        )),
+        )), 
     ]),
   );
 
@@ -579,7 +593,9 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
           ]),
           section(3, 'العنوان والموقع', [
             editing ? editField('عنوان الفرع', 'address', width: 350) : valueField('عنوان الفرع', _s(row['address']), width: 350),
-            editing ? editField('علامة مميزة / وصف الموقع', 'location', width: 250) : valueField('علامة مميزة / وصف الموقع', _s(row['location']), width: 250),
+            editing ? editField('علامة مميزة / وصف الموقع', 'location', width: 220) : valueField('علامة مميزة / وصف الموقع', _s(row['location']), width: 220),
+            editing ? editField('خط العرض', 'latitude', width: 120, keyboard: const TextInputType.numberWithOptions(decimal: true, signed: true)) : valueField('خط العرض', _s(row['latitude']), width: 120),
+            editing ? editField('خط الطول', 'longitude', width: 120, keyboard: const TextInputType.numberWithOptions(decimal: true, signed: true)) : valueField('خط الطول', _s(row['longitude']), width: 120),
             OutlinedButton.icon(
               onPressed: () => _openBranchInGoogleMaps(row),
               icon: const Icon(Icons.map_outlined, size: 17),
@@ -623,7 +639,10 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
       _geoName(row['district_id']),
       _geoName(row['governorate_id']),
     ].where((value) => value.trim().isNotEmpty && value.trim() != '—').toList();
-    final query = parts.join('، ');
+    final latitude = _s(row['latitude']).trim();
+    final longitude = _s(row['longitude']).trim();
+    final hasCoordinates = latitude.isNotEmpty && longitude.isNotEmpty;
+    final query = hasCoordinates ? '$latitude,$longitude' : parts.join('، ');
     final uri = Uri.https('www.google.com', '/maps/search/', {'api': '1', 'query': query.isEmpty ? 'مصر' : query});
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && mounted) {
