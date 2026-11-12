@@ -357,8 +357,8 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                                 )),
                                 DataCell(Checkbox(
                                   shape: const CircleBorder(),
-                                  value: selectedCount == 15,
-                                  tristate: selectedCount > 0 && selectedCount < 15,
+                                  value: selectedCount == 0 ? false : selectedCount == 15 ? true : null,
+                                  tristate: true,
                                   onChanged: _saving ? null : (value) => _toggleAll(id, value == true),
                                 )),
                                 ...List.generate(15, (index) {
