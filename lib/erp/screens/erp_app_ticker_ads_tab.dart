@@ -173,7 +173,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
 
   void _toggleAll(String brandId, bool checked) {
     final conflicts = <int>[];
-    for (var slot = 1; slot <= 15; slot++) {
+    for (var slot = 1; slot <= 25; slot++) {
       final owner = _slotOwners[slot];
       if (checked && owner != null && owner != brandId) conflicts.add(slot);
     }
@@ -306,7 +306,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Text(
-              'حدد مواضع كل براند من 1 إلى 15. لا يمكن تخصيص الموضع نفسه لأكثر من براند في النطاق الواحد. المواضع غير المحددة في النشاط تستكمل من إعدادات كل الأنشطة.',
+              'حدد مواضع كل براند من 1 إلى 25. لا يمكن تخصيص الموضع نفسه لأكثر من براند في النطاق الواحد. المواضع غير المحددة في النشاط تستكمل من إعدادات كل الأنشطة.',
               style: TextStyle(color: Colors.grey.shade700, height: 1.4),
             ),
           ),
@@ -335,7 +335,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                             columns: [
                               const DataColumn(label: Text('البراند')),
                               const DataColumn(label: Text('الكل')),
-                              ...List.generate(15, (index) => DataColumn(
+                              ...List.generate(25, (index) => DataColumn(
                                 label: Text('${index + 1}'),
                               )),
                             ],
@@ -362,11 +362,11 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                                 )),
                                 DataCell(Checkbox(
                                   shape: const CircleBorder(),
-                                  value: selectedCount == 0 ? false : selectedCount == 15 ? true : null,
+                                  value: selectedCount == 0 ? false : selectedCount == 25 ? true : null,
                                   tristate: true,
                                   onChanged: _saving ? null : (value) => _toggleAll(id, value == true),
                                 )),
-                                ...List.generate(15, (index) {
+                                ...List.generate(25, (index) {
                                   final slot = index + 1;
                                   return DataCell(Checkbox(
                                     shape: const CircleBorder(),
@@ -384,7 +384,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           Padding(
             padding: const EdgeInsets.all(12),
             child: Row(children: [
-              Text('المواضع المحددة: ${_slotOwners.length}/15',
+              Text('المواضع المحددة: ${_slotOwners.length}/25',
                 style: const TextStyle(color: _tickerPurple, fontWeight: FontWeight.w900)),
               const Spacer(),
               FilledButton.icon(
