@@ -466,13 +466,13 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: [
-                ErpQuickTaskButton(label:'تحديث', icon:Icons.refresh_rounded, kind:ErpQuickTaskKind.update, onPressed:_loading || _saving ? null : _load),
+                ErpQuickTaskButton(label:'تحديث', icon:Icons.refresh_rounded, kind:ErpQuickTaskKind.update, showSuccessToast:true, onPressed:_loading || _saving ? null : _load),
                 ErpQuickTaskButton(label:'عرض شجرة', icon:Icons.account_tree_outlined, kind:ErpQuickTaskKind.treeView, onPressed:() => setState(() => _viewMode = 'tree')),
                 ErpQuickTaskButton(label:'عرض جدول', icon:Icons.table_rows_outlined, kind:ErpQuickTaskKind.tableView, onPressed:() => setState(() => _viewMode = 'grid')),
                 ErpQuickTaskButton(label:'إضافة جديد', icon:Icons.add_circle_outline, kind:ErpQuickTaskKind.add, onPressed:_saving ? null : () => _edit()),
                 ErpQuickTaskButton(label:'تعديل', icon:Icons.edit_outlined, kind:ErpQuickTaskKind.edit, onPressed:_saving || selected == null || selected['is_system'] == true ? null : () => _edit(row:selected)),
                 ErpQuickTaskButton(label:'شعار البراند', icon:Icons.image_outlined, kind:ErpQuickTaskKind.image, onPressed:_saving || selected == null ? null : () => _uploadLogo(selected)),
-                ErpQuickTaskButton(label:'حذف', icon:Icons.delete_outline, kind:ErpQuickTaskKind.delete, onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
+                ErpQuickTaskButton(label:'حذف', icon:Icons.delete_outline, kind:ErpQuickTaskKind.delete, confirmAction:true, onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
               ]),
             ),
           ),
