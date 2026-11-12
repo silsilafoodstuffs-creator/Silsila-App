@@ -20,8 +20,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: silsila-full-validation
-  # A newer main commit supersedes an older validation run; always validate the latest tree.
+  # Isolate each branch so an unrelated feature-branch run cannot cancel main validation.
+  group: silsila-full-validation-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
