@@ -11,7 +11,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as excel;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/erp_company_settings_repository.dart';
-import 'erp_branches_screen.dart';
 import 'erp_company_branches_design_screen.dart';
 
 const _companyPurple = Color(0xFF3E007D);
@@ -367,7 +366,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
       'المأمورية الضريبية': _taxOffice.text,
       'الهاتف': _phone.text,
       'البريد الإلكتروني': _email.text,
-      'العملة الأساسية': _currency.text,
+      'العملة': _currency.text,
       'العنوان': _address.text,
       'معرّف الشركة': _activeCompanyId ?? widget.companyId ?? '',
     };
@@ -623,9 +622,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
           child: Align(alignment: AlignmentDirectional.centerStart, child: Row(mainAxisSize: MainAxisSize.min, children: [
             _companyTabButton('بيانات الشركة', 0, Icons.business_outlined),
             const SizedBox(width: 4),
-            _companyTabButton('الفروع', 1, Icons.account_tree_outlined),
-            const SizedBox(width: 4),
-            _companyTabButton('فروع الشركة', 2, Icons.account_tree),
+            _companyTabButton('فروع الشركة', 1, Icons.account_tree_outlined),
           ])),
         ),
         const SizedBox(height: 8),
@@ -652,15 +649,44 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                       Flexible(child: Text('ID: ${_activeCompanyId ?? widget.companyId ?? '—'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 11))),
                     ]),
                   ),
-                // الصف الأول: الكود والأسماء والشعار.
+                // الصف الأول: كود الشركة بعرض ثابت والاسمان بعرض أوسع.
                 Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Expanded(flex: 2, child: _field(_companyCode, 'كود الشركة', Icons.qr_code_2)),
+                  SizedBox(width: 50, child: _field(_companyCode, 'الكود', Icons.qr_code_2, showIcon: false)),
                   const SizedBox(width: 8),
-                  Expanded(flex: 3, child: _field(_tradeName, 'اسم الشركة عربي', Icons.business)),
+                  Expanded(flex: 5, child: _field(_tradeName, 'اسم الشركة عربي', Icons.business)),
                   const SizedBox(width: 8),
-                  Expanded(flex: 3, child: _field(_englishName, 'اسم الشركة إنجليزي', Icons.language)),
+                  Expanded(flex: 4, child: _field(_englishName, 'اسم الشركة إنجليزي', Icons.language)),
+                ]),
+                // الصف الثاني: وسائل الاتصال والعملة.
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(child: _field(_phone, 'موبايل الشركة 1', Icons.phone_outlined, keyboard: TextInputType.phone)),
                   const SizedBox(width: 8),
-                  SizedBox(width: 265, child: Container(
+                  Expanded(child: _field(_phone2, 'موبايل الشركة 2', Icons.phone_android_outlined, keyboard: TextInputType.phone)),
+                  const SizedBox(width: 8),
+                  Expanded(flex: 2, child: _field(_email, 'البريد الإلكتروني للشركة', Icons.email_outlined, keyboard: TextInputType.emailAddress)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _currencyField()),
+                ]),
+                // الصف الثالث: البيانات القانونية قبل العنوان.
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(flex: 2, child: _field(_legalName, 'الاسم القانوني *', Icons.gavel_outlined)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _field(_commercialRegister, 'سجل تجاري', Icons.assignment_outlined)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _field(_taxNumber, 'بطاقة ضريبية', Icons.receipt_long_outlined)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _field(_taxOffice, 'مأمورية', Icons.account_balance_outlined)),
+                ]),
+                // الصف الرابع: الدولة والعنوان الرئيسي.
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  SizedBox(width: 140, child: _countryField()),
+                  const SizedBox(width: 8),
+                  Expanded(child: _field(_address, 'العنوان الرئيسي', Icons.location_on_outlined)),
+                ]),
+                // الصف الأخير: الصورة وأزرارها مع أدوات الخريطة.
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Container(
+                    width: 330,
                     padding: const EdgeInsets.all(7),
                     decoration: BoxDecoration(color: const Color(0xFFF8F4FC), borderRadius: BorderRadius.circular(10), border: Border.all(color: _companyPurple.withValues(alpha: .15))),
                     child: Row(children: [
@@ -672,38 +698,12 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                         OutlinedButton.icon(onPressed: _uploadingLogo || !_isEditing ? null : () => _chooseCompanyImage(ImageSource.camera), icon: const Icon(Icons.camera_alt_outlined, size: 15), label: const Text('كاميرا', style: TextStyle(fontSize: 10)), style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 4))),
                       ])),
                     ]),
-                  )),
-                ]),
-                // الصف الثاني: وسائل الاتصال والعملة.
-                Row(children: [
-                  Expanded(child: _field(_phone, 'موبايل الشركة 1', Icons.phone_outlined, keyboard: TextInputType.phone)),
-                  const SizedBox(width: 8),
-                  Expanded(child: _field(_phone2, 'موبايل الشركة 2', Icons.phone_android_outlined, keyboard: TextInputType.phone)),
-                  const SizedBox(width: 8),
-                  Expanded(flex: 2, child: _field(_email, 'البريد الإلكتروني للشركة', Icons.email_outlined, keyboard: TextInputType.emailAddress)),
-                  const SizedBox(width: 8),
-                  Expanded(child: _currencyField()),
-                ]),
-                // الصف الثالث: الدولة والعنوان الرئيسي والخريطة.
-                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  SizedBox(width: 175, child: _countryField()),
-                  const SizedBox(width: 8),
-                  Expanded(child: _field(_address, 'العنوان الرئيسي', Icons.location_on_outlined)),
-                  const SizedBox(width: 8),
-                  Padding(padding: const EdgeInsets.only(bottom: 10), child: Wrap(spacing: 5, children: [
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Padding(padding: const EdgeInsets.only(top: 18), child: Wrap(spacing: 6, runSpacing: 5, children: [
                     OutlinedButton.icon(onPressed: () => _showCompanyLocationMessage('استيراد موقع من الخريطة'), icon: const Icon(Icons.map_outlined, size: 17), label: const Text('استيراد موقع من الخريطة')),
-                    OutlinedButton.icon(onPressed: () => _showCompanyLocationMessage('معاينة الموقع'), icon: const Icon(Icons.location_searching, size: 17), label: const Text('معاينة')),
-                  ])),
-                ]),
-                // الصف الرابع: البيانات القانونية.
-                Row(children: [
-                  Expanded(flex: 2, child: _field(_legalName, 'الاسم القانوني *', Icons.gavel_outlined)),
-                  const SizedBox(width: 8),
-                  Expanded(child: _field(_commercialRegister, 'سجل تجاري', Icons.assignment_outlined)),
-                  const SizedBox(width: 8),
-                  Expanded(child: _field(_taxNumber, 'بطاقة ضريبية', Icons.receipt_long_outlined)),
-                  const SizedBox(width: 8),
-                  Expanded(child: _field(_taxOffice, 'مأمورية', Icons.account_balance_outlined)),
+                    OutlinedButton.icon(onPressed: () => _showCompanyLocationMessage('معاينة الموقع'), icon: const Icon(Icons.location_searching, size: 17), label: const Text('معاينة الموقع')),
+                  ]))),
                 ]),
                 if (_uploadingLogo) const LinearProgressIndicator(minHeight: 3),
                 const SizedBox(height: 8),
@@ -718,9 +718,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
           ),
         ],
         if (_selectedCompanyTab == 1)
-          SizedBox(height: 650, child: ErpBranchesScreen(companyId: _activeCompanyId ?? widget.companyId, embedded: true)),
-        if (_selectedCompanyTab == 2)
-          const SizedBox(height: 650, child: ErpCompanyBranchesDesignScreen()),
+          SizedBox(height: 650, child: ErpCompanyBranchesDesignScreen(companyId: _activeCompanyId ?? widget.companyId, embedded: true)),
       ]),
     );
   }
@@ -751,20 +749,22 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
 
   Widget _countryField() => Padding(
     padding: const EdgeInsets.only(bottom: 10),
-    child: DropdownButtonFormField<String>(
-      value: const ['مصر', 'السعودية', 'الإمارات', 'الكويت'].contains(_country.text) ? _country.text : 'مصر',
-      isExpanded: true,
-      itemHeight: 40,
-      decoration: InputDecoration(
-        labelText: 'الدولة',
-        prefixIcon: const Icon(Icons.flag_outlined, size: 19),
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const Padding(padding: EdgeInsets.only(bottom: 3), child: Text('الدولة', style: TextStyle(color: _companyPurple, fontWeight: FontWeight.w700, fontSize: 10))),
+      DropdownButtonFormField<String>(
+        value: const ['مصر', 'السعودية', 'الإمارات', 'الكويت'].contains(_country.text) ? _country.text : 'مصر',
+        isExpanded: true,
+        itemHeight: 40,
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.flag_outlined, size: 17),
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        items: const ['مصر', 'السعودية', 'الإمارات', 'الكويت'].map((v) => DropdownMenuItem(value: v, child: Text(v, style: const TextStyle(fontSize: 12)))).toList(),
+        onChanged: _isEditing ? (v) { if (v != null) setState(() => _country.text = v); } : null,
       ),
-      items: const ['مصر', 'السعودية', 'الإمارات', 'الكويت'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-      onChanged: _isEditing ? (v) { if (v != null) setState(() => _country.text = v); } : null,
-    ),
+    ]),
   );
 
   void _showCompanyLocationMessage(String action) {
@@ -775,72 +775,53 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
   }
 
   Widget _currencyField() => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: LayoutBuilder(builder: (context, constraints) {
-          final labelWidth = (constraints.maxWidth * .30).clamp(125.0, 190.0);
-          final current = _currencyOptions.any((item) => item['code'] == _currency.text) ? _currency.text : 'EGP';
-          return Row(children: [
-            SizedBox(width: labelWidth, child: const Padding(
-              padding: EdgeInsetsDirectional.only(end: 12),
-              child: Text('العملة الأساسية', style: TextStyle(color: _companyPurple, fontWeight: FontWeight.w700, fontSize: 13)),
-            )),
-            Expanded(child: DropdownButtonFormField<String>(itemHeight: 40, 
-              value: current, isExpanded: true,
-              decoration: InputDecoration(prefixIcon: const Icon(Icons.currency_exchange, size: 20), isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
-              items: _currencyOptions.map((item) => DropdownMenuItem<String>(
-                value: item['code'], child: Text('${item['name']} (${item['code']})', overflow: TextOverflow.ellipsis))).toList(),
-              onChanged: _isEditing ? (value) { if (value != null) setState(() => _currency.text = value); } : null,
-            )),
-          ]);
-        }),
-      );
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const Padding(padding: EdgeInsets.only(bottom: 3), child: Text('العملة', style: TextStyle(color: _companyPurple, fontWeight: FontWeight.w700, fontSize: 10))),
+      DropdownButtonFormField<String>(
+        itemHeight: 40,
+        value: _currencyOptions.any((item) => item['code'] == _currency.text) ? _currency.text : 'EGP',
+        isExpanded: true,
+        decoration: InputDecoration(prefixIcon: const Icon(Icons.currency_exchange, size: 17), isDense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+        items: _currencyOptions.map((item) => DropdownMenuItem<String>(
+          value: item['code'], child: Text('${item['name']} (${item['code']})', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)))).toList(),
+        onChanged: _isEditing ? (value) { if (value != null) setState(() => _currency.text = value); } : null,
+      ),
+    ]),
+  );
 
   Widget _field(TextEditingController controller, String label, IconData icon,
-          {int maxLines = 1, TextInputType? keyboard}) =>
+          {int maxLines = 1, TextInputType? keyboard, bool showIcon = true}) =>
       Padding(
         padding: const EdgeInsets.only(bottom: 10),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final labelWidth = (constraints.maxWidth * .30).clamp(125.0, 190.0);
-            return Row(
-              crossAxisAlignment: maxLines > 1 ? CrossAxisAlignment.start : CrossAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: labelWidth,
-                  child: Padding(
-                    padding: EdgeInsetsDirectional.only(end: 12, top: maxLines > 1 ? 15 : 0),
-                    child: Text(
-                      label,
-                      textAlign: TextAlign.start,
-                      style: const TextStyle(
-                        color: _companyPurple,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    enabled: _isEditing,
-                    keyboardType: keyboard,
-                    maxLines: maxLines,
-                    minLines: maxLines > 1 ? maxLines : 1,
-                    style: const TextStyle(fontSize: 14),
-                    decoration: InputDecoration(
-                      prefixIcon: Icon(icon, size: 20),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 3),
+              child: Text(label, style: const TextStyle(
+                color: _companyPurple,
+                fontWeight: FontWeight.w700,
+                fontSize: 10,
+              ), maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+            TextField(
+              controller: controller,
+              enabled: _isEditing,
+              keyboardType: keyboard,
+              maxLines: maxLines,
+              minLines: maxLines > 1 ? maxLines : 1,
+              style: const TextStyle(fontSize: 13),
+              decoration: InputDecoration(
+                prefixIcon: showIcon ? Icon(icon, size: 18) : null,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
         ),
       );
 
