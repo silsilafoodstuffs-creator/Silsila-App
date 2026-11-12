@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_center_toast.dart';
+import '../widgets/erp_standard_data_table.dart';
 
 const _brandPurple = Color(0xFF3E007D);
 const _brandCanvas = Color(0xFFF7F5FA);
@@ -496,11 +497,9 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                   : SingleChildScrollView(
                       scrollDirection:Axis.horizontal,
                       child:SingleChildScrollView(
-                        child:DataTable(
-                          headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
-                          headingRowHeight:40,
-                          dataRowMinHeight:40,
-                          dataRowMaxHeight:40,
+                        child:ErpStandardDataTable(
+                          horizontalMargin: 8,
+                          columnSpacing: 16,
                           columns:const [
                             DataColumn(label:Text('كود البراند')),
                             DataColumn(label:Text('اسم البراند عربي')),
