@@ -5176,12 +5176,17 @@ class _OffersScreenState extends State<OffersScreen> {
     bool scheduleLater = false;
     final db = database;
     final userId = db?.auth.currentUser?.id ?? '';
-    final activityCode = (widget.activityType ?? '').trim();
+    var activityCode = widget.activityType.trim();
     List<Map<String,dynamic>> geoRows = [];
     List<Map<String,dynamic>> countRows = [];
     List<Map<String,dynamic>> categoryRows = [];
     if (db != null) {
       try {
+        final activityRow = await db.from('activity_types')
+            .select('code').eq('name', widget.activityType).maybeSingle();
+        if (activityRow != null && (activityRow['code'] ?? '').toString().isNotEmpty) {
+          activityCode = activityRow['code'].toString();
+        }
         final values = await Future.wait<dynamic>([
           db.rpc('get_offer_geo_tree'),
           db.rpc('get_offer_geo_customer_counts'),
