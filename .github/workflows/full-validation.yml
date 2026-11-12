@@ -7,6 +7,7 @@ on:
     branches:
       - main
       - feature/ticker-ads-15-slots
+      - stabilization/ui-unification-2026-11
     paths:
       - "lib/**"
       - "test/**"
@@ -45,6 +46,18 @@ jobs:
         run: |
           python -m py_compile tools/catalog_import/import_real_product_images.py
           python -m unittest discover -s tools/catalog_import -p 'test_*.py' -v
+
+      - name: Pin supported JDK for Android Gradle builds
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Verify Android build toolchain
+        run: |
+          java -version
+          flutter --version
 
       - name: Set up Flutter
         uses: subosito/flutter-action@fd55f4c5af5b953cc57a2be44cb082c8f6635e8e
