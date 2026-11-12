@@ -1180,7 +1180,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                             }
                             return KeyEventResult.ignored;
                           },
-                          child: DropdownButtonFormField<String>(itemHeight: 40, 
+                          child: DropdownButtonFormField<String>(itemHeight: null, 
                             value: selectedUnitId,
                             isDense: true,
                             isExpanded: true,
@@ -2002,7 +2002,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                     readOnly: true,
                     enabled: !hasDraft,
                   );
-                  final fiscalField = DropdownButtonFormField<String>(itemHeight: 40, 
+                  final fiscalField = DropdownButtonFormField<String>(itemHeight: null, 
                     value: fiscalOptions.any((p) => _s(p['id']) == _fiscalPeriodId) ? _fiscalPeriodId : null,
                     isExpanded: true,
                     decoration: field('السنة المالية'),
@@ -2052,7 +2052,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               ),
               const SizedBox(height: 12),
               Wrap(spacing: 8, runSpacing: 8, children: [
-                box(DropdownButtonFormField<String>(itemHeight: 40, 
+                box(DropdownButtonFormField<String>(itemHeight: null, 
                   value: _sourceChannel,
                   isExpanded: true, decoration: field('مصدر المستند'),
                   items: const [
@@ -2065,7 +2065,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   ],
                   onChanged: hasDraft || _sourceDocumentIds.isNotEmpty ? null : (v) => setState(() => _sourceChannel = v ?? 'manual'),
                 )),
-                box(DropdownButtonFormField<String>(itemHeight: 40, 
+                box(DropdownButtonFormField<String>(itemHeight: null, 
                   value: const ['نقدي','آجل','بيع مباشر'].contains(_paymentType) ? _paymentType : 'آجل',
                   isExpanded: true, decoration: field('نوع البيع / السداد'),
                   items: const [
@@ -2165,7 +2165,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   DataCell(Text((index + 1).toString())),
                   DataCell(Text(_s(line['item_code']))),
                   DataCell(SizedBox(width: 170, child: Text(_s(line['item_name']), maxLines: 2, overflow: TextOverflow.ellipsis))),
-                  DataCell(SizedBox(width: 110, child: DropdownButtonFormField<String>(itemHeight: 40, 
+                  DataCell(SizedBox(width: 110, child: DropdownButtonFormField<String>(itemHeight: null, 
                     value: units.any((u) => _s(u['id']) == _s(line['unit_id'])) ? _s(line['unit_id']) : (units.isNotEmpty ? _s(units.first['id']) : null),
                     isDense: true, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 5)),
                     items: units.map((u) => DropdownMenuItem<String>(value: _s(u['id']), child: Text(_s(u['unit_name']).isEmpty ? _s(u['unit_code']) : _s(u['unit_name']), overflow: TextOverflow.ellipsis))).toList(),
@@ -2360,7 +2360,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                             style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w700, fontSize: 12),
                           ),
                           const SizedBox(height: 2),
-                          DropdownButtonFormField<String>(itemHeight: 40, 
+                          DropdownButtonFormField<String>(itemHeight: null, 
                             value: _warehouses.any((row) => _s(row['id']) == _warehouseId) ? _warehouseId : null,
                             isExpanded: true,
                             decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
@@ -2437,7 +2437,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             ],
             const SizedBox(height: 8),
             if (widget.kind == ErpOperationalKind.purchase)
-              DropdownButtonFormField<String>(itemHeight: 40, 
+              DropdownButtonFormField<String>(itemHeight: null, 
                 value: _documentType, isExpanded: true,
                 decoration: const InputDecoration(labelText: 'نوع المستند', border: OutlineInputBorder()),
                 items: const <String, String>{'order':'طلب شراء','receipt':'استلام مشتريات','invoice':'فاتورة مشتريات','return':'مرتجع مشتريات'}.entries
@@ -2539,7 +2539,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               ),
               const SizedBox(height: 6),
             ],
-            DropdownButtonFormField<String>(itemHeight: 40, 
+            DropdownButtonFormField<String>(itemHeight: null, 
               value: _partyId, isExpanded: true,
               decoration: InputDecoration(labelText: widget.kind == ErpOperationalKind.purchase ? 'المورد' : 'اختيار العميل بالاسم أو الكود', border: const OutlineInputBorder()),
               items: _parties.map((r) => DropdownMenuItem<String>(value: _s(r['id']), child: Text(_partyLabel(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
@@ -2552,7 +2552,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF3E007D)),
               )),
               const SizedBox(height: 8),
-              DropdownButtonFormField<String>(itemHeight: 40, 
+              DropdownButtonFormField<String>(itemHeight: null, 
                 value: _representatives.any((rep) => _s(rep['id']) == _salesRepId) ? _salesRepId : null,
                 isExpanded: true,
                 decoration: const InputDecoration(labelText: 'مندوب المبيعات', border: OutlineInputBorder(), isDense: true),
@@ -2569,7 +2569,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             ],
             const SizedBox(height: 8),
             if (!(widget.kind == ErpOperationalKind.sales && _documentType == 'invoice')) ...[
-              DropdownButtonFormField<String>(itemHeight: 40, 
+              DropdownButtonFormField<String>(itemHeight: null, 
                 value: _warehouses.any((row) => _s(row['id']) == _warehouseId) ? _warehouseId : null, isExpanded: true,
                 decoration: const InputDecoration(labelText: 'المخزن', border: OutlineInputBorder()),
                 items: _warehouses.map((r) => DropdownMenuItem<String>(value: _s(r['id']), child: Text(_warehouseLabel(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
@@ -2604,7 +2604,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               ),
               if (!(widget.kind == ErpOperationalKind.sales && _documentType == 'invoice')) ...[
               const SizedBox(height: 8),
-              DropdownButtonFormField<String>(itemHeight: 40, 
+              DropdownButtonFormField<String>(itemHeight: null, 
                 value: _itemId, isExpanded: true,
                 decoration: const InputDecoration(labelText: 'الصنف', border: OutlineInputBorder()),
                 items: _items.map((r) => DropdownMenuItem<String>(value: _s(r['id']), child: Text(_itemLabel(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
@@ -2679,7 +2679,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                         )),
                         DataCell(SizedBox(
                           width: 135,
-                          child: DropdownButtonFormField<String>(itemHeight: 40, 
+                          child: DropdownButtonFormField<String>(itemHeight: null, 
                             value: (_unitsByItem[_s(line['item_id'])] ?? []).any((unit) => _s(unit['id']) == _s(line['unit_id']))
                                 ? _s(line['unit_id'])
                                 : ((_unitsByItem[_s(line['item_id'])] ?? []).isNotEmpty ? _s((_unitsByItem[_s(line['item_id'])]!).first['id']) : null),

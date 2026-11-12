@@ -96,7 +96,6 @@ class ErpPayrollRepository {
   }) async {
     final gross = basic + allowances + commissions + overtime + elementEarnings;
     final totalDeductions = deductions + elementDeductions;
-    final net = gross - totalDeductions;
     if (basic < 0 || allowances < 0 || commissions < 0 || overtime < 0 ||
         deductions < 0 || elementEarnings < 0 || elementDeductions < 0 || totalDeductions > gross || elementValues.values.any((v) => v < 0 || v > 999.999)) {
       throw ArgumentError('راجع عناصر المرتبات والاستقطاعات.');

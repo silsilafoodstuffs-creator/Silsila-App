@@ -66,6 +66,7 @@ class SupplierOfferService {
     List<String> targetDistricts = const [],
     List<String> targetAreas = const [],
     List<String> targetCustomerTypes = const [],
+    List<String> targetGeoIds = const [],
   }) async {
     final cleanTitle = _requiredText(
       title,
@@ -117,6 +118,7 @@ class SupplierOfferService {
           'target_districts': targetDistricts,
           'target_areas': targetAreas,
           'target_customer_types': targetCustomerTypes,
+          'target_geo_ids': targetGeoIds,
           'is_active': true,
         })
         .select()
@@ -143,6 +145,7 @@ class SupplierOfferService {
     List<String> targetDistricts = const [],
     List<String> targetAreas = const [],
     List<String> targetCustomerTypes = const [],
+    List<String> targetGeoIds = const [],
   }) async {
     if (!originalPrice.isFinite || !offerPrice.isFinite ||
         originalPrice < 0 || offerPrice < 0) {
@@ -171,6 +174,7 @@ class SupplierOfferService {
       'target_districts': targetDistricts,
       'target_areas': targetAreas,
       'target_customer_types': targetCustomerTypes,
+      'target_geo_ids': targetGeoIds,
       'is_active': true,
     }).select().single();
 
@@ -207,6 +211,7 @@ class SupplierOfferService {
     List<String> targetDistricts = const [],
     List<String> targetAreas = const [],
     List<String> targetCustomerTypes = const [],
+    List<String> targetGeoIds = const [],
   }) async {
     final cleanTitle = _requiredText(title, 'عنوان العرض مطلوب.');
     if (items.isEmpty) throw ArgumentError('اختر صنفًا واحدًا على الأقل.');
@@ -257,6 +262,7 @@ class SupplierOfferService {
       'target_districts': targetDistricts,
       'target_areas': targetAreas,
       'target_customer_types': targetCustomerTypes,
+      'target_geo_ids': targetGeoIds,
       'is_active': true,
     }).select().single();
 
