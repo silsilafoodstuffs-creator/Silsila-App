@@ -1177,7 +1177,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     return SizedBox(height: 40, child: Row(children: [
       SizedBox(width: 106, height: 40, child: DropdownButtonFormField<String>(
         value: _registeredFonts.contains(font) ? font : (_registeredFonts.isEmpty ? null : _registeredFonts.first),
-        isExpanded: true, isDense: true, itemHeight: 40, menuMaxHeight: 240,
+        isExpanded: true, isDense: true, itemHeight: 48, menuMaxHeight: 240,
         decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 3, vertical: 4), border: OutlineInputBorder()),
         items: _registeredFonts.map((family) => DropdownMenuItem(value: family, child: Text(family, style: const TextStyle(fontSize: 9), overflow: TextOverflow.ellipsis))).toList(),
         onChanged: (v) { if (v != null) setState(() { final next = _fontStyle(policy)..['font'] = v; policy['value'] = jsonEncode(next); }); },
@@ -1220,7 +1220,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
               if (key == 'appearance.language') {
                 editor = SizedBox(width: 150, height: 40, child: DropdownButtonFormField<String>(
                   value: (p['value'] ?? 'العربية').toString(),
-                  isExpanded: true, isDense: true, itemHeight: 40,
+                  isExpanded: true, isDense: true, itemHeight: 48,
                   decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight:40,maxHeight:40), contentPadding: EdgeInsets.symmetric(horizontal:6,vertical:4), border: OutlineInputBorder()),
                   items: const [
                     DropdownMenuItem(value:'العربية', child: Text('اللغة العربية')),
@@ -1294,7 +1294,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600)),
         const SizedBox(height: 2),
         DropdownButtonFormField<int>(
-          value: options.contains(dimensions[key]) ? dimensions[key] : options.first,          isExpanded: true, isDense: true, itemHeight: 40,
+          value: options.contains(dimensions[key]) ? dimensions[key] : options.first,          isExpanded: true, isDense: true, itemHeight: 48,
           decoration: const InputDecoration(
             isDense: true,
             constraints: BoxConstraints(minHeight: 40, maxHeight: 40),
@@ -1543,7 +1543,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                       : options.isNotEmpty
                                         ? DropdownButtonFormField<String>(
                                             value: options.contains(p['value']) ? p['value'] as String : options.first,
-                                            isExpanded: true, isDense: true, itemHeight: 40,
+                                            isExpanded: true, isDense: true, itemHeight: 48,
                                             decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
                                             style: const TextStyle(fontSize: 10, color: Colors.black87),
                                             items: options.map((v) => DropdownMenuItem(value: v, child: Text(p['key']=='inventory.stocktake.valuation_basis' ? (v=='sale'?'سعر البيع':'سعر الشراء') : v, maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),

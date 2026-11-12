@@ -413,7 +413,7 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              DropdownButtonFormField<String>(itemHeight: 40, 
+              DropdownButtonFormField<String>(itemHeight: 48, 
                 value: _assetType,
                 decoration: const InputDecoration(labelText: 'نوع الصورة', border: OutlineInputBorder()),
                 items: _types.entries.map((entry) => DropdownMenuItem(value: entry.key, child: Text(entry.value))).toList(),

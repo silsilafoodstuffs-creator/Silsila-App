@@ -34,7 +34,7 @@
 - جعل Theme واحدًا هو المصدر النهائي في `SilsilaApp`; إزالة التكرار بين `main.dart` و`app_theme.dart` بعد دمج كل خصائص الهوية والسلوك المطلوبة.
 - InputDecoration constraints: 40px ثابتة دون max 44.
 - DataTable heading/data row: 40px ثابتة؛ horizontalMargin 5 وcolumnSpacing 5.
-- Dropdown/Popup menu: itemHeight 40 في كل القوائم، بما فيها القوائم المنبثقة داخل Dialog.
+- Dropdown/Popup menu: 48px minimum interactive tap target (Flutter constraint); field controls remain 40px.
 - الحفاظ على checkbox الدائري، Tajawal، ألوان الهوية، RTL، التباين، وأحجام الأزرار المعتمدة.
 
 ### 4.2 مكون حقل موحد

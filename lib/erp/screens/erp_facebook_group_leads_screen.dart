@@ -239,7 +239,7 @@ class _ErpFacebookGroupLeadsScreenState
                         ),
                       ),
                     if (withClassification)
-                      DropdownButtonFormField<String>(itemHeight: 40, 
+                      DropdownButtonFormField<String>(itemHeight: 48, 
                         value: classification,
                         decoration: const InputDecoration(
                           labelText: 'تصنيف الحساب',
@@ -343,7 +343,7 @@ class _ErpFacebookGroupLeadsScreenState
           textDirection: TextDirection.rtl,
           child: AlertDialog(
             title: const Text('اختيار الجروب'),
-            content: DropdownButtonFormField<String>(itemHeight: 40, 
+            content: DropdownButtonFormField<String>(itemHeight: 48, 
               value: selectedGroupId,
               items: _groups
                   .map((group) => DropdownMenuItem(
@@ -414,7 +414,7 @@ class _ErpFacebookGroupLeadsScreenState
           textDirection: TextDirection.rtl,
           child: AlertDialog(
             title: const Text('ربط الحساب بجروب آخر'),
-            content: DropdownButtonFormField<String>(itemHeight: 40, 
+            content: DropdownButtonFormField<String>(itemHeight: 48, 
               value: selectedGroupId.isEmpty ? null : selectedGroupId,
               items: _groups
                   .map((group) => DropdownMenuItem(
@@ -907,7 +907,7 @@ class _ErpFacebookGroupLeadsScreenState
               ),
               SizedBox(
                 width: 210,
-                child: DropdownButtonFormField<String>(itemHeight: 40, 
+                child: DropdownButtonFormField<String>(itemHeight: 48, 
                   value: _groups.any((group) =>
                           _s(group['id']) == _groupFilter)
                       ? _groupFilter
@@ -935,7 +935,7 @@ class _ErpFacebookGroupLeadsScreenState
               ),
               SizedBox(
                 width: 190,
-                child: DropdownButtonFormField<String>(itemHeight: 40, 
+                child: DropdownButtonFormField<String>(itemHeight: 48, 
                   value: _classFilter,
                   isExpanded: true,
                   decoration: const InputDecoration(

@@ -205,7 +205,7 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
         children: [
           const Text('إنشاء مسودة سند', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
           const SizedBox(height: 8),
-          DropdownButtonFormField<String>(itemHeight: 40, 
+          DropdownButtonFormField<String>(itemHeight: 48, 
             value: _type,
             decoration: const InputDecoration(labelText: 'نوع السند', border: OutlineInputBorder()),
             items: const [
@@ -218,7 +218,7 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
           const SizedBox(height: 8),
           TextField(controller: _number, readOnly: true, decoration: const InputDecoration(labelText: 'رقم السند (تلقائي)', helperText: 'يُنشأ عند الحفظ وفق سياسات التكويد', border: OutlineInputBorder(), prefixIcon: Icon(Icons.auto_awesome))),
           const SizedBox(height: 8),
-          DropdownButtonFormField<String>(itemHeight: 40, 
+          DropdownButtonFormField<String>(itemHeight: 48, 
             value: _sourceId, isExpanded: true,
             decoration: const InputDecoration(labelText: 'خزينة المصدر', border: OutlineInputBorder()),
             items: _cashboxes.map((r) => DropdownMenuItem(value: _s(r['id']), child: Text(_cashboxName(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
@@ -226,7 +226,7 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
           ),
           if (_type == 'transfer') ...[
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(itemHeight: 40, 
+            DropdownButtonFormField<String>(itemHeight: 48, 
               value: _destinationId, isExpanded: true,
               decoration: const InputDecoration(labelText: 'خزينة الاستلام', border: OutlineInputBorder()),
               items: _cashboxes.where((r) => _s(r['id']) != _sourceId).map((r) => DropdownMenuItem(value: _s(r['id']), child: Text(_cashboxName(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
@@ -235,14 +235,14 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
           ],
           if (_type != 'transfer') ...[
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(itemHeight: 40, 
+            DropdownButtonFormField<String>(itemHeight: 48, 
               value: _accountId, isExpanded: true,
               decoration: const InputDecoration(labelText: 'الحساب المقابل', border: OutlineInputBorder()),
               items: _accounts.map((r) => DropdownMenuItem(value: _s(r['id']), child: Text(_accountName(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
               onChanged: (v) => setState(() => _accountId = v),
             ),
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(itemHeight: 40, 
+            DropdownButtonFormField<String>(itemHeight: 48, 
               value: _partyId, isExpanded: true,
               decoration: const InputDecoration(labelText: 'الطرف (اختياري)', border: OutlineInputBorder()),
               items: [const DropdownMenuItem<String>(value: null, child: Text('بدون طرف')), ..._parties.map((r) => DropdownMenuItem<String>(value: _s(r['id']), child: Text('${_s(r['party_code'])} — ${_s(r['party_name'])}', overflow: TextOverflow.ellipsis)))],

@@ -754,7 +754,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
       DropdownButtonFormField<String>(
         value: const ['مصر', 'السعودية', 'الإمارات', 'الكويت'].contains(_country.text) ? _country.text : 'مصر',
         isExpanded: true,
-        itemHeight: 40,
+        itemHeight: 48,
         decoration: InputDecoration(
           prefixIcon: const Icon(Icons.flag_outlined, size: 17),
           isDense: true,
@@ -779,7 +779,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       const Padding(padding: EdgeInsets.only(bottom: 3), child: Text('العملة', style: TextStyle(color: _companyPurple, fontWeight: FontWeight.w700, fontSize: 10))),
       DropdownButtonFormField<String>(
-        itemHeight: 40,
+        itemHeight: 48,
         value: _currencyOptions.any((item) => item['code'] == _currency.text) ? _currency.text : 'EGP',
         isExpanded: true,
         decoration: InputDecoration(prefixIcon: const Icon(Icons.currency_exchange, size: 17), isDense: true,
