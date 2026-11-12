@@ -24,7 +24,6 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
   bool _loading = false;
   bool _loadingMore = false;
   bool _hasMore = false;
-  int _nextOffset = 0;
   static const int _pageSize = 500;
   String? _error;
   String? _sourceTable;
@@ -133,7 +132,6 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
         _loading = false;
         _error = 'لا توجد شركة محددة. افتح بيانات الشركة وسجّل الدخول بحساب لديه عضوية نشطة ثم أعد المحاولة.';
         _rows = <Map<String, dynamic>>[];
-        _nextOffset = 0;
         _hasMore = false;
         _sourceTable = null;
       });
@@ -143,7 +141,6 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
       _loading = true;
       _error = null;
       _rows = <Map<String, dynamic>>[];
-      _nextOffset = 0;
       _hasMore = false;
       _sourceTable = null;
       _activeSourceTables = <String>[];
@@ -199,7 +196,6 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     setState(() {
       _rows = merged;
       _activeSourceTables = loadedTables;
-      _nextOffset = merged.length;
       _hasMore = _sourceHasMore.isNotEmpty;
       _sourceTable = loadedTables.join(' + ');
       _loading = false;
@@ -241,7 +237,6 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
       if (!mounted) return;
       setState(() {
         _rows = <Map<String, dynamic>>[..._rows, ...merged];
-        _nextOffset = _rows.length;
         _hasMore = _sourceHasMore.isNotEmpty;
         _loadingMore = false;
       });
