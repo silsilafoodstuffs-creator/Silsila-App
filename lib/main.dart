@@ -4952,6 +4952,22 @@ class _StoriesScreenState extends State<StoriesScreen> {
     }
   }
 
+  Future<void> _hideStoryGroup(List<Map<String, dynamic>> items) async {
+    try {
+      for (final item in items) {
+        final id = (item['id'] ?? '').toString();
+        if (id.isNotEmpty) await storyService.hideStoryForMe(id);
+      }
+      if (mounted) setState(() {
+        hiddenStoryIds.addAll(items.map((item) => (item['id'] ?? '').toString()));
+      });
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر إخفاء قصص هذا الحساب: $e')),
+      );
+    }
+  }
+
   Future<void> _toggleFavoriteOwner(String ownerId) async {
     final next = !favoriteStoryOwnerIds.contains(ownerId);
     try {
@@ -5060,7 +5076,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
                             color: Colors.white, shape: const CircleBorder(),
                             child: InkWell(
                               customBorder: const CircleBorder(),
-                              onTap: () => _hideStory((first['id'] ?? '').toString()),
+                              onTap: () => _hideStoryGroup(items),
                               child: const Padding(padding: EdgeInsets.all(3), child: Icon(Icons.close, color: Colors.red, size: 16)),
                             ),
                           ),
