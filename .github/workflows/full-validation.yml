@@ -70,6 +70,9 @@ jobs:
             echo "Existing Android project files detected; preserving them."
           fi
 
+      - name: Cache Gradle dependencies
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Configure Android NDK version required by plugins
         shell: bash
         run: |

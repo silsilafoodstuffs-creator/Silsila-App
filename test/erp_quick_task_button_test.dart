@@ -83,7 +83,8 @@ void main() {
     expect(table.headingRowHeight, 40);
     expect(table.dataRowMinHeight, 40);
     expect(table.dataRowMaxHeight, 40);
-    expect(table.horizontalMargin, 8);
+    expect(table.horizontalMargin, 5);
+    expect(table.columnSpacing, 5);
   });
   testWidgets('semantic custom action does not infer destructive confirmation from its label', (tester) async {
     var calls = 0;
