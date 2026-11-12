@@ -5404,27 +5404,52 @@ class _OffersScreenState extends State<OffersScreen> {
                       minimumQuantities.putIfAbsent(p.cartKey, () => TextEditingController(text: p.minQuantity.toString()));
                       final value = double.tryParse(offerPrices[p.cartKey]!.text) ?? p.price;
                       final diff = p.price - value;
-                      return CheckboxListTile(
-                        dense: true,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        value: selectedProductIds.contains(p.cartKey),
-                        secondary: SizedBox(width: 40, height: 40, child: p.imageUrl != null
-                          ? ClipRRect(borderRadius: BorderRadius.circular(7), child: Image.network(p.imageUrl!, fit: BoxFit.cover))
-                          : Icon(p.icon, color: purple)),
-                        title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                        subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('السعر الحالي عند المورد: ${p.price.toStringAsFixed(2)} ج.م'),
-                          TextField(controller: offerPrices[p.cartKey], keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            onChanged: (_) => refresh(() {}),
-                            decoration: const InputDecoration(isDense: true, labelText: 'سعر العرض')),
-                          Text('فرق السعر: ${diff >= 0 ? 'توفير' : 'زيادة'} ${diff.abs().toStringAsFixed(2)} ج.م',
-                            style: TextStyle(fontSize: 11, color: diff >= 0 ? Colors.green.shade700 : Colors.red.shade700, fontWeight: FontWeight.w700)),
-                          TextField(controller: minimumQuantities[p.cartKey], keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(isDense: true, labelText: 'أقل كمية')),
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 7),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: purple.withValues(alpha: .12)),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                          Row(children: [
+                            Checkbox(
+                              shape: const CircleBorder(),
+                              value: selectedProductIds.contains(p.cartKey),
+                              onChanged: (value) => refresh(() {
+                                if (value == true) { selectedProductIds.add(p.cartKey); } else { selectedProductIds.remove(p.cartKey); }
+                              }),
+                            ),
+                            SizedBox(width: 36, height: 36, child: p.imageUrl != null
+                              ? ClipRRect(borderRadius: BorderRadius.circular(7), child: Image.network(p.imageUrl!, fit: BoxFit.cover))
+                              : Icon(p.icon, color: purple)),
+                            const SizedBox(width: 7),
+                            Expanded(child: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                          ]),
+                          Wrap(spacing: 8, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                            SizedBox(width: 132, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              const Text('السعر الحالي عند المورد', style: TextStyle(fontSize: 10, color: Colors.black54)),
+                              Text('${p.price.toStringAsFixed(2)} ج.م', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                            ])),
+                            SizedBox(width: 142, child: TextField(
+                              controller: offerPrices[p.cartKey],
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              onChanged: (_) => refresh(() {}),
+                              decoration: const InputDecoration(isDense: true, labelText: 'سعر العرض', suffixText: 'ج.م'),
+                            )),
+                            SizedBox(width: 132, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              const Text('معاينة الفرق', style: TextStyle(fontSize: 10, color: Colors.black54)),
+                              Text('${diff >= 0 ? 'توفير' : 'زيادة'} ${diff.abs().toStringAsFixed(2)} ج.م',
+                                style: TextStyle(fontSize: 11, color: diff >= 0 ? Colors.green.shade700 : Colors.red.shade700, fontWeight: FontWeight.w800)),
+                            ])),
+                            SizedBox(width: 132, child: TextField(
+                              controller: minimumQuantities[p.cartKey],
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(isDense: true, labelText: 'أقل كمية'),
+                            )),
+                          ]),
                         ]),
-                        onChanged: (value) => refresh(() {
-                          if (value == true) { selectedProductIds.add(p.cartKey); } else { selectedProductIds.remove(p.cartKey); }
-                        }),
                       );
                     }).toList(),
                   )).toList())),
