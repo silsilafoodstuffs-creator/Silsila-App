@@ -5187,7 +5187,9 @@ class _OffersScreenState extends State<OffersScreen> {
         title: Text(silsilaText(silsilaText('إنشاء عرض جديد'))),
         content: StatefulBuilder(
           builder: (context, setDialogState) {
-            final visibleOfferProducts = filterOfferProducts();
+            final visibleOfferProducts = widget.availableProducts;
+            final productGroups = <String, List<Product>>{};
+            for (final product in visibleOfferProducts) { productGroups.putIfAbsent(product.category, () => <Product>[]).add(product); }
             final mainCategories = <String>{'الكل', ...widget.availableProducts.map((p) => p.category)}.toList();
             final subcategories = <String>{'الكل', ...widget.availableProducts.where((p) => selectedMainCategory == 'الكل' || p.category == selectedMainCategory).map((p) => p.subcategory ?? 'أصناف عامة')}.toList();
             final brands = <String>{'الكل', ...widget.availableProducts.where((p) => (selectedMainCategory == 'الكل' || p.category == selectedMainCategory) && (selectedSubcategory == 'الكل' || (p.subcategory ?? 'أصناف عامة') == selectedSubcategory)).map((p) => p.brand ?? 'بدون ماركة')}.toList();
@@ -5200,30 +5202,13 @@ class _OffersScreenState extends State<OffersScreen> {
                   TextField(controller: title, decoration: const InputDecoration(labelText: 'عنوان العرض / المجلة')),
                   TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'تفاصيل العرض')),
                   TextField(controller: discount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'نسبة الخصم (اختياري)')),
-                  DropdownButtonFormField<String>(
-                    value: selectedMainCategory,
-                    decoration: const InputDecoration(labelText: 'تصفية الفئة الرئيسية'),
-                    items: mainCategories.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                    onChanged: (v) => setDialogState(() {
-                      selectedMainCategory = v ?? 'الكل';
-                      selectedSubcategory = 'الكل';
-                      selectedBrand = 'الكل';
-                    }),
-                  ),
-                  DropdownButtonFormField<String>(
-                    value: selectedSubcategory,
-                    decoration: const InputDecoration(labelText: 'تصفية الفئة الفرعية'),
-                    items: subcategories.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                    onChanged: (v) => setDialogState(() {
-                      selectedSubcategory = v ?? 'الكل';
-                      selectedBrand = 'الكل';
-                    }),
-                  ),
-                  DropdownButtonFormField<String>(
-                    value: selectedBrand,
-                    decoration: const InputDecoration(labelText: 'تصفية الماركة'),
-                    items: brands.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                    onChanged: (v) => setDialogState(() => selectedBrand = v ?? 'الكل'),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: OutlinedButton.icon(
+                      onPressed: () => setDialogState(() {}),
+                      icon: const Icon(Icons.account_tree_outlined, size: 18),
+                      label: Text('اختيار الأصناف (${selectedProductIds.length})'),
+                    ),
                   ),
                   Row(children: [
                     Expanded(child: OutlinedButton.icon(
@@ -5317,38 +5302,42 @@ class _OffersScreenState extends State<OffersScreen> {
                       child: Text(selectedProductIds.length == visibleOfferProducts.length ? 'إلغاء الكل' : 'تحديد الكل'),
                     ),
                   ]),
-                  ...visibleOfferProducts.map((p) {
-                    offerPrices.putIfAbsent(p.cartKey, () => TextEditingController(text: p.price.toStringAsFixed(2)));
-                    minimumQuantities.putIfAbsent(p.cartKey, () => TextEditingController(text: p.minQuantity.toString()));
-                    return CheckboxListTile(
-                      dense: true,
-                      value: selectedProductIds.contains(p.cartKey),
-                      secondary: SizedBox(
-                        width: 48,
-                        height: 48,
-                        child: p.imageUrl != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(7),
-                                child: Image.network(p.imageUrl!, fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Icon(p.icon, color: purple)),
-                              )
+                  ...productGroups.entries.map((group) => ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    initiallyExpanded: true,
+                    title: Text('${group.key} (${group.value.length})', style: const TextStyle(fontWeight: FontWeight.w800)),
+                    children: group.value.map((p) {
+                      offerPrices.putIfAbsent(p.cartKey, () => TextEditingController(text: p.price.toStringAsFixed(2)));
+                      minimumQuantities.putIfAbsent(p.cartKey, () => TextEditingController(text: p.minQuantity.toString()));
+                      final offerValue = double.tryParse(offerPrices[p.cartKey]!.text) ?? p.price;
+                      final difference = p.price - offerValue;
+                      return CheckboxListTile(
+                        dense: true,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        value: selectedProductIds.contains(p.cartKey),
+                        secondary: SizedBox(
+                          width: 42, height: 42,
+                          child: p.imageUrl != null
+                            ? ClipRRect(borderRadius: BorderRadius.circular(7), child: Image.network(p.imageUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(p.icon, color: purple)))
                             : Icon(p.icon, color: purple),
-                      ),
-                      title: Text(p.name),
-                      subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('السعر الحالي: ${p.price.toStringAsFixed(2)} ج.م'),
-                        const SizedBox(height: 5),
-                        Row(children: [
-                          Expanded(child: TextField(controller: offerPrices[p.cartKey], keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(isDense: true, labelText: 'سعر العرض'))),
-                          const SizedBox(width: 8),
-                          Expanded(child: TextField(controller: minimumQuantities[p.cartKey], keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(isDense: true, labelText: 'أقل كمية'))),
+                        ),
+                        title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('السعر الحالي عند المورد: ${p.price.toStringAsFixed(2)} ج.م'),
+                          Row(children: [
+                            Expanded(child: TextField(controller: offerPrices[p.cartKey], keyboardType: const TextInputType.numberWithOptions(decimal: true), onChanged: (_) => setDialogState(() {}), decoration: const InputDecoration(isDense: true, labelText: 'سعر العرض'))),
+                            const SizedBox(width: 8),
+                            Expanded(child: TextField(controller: minimumQuantities[p.cartKey], keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(isDense: true, labelText: 'أقل كمية'))),
+                          ]),
+                          Text(difference >= 0 ? 'فرق السعر: توفير ${difference.toStringAsFixed(2)} ج.م' : 'زيادة عن السعر الحالي: ${difference.abs().toStringAsFixed(2)} ج.م',
+                            style: TextStyle(fontSize: 11, color: difference >= 0 ? Colors.green.shade700 : Colors.red.shade700, fontWeight: FontWeight.w700)),
                         ]),
-                      ]),
-                      onChanged: (v) => setDialogState(() {
-                        if (v == true) { selectedProductIds.add(p.cartKey); } else { selectedProductIds.remove(p.cartKey); }
-                      }),
-                    );
-                  }),
+                        onChanged: (v) => setDialogState(() {
+                          if (v == true) { selectedProductIds.add(p.cartKey); } else { selectedProductIds.remove(p.cartKey); }
+                        }),
+                      );
+                    }).toList(),
+                  )),
                   if (visibleOfferProducts.isEmpty) Text(silsilaText(silsilaText('لا توجد أصناف محملة لهذا النشاط.'))),
                 ],
               ),
