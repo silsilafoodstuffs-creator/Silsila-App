@@ -42,25 +42,13 @@ class OfferService {
     int limit = 50,
   }) async {
     _validateLimit(limit);
-
-    final now = DateTime.now().toUtc().toIso8601String();
-
-    var query = _requireClient
-        .from('offers')
-        .select()
-        .eq('is_active', true)
-        .or('start_at.is.null,start_at.lte.$now')
-        .or('ends_at.is.null,ends_at.gte.$now');
-
-    final activity = _emptyToNull(activityType);
-    if (activity != null) {
-      query = query.eq('activity_type', activity);
-    }
-
-    final response = await query
-        .order('created_at', ascending: false)
-        .limit(limit);
-
+    final response = await _requireClient.rpc(
+      'get_targeted_active_offers',
+      params: {
+        'p_activity_type': _emptyToNull(activityType),
+        'p_limit': limit,
+      },
+    );
     return _toMapList(response);
   }
 
