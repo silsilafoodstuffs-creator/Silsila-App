@@ -420,7 +420,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
               const SizedBox(width: 8),
               Expanded(child: Text(group == 'بدون مجموعة' ? 'براندات بدون مجموعة' : group,
                 style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
-              Text('\${children.length} براند',
+              Text('${children.length} براند',
                 style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w700)),
             ]),
           ),
