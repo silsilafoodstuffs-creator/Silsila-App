@@ -283,6 +283,44 @@ class StoryService {
     );
   }
 
+
+  /// القصص التي أخفاها المستخدم الحالي من قائمته فقط.
+  Future<Set<String>> getHiddenStoryIds() async {
+    final rows = await _requireClient.from('story_hidden')
+        .select('story_id').eq('viewer_id', _userId);
+    return rows.whereType<Map>().map((row) => row['story_id'].toString()).toSet();
+  }
+
+  Future<void> hideStoryForMe(String storyId) async {
+    final id = int.tryParse(_requiredText(storyId, 'معرّف القصة مطلوب.'));
+    if (id == null) throw ArgumentError('معرّف القصة غير صالح.');
+    await _requireClient.from('story_hidden').upsert(
+      {'story_id': id, 'viewer_id': _userId},
+      onConflict: 'story_id,viewer_id', ignoreDuplicates: true,
+    );
+  }
+
+  /// أصحاب القصص المفضلون للمستخدم الحالي.
+  Future<Set<String>> getFavoriteStoryOwnerIds() async {
+    final rows = await _requireClient.from('story_favorites')
+        .select('owner_id').eq('viewer_id', _userId);
+    return rows.whereType<Map>().map((row) => row['owner_id'].toString()).toSet();
+  }
+
+  Future<void> setFavoriteStoryOwner(String ownerId, bool favorite) async {
+    final owner = _requiredText(ownerId, 'صاحب القصة غير معروف.');
+    if (owner == _userId) throw ArgumentError('لا يمكنك إضافة نفسك للمفضلة.');
+    if (favorite) {
+      await _requireClient.from('story_favorites').upsert(
+        {'owner_id': owner, 'viewer_id': _userId},
+        onConflict: 'owner_id,viewer_id', ignoreDuplicates: true,
+      );
+    } else {
+      await _requireClient.from('story_favorites')
+          .delete().eq('owner_id', owner).eq('viewer_id', _userId);
+    }
+  }
+
   /// إرسال رد خاص على قصة إلى صاحبها.
   Future<void> sendReply({
     required String storyId,
