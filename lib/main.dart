@@ -5499,19 +5499,33 @@ class _OffersScreenState extends State<OffersScreen> {
           TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
           OutlinedButton.icon(
             onPressed: () async {
+              final previewImageBytes = selectedImage == null ? null : await selectedImage!.readAsBytes();
+              final previewItems = widget.availableProducts.where((p) => selectedProductIds.contains(p.cartKey)).toList();
               final preview = await showDialog<bool>(
                 context: dialogContext,
                 builder: (previewContext) => AlertDialog(
                   title: const Text('معاينة العرض قبل النشر'),
-                  content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    Text(title.text.trim().isEmpty ? 'مجلة عروض سلسلة' : title.text.trim(), style: const TextStyle(fontWeight: FontWeight.bold)),
-                    if (description.text.trim().isNotEmpty) Text(description.text.trim()),
-                    Text('عدد الأصناف المحددة: ${selectedProductIds.length}'),
-                    Text('عدد المناطق المستهدفة: ${selectedGeoIds.length}'),
-                    Text('فئات العملاء: ${selectedCustomerTypes.join('، ')}'),
-                    Text('موعد النشر: ${scheduleLater ? scheduledStart.toString().substring(0,16) : 'فورًا'}'),
-                    if (selectedImage != null) Text('الصورة: ${selectedImage!.name}'),
-                  ]),
+                  content: SizedBox(
+                    width: 420,
+                    child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      Text(title.text.trim().isEmpty ? 'مجلة عروض سلسلة' : title.text.trim(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                      if (description.text.trim().isNotEmpty) Text(description.text.trim()),
+                      if (previewImageBytes != null) Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.memory(previewImageBytes, height: 130, fit: BoxFit.contain)),
+                      ),
+                      const Divider(),
+                      Text('الأصناف المحددة: ${previewItems.length}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                      ...previewItems.map((p) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Text('${p.name} — السعر الحالي ${p.price.toStringAsFixed(2)} ج.م — سعر العرض ${double.tryParse(offerPrices[p.cartKey]?.text ?? '')?.toStringAsFixed(2) ?? '—'} ج.م'),
+                      )),
+                      const Divider(),
+                      Text('المناطق المستهدفة: ${selectedGeoIds.length}'),
+                      Text('فئات العملاء: ${selectedCustomerTypes.join('، ')}'),
+                      Text('موعد النشر: ${scheduleLater ? scheduledStart.toString().substring(0,16) : 'فورًا'}'),
+                    ])),
+                  ),
                   actions: [
                     TextButton(onPressed: () => Navigator.pop(previewContext, false), child: const Text('تعديل')),
                     FilledButton(onPressed: () => Navigator.pop(previewContext, true), child: const Text('حفظ ونشر')),
