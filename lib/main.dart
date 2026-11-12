@@ -998,6 +998,7 @@ class _HomeTickerAdsStrip extends StatefulWidget {
 class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
   List<Map<String, dynamic>> _ads = const [];
   bool _loading = false;
+  int _requestVersion = 0;
 
   @override
   void initState() {
@@ -1013,7 +1014,8 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
 
   Future<void> _load() async {
     final client = database;
-    if (client == null || _loading) return;
+    if (client == null) return;
+    final requestVersion = ++_requestVersion;
     _loading = true;
     try {
       final rows = await client.rpc('get_silsila_public_ticker_ads', params: {
@@ -1025,12 +1027,12 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
           .toList()
         ..sort((a, b) => ((a['slot_no'] as num?)?.toInt() ?? 0)
             .compareTo((b['slot_no'] as num?)?.toInt() ?? 0));
-      if (!mounted) return;
+      if (!mounted || requestVersion != _requestVersion) return;
       setState(() => _ads = loaded);
     } catch (_) {
       // Optional ticker ads must never block the customer home screen.
     } finally {
-      _loading = false;
+      if (requestVersion == _requestVersion) _loading = false;
     }
   }
 
