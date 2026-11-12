@@ -120,11 +120,11 @@ with check (
   and actor_user_id = auth.uid()
 );
 
-revoke all on public.erp_studio_designs, public.erp_studio_design_versions, public.erp_studio_audit_log from anon;
-grant select, insert, update, delete on public.erp_studio_designs to authenticated;
-grant select, insert on public.erp_studio_design_versions to authenticated;
-grant select, insert on public.erp_studio_audit_log to authenticated;
-grant usage, select on sequence public.erp_studio_audit_log_id_seq to authenticated;
+revoke all on public.erp_studio_designs, public.erp_studio_design_versions, public.erp_studio_audit_log from anon, authenticated;
+grant select, delete on public.erp_studio_designs to authenticated;
+grant select on public.erp_studio_design_versions to authenticated;
+grant select on public.erp_studio_audit_log to authenticated;
+-- All writes and status transitions must pass through the checked RPC functions.
 
 -- All design mutations are transactional and use optimistic revision checks.
 create or replace function public.erp_studio_save_draft(
@@ -140,8 +140,10 @@ create or replace function public.erp_studio_save_draft(
   p_change_note text default null
 ) returns uuid
 language plpgsql
+security definer
 set search_path = public
-as $
+set row_security = off
+as $studio$
 declare
   v_id uuid;
   v_revision integer;
@@ -201,7 +203,7 @@ begin
 
   return v_id;
 end;
-$;
+$studio$;
 
 create or replace function public.erp_studio_approve_design(
   p_company_id uuid,
@@ -209,8 +211,10 @@ create or replace function public.erp_studio_approve_design(
   p_expected_revision integer
 ) returns boolean
 language plpgsql
+security definer
 set search_path = public
-as $
+set row_security = off
+as $studio$
 declare v_revision integer;
 begin
   if auth.uid() is null or not public.erp_user_has_company_role(
@@ -228,7 +232,7 @@ begin
   values (p_company_id, p_design_id, 'approve', jsonb_build_object('revision', v_revision), auth.uid());
   return true;
 end;
-$;
+$studio$;
 
 create or replace function public.erp_studio_publish_design(
   p_company_id uuid,
@@ -236,8 +240,10 @@ create or replace function public.erp_studio_publish_design(
   p_tested_revision integer
 ) returns boolean
 language plpgsql
+security definer
 set search_path = public
-as $
+set row_security = off
+as $studio$
 declare v_revision integer;
 begin
   if auth.uid() is null or not public.erp_user_has_company_role(
@@ -258,7 +264,7 @@ begin
   values (p_company_id, p_design_id, 'publish', jsonb_build_object('revision', v_revision), auth.uid());
   return true;
 end;
-$;
+$studio$;
 
 create or replace function public.erp_studio_restore_version(
   p_company_id uuid,
@@ -267,8 +273,10 @@ create or replace function public.erp_studio_restore_version(
   p_expected_revision integer
 ) returns integer
 language plpgsql
+security definer
 set search_path = public
-as $
+set row_security = off
+as $studio$
 declare
   v_json jsonb;
   v_binding jsonb;
@@ -307,7 +315,7 @@ begin
     jsonb_build_object('source_revision', p_target_revision, 'new_revision', v_new_revision), auth.uid());
   return v_new_revision;
 end;
-$;
+$studio$;
 
 revoke all on function public.erp_studio_save_draft(uuid,uuid,text,text,text,integer,jsonb,jsonb,integer,text) from public, anon;
 revoke all on function public.erp_studio_approve_design(uuid,uuid,integer) from public, anon;
