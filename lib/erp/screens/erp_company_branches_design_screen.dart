@@ -229,6 +229,14 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
       if (name.text.trim().isEmpty) {
         throw ArgumentError('اسم الفرع مطلوب.');
       }
+      final latitudeText = latitude.text.trim();
+      final longitudeText = longitude.text.trim();
+      final latitudeValue = latitudeText.isEmpty ? null : double.tryParse(latitudeText);
+      final longitudeValue = longitudeText.isEmpty ? null : double.tryParse(longitudeText);
+      if ((latitudeText.isNotEmpty && (latitudeValue == null || latitudeValue < -90 || latitudeValue > 90)) ||
+          (longitudeText.isNotEmpty && (longitudeValue == null || longitudeValue < -180 || longitudeValue > 180))) {
+        throw ArgumentError('إحداثيات الموقع غير صحيحة؛ خط العرض من -90 إلى 90 وخط الطول من -180 إلى 180.');
+      }
       final payload = <String, Object?>{
         'company_id': companyId,
         'branch_code': row == null ? '' : code.text.trim(),
@@ -285,6 +293,15 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
     final name = _editFields['branch_name']!.text.trim();
     if (name.isEmpty) {
       setState(() => _error = 'اسم الفرع العربي مطلوب.');
+      return;
+    }
+    final latitudeText = _editFields['latitude']!.text.trim();
+    final longitudeText = _editFields['longitude']!.text.trim();
+    final latitudeValue = latitudeText.isEmpty ? null : double.tryParse(latitudeText);
+    final longitudeValue = longitudeText.isEmpty ? null : double.tryParse(longitudeText);
+    if ((latitudeText.isNotEmpty && (latitudeValue == null || latitudeValue < -90 || latitudeValue > 90)) ||
+        (longitudeText.isNotEmpty && (longitudeValue == null || longitudeValue < -180 || longitudeValue > 180))) {
+      setState(() => _error = 'إحداثيات الموقع غير صحيحة؛ خط العرض من -90 إلى 90 وخط الطول من -180 إلى 180.');
       return;
     }
     const allowed = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-';
@@ -610,6 +627,7 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
             editing ? editField('موبايل الفرع', 'phone', width: 155, keyboard: TextInputType.phone) : valueField('موبايل الفرع', _s(row['phone']), width: 155),
             editing ? editField('موبايل إضافي', 'phone2', width: 155, keyboard: TextInputType.phone) : valueField('موبايل إضافي', _s(row['phone2']), width: 155),
             editing ? editField('تليفون أرضي', 'landline1', width: 155, keyboard: TextInputType.phone) : valueField('تليفون أرضي', _s(row['landline1']), width: 155),
+            editing ? editField('تليفون أرضي إضافي', 'landline2', width: 155, keyboard: TextInputType.phone) : valueField('تليفون أرضي إضافي', _s(row['landline2']), width: 155),
             editing ? editField('البريد الإلكتروني', 'email', width: 220, keyboard: TextInputType.emailAddress) : valueField('البريد الإلكتروني', _s(row['email']), width: 220),
             valueField('المخازن المرتبطة بهذا الفرع', _warehouseSummary(id), width: 380),
           ]),
