@@ -205,15 +205,15 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
               const SizedBox(height: 10),
               TextField(controller: location, decoration: const InputDecoration(labelText: 'الموقع / وصف المكان', border: OutlineInputBorder())),
               const SizedBox(height: 10),
-              DropdownButtonFormField<String>(itemHeight: 40, value: governorateId, isExpanded: true, decoration: const InputDecoration(labelText: 'المحافظة', border: OutlineInputBorder()),
+              DropdownButtonFormField<String>(itemHeight: null, value: governorateId, isExpanded: true, decoration: const InputDecoration(labelText: 'المحافظة', border: OutlineInputBorder()),
                 items: [const DropdownMenuItem<String>(value: null, child: Text('اختر المحافظة')), ..._geoRows.where((g) => g['level'] == 'governorate').map((g) => DropdownMenuItem(value: _s(g['id']), child: Text(_s(g['name_ar']))))],
                 onChanged: (v) => setState(() { governorateId = v; districtId = null; areaId = null; })),
               const SizedBox(height: 10),
-              DropdownButtonFormField<String>(itemHeight: 40, value: districtId, isExpanded: true, decoration: const InputDecoration(labelText: 'الحي / المركز', border: OutlineInputBorder()),
+              DropdownButtonFormField<String>(itemHeight: null, value: districtId, isExpanded: true, decoration: const InputDecoration(labelText: 'الحي / المركز', border: OutlineInputBorder()),
                 items: [const DropdownMenuItem<String>(value: null, child: Text('اختر الحي أو المركز')), ..._geoRows.where((g) => g['level'] == 'district' && _s(g['parent_id']) == (governorateId ?? '')).map((g) => DropdownMenuItem(value: _s(g['id']), child: Text(_s(g['name_ar']))))],
                 onChanged: (v) => setState(() { districtId = v; areaId = null; })),
               const SizedBox(height: 10),
-              DropdownButtonFormField<String>(itemHeight: 40, value: areaId, isExpanded: true, decoration: const InputDecoration(labelText: 'المنطقة / القرية', border: OutlineInputBorder()),
+              DropdownButtonFormField<String>(itemHeight: null, value: areaId, isExpanded: true, decoration: const InputDecoration(labelText: 'المنطقة / القرية', border: OutlineInputBorder()),
                 items: [const DropdownMenuItem<String>(value: null, child: Text('اختر المنطقة أو القرية')), ..._geoRows.where((g) => g['level'] == 'area' && _s(g['parent_id']) == (districtId ?? '')).map((g) => DropdownMenuItem(value: _s(g['id']), child: Text(_s(g['name_ar']))))],
                 onChanged: (v) => setState(() => areaId = v)),
               const SizedBox(height: 10),
@@ -491,18 +491,21 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
       _branchActions(),
       if (_error != null) _notice(_error!, Colors.red),
       if (_message != null) _notice(_message!, Colors.green),
-      if (_loading)
-        Expanded(child: Center(child: CircularProgressIndicator()))
-      else if (_rows.isEmpty)
-        Expanded(child: Center(child: Card(child: Padding(
-          padding: EdgeInsets.all(24), child: Text('لا توجد فروع مسجلة بعد. اضغط «إضافة فرع» لإنشاء أول فرع.')))))
-      else
-        Expanded(child: ListView.separated(
-          padding: const EdgeInsets.only(bottom: 8),
-          itemCount: _rows.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
-          itemBuilder: (context, index) => _branchCard(_rows[index], index),
-        )), 
+      Expanded(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _rows.isEmpty
+                ? Center(child: Card(child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: const Text('لا توجد فروع مسجلة بعد. اضغط «إضافة فرع» لإنشاء أول فرع.'),
+                  )))
+                : ListView.separated(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    itemCount: _rows.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) => _branchCard(_rows[index], index),
+                  ),
+      ),
     ]),
   );
 
