@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 /// Shared ERP table metrics and header treatment.
 ///
+/// New catalog screens should use this wrapper instead of setting row metrics
+/// independently so the compact ERP table contract stays consistent.
+///
 /// Keep table-specific columns and row actions in the screen; this widget owns
 /// the consistent density and visual defaults used across ERP catalogs.
 class ErpStandardDataTable extends StatelessWidget {
