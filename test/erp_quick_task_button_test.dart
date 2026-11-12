@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silsila_app/erp/widgets/erp_quick_task_button.dart';
 import 'package:silsila_app/erp/widgets/erp_standard_data_table.dart';
+import 'package:silsila_app/erp/widgets/erp_catalog_tree_card.dart';
 
 Finder _filledButtons() =>
     find.byWidgetPredicate((widget) => widget is FilledButton);
@@ -84,4 +85,49 @@ void main() {
     expect(table.dataRowMaxHeight, 40);
     expect(table.horizontalMargin, 8);
   });
+  testWidgets('semantic custom action does not infer destructive confirmation from its label', (tester) async {
+    var calls = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ErpQuickTaskButton(
+            label: 'حذف صورة',
+            icon: Icons.delete_outline,
+            kind: ErpQuickTaskKind.custom,
+            onPressed: () => calls++,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('حذف صورة'));
+    await tester.pumpAndSettle();
+
+    expect(calls, 1);
+    expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('catalog tree card provides shared selection surface', (tester) async {
+    var selected = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ErpCatalogTreeCard(
+            depth: 1,
+            selected: false,
+            backgroundColor: Colors.white,
+            selectedColor: const Color(0xFFF0E7FA),
+            borderColor: const Color(0xFFE8E1EF),
+            selectedBorderColor: const Color(0xFF3E007D),
+            onTap: () => selected = true,
+            child: const Text('عنصر تجريبي'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('عنصر تجريبي'));
+    expect(selected, isTrue);
+  });
+
 }
