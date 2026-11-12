@@ -732,6 +732,9 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                       child: SingleChildScrollView(
                         child: DataTable(
                           headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                          headingRowHeight: 40,
+                          dataRowMinHeight: 40,
+                          dataRowMaxHeight: 40,
                           columns: const [
                             DataColumn(label: Text('كود الفئة')),
                             DataColumn(label: Text('اسم الفئة عربي')),
