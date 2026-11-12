@@ -30,7 +30,7 @@ class StudioDocument {
         'schemaVersion': schemaVersion,
         'id': id,
         'name': name,
-        'updatedAt': (updatedAt ?? DateTime.now()).toUtc().toIso8601String(),
+        'updatedAt': (updatedAt ?? DateTime.now()).toUtc().toIso8601String(),\n        'remoteId': remoteId,\n        'remoteRevision': remoteRevision,
         'nodes': nodes.map((e) => e.toJson()).toList(),
       };
 
@@ -62,7 +62,7 @@ class StudioDocument {
     return value;
   }
 
-  StudioDocument copyWith({String? name, List<StudioNode>? nodes}) => StudioDocument(
+  StudioDocument copyWith({String? name, List<StudioNode>? nodes, String? remoteId, int? remoteRevision}) => StudioDocument(
         id: id,
         name: name ?? this.name,
         schemaVersion: schemaVersion,
