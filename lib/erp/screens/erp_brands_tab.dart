@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
@@ -42,7 +45,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     setState(() { _loading = true; _error = null; });
     try {
       final rows = await _db.from('erp_brands')
-        .select('id,brand_code,brand_name,brand_name_en,brand_group,display_order,is_active,is_system')
+        .select('id,brand_code,brand_name,brand_name_en,brand_group,display_order,is_active,is_system,logo_data,logo_mime_type')
         .eq('company_id', widget.companyId.trim())
         .order('display_order')
         .order('brand_code');
@@ -157,6 +160,69 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     }
   }
 
+  Uint8List? _logoBytes(dynamic value) {
+    if (value == null) return null;
+    final raw = value.toString();
+    final hex = raw.startsWith(r'\x') ? raw.substring(2) : raw;
+    if (hex.isEmpty || hex.length.isOdd) return null;
+    try {
+      return Uint8List.fromList(List<int>.generate(
+        hex.length ~/ 2,
+        (i) => int.parse(hex.substring(i * 2, i * 2 + 2), radix: 16),
+      ));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _uploadLogo() async {
+    final row = _selectedRow();
+    if (row == null) {
+      ErpCenterToast.show(context, 'اختر براندًا أولًا.', isError: true);
+      return;
+    }
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.image, allowMultiple: false, withData: true,
+    );
+    if (picked == null || picked.files.isEmpty) return;
+    final file = picked.files.single;
+    final bytes = file.bytes;
+    if (bytes == null || bytes.isEmpty) {
+      ErpCenterToast.show(context, 'تعذر قراءة ملف الشعار.', isError: true);
+      return;
+    }
+    if (bytes.length > 256 * 1024) {
+      ErpCenterToast.show(context, 'الحد الأقصى لحجم شعار البراند 256 كيلوبايت.', isError: true);
+      return;
+    }
+    final ext = file.extension?.toLowerCase() ?? '';
+    final mime = switch (ext) {
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      'gif' => 'image/gif',
+      _ => '',
+    };
+    if (mime.isEmpty) {
+      ErpCenterToast.show(context, 'الصيغ المدعومة للشعار JPG وPNG وWEBP وGIF.', isError: true);
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final hex = r'\x' + bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+      await _db.from('erp_brands').update({
+        'logo_data': hex,
+        'logo_mime_type': mime,
+      }).eq('id', _s(row['id'])).eq('company_id', widget.companyId.trim()).select('id').single();
+      await _load();
+      if (mounted) ErpCenterToast.show(context, 'تم حفظ شعار البراند بنجاح.');
+    } catch (error) {
+      if (mounted) ErpCenterToast.show(context, 'تعذر حفظ شعار البراند: $error', isError: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _toggle(Map<String,dynamic> row) async {
     if (row['is_system'] == true) return;
     try {
@@ -210,6 +276,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 ErpQuickTaskButton(label:'تحديث',icon:Icons.refresh_rounded,onPressed:_loading || _saving ? null : _load),
                 ErpQuickTaskButton(label:'إضافة',icon:Icons.add_circle_outline,onPressed:_saving ? null : () => _edit()),
                 ErpQuickTaskButton(label:'تعديل',icon:Icons.edit_outlined,onPressed:_saving || selected == null || selected['is_system'] == true ? null : () => _edit(row:selected)),
+                ErpQuickTaskButton(label:'شعار البراند',icon:Icons.image_outlined,onPressed:_saving || selected == null ? null : _uploadLogo),
                 ErpQuickTaskButton(label:'حذف',icon:Icons.delete_outline,onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
               ]),
             ),
@@ -259,13 +326,25 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                             onSelectChanged:(_)=>setState(()=>_selectedId=id),
                             cells:[
                               DataCell(Text(_s(row['brand_code']),style:const TextStyle(fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
-                              DataCell(Column(
-                                mainAxisAlignment:MainAxisAlignment.center,
-                                crossAxisAlignment:CrossAxisAlignment.start,
+                              DataCell(Row(
                                 children:[
-                                  Text(_s(row['brand_name'])),
-                                  if(_s(row['brand_group']).isNotEmpty)
-                                    Text('المجموعة: ${_s(row['brand_group'])}',style:const TextStyle(fontSize:10,color:Color(0xFF6B5A78))),
+                                  if (_logoBytes(row['logo_data']) != null)
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: Image.memory(_logoBytes(row['logo_data'])!, width: 34, height: 34, fit: BoxFit.contain),
+                                    )
+                                  else
+                                    const Icon(Icons.storefront_outlined, color: Color(0xFF3E007D), size: 28),
+                                  const SizedBox(width: 8),
+                                  Column(
+                                    mainAxisAlignment:MainAxisAlignment.center,
+                                    crossAxisAlignment:CrossAxisAlignment.start,
+                                    children:[
+                                      Text(_s(row['brand_name'])),
+                                      if(_s(row['brand_group']).isNotEmpty)
+                                        Text('المجموعة: ${_s(row['brand_group'])}',style:const TextStyle(fontSize:10,color:Color(0xFF6B5A78))),
+                                    ],
+                                  ),
                                 ],
                               )),
                               DataCell(Text(_s(row['brand_name_en']))),
