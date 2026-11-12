@@ -261,6 +261,7 @@ class SupplierOfferService {
       'target_districts': targetDistricts,
       'target_areas': targetAreas,
       'target_customer_types': targetCustomerTypes,
+      'target_geo_ids': targetGeoIds,
       'is_active': true,
     }).select().single();
 
