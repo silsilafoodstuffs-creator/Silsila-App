@@ -131,4 +131,27 @@ void main() {
     expect(selected, isTrue);
   });
 
+  testWidgets('catalog tree card forwards double tap for expansion', (tester) async {
+    var expanded = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ErpCatalogTreeCard(
+            depth: 0,
+            selected: false,
+            backgroundColor: Colors.white,
+            selectedColor: const Color(0xFFF0E7FA),
+            borderColor: const Color(0xFFE8E1EF),
+            selectedBorderColor: const Color(0xFF3E007D),
+            onDoubleTap: () => expanded = true,
+            child: const Text('حساب رئيسي'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.doubleTap(find.text('حساب رئيسي'));
+    expect(expanded, isTrue);
+  });
+
 }

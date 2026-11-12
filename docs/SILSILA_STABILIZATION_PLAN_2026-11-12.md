@@ -60,7 +60,7 @@ These are the next integration backlog, not completed work.
 - Added `ErpQuickTaskKind` so screens can select action style semantically instead of relying on Arabic/English label parsing. The old inference remains as a backwards-compatible fallback for screens not yet migrated.
 - Migrated the item-category and brand toolbars to explicit semantic action kinds. Tree and table actions now retain their actual icons.
 - Added widget regression tests for tree/table action icon and color behavior.
-- Added a shared `ErpStandardDataTable` component and migrated item categories, brands, item units, accounts, and cost centers to it, centralizing 40px row/header metrics and 5px spacing.
+- Added a shared `ErpStandardDataTable` component and migrated item categories, brands, item units, accounts, cost centers, activity branches, and inventory master to it, centralizing 40px row/header metrics and 5px spacing.
 - Added a shared `ErpCatalogTreeCard` and migrated both item categories and brands to it, centralizing tree indentation, selection, border and spacing.
 - Compacted brand tree rows and brand table images; fixed the brand group count interpolation.
 - Kept the Java 17 fix already committed to `main`, then added JDK 17 to the release APK workflow. The full-validation workflow also includes this branch for safe CI verification.
