@@ -5444,7 +5444,7 @@ class _OffersScreenState extends State<OffersScreen> {
                         if (value == true) { selectedCustomerTypes.add(name); } else { selectedCustomerTypes.remove(name); }
                       }) : null,
                     )).toList(),
-                  ))).toList()),
+                  )).toList())),
                   if (allowedCustomerTypes.isEmpty)
                     const Padding(padding: EdgeInsets.all(8), child: Text('اضبط الفئات المسموحة من زر الإعدادات أولًا.')),
                 ],
