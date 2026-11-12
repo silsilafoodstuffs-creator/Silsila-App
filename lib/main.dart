@@ -5178,6 +5178,12 @@ class _OffersScreenState extends State<OffersScreen> {
     bool scheduleLater = false;
     final db = database;
     final userId = db?.auth.currentUser?.id ?? '';
+    // Offers may only reference products actually listed by this supplier.
+    // ERP master-catalog rows have no products-table supplier_id and cannot
+    // satisfy offer_items.product_id's foreign key.
+    final offerableProducts = offerableProducts
+        .where((product) => product.id != null && product.supplierId == userId)
+        .toList(growable: false);
     var activityCode = widget.activityType.trim();
     List<Map<String,dynamic>> geoRows = [];
     List<Map<String,dynamic>> countRows = [];
@@ -5356,7 +5362,7 @@ class _OffersScreenState extends State<OffersScreen> {
         title: const Text('إنشاء عرض جديد'),
         content: StatefulBuilder(builder: (context, refresh) {
           final groups = <String,List<Product>>{};
-          for (final product in widget.availableProducts) {
+          for (final product in offerableProducts) {
             groups.putIfAbsent(product.category, () => []).add(product);
           }
           final categoryGroups = <String,List<String>>{};
@@ -5376,14 +5382,16 @@ class _OffersScreenState extends State<OffersScreen> {
                 icon: const Icon(Icons.account_tree_outlined, size: 18),
                 label: Text(showProducts ? 'إخفاء الأصناف (${selectedProductIds.length})' : 'اختيار الأصناف (${selectedProductIds.length})'),
               )),
+              if (showProducts && offerableProducts.isEmpty)
+                const Padding(padding: EdgeInsets.all(10), child: Text('لا توجد أصناف منشورة باسم هذا المورد في النشاط الحالي. أضف أصنافك أولًا ثم أنشئ العرض.')),
               if (showProducts) ...[
                 Row(children: [
                   const Expanded(child: Text('فئات الأصناف والأصناف', style: TextStyle(fontWeight: FontWeight.w800))),
                   TextButton(onPressed: () => refresh(() {
-                    if (selectedProductIds.length == widget.availableProducts.length) {
+                    if (selectedProductIds.length == offerableProducts.length) {
                       selectedProductIds.clear();
                     } else {
-                      selectedProductIds.addAll(widget.availableProducts.map((p) => p.cartKey));
+                      selectedProductIds.addAll(offerableProducts.map((p) => p.cartKey));
                     }
                   }), child: const Text('تحديد / إلغاء الكل')),
                 ]),
@@ -5540,7 +5548,7 @@ class _OffersScreenState extends State<OffersScreen> {
           OutlinedButton.icon(
             onPressed: () async {
               final previewImageBytes = selectedImage == null ? null : await selectedImage!.readAsBytes();
-              final previewItems = widget.availableProducts.where((p) => selectedProductIds.contains(p.cartKey)).toList();
+              final previewItems = offerableProducts.where((p) => selectedProductIds.contains(p.cartKey)).toList();
               final preview = await showDialog<bool>(
                 context: dialogContext,
                 builder: (previewContext) => AlertDialog(
@@ -5614,7 +5622,7 @@ class _OffersScreenState extends State<OffersScreen> {
           );
         } else {
           final items = <Map<String,dynamic>>[];
-          for (final p in widget.availableProducts.where((p) => selectedProductIds.contains(p.cartKey))) {
+          for (final p in offerableProducts.where((p) => selectedProductIds.contains(p.cartKey))) {
             final price = double.tryParse(offerPrices[p.cartKey]?.text.trim() ?? '');
             if (price == null || !price.isFinite || price < 0) throw ArgumentError('سعر العرض غير صحيح للصنف ${p.name}');
             final minimum = double.tryParse(minimumQuantities[p.cartKey]?.text.trim() ?? '');
