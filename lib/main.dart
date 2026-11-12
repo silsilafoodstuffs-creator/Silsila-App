@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/foundation.dart';
@@ -1033,6 +1034,23 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
     }
   }
 
+  Uint8List? _tickerLogoBytes(dynamic value) {
+    if (value == null) return null;
+    if (value is Uint8List) return value;
+    if (value is List<int>) return Uint8List.fromList(value);
+    final raw = value.toString();
+    final hex = raw.startsWith(r'\\x') ? raw.substring(2) : raw;
+    if (hex.isEmpty || hex.length.isOdd) return null;
+    try {
+      return Uint8List.fromList(List<int>.generate(
+        hex.length ~/ 2,
+        (index) => int.parse(hex.substring(index * 2, index * 2 + 2), radix: 16),
+      ));
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_ads.isEmpty) return const SizedBox.shrink();
@@ -1044,7 +1062,7 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
         separatorBuilder: (_, __) => const SizedBox(width: 6),
         itemBuilder: (context, index) {
           final ad = _ads[index];
-          final logo = _decodeDatabaseBytea(ad['logo_data']);
+          final logo = _tickerLogoBytes(ad['logo_data']);
           return Container(
             width: 82,
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
