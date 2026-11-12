@@ -123,7 +123,6 @@ REVOKE ALL ON FUNCTION public.erp_save_app_ticker_ads(uuid,text,jsonb) FROM PUBL
 GRANT EXECUTE ON FUNCTION public.erp_save_app_ticker_ads(uuid,text,jsonb) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.get_silsila_public_ticker_ads(
-  p_app_id uuid,
   p_activity_code text DEFAULT NULL
 )
 RETURNS TABLE(
@@ -143,20 +142,29 @@ AS $function$
   WITH app_scope AS (
     SELECT app.id, app.company_id
     FROM public.erp_managed_apps app
-    WHERE app.id = p_app_id AND app.app_key = 'silsila' AND app.status = 'active'
+    WHERE app.app_key = 'silsila' AND app.status = 'active'
   ),
-  specific AS (
+  specific_ranked AS (
     SELECT a.slot_no, a.brand_id, b.brand_code, b.brand_name,
-           b.logo_data, b.logo_mime_type, a.activity_code
+           b.logo_data, b.logo_mime_type, a.activity_code,
+           row_number() OVER (
+             PARTITION BY a.slot_no
+             ORDER BY a.updated_at DESC, a.created_at DESC
+           ) AS slot_rank
     FROM public.erp_app_ticker_ads a
     JOIN app_scope s ON s.id = a.app_id AND s.company_id = a.company_id
     JOIN public.erp_brands b ON b.id = a.brand_id AND b.company_id = a.company_id
-    WHERE p_activity_code IS NOT NULL AND a.activity_code = p_activity_code
+    WHERE NULLIF(btrim(p_activity_code), '') IS NOT NULL
+      AND a.activity_code = NULLIF(btrim(p_activity_code), '')
       AND b.is_active = true
   ),
-  global_ads AS (
+  global_ranked AS (
     SELECT a.slot_no, a.brand_id, b.brand_code, b.brand_name,
-           b.logo_data, b.logo_mime_type, a.activity_code
+           b.logo_data, b.logo_mime_type, a.activity_code,
+           row_number() OVER (
+             PARTITION BY a.slot_no
+             ORDER BY a.updated_at DESC, a.created_at DESC
+           ) AS slot_rank
     FROM public.erp_app_ticker_ads a
     JOIN app_scope s ON s.id = a.app_id AND s.company_id = a.company_id
     JOIN public.erp_brands b ON b.id = a.brand_id AND b.company_id = a.company_id
@@ -165,13 +173,22 @@ AS $function$
   SELECT chosen.slot_no, chosen.brand_id, chosen.brand_code, chosen.brand_name,
          chosen.logo_data, chosen.logo_mime_type, chosen.activity_code
   FROM (
-    SELECT * FROM specific
+    SELECT sp.slot_no, sp.brand_id, sp.brand_code, sp.brand_name,
+           sp.logo_data, sp.logo_mime_type, sp.activity_code
+    FROM specific_ranked sp
+    WHERE sp.slot_rank = 1
     UNION ALL
-    SELECT g.* FROM global_ads g
-    WHERE NOT EXISTS (SELECT 1 FROM specific)
+    SELECT gp.slot_no, gp.brand_id, gp.brand_code, gp.brand_name,
+           gp.logo_data, gp.logo_mime_type, gp.activity_code
+    FROM global_ranked gp
+    WHERE gp.slot_rank = 1
+      AND NOT EXISTS (
+        SELECT 1 FROM specific_ranked sp
+        WHERE sp.slot_no = gp.slot_no AND sp.slot_rank = 1
+      )
   ) chosen
   ORDER BY chosen.slot_no;
 $function$;
 
-REVOKE ALL ON FUNCTION public.get_silsila_public_ticker_ads(uuid,text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_silsila_public_ticker_ads(uuid,text) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_silsila_public_ticker_ads(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_silsila_public_ticker_ads(text) TO anon, authenticated;
