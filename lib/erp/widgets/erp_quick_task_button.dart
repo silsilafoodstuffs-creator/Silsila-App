@@ -83,19 +83,20 @@ class ErpQuickTaskButton extends StatelessWidget {
           if (isSave || isDelete) {
             final confirmed = await showDialog<bool>(
               context: context,
-              builder: (dialogContext) => AlertDialog(
-                title: Text(isSave ? 'تأكيد الحفظ' : 'تأكيد الحذف'),
-                content: Text(isSave ? 'هل ترغب في الحفظ؟' : 'هل ترغب في الحذف؟'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(dialogContext, false),
-                    child: const Text('إلغاء'),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(dialogContext, true),
-                    child: Text(isSave ? 'حفظ' : 'حذف'),
-                  ),
-                ],
+              builder: (dialogContext) => Directionality(
+                textDirection: TextDirection.rtl,
+                child: AlertDialog(
+                  title: Text(isSave ? 'تأكيد الحفظ' : 'تأكيد الحذف'),
+                  content: Text(isSave ? 'هل ترغب في الحفظ؟' : 'هل ترغب في الحذف؟'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(dialogContext, null),
+                      child: const Text('إلغاء الأمر')),
+                    TextButton(onPressed: () => Navigator.pop(dialogContext, false),
+                      child: const Text('لأ')),
+                    FilledButton(onPressed: () => Navigator.pop(dialogContext, true),
+                      child: const Text('نعم')),
+                  ],
+                ),
               ),
             );
             if (confirmed != true || !context.mounted) return;
