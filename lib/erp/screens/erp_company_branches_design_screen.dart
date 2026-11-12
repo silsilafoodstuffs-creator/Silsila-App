@@ -461,12 +461,12 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
       if (_error != null) _notice(_error!, Colors.red),
       if (_message != null) _notice(_message!, Colors.green),
       if (_loading)
-        SizedBox(height: 540, child: Center(child: CircularProgressIndicator()))
+        SizedBox(height: 470, child: Center(child: CircularProgressIndicator()))
       else if (_rows.isEmpty)
-        SizedBox(height: 540, child: Center(child: Card(child: Padding(
+        SizedBox(height: 470, child: Center(child: Card(child: Padding(
           padding: EdgeInsets.all(24), child: Text('لا توجد فروع مسجلة بعد. اضغط «إضافة فرع» لإنشاء أول فرع.')))))
       else
-        SizedBox(height: 540, child: ListView.separated(
+        SizedBox(height: 470, child: ListView.separated(
           padding: const EdgeInsets.only(bottom: 8),
           itemCount: _rows.length,
           separatorBuilder: (_, __) => const SizedBox(height: 8),
