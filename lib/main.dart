@@ -5396,8 +5396,24 @@ class _OffersScreenState extends State<OffersScreen> {
                   }), child: const Text('تحديد / إلغاء الكل')),
                 ]),
                 Theme(data: Theme.of(context).copyWith(checkboxTheme: CheckboxThemeData(shape: const CircleBorder())),
-                  child: Column(children: groups.entries.map((group) => ExpansionTile(
+                  child: Column(children: groups.entries.map((group) {
+                    final groupSelectedCount = group.value.where((p) => selectedProductIds.contains(p.cartKey)).length;
+                    return ExpansionTile(
                     initiallyExpanded: false,
+                    leading: Checkbox(
+                      tristate: true,
+                      shape: const CircleBorder(),
+                      value: groupSelectedCount == 0
+                          ? false
+                          : groupSelectedCount == group.value.length ? true : null,
+                      onChanged: (value) => refresh(() {
+                        if (value == true) {
+                          selectedProductIds.addAll(group.value.map((p) => p.cartKey));
+                        } else {
+                          selectedProductIds.removeAll(group.value.map((p) => p.cartKey));
+                        }
+                      }),
+                    ),
                     title: Text('${group.key} (${group.value.length})', style: const TextStyle(fontWeight: FontWeight.w800)),
                     children: group.value.map((p) {
                       offerPrices.putIfAbsent(p.cartKey, () => TextEditingController(text: p.price.toStringAsFixed(2)));
@@ -5452,7 +5468,7 @@ class _OffersScreenState extends State<OffersScreen> {
                         ]),
                       );
                     }).toList(),
-                  )).toList())),
+                  ); }).toList())),
               ],
               Row(children: [
                 const Expanded(child: Text('صورة العرض', style: TextStyle(fontWeight: FontWeight.w700))),
