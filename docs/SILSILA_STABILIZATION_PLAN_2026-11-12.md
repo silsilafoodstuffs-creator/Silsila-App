@@ -35,13 +35,34 @@ These documents are starting evidence, not proof that every route is operational
 3. The Android runner defaulted to Java `25.0.5` with Gradle `8.10.2`. The latest main validation failed in `flutter build apk --debug` with `What went wrong: 25.0.5`, while Dart analysis, Flutter tests, Web build and desktop/mobile WebView checks passed on that commit.
 4. A successful static analysis or Web build does not prove the Android build, every CRUD path, or every screen's database integration.
 
+## Confirmed completion backlog from the existing route/UI audits
+
+The existing repository audits already identify substantial work that must not be hidden behind a visual refresh:
+
+- 485 menu entries, 468 unique page labels, and 17 repeated labels.
+- 63 menu entries still route to the generic `_workspace()` instead of a domain-specific screen.
+- 14 report names in `_isDatabaseReport` have no matching source key in the report reader; the 45 intersecting source mappings are candidates, not proof of calculated/reconciled reports.
+- 170 Business Suite entries share 53 record/form types and still need page-by-page mapping to the correct operational entity, line tables, and RPC lifecycle.
+- The active `main.dart` ThemeData differs from the unused `SilsilaTheme.light`: active tables are 48–64px with 12/14px margins/spacing, while the approved standard is 40px and 5px. Switching the entire theme blindly is unsafe because many screens have not been migrated/tested against compact table cells.
+- `_pricingPolicyScreen` and `_transactionRestrictionsScreen` save company-scoped configuration to `erp_company_settings`; the repository explicitly documents that these settings do not themselves enforce price or transaction rules in trusted posting RPCs. Server-side enforcement remains required before those policies can be described as operational.
+
+Existing design references that should be used rather than recreated:
+- `SILSILA_MENU_ROUTE_PAGE_INVENTORY_2026-11-11.md`
+- `SILSILA_GENERIC_WORKSPACE_PAGE_DESIGN_CLOSURE_2026-11-11.md`
+- `SILSILA_REPORTS_FORMULA_DICTIONARY_2026-11-11.md`
+- `SILSILA_RLS_PERMISSION_SCOPE_DESIGN_MATRIX_2026-11-11.md`
+- `SILSILA_UI_GLOBAL_DESIGN_COMPLIANCE_AUDIT_2026-11-11.md`
+
+These are the next integration backlog, not completed work.
+
 ## Changes in this stabilization branch
 
 - Added `ErpQuickTaskKind` so screens can select action style semantically instead of relying on Arabic/English label parsing. The old inference remains as a backwards-compatible fallback for screens not yet migrated.
 - Migrated the item-category and brand toolbars to explicit semantic action kinds. Tree and table actions now retain their actual icons.
 - Added widget regression tests for tree/table action icon and color behavior.
 - Added a shared `ErpStandardDataTable` component and migrated both item categories and brands to it, centralizing 40px row/header metrics and compact table spacing.
-- Compacted brand tree rows and brand table images.
+- Added a shared `ErpCatalogTreeCard` and migrated both item categories and brands to it, centralizing tree indentation, selection, border and spacing.
+- Compacted brand tree rows and brand table images; fixed the brand group count interpolation.
 - Kept the Java 17 fix already committed to `main`, then added JDK 17 to the release APK workflow. The full-validation workflow also includes this branch for safe CI verification.
 - Added this baseline and acceptance-gate document.
 
