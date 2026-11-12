@@ -5077,17 +5077,32 @@ class _StoriesScreenState extends State<StoriesScreen> {
             FilledButton.icon(onPressed: createStory, icon: const Icon(Icons.add), label: Text(silsilaText('إضافة قصة'))),
           ]),
           const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: ['الكل', 'الموردون', 'العملاء', 'شركات شحن'].map((filter) => Padding(
-              padding: const EdgeInsetsDirectional.only(end: 7),
-              child: ChoiceChip(
-                label: Text(filter), selected: storyFilter == filter,
-                selectedColor: purple,
-                labelStyle: TextStyle(color: storyFilter == filter ? Colors.white : purple),
-                onSelected: (_) => setState(() => storyFilter = filter),
+          Row(
+            children: ['الكل', 'الموردون', 'العملاء', 'شركات شحن'].map((filter) => Expanded(
+              child: Padding(
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 2),
+                child: ChoiceChip(
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
+                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
+                  label: SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      filter,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.visible,
+                      style: const TextStyle(fontSize: 11.5),
+                    ),
+                  ),
+                  selected: storyFilter == filter,
+                  selectedColor: purple,
+                  labelStyle: TextStyle(color: storyFilter == filter ? Colors.white : purple),
+                  onSelected: (_) => setState(() => storyFilter = filter),
+                ),
               ),
-            )).toList()),
+            )).toList(),
           ),
           const SizedBox(height: 8),
           Text(silsilaText('تختفي القصة تلقائيًا عند انتهاء مدتها.')),
