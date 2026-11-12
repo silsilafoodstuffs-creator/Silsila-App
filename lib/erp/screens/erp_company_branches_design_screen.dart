@@ -68,6 +68,7 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
       return;
     }
     setState(() { _loading = true; _error = null; });
+    String? relatedDataWarning;
     try {
       // Branch records are the primary data. Geographic metadata is optional;
       // a failed geography query must not prevent the branch directory from loading.
@@ -82,14 +83,14 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
             .select('id,parent_id,geo_code,name_ar,name_en,level,is_active')
             .eq('company_id', companyId).eq('is_active', true).order('geo_code');
         geoRows = (geoResult as List).map((e) => Map<String, dynamic>.from(e)).toList();
-      } catch (_) {}
+      } catch (error) { relatedDataWarning = 'تعذر تحميل البيانات الجغرافية: $error'; }
       List<Map<String, dynamic>> warehouseRows = [];
       try {
         final warehouseResult = await _db!.from('erp_warehouses')
             .select('id,branch_id,warehouse_code,warehouse_name,is_active')
             .eq('company_id', companyId).order('warehouse_code');
         warehouseRows = (warehouseResult as List).map((e) => Map<String, dynamic>.from(e)).toList();
-      } catch (_) {}
+      } catch (error) { relatedDataWarning = [relatedDataWarning, 'تعذر تحميل المخازن التابعة: $error'].whereType<String>().join(' • '); }
       if (!mounted) return;
       setState(() {
         _warehouseRows = warehouseRows;
@@ -102,6 +103,7 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
         _rows = List<Map<String, dynamic>>.unmodifiable(_rows);
         _selectedBranchIds.removeWhere((id) => !_rows.any((row) => _s(row['id']) == id));
         _geoRows = geoRows;
+        _error = relatedDataWarning;
         _loading = false;
       });
     } catch (error) {
