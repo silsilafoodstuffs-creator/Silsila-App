@@ -339,7 +339,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
           borderRadius: BorderRadius.circular(10),
           onTap: () => setState(() => _selectedId = id),
           child: Container(
-            padding: const EdgeInsetsDirectional.fromSTEB(8, 6, 8, 6),
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 2, 8, 2),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: selected ? _brandPurple : _brandBorder),
@@ -356,7 +356,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 activeColor: _brandPurple, visualDensity: VisualDensity.compact,
                 onChanged: system ? null : (_) => _toggle(row)),
               const SizedBox(width: 6),
-              _logoPreview(row, size: 44),
+              _logoPreview(row, size: 32),
               IconButton(tooltip: 'اختيار/تغيير الشعار', visualDensity: VisualDensity.compact,
                 onPressed: _saving ? null : () => _uploadLogo(row),
                 icon: const Icon(Icons.photo_library_outlined, color: _brandPurple)),
@@ -498,8 +498,9 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       child:SingleChildScrollView(
                         child:DataTable(
                           headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
-                          dataRowMinHeight:56,
-                          dataRowMaxHeight:64,
+                          headingRowHeight:40,
+                          dataRowMinHeight:40,
+                          dataRowMaxHeight:40,
                           columns:const [
                             DataColumn(label:Text('كود البراند')),
                             DataColumn(label:Text('اسم البراند عربي')),
@@ -521,7 +522,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                                 DataCell(Text(_s(row['brand_code']),style:const TextStyle(fontWeight:FontWeight.w900,color:_brandPurple))),
                                 DataCell(SizedBox(width:180,child:Text(_s(row['brand_name'])))),
                                 DataCell(SizedBox(width:150,child:Text(_s(row['brand_name_en'])))),
-                                DataCell(_logoPreview(row,size:46)),
+                                DataCell(_logoPreview(row,size:36)),
                                 DataCell(Text(_s(row['brand_group']).isEmpty ? '—' : _s(row['brand_group']))),
                                 DataCell(Text(system ? 'افتراضي' : 'براند')),
                                 DataCell(Checkbox(
