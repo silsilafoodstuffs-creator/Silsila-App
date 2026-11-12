@@ -27,7 +27,7 @@ void main() {
       );
     });
 
-    test('rejects oversized component collections', () {
+    test('rejects duplicate component identifiers', () {\n      expect(\n        () => StudioDocument.fromJson({\n          'schemaVersion': 1, 'id': 'x', 'name': 'x',\n          'nodes': [\n            {'id': 'same', 'type': 'text', 'props': {}},\n            {'id': 'same', 'type': 'divider', 'props': {}},\n          ],\n        }),\n        throwsFormatException,\n      );\n    });\n\n    test('rejects oversized component collections', () {
       expect(
         () => StudioDocument.fromJson({
           'schemaVersion': 1, 'id': 'x', 'name': 'x',
