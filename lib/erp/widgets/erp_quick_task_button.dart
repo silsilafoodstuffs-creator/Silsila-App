@@ -30,6 +30,8 @@ class ErpQuickTaskButton extends StatelessWidget {
     this.fallbackColor = const Color(0xFF3E007D),
     this.compact = false,
     this.kind,
+    this.confirmAction,
+    this.showSuccessToast,
   });
 
   final String label;
@@ -38,6 +40,8 @@ class ErpQuickTaskButton extends StatelessWidget {
   final Color fallbackColor;
   final bool compact;
   final ErpQuickTaskKind? kind;
+  final bool? confirmAction;
+  final bool? showSuccessToast;
 
   Color get _color {
     switch (kind) {
@@ -162,7 +166,9 @@ class ErpQuickTaskButton extends StatelessWidget {
               (kind == null && action.contains('حفظ'));
           final isDelete = kind == ErpQuickTaskKind.delete ||
               (kind == null && action.contains('حذف'));
-          if (isSave || isDelete) {
+          final shouldConfirm = confirmAction ??
+              (kind == null && (isSave || isDelete));
+          if (shouldConfirm) {
             final confirmed = await showDialog<bool>(
               context: context,
               builder: (dialogContext) => AlertDialog(
@@ -192,7 +198,7 @@ class ErpQuickTaskButton extends StatelessWidget {
                     : kind == ErpQuickTaskKind.update || (kind == null && action.contains('تحديث'))
                         ? 'تم التحديث'
                         : null;
-            if (successMessage != null) {
+            if ((showSuccessToast ?? kind == null) && successMessage != null) {
               ErpCenterToast.show(context, successMessage);
             }
           } catch (error) {
