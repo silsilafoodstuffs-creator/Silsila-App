@@ -145,6 +145,7 @@ class SupplierOfferService {
     List<String> targetDistricts = const [],
     List<String> targetAreas = const [],
     List<String> targetCustomerTypes = const [],
+    List<String> targetGeoIds = const [],
   }) async {
     if (!originalPrice.isFinite || !offerPrice.isFinite ||
         originalPrice < 0 || offerPrice < 0) {
