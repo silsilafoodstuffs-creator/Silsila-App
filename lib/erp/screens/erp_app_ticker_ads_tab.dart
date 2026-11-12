@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../services/activity_service.dart';
+import '../widgets/erp_quick_task_button.dart';
 
 const _tickerPurple = Color(0xFF3E007D);
 
@@ -29,6 +30,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
   String _activityCode = 'ALL';
   bool _loading = false;
   bool _saving = false;
+  bool _editMode = false;
   String? _error;
   String? _message;
 
@@ -154,6 +156,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
   }
 
   void _toggleSlot(String brandId, int slot, bool checked) {
+    if (!_editMode || _saving) return;
     final owner = _slotOwners[slot];
     if (checked && owner != null && owner != brandId) {
       final other = _brands.where((b) => _s(b['id']) == owner);
@@ -172,6 +175,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
   }
 
   void _toggleAll(String brandId, bool checked) {
+    if (!_editMode || _saving) return;
     final conflicts = <int>[];
     for (var slot = 1; slot <= 25; slot++) {
       final owner = _slotOwners[slot];
@@ -209,7 +213,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
         'p_assignments': assignments,
       });
       if (!mounted) return;
-      setState(() => _message = 'تم حفظ توزيع ${count ?? assignments.length} موضعًا إعلانيًا بنجاح.');
+      setState(() { _message = 'تم حفظ توزيع ${count ?? assignments.length} موضعًا إعلانيًا بنجاح.'; _editMode = false; });
       await _load();
     } catch (error) {
       if (mounted) setState(() => _error = 'تعذر حفظ توزيع شريط التمرير: $error');
@@ -247,29 +251,36 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 3),
             child: Row(children: [
-              const Icon(Icons.view_carousel_outlined, color: _tickerPurple),
-              const SizedBox(width: 8),
-              const Expanded(child: Text(
-                'إعلانات شريط التمرير',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _tickerPurple),
-              )),
-              IconButton(
-                tooltip: 'تحديث',
-                onPressed: _loading || _saving ? null : _load,
-                icon: const Icon(Icons.refresh),
-              ),
+              const Icon(Icons.view_carousel_outlined, color: _tickerPurple, size: 20),
+              const SizedBox(width: 6),
+              const Expanded(child: Text('إعلانات شريط التمرير',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _tickerPurple))),
             ]),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: DropdownButtonFormField<String>(
+            padding: const EdgeInsets.symmetric(horizontal: 5),
+            child: Wrap(spacing: 2.5, runSpacing: 2.5, children: [
+              ErpQuickTaskButton(label: 'تحديث', icon: Icons.refresh, compact: true,
+                onPressed: _loading || _saving ? null : _load),
+              ErpQuickTaskButton(label: 'تعديل', icon: Icons.edit_outlined, compact: true,
+                onPressed: _saving || _loading ? null : () => setState(() => _editMode = !_editMode)),
+              ErpQuickTaskButton(label: 'حفظ', icon: Icons.save_outlined, compact: true,
+                onPressed: !_ready || _saving || _loading || !_editMode ? null : _save),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+            child: SizedBox(height: 40, child: DropdownButtonFormField<String>(
               value: _activityCode,
               isDense: true,
+              itemHeight: 40,
               decoration: const InputDecoration(
-                labelText: 'نطاق الإعلانات حسب النشاط',
+                labelText: 'نطاق الإعلان حسب النشاط',
                 border: OutlineInputBorder(),
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 7),
               ),
               items: [
                 const DropdownMenuItem(
@@ -288,25 +299,26 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                 });
                 _load();
               },
-            ),
+            )),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: TextField(
+            padding: const EdgeInsets.fromLTRB(5, 2.5, 5, 2.5),
+            child: SizedBox(height: 40, child: TextField(
               controller: _search,
               onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(
                 labelText: 'ابحث باسم البراند أو كوده',
-                prefixIcon: Icon(Icons.search, color: _tickerPurple),
+                prefixIcon: Icon(Icons.search, color: _tickerPurple, size: 18),
                 isDense: true,
+                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 7),
                 border: OutlineInputBorder(),
               ),
-            ),
+            )),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Text(
-              'حدد مواضع كل براند من 1 إلى 25. لا يمكن تخصيص الموضع نفسه لأكثر من براند في النطاق الواحد. المواضع غير المحددة في النشاط تستكمل من إعدادات كل الأنشطة.',
+              _editMode ? 'وضع التعديل نشط. حدد مواضع البراندات ثم اضغط حفظ من شريط المهام.' : 'اضغط تعديل أولاً لتغيير التوزيع. لا يمكن تخصيص الموضع نفسه لأكثر من براند في النطاق الواحد.',
               style: TextStyle(color: Colors.grey.shade700, height: 1.4),
             ),
           ),
@@ -330,48 +342,48 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                           scrollDirection: Axis.horizontal,
                           child: DataTable(
                             headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
-                            columnSpacing: 12,
+                            columnSpacing: 2.5,
                             horizontalMargin: 10,
                             columns: [
-                              const DataColumn(label: Text('البراند')),
+                              const DataColumn(label: Text('م')),
+                              const DataColumn(label: Text('كود البراند')),
+                              const DataColumn(label: Text('الصورة')),
+                              const DataColumn(label: Text('اسم البراند')),
                               const DataColumn(label: Text('الكل')),
-                              ...List.generate(25, (index) => DataColumn(
-                                label: Text('${index + 1}'),
-                              )),
+                              ...List.generate(25, (index) => DataColumn(label: Text('${index + 1}'))),
                             ],
-                            rows: brands.map((brand) {
+                            rows: brands.asMap().entries.map((entry) {
+                              final rowNo = entry.key + 1;
+                              final brand = entry.value;
                               final id = _s(brand['id']);
                               final selectedCount = _slotOwners.values.where((owner) => owner == id).length;
                               return DataRow(cells: [
-                                DataCell(SizedBox(
-                                  width: 190,
-                                  child: Row(children: [
-                                    _brandLogo(brand),
-                                    const SizedBox(width: 8),
-                                    Expanded(child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(_s(brand['brand_name']), maxLines: 1, overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontWeight: FontWeight.w800)),
-                                        Text(_s(brand['brand_code']),
-                                          style: const TextStyle(fontSize: 11, color: Colors.black54)),
-                                      ],
-                                    )),
-                                  ]),
-                                )),
+                                DataCell(Text('$rowNo', style: const TextStyle(fontWeight: FontWeight.w800))),
+                                DataCell(Text(_s(brand['brand_code']), style: const TextStyle(fontWeight: FontWeight.w700))),
+                                DataCell(_brandLogo(brand)),
+                                DataCell(SizedBox(width: 145, child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(_s(brand['brand_name']), maxLines: 1, overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontWeight: FontWeight.w800)),
+                                    Text(_s(brand['brand_name_en']).isEmpty ? '—' : _s(brand['brand_name_en']),
+                                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                                  ],
+                                ))),
                                 DataCell(Checkbox(
                                   shape: const CircleBorder(),
                                   value: selectedCount == 0 ? false : selectedCount == 25 ? true : null,
                                   tristate: true,
-                                  onChanged: _saving ? null : (value) => _toggleAll(id, value == true),
+                                  onChanged: !_editMode || _saving ? null : (value) => _toggleAll(id, value == true),
                                 )),
                                 ...List.generate(25, (index) {
                                   final slot = index + 1;
                                   return DataCell(Checkbox(
                                     shape: const CircleBorder(),
                                     value: _slotOwners[slot] == id,
-                                    onChanged: _saving ? null : (value) =>
+                                    onChanged: !_editMode || _saving ? null : (value) =>
                                       _toggleSlot(id, slot, value == true),
                                   ));
                                 }),
@@ -382,21 +394,9 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                       ),
           ),
           Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(children: [
-              Text('المواضع المحددة: ${_slotOwners.length}/25',
-                style: const TextStyle(color: _tickerPurple, fontWeight: FontWeight.w900)),
-              const Spacer(),
-              FilledButton.icon(
-                onPressed: !_ready || _saving || _loading ? null : _save,
-                icon: _saving
-                    ? const SizedBox(width: 16, height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.save_outlined),
-                label: const Text('حفظ التوزيع'),
-                style: FilledButton.styleFrom(backgroundColor: _tickerPurple),
-              ),
-            ]),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            child: Text('المواضع المحددة: ${_slotOwners.length}/25',
+              style: const TextStyle(color: _tickerPurple, fontWeight: FontWeight.w900)),
           ),
         ],
       ),
