@@ -3,6 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:silsila_app/erp/widgets/erp_quick_task_button.dart';
 import 'package:silsila_app/erp/widgets/erp_standard_data_table.dart';
 
+Finder _filledButtons() =>
+    find.byWidgetPredicate((widget) => widget is FilledButton);
+
 void main() {
   testWidgets('tree and table actions keep their own icons and shared palette', (tester) async {
     await tester.pumpWidget(
@@ -32,7 +35,8 @@ void main() {
     expect(find.byIcon(Icons.table_rows_outlined), findsOneWidget);
     expect(find.byIcon(Icons.preview_outlined), findsNothing);
 
-    final buttons = tester.widgetList<FilledButton>(find.byType(FilledButton)).toList();
+    final buttons = tester.widgetList<FilledButton>(_filledButtons()).toList();
+    expect(buttons, hasLength(2));
     expect(buttons[0].style!.backgroundColor!.resolve(<WidgetState>{}), const Color(0xFF6E2BA6));
     expect(buttons[1].style!.backgroundColor!.resolve(<WidgetState>{}), const Color(0xFF6E2BA6));
   });
@@ -52,11 +56,10 @@ void main() {
       ),
     );
 
-    final button = tester.widget<FilledButton>(find.byType(FilledButton));
+    final button = tester.widget<FilledButton>(_filledButtons());
     expect(button.style!.backgroundColor!.resolve(<WidgetState>{}), const Color(0xFF123456));
     expect(find.byIcon(Icons.table_rows_outlined), findsOneWidget);
   });
-}
 
   testWidgets('standard ERP data table enforces the shared 40px row contract', (tester) async {
     await tester.pumpWidget(
@@ -81,3 +84,4 @@ void main() {
     expect(table.dataRowMaxHeight, 40);
     expect(table.horizontalMargin, 8);
   });
+}
