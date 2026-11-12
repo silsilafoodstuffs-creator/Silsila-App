@@ -12,7 +12,7 @@
 | 1 | الملخص التنفيذي | لوحة الملخص | RPC `erp_get_executive_metrics` ومصادر مالية/مبيعات/مخزون؛ يلزم قاموس KPI ومصالحة حسب الفترة |
 | 2 | سياسات البرنامج | ErpProgramPoliciesScreen | `erp_program_policies`, `erp_program_settings`, `erp_users`؛ يجب فصل policy key عن إعدادات العرض |
 | 3 | بيانات الشركة | ErpCompanyProfileScreen | `erp_companies`, `erp_currencies`, `erp_company_members`; RPC `erp_create_company`, `erp_update_company_profile` |
-| 4 | الفروع | ErpBranchesScreen | `erp_branches`, `erp_geographic_data`; RPC `erp_preview_next_central_code` |
+| 4 | الفروع | ErpCompanyBranchesDesignScreen | `erp_branches`, `erp_geographic_data`; RPC `erp_preview_next_central_code` |
 | 5، 43 | مراكز التكلفة | ErpCostCentersScreen | `erp_cost_centers`, `erp_branches` |
 | 6، 90 | بيانات جغرافية | ErpGeographicDataScreen | `erp_geographic_data`, `erp_countries`; يلزم الحفاظ على تسلسل parent والرمز الجغرافي |
 | 7 | أنواع الأنشطة | ErpActivityTypesScreen | `activity_types` |
