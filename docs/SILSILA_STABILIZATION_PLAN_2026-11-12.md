@@ -40,7 +40,8 @@ These documents are starting evidence, not proof that every route is operational
 - Added `ErpQuickTaskKind` so screens can select action style semantically instead of relying on Arabic/English label parsing. The old inference remains as a backwards-compatible fallback for screens not yet migrated.
 - Migrated the item-category and brand toolbars to explicit semantic action kinds. Tree and table actions now retain their actual icons.
 - Added widget regression tests for tree/table action icon and color behavior.
-- Applied the project's 40px row target to the item-category and brand DataTables; compacted brand tree rows and brand table images.
+- Added a shared `ErpStandardDataTable` component and migrated both item categories and brands to it, centralizing 40px row/header metrics and compact table spacing.
+- Compacted brand tree rows and brand table images.
 - Kept the Java 17 fix already committed to `main`, then added JDK 17 to the release APK workflow. The full-validation workflow also includes this branch for safe CI verification.
 - Added this baseline and acceptance-gate document.
 
