@@ -99,11 +99,16 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           : query.eq('activity_code', _activityCode);
       final assignedRows = await query.order('slot_no');
       if (!mounted) return;
+      final activeBrandIds = List<Map<String, dynamic>>.from(brandRows)
+          .map((brand) => _s(brand['id']))
+          .toSet();
+      final validAssignments = (assignedRows as List)
+          .where((row) => activeBrandIds.contains(_s(row['brand_id'])));
       setState(() {
         _brands = List<Map<String, dynamic>>.from(brandRows);
         _slotOwners
           ..clear()
-          ..addEntries((assignedRows as List).map((row) => MapEntry(
+          ..addEntries(validAssignments.map((row) => MapEntry(
             (row['slot_no'] as num).toInt(), _s(row['brand_id']),
           )));
         _loading = false;
