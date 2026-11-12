@@ -987,6 +987,113 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
   }
 }
 
+class _HomeTickerAdsStrip extends StatefulWidget {
+  const _HomeTickerAdsStrip({this.activityCode});
+  final String? activityCode;
+
+  @override
+  State<_HomeTickerAdsStrip> createState() => _HomeTickerAdsStripState();
+}
+
+class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
+  List<Map<String, dynamic>> _ads = const [];
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant _HomeTickerAdsStrip oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.activityCode != widget.activityCode) _load();
+  }
+
+  Future<void> _load() async {
+    final client = database;
+    if (client == null || _loading) return;
+    _loading = true;
+    try {
+      final rows = await client.rpc('get_silsila_public_ticker_ads', params: {
+        'p_activity_code': widget.activityCode,
+      });
+      final loaded = (rows as List)
+          .whereType<Map<String, dynamic>>()
+          .where((row) => row['brand_id'] != null)
+          .toList()
+        ..sort((a, b) => ((a['slot_no'] as num?)?.toInt() ?? 0)
+            .compareTo((b['slot_no'] as num?)?.toInt() ?? 0));
+      if (!mounted) return;
+      setState(() => _ads = loaded);
+    } catch (_) {
+      // Optional ticker ads must never block the customer home screen.
+    } finally {
+      _loading = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_ads.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 38,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _ads.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 6),
+        itemBuilder: (context, index) {
+          final ad = _ads[index];
+          final logo = _decodeDatabaseBytea(ad['logo_data']);
+          return Container(
+            width: 82,
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(color: purple.withValues(alpha: .12)),
+            ),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 27,
+                  height: 27,
+                  child: logo == null
+                      ? const Icon(Icons.storefront_outlined, color: purple, size: 20)
+                      : Image.memory(
+                          logo,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.storefront_outlined,
+                            color: purple,
+                            size: 20,
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    (ad['brand_name'] ?? '').toString(),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: purple,
+                      fontSize: 9,
+                      height: 1.05,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class MainShell extends StatefulWidget {
   const MainShell({
     super.key,
@@ -1596,14 +1703,61 @@ class _MainShellState extends State<MainShell> {
           ),
         ),
         appBar: AppBar(
-          title: Text(silsilaText(silsilaText('سلسلة Silsila')),
-            style: TextStyle(fontWeight: FontWeight.bold),
+          toolbarHeight: 58,
+          titleSpacing: 4,
+          leadingWidth: 112,
+          title: SizedBox(
+            height: 38,
+            child: TextField(
+              controller: searchController,
+              onChanged: (value) => setState(() => search = value),
+              textAlignVertical: TextAlignVertical.center,
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'ابحث عن فئة أو صنف أو مورد أو عميل...',
+                prefixIcon: const Icon(Icons.search, color: purple, size: 19),
+                prefixIconConstraints: const BoxConstraints(minWidth: 34, minHeight: 36),
+                suffixIcon: search.isEmpty ? null : IconButton(
+                  tooltip: 'مسح البحث',
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                  onPressed: () {
+                    searchController.clear();
+                    setState(() => search = '');
+                  },
+                  icon: const Icon(Icons.close, size: 16),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: purple.withValues(alpha: .12)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: purple.withValues(alpha: .12)),
+                ),
+              ),
+            ),
           ),
           leading: Builder(
-            builder: (drawerContext) => IconButton(
-              tooltip: 'المزيد',
-              icon: const Icon(Icons.menu_rounded),
-              onPressed: () => Scaffold.of(drawerContext).openDrawer(),
+            builder: (drawerContext) => Row(
+              children: [
+                SizedBox(
+                  width: 42,
+                  child: IconButton(
+                    tooltip: 'المزيد',
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.menu_rounded, color: purple, size: 23),
+                    onPressed: () => Scaffold.of(drawerContext).openDrawer(),
+                  ),
+                ),
+                Container(width: 1, height: 27, color: purple.withValues(alpha: .18)),
+                const SizedBox(width: 6),
+                const SilsilaWhiteLogo(width: 52, height: 36),
+                const SizedBox(width: 5),
+              ],
             ),
           ),
           actions: [
@@ -1803,62 +1957,6 @@ class _MainShellState extends State<MainShell> {
       children: [
         if (loadingLiveProducts)
           const LinearProgressIndicator(minHeight: 2),
-        // Keep search as the first control on the home screen.
-        SizedBox(
-          height: 36,
-          child: TextField(
-            controller: searchController,
-            onChanged: (value) => setState(() => search = value),
-            textAlignVertical: TextAlignVertical.center,
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: 'ابحث عن فئة أو صنف أو مورد أو عميل...',
-              prefixIcon: const Icon(Icons.search, color: purple, size: 20),
-              prefixIconConstraints: const BoxConstraints(
-                minWidth: 42,
-                minHeight: 36,
-              ),
-              suffixIcon: search.isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'مسح البحث',
-                      visualDensity: VisualDensity.compact,
-                      constraints: const BoxConstraints(
-                        minWidth: 36,
-                        minHeight: 36,
-                      ),
-                      onPressed: () {
-                        searchController.clear();
-                        setState(() => search = '');
-                      },
-                      icon: const Icon(Icons.close, size: 18),
-                    ),
-              suffixIconConstraints: const BoxConstraints(
-                minWidth: 36,
-                minHeight: 36,
-              ),
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 7,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: purple.withValues(alpha: .12),
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: purple.withValues(alpha: .12),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
         _HomeAdvertisementsCarousel(activityCode: currentActivityCode, onDestinationTap: (type, code) async {
           if (type == 'category') {
             try {
@@ -1887,6 +1985,8 @@ class _MainShellState extends State<MainShell> {
             });
           }
         }),
+        const SizedBox(height: 6),
+        _HomeTickerAdsStrip(activityCode: currentActivityCode),
         const SizedBox(height: 12),
         Text(silsilaText(silsilaText('نوع النشاط')),
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
