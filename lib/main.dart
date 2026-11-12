@@ -5154,7 +5154,9 @@ class _OffersScreenState extends State<OffersScreen> {
     if (!allowed.contains(extension)) throw ArgumentError('صيغة الصورة يجب أن تكون JPG أو PNG أو WEBP.');
     final path = '${user.id}/${DateTime.now().millisecondsSinceEpoch}.$extension';
     final mime = extension == 'png' ? 'image/png' : extension == 'webp' ? 'image/webp' : 'image/jpeg';
-    await client.storage.from('supplier-offers').uploadBinary(path, await file.readAsBytes(),
+    final bytes = await file.readAsBytes();
+    if (bytes.length > 5 * 1024 * 1024) throw ArgumentError('حجم صورة العرض يجب ألا يتجاوز 5 ميجابايت.');
+    await client.storage.from('supplier-offers').uploadBinary(path, bytes,
       fileOptions: FileOptions(contentType: mime, upsert: false));
     return client.storage.from('supplier-offers').getPublicUrl(path);
   }
