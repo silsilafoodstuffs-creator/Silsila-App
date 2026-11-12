@@ -5273,7 +5273,9 @@ class _OffersScreenState extends State<OffersScreen> {
         context: context,
         builder: (ctx) => StatefulBuilder(builder: (ctx, setSettings) => AlertDialog(
           title: const Text('إعدادات فئات العملاء المسموحة للمورد'),
-          content: SizedBox(width: 420, child: SingleChildScrollView(child: Column(
+          content: SizedBox(width: 420, child: SingleChildScrollView(child: Theme(
+            data: Theme.of(ctx).copyWith(checkboxTheme: CheckboxThemeData(shape: const CircleBorder())),
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: names.map((name) => CheckboxListTile(
               dense: true,
@@ -5284,7 +5286,7 @@ class _OffersScreenState extends State<OffersScreen> {
                 if (value == true) { draft.add(name); } else { draft.remove(name); }
               }),
             )).toList(),
-          ))),
+          )))),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
             FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حفظ الإعدادات')),
@@ -5423,7 +5425,9 @@ class _OffersScreenState extends State<OffersScreen> {
                 children: [
                   if (categoryGroups.isEmpty)
                     const Padding(padding: EdgeInsets.all(10), child: Text('لا توجد فئات معرفة لهذا النشاط. أضفها من بيانات أساسية > عملاء النشاطات.'))
-                  else ...categoryGroups.entries.map((group) => ExpansionTile(
+                  else Theme(
+                    data: Theme.of(context).copyWith(checkboxTheme: CheckboxThemeData(shape: const CircleBorder())),
+                    child: Column(children: categoryGroups.entries.map((group) => ExpansionTile(
                     tilePadding: const EdgeInsetsDirectional.only(start: 8, end: 8),
                     title: Text(group.key, style: const TextStyle(fontWeight: FontWeight.w700)),
                     children: group.value.toSet().map((name) => CheckboxListTile(
@@ -5435,7 +5439,7 @@ class _OffersScreenState extends State<OffersScreen> {
                         if (value == true) { selectedCustomerTypes.add(name); } else { selectedCustomerTypes.remove(name); }
                       }) : null,
                     )).toList(),
-                  )),
+                  ))).toList()),
                   if (allowedCustomerTypes.isEmpty)
                     const Padding(padding: EdgeInsets.all(8), child: Text('اضبط الفئات المسموحة من زر الإعدادات أولًا.')),
                 ],
@@ -5557,6 +5561,7 @@ class _OffersScreenState extends State<OffersScreen> {
         }
         if (selectedCustomerTypes.isEmpty) throw ArgumentError('حدد فئات العملاء المستهدفة من الفئات المسموحة للمورد.');
         final startsAt = scheduleLater ? scheduledStart : DateTime.now();
+        if (scheduleLater && !startsAt.isAfter(DateTime.now())) throw ArgumentError('موعد الجدولة يجب أن يكون في المستقبل.');
         final endsAt = startsAt.add(Duration(days: durationDays));
         final imageUrl = selectedImage == null ? null : await _uploadSupplierOfferImage(selectedImage!);
         final selectedGeoRows = geoRows.where((r) => selectedGeoIds.contains((r['id'] ?? '').toString())).toList();
