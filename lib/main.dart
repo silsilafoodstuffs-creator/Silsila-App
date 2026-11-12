@@ -2767,6 +2767,35 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
+  Widget _marketActionButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+  }) => SizedBox(
+    height: 42,
+    child: FilledButton(
+      style: FilledButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+      ),
+      onPressed: onPressed,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 17),
+          const SizedBox(width: 4),
+          Text(label, maxLines: 1, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+        ]),
+      ),
+    ),
+  );
+
   Widget marketPage() => ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -2775,22 +2804,27 @@ class _MainShellState extends State<MainShell> {
           Text(silsilaText(silsilaText('طلبات شراء وعروض بيع بين التجار.'))),
           const SizedBox(height: 14),
           Row(children: [
-            Expanded(child: FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: purple),
+            Expanded(child: _marketActionButton(
+              label: 'عايز أشتري',
+              icon: Icons.shopping_basket_outlined,
+              color: purple,
               onPressed: () => openMarketPost('buy'),
-              icon: const Icon(Icons.shopping_basket_outlined),
-              label: const Text('عايز أشتري'),
             )),
-            const SizedBox(width: 8),
-            Expanded(child: FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: orange),
+            const SizedBox(width: 6),
+            Expanded(child: _marketActionButton(
+              label: 'عايز أبيع',
+              icon: Icons.sell_outlined,
+              color: orange,
               onPressed: () => openMarketPost('sell'),
-              icon: const Icon(Icons.sell_outlined),
-              label: const Text('عايز أبيع'),
+            )),
+            const SizedBox(width: 6),
+            Expanded(child: _marketActionButton(
+              label: 'عايز أنقل',
+              icon: Icons.local_shipping_outlined,
+              color: const Color(0xFFFF27C3),
+              onPressed: () => openMarketPost('transfer'),
             )),
           ]),
-          const SizedBox(height: 8),
-          SizedBox(width: double.infinity, child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF27C3)), onPressed: () => openMarketPost('transfer'), icon: const Icon(Icons.local_shipping_outlined), label: const Text('عايز أنقل'))),
           const SizedBox(height: 12),
           OutlinedButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyMarketPostsScreen())), icon: const Icon(Icons.manage_history), label: const Text('إدارة طلباتي وسجل السوق')),
           const SizedBox(height: 8),
