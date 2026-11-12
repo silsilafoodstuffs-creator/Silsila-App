@@ -145,8 +145,22 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
     }
     var defaultCode = '';
     if (row == null) {
-      try { defaultCode = (await _db!.rpc('erp_preview_next_central_code', params: {'p_company_id': (widget.companyId ?? '').trim(), 'p_entity_key': 'branch'})).toString(); } catch (_) { defaultCode = 'Brn00001'; }
-    } else { defaultCode = _s(row['branch_code']); }
+      try {
+        defaultCode = (await _db!.rpc('erp_preview_next_central_code', params: {
+          'p_company_id': (widget.companyId ?? '').trim(),
+          'p_entity_key': 'branch',
+        })).toString().trim();
+      } catch (error) {
+        if (mounted) setState(() => _error = 'تعذر توليد كود الفرع من سياسة التكويد: $error');
+        return;
+      }
+      if (defaultCode.isEmpty) {
+        if (mounted) setState(() => _error = 'لم تُرجع سياسة التكويد كودًا صالحًا للفرع؛ لم يتم إنشاء سجل بكود افتراضي.');
+        return;
+      }
+    } else {
+      defaultCode = _s(row['branch_code']);
+    }
     final code = TextEditingController(text: defaultCode);
     final name = TextEditingController(text: _s(row?['branch_name']));
     final nameEn = TextEditingController(text: _s(row?['branch_name_en']));
@@ -239,7 +253,7 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
       }
       final payload = <String, Object?>{
         'company_id': companyId,
-        'branch_code': row == null ? '' : code.text.trim(),
+        'branch_code': code.text.trim(),
         'branch_name': name.text.trim(),
         'branch_name_en': nameEn.text.trim().isEmpty ? null : nameEn.text.trim(),
         'email': email.text.trim().isEmpty ? null : email.text.trim(),
