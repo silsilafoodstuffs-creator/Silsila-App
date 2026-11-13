@@ -1312,7 +1312,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                     child: ErpScreenFrame(
                       title: _page,
                       showFrameTitle: false,
-                      applyContentWidth: false,
                       tabs: layoutTabs,
                       selectedTab: selectedLayoutTab < 0 ? 0 : selectedLayoutTab,
                       onTabSelected: (index) {
@@ -3489,6 +3488,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       title: _page,
       subtitle: '$_module • $_group',
       icon: _iconFor(_module),
+      applyContentWidth: false,
       actions: _recordToolbarActions(includeAdd: _group != 'تقارير'),
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
       footer: Row(children: [
