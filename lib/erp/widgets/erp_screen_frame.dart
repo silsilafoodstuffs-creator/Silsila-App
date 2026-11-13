@@ -21,6 +21,7 @@ class ErpScreenFrame extends StatelessWidget {
     this.sidebar,
     this.showFrameTitle = true,
     this.applyContentWidth = true,
+    this.shrinkWrap = false,
     required this.child,
     this.footer,
     this.padding = const EdgeInsets.all(12),
@@ -39,6 +40,7 @@ class ErpScreenFrame extends StatelessWidget {
   final Widget? sidebar;
   final bool showFrameTitle;
   final bool applyContentWidth;
+  final bool shrinkWrap;
   final Widget child;
   final Widget? footer;
   final EdgeInsetsGeometry padding;
@@ -273,29 +275,30 @@ class ErpScreenFrame extends StatelessWidget {
         }
 
         final headerTabs = tabsVisible && tabsPosition == 'below_title';
-        final content = Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              sideRail(left: false),
-              Expanded(
-                child: Center(
-                  child: FractionallySizedBox(
-                    widthFactor: applyContentWidth ? contentWidth / 100 : 1,
-                    child: Padding(padding: padding, child: child),
-                  ),
+        final contentRow = Row(
+          mainAxisSize: MainAxisSize.max,
+          crossAxisAlignment: shrinkWrap ? CrossAxisAlignment.start : CrossAxisAlignment.stretch,
+          children: [
+            sideRail(left: false),
+            Expanded(
+              child: Center(
+                child: FractionallySizedBox(
+                  widthFactor: applyContentWidth ? contentWidth / 100 : 1,
+                  child: Padding(padding: padding, child: child),
                 ),
               ),
-              sideRail(left: true),
-            ],
-          ),
+            ),
+            sideRail(left: true),
+          ],
         );
+        final Widget content = shrinkWrap ? contentRow : Expanded(child: contentRow);
 
         return Theme(
           data: themed,
           child: Directionality(
             textDirection: Directionality.of(context),
             child: Column(
+              mainAxisSize: shrinkWrap ? MainAxisSize.min : MainAxisSize.max,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (tabsVisible && tabsPosition == 'top') tabsPanel(),
