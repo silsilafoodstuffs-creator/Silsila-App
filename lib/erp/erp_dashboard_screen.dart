@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'services/erp_screen_layout_profiles.dart';
 import 'services/erp_print_support.dart';
 import 'widgets/erp_center_toast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -1220,7 +1221,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
+    return ErpScreenLayoutRuntime(
+      screen: _page,
+      child: Directionality(
       textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
       child: LayoutBuilder(builder: (context, c) {
         // Responsive breakpoints: keep navigation, workspace, and utility panels visible.
@@ -1334,6 +1337,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           ]),
         );
       }),
+      ),
     );
   }
 
