@@ -295,6 +295,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
       child: ErpScreenFrame(
         title: widget.title,
         profileKey: widget.layoutScreenKey,
+        applyContentWidth: false,
         subtitle: 'لقطة أرصدة، إدخال الكميات الفعلية، مراجعة الفروقات ثم الترحيل.',
         icon: Icons.fact_check_outlined,
         actions: [
