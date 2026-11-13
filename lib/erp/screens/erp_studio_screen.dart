@@ -260,6 +260,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
         if (node.parentId != null && ids.contains(node.parentId) && ids.add(node.id)) expanded = true;
       }
     }
+    if (_doc.nodes.any((node) => ids.contains(node.id) && node.locked && !_selectedIds.contains(node.id))) {
+      _notice('لا يمكن حذف المجموعة لأنها تحتوي على مكون مقفل. أزل القفل عن المكون أولاً.');
+      return;
+    }
     _change(_doc.copyWith(nodes: _doc.nodes.where((node) => !ids.contains(node.id)).toList()));
     setState(() => _selectedIds.clear());
   }
@@ -289,7 +293,9 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     final next = <StudioNode>[];
     for (final node in _doc.nodes) {
       if (selectedGroups.contains(node.id)) continue;
-      if ((_selectedIds.contains(node.id) || (node.parentId != null && selectedGroups.contains(node.parentId))) && !node.locked) {
+      if (node.parentId != null && selectedGroups.contains(node.parentId)) {
+        next.add(node.copyWith(clearParent: true));
+      } else if (_selectedIds.contains(node.id) && !node.locked) {
         next.add(node.copyWith(clearParent: true, clearGroup: true));
       } else {
         next.add(node);
