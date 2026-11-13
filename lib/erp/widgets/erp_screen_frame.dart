@@ -9,6 +9,7 @@ class ErpScreenFrame extends StatelessWidget {
   const ErpScreenFrame({
     super.key,
     required this.title,
+    this.profileKey,
     this.subtitle,
     this.icon = Icons.dashboard_customize_outlined,
     this.tabs = const [],
@@ -26,6 +27,7 @@ class ErpScreenFrame extends StatelessWidget {
   });
 
   final String title;
+  final String? profileKey;
   final String? subtitle;
   final IconData icon;
   final List<String> tabs;
@@ -46,8 +48,9 @@ class ErpScreenFrame extends StatelessWidget {
     return ValueListenableBuilder<Map<String, dynamic>>(
       valueListenable: ErpScreenLayoutProfiles.profiles,
       builder: (context, profiles, _) {
-        final raw = profiles[title] is Map
-            ? profiles[title] as Map
+        final key = profileKey ?? title;
+        final raw = profiles[key] is Map
+            ? profiles[key] as Map
             : profiles['*'] is Map ? profiles['*'] as Map : const {};
         final profile = Map<String, dynamic>.from(raw);
         final showTitle = (profile['showTitle'] as bool? ?? true) && showFrameTitle;
