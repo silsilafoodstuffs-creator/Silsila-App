@@ -44,8 +44,10 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   bool _loading = true;
   Map<String, dynamic> _profiles = {};
 
-  Map<String, dynamic> get _current => Map<String, dynamic>.from(_profiles[_screen] is Map
-      ? _profiles[_screen] as Map : _profiles['*'] is Map ? _profiles['*'] as Map : <String,dynamic>{});
+  String get _profileKey => _screen == _screens.first ? '*' : _screen;
+
+  Map<String, dynamic> get _current => Map<String, dynamic>.from(_profiles[_profileKey] is Map
+      ? _profiles[_profileKey] as Map : _profiles['*'] is Map ? _profiles['*'] as Map : <String,dynamic>{});
 
   @override
   void initState() {
@@ -100,14 +102,14 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   };
 
   Future<void> _save() async {
-    await ErpScreenLayoutProfiles.save(_screen, _serialize());
+    await ErpScreenLayoutProfiles.save(_profileKey, _serialize());
     if (!mounted) return;
     setState(() => _profiles = Map<String, dynamic>.from(ErpScreenLayoutProfiles.profiles.value));
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ التخطيط وتطبيقه فورياً على الشاشات التي تستخدم الإطار الموحد.')));
   }
 
   Future<void> _reset() async {
-    await ErpScreenLayoutProfiles.reset(_screen);
+    await ErpScreenLayoutProfiles.reset(_profileKey);
     if (!mounted) return;
     setState(() { _profiles = Map<String, dynamic>.from(ErpScreenLayoutProfiles.profiles.value); _apply(_current); });
   }
