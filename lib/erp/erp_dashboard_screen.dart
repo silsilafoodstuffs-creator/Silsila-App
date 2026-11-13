@@ -1263,7 +1263,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                       _page == 'قوالب صلاحيات المستخدمين' ||
                       _page == 'صلاحيات المستخدمين' ||
                       _page == 'سياسات البرنامج' ||
-                      _page == 'استوديو تخطيط الشاشات' ||
+                      _page == 'سلسلة ستوديو' ||
                       _page == 'بيانات المخازن' ||
                       _page == 'دليل المخازن والفروع' ||
                       _page == 'دليل المخازن' ||
@@ -1293,7 +1293,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                                       : (_page == 'مراكز التكلفة' || _page == 'الفروع ومراكز التكلفة')
                                       ? ErpCostCentersScreen(companyId: _appManagementCompanyId)
                                        : _page == 'استوديو تخطيط الشاشات'
-                                      ? const ErpScreenLayoutStudioScreen()
+                                      ? SilsilaStudioScreen(companyId: _appManagementCompanyId)
                                       : _page == 'سياسات البرنامج'
                                       ? ErpProgramPoliciesScreen(
                                           companyId: _appManagementCompanyId,
