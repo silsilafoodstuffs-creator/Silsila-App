@@ -2240,6 +2240,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     }
   }
 
+  String _staffName(Map<String, dynamic> row, List<String> candidates) {
+    for (final key in candidates) {
+      final value = row[key]?.toString().trim() ?? '';
+      if (value.isNotEmpty && value.toLowerCase() != 'null') return value;
+    }
+    final code = row['employee_code']?.toString().trim() ??
+        row['rep_code']?.toString().trim() ?? '';
+    return code.isEmpty ? 'اسم غير مسجل' : 'بدون اسم ($code)';
+  }
+
   double _performanceNumber(dynamic value) => double.tryParse(value?.toString() ?? '') ?? 0;
 
   double _salesRepActual(Map<String, dynamic> rep) {
@@ -2352,29 +2362,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     } catch (_) {
       // Expiry alerts are supplementary; do not interrupt financial analytics.
     }
-  }
-
-  double _performanceNumber(dynamic value) => double.tryParse(value?.toString() ?? '') ?? 0;
-
-  double _salesRepActual(Map<String, dynamic> rep) {
-    final id = rep['id']?.toString();
-    return _executiveSalesDocuments.where((doc) => doc['sales_rep_id']?.toString() == id).fold<double>(0, (sum, doc) {
-      final amount = _performanceNumber(doc['grand_total']);
-      return sum + (doc['document_type']?.toString() == 'return' ? -amount : amount);
-    });
-  }
-
-  double _purchaseEmployeeActual(Map<String, dynamic> employee) {
-    final id = employee['id']?.toString();
-    return _executivePurchaseDocuments.where((doc) => doc['created_by']?.toString() == id).fold<double>(0, (sum, doc) {
-      final amount = _performanceNumber(doc['grand_total']);
-      return sum + (doc['document_type']?.toString() == 'return' ? -amount : amount);
-    });
-  }
-
-  double _employeeTarget(String employeeId, String type) {
-    final matching = _executiveEmployeeTargets.where((target) => target['employee_id']?.toString() == employeeId && target['target_type']?.toString() == type);
-    return matching.isEmpty ? 0 : _performanceNumber(matching.first['target_amount']);
   }
 
   Widget _staffPerformanceCard({required String title, required IconData icon, required Color color, required List<Map<String, dynamic>> people, required double Function(Map<String, dynamic>) actualFor, required double Function(Map<String, dynamic>) targetFor, required String Function(Map<String, dynamic>) nameFor, required String Function(Map<String, dynamic>) classificationFor, required bool showAll, required VoidCallback onToggle, required String emptyText, ValueChanged<Map<String, dynamic>>? onEditTarget}) {
