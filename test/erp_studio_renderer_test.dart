@@ -162,5 +162,15 @@ void main() {
       ).toJson();
       expect(() => StudioDocument.fromJson(cyclic), throwsFormatException);
     });
+    test('round trips bounded embedded image data in a Studio document', () {
+      final source = 'data:image/png;base64,' + List.filled(5000, 'A').join();
+      final document = StudioDocument(
+        id: 'image-json-test',
+        name: 'اختبار حفظ الصورة',
+        nodes: [StudioNode(id: 'image', type: 'image', props: {'url': source})],
+      );
+      final restored = StudioDocument.fromJson(document.toJson());
+      expect(restored.nodes.single.props['url'], source);
+    });
   });
 }
