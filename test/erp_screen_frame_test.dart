@@ -155,4 +155,17 @@ void main() {
     expect(find.text('بيانات أساسية'), findsOneWidget);
   });
 
+  testWidgets('supports shrink-wrapped frames inside vertical scroll views', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: SingleChildScrollView(
+        child: ErpScreenFrame(
+          title: 'إطار مضغوط',
+          shrinkWrap: true,
+          child: const Column(children: [Text('محتوى الشاشة')]),
+        ),
+      ),
+    ));
+    expect(find.text('محتوى الشاشة'), findsOneWidget);
+  });
+
 }
