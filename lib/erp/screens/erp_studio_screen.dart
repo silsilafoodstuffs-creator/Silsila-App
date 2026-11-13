@@ -423,7 +423,8 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     try {
       final parsed = jsonDecode(controller.text);
       if (parsed is! Map) throw const FormatException('يجب أن يكون جذر الملف كائناً.');
-      final imported = StudioDocument.fromJson(Map<String, dynamic>.from(parsed));
+      final importMap = Map<String, dynamic>.from(parsed)..remove('remoteId')..['remoteRevision'] = 0;
+      final imported = StudioDocument.fromJson(importMap);
       setState(() {
         _doc = imported;
         _nameController.text = imported.name;
@@ -1169,7 +1170,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       const Text('اختر شركة نشطة لعرض سجل الإصدارات المركزي.')
     else ...[
       DropdownButtonFormField<String>(
-        value: _remoteDesignId,
+        value: _remoteDesigns.any((row) => row['id']?.toString() == _remoteDesignId) ? _remoteDesignId : null,
         decoration: const InputDecoration(labelText: 'التصميم المركزي'),
         items: _remoteDesigns.map((row) => DropdownMenuItem(
           value: row['id'].toString(),
