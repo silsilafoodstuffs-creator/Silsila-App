@@ -2207,6 +2207,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           .from('erp_employee_monthly_targets')
           .select('employee_id,target_type,target_month,target_amount')
           .eq('company_id', companyId).eq('target_month', month)),
+      safeRows(() => Supabase.instance.client
+          .from('erp_users').select('auth_user_id,employee_id')
+          .eq('company_id', companyId).eq('is_active', true)),
     ]);
     if (!mounted) return;
 
@@ -2224,9 +2227,23 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         .where((row) => row['is_demo_data'] != true)
         .toList();
 
+    final employeeAuthIds = <String, String>{};
+    for (final raw in results[5]) {
+      if (raw is! Map) continue;
+      final row = Map<String, dynamic>.from(raw);
+      final employeeId = row['employee_id']?.toString() ?? '';
+      final authUserId = row['auth_user_id']?.toString() ?? '';
+      if (employeeId.isNotEmpty && authUserId.isNotEmpty) {
+        employeeAuthIds[employeeId] = authUserId;
+      }
+    }
     final employees = results[2]
         .whereType<Map>()
-        .map((row) => Map<String, dynamic>.from(row))
+        .map((row) {
+          final employee = Map<String, dynamic>.from(row);
+          employee['auth_user_id'] ??= employeeAuthIds[employee['id']?.toString()];
+          return employee;
+        })
         .toList();
 
     final purchaseDocuments = results[3]
@@ -2380,8 +2397,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }
 
   double _purchaseEmployeeActual(Map<String, dynamic> employee) {
-    final id = employee['id']?.toString();
-    return _executivePurchaseDocuments.where((doc) => doc['created_by']?.toString() == id).fold<double>(0, (sum, doc) {
+    final employeeIds = <String>{
+      employee['id']?.toString() ?? '',
+      employee['auth_user_id']?.toString() ?? '',
+    }..remove('');
+    return _executivePurchaseDocuments.where((doc) =>
+      employeeIds.contains(doc['created_by']?.toString())
+    ).fold<double>(0, (sum, doc) {
       final amount = _performanceNumber(doc['grand_total']);
       return sum + (doc['document_type']?.toString() == 'return' ? -amount : amount);
     });
