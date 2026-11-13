@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'studio_document.dart';
 
 const _studioPrimary = Color(0xFF3E007D);
-const _studioOrange = Color(0xFFFFA015);
 
 /// Fixed component allow-list. A Studio document is data only; it cannot execute code.
 class StudioComponentRegistry {
