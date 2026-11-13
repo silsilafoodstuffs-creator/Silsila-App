@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'studio_data_sources.dart';
 import 'studio_document.dart';
 
 /// Supabase persistence for Studio metadata. RLS and RPC role checks are authoritative.
@@ -22,6 +23,19 @@ class ErpStudioRepository {
     return (rows as List).map((e) => Map<String, dynamic>.from(e as Map)).toList(growable: false);
   }
 
+  Future<Map<String, dynamic>> getDesign({
+    required String companyId,
+    required String designId,
+  }) async {
+    _requireCompany(companyId);
+    final row = await _client.from('erp_studio_designs')
+        .select('id,design_key,name,design_kind,status,schema_version,revision,published_revision,design_json,binding_json,updated_at')
+        .eq('company_id', companyId)
+        .eq('id', designId)
+        .single();
+    return Map<String, dynamic>.from(row);
+  }
+
   Future<List<Map<String, dynamic>>> listVersions({
     required String companyId,
     required String designId,
@@ -34,6 +48,56 @@ class ErpStudioRepository {
         .order('revision', ascending: false)
         .limit(100);
     return (rows as List).map((e) => Map<String, dynamic>.from(e as Map)).toList(growable: false);
+  }
+
+  Future<Map<String, dynamic>> getVersion({
+    required String companyId,
+    required String designId,
+    required int revision,
+  }) async {
+    _requireCompany(companyId);
+    final row = await _client.from('erp_studio_design_versions')
+        .select('revision,design_json,binding_json,change_note,created_at')
+        .eq('company_id', companyId)
+        .eq('design_id', designId)
+        .eq('revision', revision)
+        .single();
+    return Map<String, dynamic>.from(row);
+  }
+
+  Future<List<Map<String, dynamic>>> previewSource({
+    required String companyId,
+    required String sourceKey,
+    int limit = 50,
+  }) async {
+    _requireCompany(companyId);
+    final source = StudioDataSources.byKey(sourceKey);
+    final safeLimit = limit.clamp(1, 100);
+    var request = _client.from(source.table).select(source.select).eq('company_id', companyId);
+    if (source.excludeDemo) {
+      request = request.eq('is_demo_data', false);
+    }
+    final rows = await request.limit(safeLimit);
+    return (rows as List).map((row) => Map<String, dynamic>.from(row as Map)).toList(growable: false);
+  }
+
+  Future<Map<String, List<Map<String, dynamic>>>> previewBindings({
+    required String companyId,
+    required StudioDocument document,
+    int limit = 50,
+  }) async {
+    final keys = <String>{};
+    for (final node in document.nodes) {
+      final binding = node.props['binding'];
+      if (binding is Map && binding['source'] is String) {
+        keys.add(binding['source'] as String);
+      }
+    }
+    final result = <String, List<Map<String, dynamic>>>{};
+    for (final key in keys) {
+      result[key] = await previewSource(companyId: companyId, sourceKey: key, limit: limit);
+    }
+    return result;
   }
 
   Future<String> saveDraft({
@@ -50,10 +114,13 @@ class ErpStudioRepository {
       'p_design_id': remoteId,
       'p_design_key': designKey,
       'p_name': document.name,
-      'p_design_kind': 'screen',
+      'p_design_kind': document.designKind,
       'p_schema_version': document.schemaVersion,
       'p_design_json': document.toJson(),
-      'p_binding_json': {'mode': 'unbound', 'sources': []},
+      'p_binding_json': {
+        'mode': document.bindings.isEmpty ? 'unbound' : 'allowlisted',
+        'bindings': document.bindings,
+      },
       'p_expected_revision': expectedRevision,
       'p_change_note': changeNote,
     });
