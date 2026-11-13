@@ -53,7 +53,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       final rows = await _db.from('erp_brands')
         .select('id,brand_code,brand_name,brand_name_en,brand_group,display_order,is_active,is_system,logo_data,logo_mime_type')
         .eq('company_id', widget.companyId.trim())
-        .order('display_order')
         .order('brand_code');
       if (!mounted) return;
       setState(() {
@@ -347,11 +346,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
   List<Map<String,dynamic>> _rowsInGroup(String group) {
     return _visibleRows.where((row) => _groupKey(row) == group).toList()
-      ..sort((a,b) {
-        final byOrder = (a['display_order'] as num? ?? 1000)
-            .compareTo(b['display_order'] as num? ?? 1000);
-        return byOrder != 0 ? byOrder : _s(a['brand_code']).compareTo(_s(b['brand_code']));
-      });
+      ..sort((a,b) => _s(a['brand_code']).compareTo(_s(b['brand_code'])));
   }
 
   Widget _logoPreview(Map<String,dynamic> row, {double size = 48}) {
