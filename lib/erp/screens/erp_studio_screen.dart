@@ -1010,7 +1010,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
                       if (value == true) { _selectedIds.add(node.id); } else { _selectedIds.remove(node.id); }
                     }),
                   ),
-                  const Icon(Icons.drag_indicator),
+                  ReorderableDragStartListener(
+                    index: _doc.nodes.indexOf(node),
+                    child: const Icon(Icons.drag_indicator),
+                  ),
                 ]),
                 title: Opacity(
                   opacity: node.hidden ? .45 : 1,
