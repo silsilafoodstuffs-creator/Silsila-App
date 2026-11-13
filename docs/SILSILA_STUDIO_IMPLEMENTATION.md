@@ -59,3 +59,11 @@ Silsila Studio is the single integrated design workspace in ERP navigation under
 - Data-source table names and column names come from a fixed registry; callers cannot supply arbitrary identifiers.
 - Company isolation and write permissions are enforced by RLS and owner/admin role policies. Anonymous access is revoked.
 - Published custom designs render read-only in the published-design viewer. Business mutations must continue through the ERP's existing validated business workflows.
+
+
+## Validation fixes — 2026-11-13
+
+- Corrected the Studio layout preview's nested data-view expression to explicit widget branches.
+- Removed duplicate executive-dashboard staff calculation helpers introduced during the layout integration and restored the shared staff-name resolver.
+- Updated the layout editor widget tests to use Flutter 3.29 TestFlutterView sizing properties.
+- Re-run the full validation workflow against the consolidated branch head before treating the Studio work as verified.
