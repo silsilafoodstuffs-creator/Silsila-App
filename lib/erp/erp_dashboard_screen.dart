@@ -211,7 +211,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   List<Map<String, dynamic>> _executivePurchaseEmployees = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _executivePurchaseDocuments = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _executiveEmployeeTargets = <Map<String, dynamic>>[];
-  String _executivePeriod = 'من بداية النشاط';
+  String _executivePeriod = 'السنة الحالية';
   double? _executivePreviousSales;
   double? _executivePreviousPurchases;
   double? _executivePreviousGrossProfit;
@@ -241,6 +241,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   int? _executiveInvoiceCount;
   int? _executiveReorderItemCount;
   int? _executiveExpiryBatchCount;
+  int? _executiveExpiredBatchCount;
+  int? _executiveExpiryNext60BatchCount;
   int? _executiveSlowMovingItemCount;
   int? _executiveFulfillmentPendingCount;
   int? _executivePendingApprovalCount;
@@ -2136,6 +2138,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _executiveMetricsLoading = false;
       });
       await _loadExecutiveStaffPerformance(companyId, bounds.start, bounds.end);
+      await _loadExecutiveExpiryMetrics(companyId);
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -2146,33 +2149,198 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }
 
   Future<void> _loadExecutiveStaffPerformance(String companyId, DateTime start, DateTime end) async {
+    // Load each optional source independently. A missing column/table or an RLS
+    // restriction must not hide the names returned successfully by other sources.
+    Future<List<dynamic>> safeRows(dynamic Function() request) async {
+      try {
+        final result = await request();
+        return result is List ? result : <dynamic>[];
+      } catch (_) {
+        return <dynamic>[];
+      }
+    }
+
+    final from = start.toIso8601String().substring(0, 10);
+    final to = end.toIso8601String().substring(0, 10);
+    final month = DateTime(start.year, start.month).toIso8601String().substring(0, 10);
+    final results = await Future.wait<List<dynamic>>([
+      safeRows(() => Supabase.instance.client
+          .from('erp_sales_representatives').select('*')
+          .eq('company_id', companyId).eq('is_active', true)),
+      safeRows(() => Supabase.instance.client
+          .from('erp_sales_documents').select('*')
+          .eq('company_id', companyId).eq('status', 'posted')
+          .gte('document_date', from).lt('document_date', to)),
+      safeRows(() => Supabase.instance.client
+          .from('erp_employees').select('*')
+          .eq('company_id', companyId).eq('is_active', true)),
+      safeRows(() => Supabase.instance.client
+          .from('erp_purchase_documents').select('*')
+          .eq('company_id', companyId).eq('status', 'posted')
+          .gte('document_date', from).lt('document_date', to)),
+      safeRows(() => Supabase.instance.client
+          .from('erp_employee_monthly_targets')
+          .select('employee_id,target_type,target_month,target_amount')
+          .eq('company_id', companyId).eq('target_month', month)),
+    ]);
+    if (!mounted) return;
+
+    final salesReps = results[0]
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .where((row) => row['is_demo_data'] != true)
+        .toList()
+      ..sort((a, b) => _staffName(a, const ['rep_name', 'full_name', 'name_ar', 'name'])
+          .compareTo(_staffName(b, const ['rep_name', 'full_name', 'name_ar', 'name'])));
+
+    final salesDocuments = results[1]
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .where((row) => row['is_demo_data'] != true)
+        .toList();
+
+    final employees = results[2]
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+
+    final purchaseDocuments = results[3]
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .where((row) => row['is_demo_data'] != true)
+        .toList();
+
+    final purchaseCreatorIds = purchaseDocuments
+        .map((row) => row['created_by']?.toString())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    final purchasingEmployees = employees.where((employee) {
+      final role = [
+        employee['job_title'], employee['department_name'],
+        employee['job_name'], employee['department'], employee['role_name'],
+      ].whereType<Object>().join(' ').toLowerCase();
+      final employeeIds = [
+        employee['id'], employee['user_id'], employee['auth_user_id'],
+      ].whereType<Object>().map((value) => value.toString()).toSet();
+      final isPurchasingRole = role.contains('مشت') ||
+          role.contains('شراء') || role.contains('procurement') ||
+          role.contains('purchas');
+      return isPurchasingRole || employeeIds.intersection(purchaseCreatorIds).isNotEmpty;
+    }).toList()
+      ..sort((a, b) => _staffName(a, const ['full_name', 'name_ar', 'employee_name', 'name'])
+          .compareTo(_staffName(b, const ['full_name', 'name_ar', 'employee_name', 'name'])));
+
+    setState(() {
+      _executiveSalesReps = salesReps;
+      _executiveSalesDocuments = salesDocuments;
+      _executivePurchaseEmployees = purchasingEmployees;
+      _executivePurchaseDocuments = purchaseDocuments;
+      _executiveEmployeeTargets = results[4]
+          .whereType<Map>()
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList();
+    });
+  }
+
+  String _staffName(Map<String, dynamic> row, List<String> candidates) {
+    for (final key in candidates) {
+      final value = row[key]?.toString().trim() ?? '';
+      if (value.isNotEmpty && value.toLowerCase() != 'null') return value;
+    }
+    final code = row['employee_code']?.toString().trim() ?? row['rep_code']?.toString().trim() ?? '';
+    return code.isEmpty ? 'اسم غير مسجل' : 'بدون اسم ($code)';
+  }
+
+  Widget _executivePeriodCheckbox(String period) {
+    final selected = _executivePeriod == period;
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(end: 3),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(9),
+        onTap: () => _changeExecutivePeriod(period),
+        child: Container(
+          padding: const EdgeInsetsDirectional.only(start: 2, end: 7),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFFF1E6FF) : Colors.white,
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: selected ? _purple : const Color(0xFFE7E0EF)),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Checkbox(
+              value: selected,
+              onChanged: (value) {
+                if (value == true) _changeExecutivePeriod(period);
+              },
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            Text(period, style: TextStyle(
+              color: selected ? _purple : const Color(0xFF51465D),
+              fontSize: 10,
+              fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
+            )),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  void _changeExecutivePeriod(String period) {
+    if (_executivePeriod == period) return;
+    setState(() => _executivePeriod = period);
+    final companyId = _appManagementCompanyId;
+    if (companyId != null) _loadExecutiveMetrics(companyId);
+  }
+
+  Future<void> _loadExecutiveExpiryMetrics(String companyId) async {
     try {
-      final client = Supabase.instance.client;
-      final from = start.toIso8601String().substring(0, 10);
-      final to = end.toIso8601String().substring(0, 10);
-      final month = DateTime(start.year, start.month).toIso8601String().substring(0, 10);
-      final results = await Future.wait<dynamic>([
-        client.from('erp_sales_representatives').select('*').eq('company_id', companyId).eq('is_active', true).order('rep_name'),
-        client.from('erp_sales_documents').select('id,sales_rep_id,document_type,grand_total,status,document_date,is_demo_data').eq('company_id', companyId).eq('status', 'posted').eq('is_demo_data', false).gte('document_date', from).lt('document_date', to),
-        client.from('erp_employees').select('id,employee_code,full_name,job_title,department_name,is_active').eq('company_id', companyId).eq('is_active', true).order('full_name'),
-        client.from('erp_purchase_documents').select('id,created_by,document_type,grand_total,status,document_date,is_demo_data').eq('company_id', companyId).eq('status', 'posted').eq('is_demo_data', false).gte('document_date', from).lt('document_date', to),
-        client.from('erp_employee_monthly_targets').select('employee_id,target_type,target_month,target_amount').eq('company_id', companyId).eq('target_month', month),
-      ]);
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final horizon = today.add(const Duration(days: 60));
+      final rows = await Supabase.instance.client
+          .from('erp_inventory_movements')
+          .select('item_id,batch_number,expiry_date,quantity_in,quantity_out')
+          .eq('company_id', companyId)
+          .not('expiry_date', 'is', null)
+          .lte('expiry_date', horizon.toIso8601String().substring(0, 10))
+          .limit(10000);
+
+      final batches = <String, Map<String, dynamic>>{};
+      for (final raw in rows) {
+        if (raw is! Map) continue;
+        final row = Map<String, dynamic>.from(raw);
+        final expiry = DateTime.tryParse(row['expiry_date']?.toString() ?? '');
+        if (expiry == null) continue;
+        final key = '${row['item_id']}|${row['batch_number']}|${row['expiry_date']}';
+        final batch = batches.putIfAbsent(key, () => {'expiry': expiry, 'quantity': 0.0});
+        batch['quantity'] = (batch['quantity'] as double) +
+            (_performanceNumber(row['quantity_in']) - _performanceNumber(row['quantity_out']));
+      }
+
+      var expired = 0;
+      var next30 = 0;
+      var next60 = 0;
+      for (final batch in batches.values) {
+        if ((batch['quantity'] as double) <= 0) continue;
+        final expiry = batch['expiry'] as DateTime;
+        if (expiry.isBefore(today)) {
+          expired++;
+        } else if (!expiry.isAfter(today.add(const Duration(days: 30)))) {
+          next30++;
+        } else {
+          next60++;
+        }
+      }
       if (!mounted) return;
-      final allEmployees = (results[2] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-      final purchasingEmployees = allEmployees.where((employee) {
-        final role = '${employee['job_title'] ?? ''} ${employee['department_name'] ?? ''}'.toLowerCase();
-        return role.contains('مشت') || role.contains('شراء') || role.contains('procurement') || role.contains('purchas');
-      }).toList();
       setState(() {
-        _executiveSalesReps = (results[0] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        _executiveSalesDocuments = (results[1] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        _executivePurchaseEmployees = purchasingEmployees;
-        _executivePurchaseDocuments = (results[3] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        _executiveEmployeeTargets = (results[4] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _executiveExpiredBatchCount = expired;
+        _executiveExpiryNext60BatchCount = next60;
+        _executiveExpiryBatchCount = next30;
       });
     } catch (_) {
-      // Staff performance is supplemental; keep the financial summary available if optional tables are not deployed yet.
+      // Expiry alerts are supplementary; do not interrupt financial analytics.
     }
   }
 
@@ -2310,7 +2478,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       people: _executiveSalesReps,
       actualFor: _salesRepActual,
       targetFor: (rep) => _performanceNumber(rep['monthly_sales_target']),
-      nameFor: (rep) => (rep['rep_name'] ?? 'مندوب مبيعات').toString(),
+      nameFor: (rep) => _staffName(rep, const ['rep_name', 'full_name', 'name_ar', 'name']),
       classificationFor: (rep) => (rep['rep_classification'] ?? rep['channel'] ?? 'مندوب مبيعات').toString(),
       showAll: _showAllSalesPerformance,
       onToggle: () => setState(() => _showAllSalesPerformance = !_showAllSalesPerformance),
@@ -2321,7 +2489,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       people: _executivePurchaseEmployees,
       actualFor: _purchaseEmployeeActual,
       targetFor: (employee) => _employeeTarget(employee['id'].toString(), 'purchase'),
-      nameFor: (employee) => (employee['full_name'] ?? 'مسؤول مشتريات').toString(),
+      nameFor: (employee) => _staffName(employee, const ['full_name', 'name_ar', 'employee_name', 'name']),
       classificationFor: (employee) => '${employee['job_title'] ?? 'مسؤول مشتريات'} • ${employee['department_name'] ?? 'المشتريات'}',
       showAll: _showAllPurchasePerformance,
       onToggle: () => setState(() => _showAllPurchasePerformance = !_showAllPurchasePerformance),
@@ -2384,7 +2552,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'items': <Map<String, Object>>[
           {'title': 'قيمة المخزون', 'value': _executiveMoney(_executiveInventoryValue), 'note': 'تقدير بتكلفة الشراء الحالية', 'icon': Icons.inventory_2_outlined, 'color': const Color(0xFF2475B8), 'details': 'قيمة المخزون المتاح والمحجوز حسب المخزن والفرع والصنف.'},
           {'title': 'تحت حد الطلب', 'value': '${_executiveReorderItemCount ?? '—'} صنف', 'note': 'بحاجة للشراء', 'icon': Icons.warning_amber_rounded, 'color': _orange, 'details': 'الأصناف التي وصلت إلى حد إعادة الطلب والكميات المقترحة للشراء.'},
+          {'title': 'منتهية الصلاحية', 'value': '${_executiveExpiredBatchCount ?? '—'} تشغيلة', 'note': 'رصيد متبقٍ بعد تاريخ الانتهاء', 'icon': Icons.warning_amber_rounded, 'color': const Color(0xFFD92D48), 'details': 'تشغيلات انتهى تاريخ صلاحيتها وما زال لها رصيد موجب؛ يلزم عزلها ومراجعة التسوية أو الإعدام.'},
           {'title': 'قرب انتهاء الصلاحية', 'value': '${_executiveExpiryBatchCount ?? '—'} تشغيلة', 'note': 'خلال 30 يومًا', 'icon': Icons.event_busy_outlined, 'color': _pink, 'details': 'الأصناف القريبة من انتهاء الصلاحية مع الكميات والقيمة والمخزن.'},
+          {'title': 'انتهاء خلال 31–60 يومًا', 'value': '${_executiveExpiryNext60BatchCount ?? '—'} تشغيلة', 'note': 'نافذة تنبيه مبكر', 'icon': Icons.date_range_rounded, 'color': _orange, 'details': 'تشغيلات ستنتهي خلال الفترة من اليوم 31 إلى اليوم 60، لإتاحة وقت كافٍ للتصريف أو إعادة التوزيع.'},
           {'title': 'الأصناف الراكدة', 'value': '${_executiveSlowMovingItemCount ?? '—'} صنف', 'note': 'بلا صرف خلال 90 يومًا', 'icon': Icons.inventory_outlined, 'color': _orange, 'details': 'الأصناف التي لم تتحرك خلال فترة محددة وقيمة رأس المال المجمد بها.'},
           {'title': 'دوران المخزون', 'value': _executiveInventoryTurnoverRate == null ? '— مرة' : '${_executiveInventoryTurnoverRate!.toStringAsFixed(2)} مرة', 'note': 'تكلفة المبيعات ÷ قيمة المخزون الحالية', 'icon': Icons.sync_alt_rounded, 'color': _purple, 'details': 'معدل دوران المخزون ومتوسط أيام التخزين حسب الفئة والصنف.'},
           {'title': 'تغير تكلفة الشراء', 'value': '—%', 'note': 'مقارنة بآخر شراء', 'icon': Icons.price_change_outlined, 'color': const Color(0xFF2475B8), 'details': 'تغير تكلفة الشراء ومقارنة أسعار الصنف بين الموردين.'},
@@ -2463,34 +2633,20 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               Row(children: [
                 Expanded(child: Text(silsilaText('الملخص التنفيذي'), style: const TextStyle(fontSize: 22, height: 1.15, fontWeight: FontWeight.w900, color: _purple, letterSpacing: -.3))),
                 const SizedBox(width: 12),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 220),
-                  child: DropdownButtonFormField<String>(itemHeight: 48, 
-                    value: _executivePeriod,
-                    isExpanded: true,
-                    dropdownColor: Colors.white,
-                    style: const TextStyle(color: _purple, fontSize: 13, fontWeight: FontWeight.w800),
-                    decoration: InputDecoration(
-                      labelText: 'فترة التحليلات',
-                      labelStyle: const TextStyle(color: _purple, fontSize: 11),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                SizedBox(
+                  width: 360,
+                  height: 40,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _executivePeriodCheckbox('السنة السابقة'),
+                        _executivePeriodCheckbox('السنة الحالية'),
+                        _executivePeriodCheckbox('الشهر السابق'),
+                        _executivePeriodCheckbox('الشهر الحالي'),
+                      ],
                     ),
-                    items: const [
-                      DropdownMenuItem(value: 'من بداية النشاط', child: Text('من بداية النشاط')),
-                      DropdownMenuItem(value: 'السنة السابقة', child: Text('السنة السابقة')),
-                      DropdownMenuItem(value: 'السنة الحالية', child: Text('السنة الحالية')),
-                      DropdownMenuItem(value: 'الشهر السابق', child: Text('الشهر السابق')),
-                      DropdownMenuItem(value: 'الشهر الحالي', child: Text('الشهر الحالي')),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() => _executivePeriod = value);
-                      final companyId = _appManagementCompanyId;
-                      if (companyId != null) _loadExecutiveMetrics(companyId);
-                    },
                   ),
                 ),
               ]),
@@ -2934,8 +3090,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: color.withValues(alpha: .35), width: 1.3),
-        boxShadow: const [BoxShadow(color: Color(0x103E007D), blurRadius: 10, offset: Offset(0, 3))],
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.white, color.withValues(alpha: .055)],
+        ),
+        border: Border.all(color: color.withValues(alpha: .42), width: 1.3),
+        boxShadow: [
+          BoxShadow(color: color.withValues(alpha: .13), blurRadius: 16, offset: const Offset(0, 5)),
+          const BoxShadow(color: Color(0x08FFFFFF), blurRadius: 3, offset: Offset(-1, -1)),
+        ],
       ),
       child: Row(children: [
         Container(
@@ -2958,7 +3122,29 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         )),
         const SizedBox(width: 6),
         Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(change == null ? Icons.remove_rounded : change >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded, color: trendColor, size: 19),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: change == null
+                    ? [const Color(0xFFB9B0C4), const Color(0xFF766A86)]
+                    : change >= 0
+                        ? [const Color(0xFF32C58A), const Color(0xFF087A54)]
+                        : [const Color(0xFFFF8794), const Color(0xFFCB2944)],
+              ),
+              borderRadius: BorderRadius.circular(11),
+              boxShadow: [BoxShadow(color: trendColor.withValues(alpha: .22), blurRadius: 9, offset: const Offset(0, 3))],
+            ),
+            child: Icon(
+              change == null ? Icons.remove_rounded : change >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+              color: Colors.white,
+              size: 21,
+            ),
+          ),
+          const SizedBox(height: 3),
           Text(change == null ? '—%' : '${change.abs().toStringAsFixed(1)}%', style: TextStyle(fontSize: 10, color: trendColor, fontWeight: FontWeight.w900)),
         ]),
       ]),
