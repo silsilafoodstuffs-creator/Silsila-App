@@ -304,25 +304,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       _quickTask('معاينة التقرير', Icons.visibility_outlined, const Color(0xFF6841A5), _previewAudit),
       _quickTask('نسخ التقرير', Icons.copy_outlined, const Color(0xFF137C8B), _copyReport),
     ];
-    final dateFilter = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      TextField(
-        controller: _company,
-        decoration: const InputDecoration(
-          labelText: 'معرّف الشركة (UUID)',
-          prefixIcon: Icon(Icons.business),
-          border: OutlineInputBorder(),
-        ),
-      ),
-      const SizedBox(height: 8),
-      DropdownButtonFormField<String>(
-        itemHeight: 48,
-        value: _area,
-        decoration: const InputDecoration(labelText: 'مجال الفحص', border: OutlineInputBorder()),
-        items: _areas.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
-        onChanged: (v) => setState(() => _area = v ?? _area),
-      ),
-      const SizedBox(height: 8),
-      Wrap(spacing: 8, runSpacing: 8, children: [
+    final dateFilter = Wrap(spacing: 8, runSpacing: 8, children: [
         OutlinedButton.icon(
           onPressed: () => _chooseDate(true),
           icon: const Icon(Icons.calendar_month),
@@ -347,8 +329,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           onPressed: () => setState(() { _startDate = null; _endDate = null; }),
           child: const Text('من بداية النظام'),
         ),
-      ]),
-    ]);
+      ]);
     return Directionality(
       textDirection: TextDirection.rtl,
       child: ErpScreenFrame(
@@ -367,6 +348,23 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+          TextField(
+            controller: _company,
+            decoration: const InputDecoration(
+              labelText: 'معرّف الشركة (UUID)',
+              prefixIcon: Icon(Icons.business),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            itemHeight: 48,
+            value: _area,
+            decoration: const InputDecoration(labelText: 'مجال الفحص', border: OutlineInputBorder()),
+            items: _areas.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
+            onChanged: (v) => setState(() => _area = v ?? _area),
+          ),
+          const SizedBox(height: 10),
           const Text(
             'مراجعة كل حركة على حدة',
             style: TextStyle(color: Color(0xFF3E007D), fontSize: 16, fontWeight: FontWeight.w900),
