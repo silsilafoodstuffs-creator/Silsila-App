@@ -806,9 +806,34 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   final Map<String, bool> _workspaceHasMore = <String, bool>{};
 
   List<Map<String, String>> get _rows {
-    final rows = _saved[_page] ?? <Map<String, String>>[];
-    if (_search.trim().isEmpty) return rows;
-    return rows.where((r) => r.values.any((v) => v.toLowerCase().contains(_search.toLowerCase()))).toList();
+    final source = _saved[_page] ?? <Map<String, String>>[];
+    final query = _search.trim().toLowerCase();
+    final rows = query.isEmpty
+        ? List<Map<String, String>>.from(source)
+        : source.where((row) => row.values.any((value) => value.toLowerCase().contains(query))).toList();
+    String codeOf(Map<String, String> row) {
+      const preferred = ['الكود', 'كود الهيكل', 'كود المجموعة', 'كود البراند', 'كود الصنف', 'كود العميل', 'كود المورد', 'رقم المستند', 'الرقم', 'code', 'document_code'];
+      for (final key in preferred) {
+        final value = row[key]?.trim() ?? '';
+        if (value.isNotEmpty) return value.toUpperCase();
+      }
+      for (final entry in row.entries) {
+        final key = entry.key.toLowerCase();
+        if (key.contains('كود') || key.contains('code')) {
+          final value = entry.value.trim();
+          if (value.isNotEmpty) return value.toUpperCase();
+        }
+      }
+      return '';
+    }
+    rows.sort((a, b) {
+      final aCode = codeOf(a);
+      final bCode = codeOf(b);
+      if (aCode.isEmpty) return bCode.isEmpty ? 0 : 1;
+      if (bCode.isEmpty) return -1;
+      return aCode.compareTo(bCode);
+    });
+    return rows;
   }
 
   List<String> get _gridKeys {
