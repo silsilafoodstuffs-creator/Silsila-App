@@ -208,7 +208,18 @@ class StudioNode {
     if (group != null && (group is! String || group.length > 100)) {
       throw const FormatException('مرجع المجموعة غير صالح.');
     }
-    _validateJsonValue(props);
+    final safeProps = Map<String, dynamic>.from(props);
+    final imageSource = safeProps['url'];
+    final embeddedImage = type == 'image' && imageSource is String && imageSource.startsWith('data:image/') && imageSource.contains(';base64,');
+    if (embeddedImage) {
+      if ((imageSource as String).length > 700000) {
+        throw const FormatException('حجم الصورة المضمنة أكبر من الحد المسموح.');
+      }
+      safeProps.remove('url');
+      _validateJsonValue(safeProps);
+    } else {
+      _validateJsonValue(safeProps);
+    }
     return StudioNode(
       id: id,
       type: type,
