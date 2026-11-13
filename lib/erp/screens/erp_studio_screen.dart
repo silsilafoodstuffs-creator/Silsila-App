@@ -15,8 +15,9 @@ const _studioOrange = Color(0xFFFFA015);
 const _studioCanvas = Color(0xFFFAF8FC);
 
 class SilsilaStudioScreen extends StatefulWidget {
-  const SilsilaStudioScreen({super.key, this.companyId});
+  const SilsilaStudioScreen({super.key, this.companyId, this.availableScreens = const <String>[]});
   final String? companyId;
+  final List<String> availableScreens;
 
   @override
   State<SilsilaStudioScreen> createState() => _SilsilaStudioScreenState();
@@ -788,7 +789,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
           if (_activeTab == 0) _overviewPanel(),
           if (_activeTab >= 1 && _activeTab <= 4) _designerPanel(wide),
           if (_activeTab == 5) _dataBindingPanel(),
-          if (_activeTab == 6) Expanded(child: ErpScreenLayoutStudioScreen(companyId: widget.companyId)),
+          if (_activeTab == 6) Expanded(child: ErpScreenLayoutStudioScreen(companyId: widget.companyId, availableScreens: widget.availableScreens)),
           if (_activeTab == 7) _testPanel(),
           if (_activeTab == 8) _versionsPanel(),
           if (_activeTab == 9) _approvalPanel(),
