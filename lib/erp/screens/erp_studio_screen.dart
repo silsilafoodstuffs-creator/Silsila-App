@@ -238,31 +238,52 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   void _deleteSelected() {
-    final removable = _doc.nodes.where((n) => _selectedIds.contains(n.id) && !n.locked).toList();
-    if (removable.isEmpty) {
-      _notice('لا توجد مكونات محددة قابلة للحذف.');
-      return;
+    final removable = _doc.nodes.where((node) => _selectedIds.contains(node.id) && !node.locked).toList();
+    if (removable.isEmpty) { _notice('لا توجد مكونات محددة قابلة للحذف.'); return; }
+    final ids = removable.map((node) => node.id).toSet();
+    var expanded = true;
+    while (expanded) {
+      expanded = false;
+      for (final node in _doc.nodes) {
+        if (node.parentId != null && ids.contains(node.parentId) && ids.add(node.id)) expanded = true;
+      }
     }
-    final ids = removable.map((e) => e.id).toSet();
-    _change(_doc.copyWith(nodes: _doc.nodes.where((e) => !ids.contains(e.id)).toList()));
+    _change(_doc.copyWith(nodes: _doc.nodes.where((node) => !ids.contains(node.id)).toList()));
     setState(() => _selectedIds.clear());
   }
 
   void _groupSelected() {
-    if (_selectedIds.length < 2) {
-      _notice('حدد مكونين على الأقل لإنشاء مجموعة.');
-      return;
-    }
-    final groupId = 'group_${DateTime.now().microsecondsSinceEpoch}';
-    _change(_doc.copyWith(nodes: _doc.nodes.map((node) =>
-      _selectedIds.contains(node.id) && !node.locked ? node.copyWith(groupId: groupId) : node).toList()));
-    _notice('تم تجميع العناصر المحددة.');
+    final selected = _doc.nodes.where((node) => _selectedIds.contains(node.id) && !node.locked).toList();
+    if (selected.length < 2) { _notice('حدد مكونين على الأقل لإنشاء مجموعة.'); return; }
+    final groupId = 'group_' + DateTime.now().microsecondsSinceEpoch.toString();
+    final firstIndex = _doc.nodes.indexWhere((node) => _selectedIds.contains(node.id));
+    final selectedIds = selected.map((node) => node.id).toSet();
+    final remaining = _doc.nodes.where((node) => !selectedIds.contains(node.id)).toList();
+    final insertion = firstIndex.clamp(0, remaining.length);
+    final group = StudioNode(id: groupId, type: 'container', props: {'label': 'مجموعة عناصر', 'padding': 8});
+    remaining.insert(insertion, group);
+    final children = selected.map((node) => node.copyWith(clearGroup: true, parentId: groupId)).toList();
+    remaining.insertAll(insertion + 1, children);
+    _change(_doc.copyWith(nodes: remaining));
+    setState(() { _selectedIds..clear()..add(groupId); });
+    _notice('تم إنشاء حاوية مجموعة؛ ويمكن إنشاء مجموعات متداخلة داخلها.');
   }
 
   void _ungroupSelected() {
     if (_selectedIds.isEmpty) return;
-    _change(_doc.copyWith(nodes: _doc.nodes.map((node) =>
-      _selectedIds.contains(node.id) && !node.locked ? node.copyWith(clearGroup: true) : node).toList()));
+    final selectedGroups = _doc.nodes
+        .where((node) => _selectedIds.contains(node.id) && node.type == 'container' && !node.locked)
+        .map((node) => node.id).toSet();
+    final next = <StudioNode>[];
+    for (final node in _doc.nodes) {
+      if (selectedGroups.contains(node.id)) continue;
+      if ((_selectedIds.contains(node.id) || (node.parentId != null && selectedGroups.contains(node.parentId))) && !node.locked) {
+        next.add(node.copyWith(clearParent: true, clearGroup: true));
+      } else {
+        next.add(node);
+      }
+    }
+    _change(_doc.copyWith(nodes: next));
   }
 
   void _finishResize(StudioNode node) {
@@ -1005,6 +1026,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
               ),
               child: ListTile(
                 dense: true,
+                contentPadding: EdgeInsetsDirectional.only(start: node.parentId == null ? 8 : 26, end: 8),
                 leading: Row(mainAxisSize: MainAxisSize.min, children: [
                   Checkbox(
                     value: _selectedIds.contains(node.id),
