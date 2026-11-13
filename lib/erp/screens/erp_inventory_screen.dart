@@ -245,7 +245,6 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
   }
 
   @override
-  Widget   @override
   Widget build(BuildContext context) {
     ErpKeyboardNavigation.registerActions(add: _newMovement, save: _save);
     final totalItems = _balances.length;
