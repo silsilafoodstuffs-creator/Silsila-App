@@ -1292,7 +1292,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                                       ? ErpActivityCustomersScreen(companyId: _appManagementCompanyId)
                                       : (_page == 'مراكز التكلفة' || _page == 'الفروع ومراكز التكلفة')
                                       ? ErpCostCentersScreen(companyId: _appManagementCompanyId)
-                                       : _page == 'استوديو تخطيط الشاشات'
+                                       : _page == 'سلسلة ستوديو'
                                       ? SilsilaStudioScreen(companyId: _appManagementCompanyId)
                                       : _page == 'سياسات البرنامج'
                                       ? ErpProgramPoliciesScreen(
