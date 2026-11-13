@@ -11,8 +11,9 @@ const _brandCanvas = Color(0xFFF7F5FA);
 const _brandBorder = Color(0xFFE8E1EF);
 
 class ErpBrandsTab extends StatefulWidget {
-  const ErpBrandsTab({super.key, required this.companyId});
+  const ErpBrandsTab({super.key, required this.companyId, this.showGroupsOnly = false});
   final String companyId;
+  final bool showGroupsOnly;
 
   @override
   State<ErpBrandsTab> createState() => _ErpBrandsTabState();
@@ -36,6 +37,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   @override
   void initState() {
     super.initState();
+    _showGroups = widget.showGroupsOnly;
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
@@ -550,9 +552,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: [
-                ErpQuickTaskButton(label:'مجموعات البراندات', icon:Icons.folder_copy_outlined, onPressed:() => setState(() => _showGroups = true)),
                 ErpQuickTaskButton(label:'تحديث', icon:Icons.refresh_rounded, onPressed:_loading || _saving ? null : _load),
-                ErpQuickTaskButton(label:'البراندات', icon:Icons.sell_outlined, onPressed:() => setState(() => _showGroups = false)),
                 ErpQuickTaskButton(label:'عرض شجرة', icon:Icons.account_tree_outlined, onPressed:() => setState(() => _viewMode = 'tree')),
                 ErpQuickTaskButton(label:'عرض جدول', icon:Icons.table_rows_outlined, onPressed:() => setState(() => _viewMode = 'grid')),
                 ErpQuickTaskButton(label:'إضافة جديد', icon:Icons.add_circle_outline, onPressed:_saving ? null : () => _edit()),
