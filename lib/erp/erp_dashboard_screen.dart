@@ -3446,3 +3446,54 @@ class _ExecutiveChartPainter extends CustomPainter {
   bool shouldRepaint(covariant _ExecutiveChartPainter oldDelegate) =>
       oldDelegate.color != color || oldDelegate.values != values;
 }
+
+/// Applies saved Studio visual tokens and density to every ERP page subtree.
+class ErpScreenLayoutRuntime extends StatelessWidget {
+  const ErpScreenLayoutRuntime({super.key, required this.screen, required this.child});
+
+  final String screen;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<Map<String, dynamic>>(
+      valueListenable: ErpScreenLayoutProfiles.profiles,
+      builder: (context, profiles, _) {
+        final raw = profiles[screen] is Map
+            ? profiles[screen] as Map
+            : profiles['*'] is Map ? profiles['*'] as Map : const {};
+        final profile = Map<String, dynamic>.from(raw);
+        final primary = Color((profile['primary'] as int?) ?? const Color(0xFF3E007D).value);
+        final accent = Color((profile['accent'] as int?) ?? const Color(0xFFFFA015).value);
+        final rowHeight = ((profile['rowHeight'] as num?)?.toDouble() ?? 40).clamp(28, 80).toDouble();
+        final spacing = ((profile['spacing'] as num?)?.toDouble() ?? 5).clamp(0, 30).toDouble();
+        final radius = ((profile['cornerRadius'] as num?)?.toDouble() ?? 12).clamp(0, 30).toDouble();
+        final base = Theme.of(context);
+        final border = OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: BorderSide(color: primary.withValues(alpha: .18)),
+        );
+        final theme = base.copyWith(
+          colorScheme: base.colorScheme.copyWith(primary: primary, secondary: accent),
+          dataTableTheme: base.dataTableTheme.copyWith(
+            dataRowMinHeight: rowHeight,
+            dataRowMaxHeight: rowHeight + 8,
+            columnSpacing: spacing <= 2 ? 6 : spacing * 2.8,
+          ),
+          inputDecorationTheme: base.inputDecorationTheme.copyWith(
+            border: border,
+            enabledBorder: border,
+            focusedBorder: border.copyWith(borderSide: BorderSide(color: accent, width: 1.6)),
+            constraints: BoxConstraints(minHeight: rowHeight),
+          ),
+          appBarTheme: base.appBarTheme.copyWith(backgroundColor: primary),
+          listTileTheme: base.listTileTheme.copyWith(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
+            minVerticalPadding: spacing,
+          ),
+        );
+        return Theme(data: theme, child: child);
+      },
+    );
+  }
+}
