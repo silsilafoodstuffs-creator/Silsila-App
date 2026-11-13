@@ -78,3 +78,9 @@ Do not add a visible policy row without wiring its database generator and lock c
 ## Historical identifiers
 
 A historical-code migration must be a separate, reviewed operation with an explicit old-to-new mapping and reference checks. It must preserve record IDs and foreign-key relationships, verify uniqueness before changing data, and fail before mutation when the preflight checks detect a collision or invalid hierarchy.
+
+
+## Brand groups
+- Brand groups are stored in `erp_brand_groups` and use the policy key `code_type.brand_group`.
+- The default prefix is `Brg` with exactly 2 serial digits (`Brg01` … `Brg99`), generated on insert through `erp_assign_brand_group_code`.
+- Brand records may reference a group through `erp_brands.brand_group_id`; existing brand records remain unassigned until the user selects a group.
