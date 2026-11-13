@@ -1000,7 +1000,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
                   child: StudioComponentRegistry.build(node, dataBySource: _previewData),
                 ),
                 subtitle: Text('${StudioComponentRegistry.supportedTypes[node.type]} • ${node.groupId ?? 'بدون مجموعة'}${node.locked ? ' • مقفل' : ''}'),
-                trailing: Wrap(mainAxisSize: MainAxisSize.min, children: [
+                trailing: Wrap(children: [
                   IconButton(
                     tooltip: node.hidden ? 'إظهار' : 'إخفاء',
                     icon: Icon(node.hidden ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 18),
