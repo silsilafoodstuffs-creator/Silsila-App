@@ -122,5 +122,27 @@ void main() {
 
       expect(find.byType(Image), findsOneWidget);
     });
+    testWidgets('renders nested container groups recursively', (tester) async {
+      final document = StudioDocument(
+        id: 'nested-groups-test',
+        name: 'اختبار المجموعات المتداخلة',
+        nodes: [
+          StudioNode(id: 'outer', type: 'container', props: {'label': 'المجموعة الرئيسية'}),
+          StudioNode(id: 'outer-text', type: 'text', props: {'text': 'عنصر رئيسي'}, parentId: 'outer'),
+          StudioNode(id: 'inner', type: 'container', props: {'label': 'مجموعة فرعية'}, parentId: 'outer'),
+          StudioNode(id: 'inner-text', type: 'text', props: {'text': 'عنصر متداخل'}, parentId: 'inner'),
+        ],
+      );
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(body: StudioDocumentRenderer(document: document)),
+      ));
+
+      expect(find.text('المجموعة الرئيسية'), findsOneWidget);
+      expect(find.text('مجموعة فرعية'), findsOneWidget);
+      expect(find.text('عنصر رئيسي'), findsOneWidget);
+      expect(find.text('عنصر متداخل'), findsOneWidget);
+      expect(find.byType(Card), findsNWidgets(2));
+    });
   });
 }
