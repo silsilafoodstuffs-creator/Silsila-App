@@ -1363,6 +1363,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       onWillPop: _onWillPop,
       child: ErpScreenFrame(
         title: 'سياسات البرنامج',
+        applyContentWidth: false,
         subtitle: 'إعدادات تشغيل البرنامج والسياسات العامة والتكويد',
         icon: Icons.policy_outlined,
         tabs: tabs,
