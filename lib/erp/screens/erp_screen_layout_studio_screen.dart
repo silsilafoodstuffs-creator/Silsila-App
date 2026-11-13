@@ -303,18 +303,88 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
                 Widget date()=>Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:6),decoration:BoxDecoration(color:const Color(0xFFF5EFFB),borderRadius:BorderRadius.circular(7)),child:const Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.calendar_month_outlined,size:15),SizedBox(width:5),Text('من تاريخ — إلى تاريخ',style:TextStyle(fontSize:10))]));
                 Widget images()=>const Column(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.image_outlined,size:34,color:Colors.black38),Text('صور الأصناف',style:TextStyle(fontSize:9,color:Colors.black54))]);
                 Widget scrollIndicator()=>Container(width:5,height:54,decoration:BoxDecoration(color:_showScroll?const Color(0xFFD9CDE8):Colors.transparent,borderRadius:BorderRadius.circular(5)));
-                Widget sampleData()=>Container(
-                  width:double.infinity,
-                  padding:const EdgeInsets.all(7),
-                  decoration:BoxDecoration(color:_primary.withValues(alpha:.045),border:Border.all(color:_primary.withValues(alpha:.12)),borderRadius:BorderRadius.circular(6)),
-                  child:_view=='grid'
-                    ?Wrap(spacing:5,runSpacing:5,children:List.generate(4,(i)=>Container(width:(constraints.maxWidth-55)/2,height:_rowHeight,alignment:Alignment.center,decoration:BoxDecoration(border:Border.all(color:_primary.withValues(alpha:.2)),borderRadius:BorderRadius.circular(5)),child:Text('بطاقة ${i+1}',style:const TextStyle(fontSize:10))))
-                    :_view=='tree'
-                      ?Column(crossAxisAlignment:CrossAxisAlignment.start,children:const [Text('▾ دليل البيانات',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)),Padding(padding:EdgeInsetsDirectional.only(start:18),child:Text('• عنصر رئيسي\n• عنصر فرعي',style:TextStyle(fontSize:10)))])
-                      :_view=='split'
-                        ?Row(children:[Expanded(child:Text('قائمة العناصر\nعنصر 1\nعنصر 2',style:TextStyle(fontSize:10))),const VerticalDivider(width:12),Expanded(child:Text('تفاصيل العنصر المحدد',style:TextStyle(fontSize:10)))])
-                        :Column(children:[Container(height:28,alignment:Alignment.centerRight,color:_primary.withValues(alpha:.10),child:const Text('الكود     اسم الصنف     الرصيد',style:TextStyle(fontSize:9,fontWeight:FontWeight.w700))),for(var i=0;i<3;i++)Container(height:_rowHeight/1.7,alignment:Alignment.centerRight,padding:const EdgeInsets.symmetric(horizontal:5),color:i.isEven?Colors.white:const Color(0xFFFAF8FC),child:Text('ITM-00${i+1}     صنف تجريبي     120',style:const TextStyle(fontSize:9)))]),
-                );
+                Widget sampleData() {
+                  final dataDecoration = BoxDecoration(
+                    color: _primary.withValues(alpha: .045),
+                    border: Border.all(color: _primary.withValues(alpha: .12)),
+                    borderRadius: BorderRadius.circular(6),
+                  );
+                  if (_view == 'grid') {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(7),
+                      decoration: dataDecoration,
+                      child: Wrap(
+                        spacing: 5,
+                        runSpacing: 5,
+                        children: List.generate(4, (i) => Container(
+                          width: (constraints.maxWidth - 55) / 2,
+                          height: _rowHeight,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: _primary.withValues(alpha: .2)),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Text('بطاقة ${i + 1}', style: const TextStyle(fontSize: 10)),
+                        )),
+                      ),
+                    );
+                  }
+                  if (_view == 'tree') {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(7),
+                      decoration: dataDecoration,
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('▾ دليل البيانات', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                          Padding(
+                            padding: EdgeInsetsDirectional.only(start: 18),
+                            child: Text('• عنصر رئيسي\\n• عنصر فرعي', style: TextStyle(fontSize: 10)),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  if (_view == 'split') {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(7),
+                      decoration: dataDecoration,
+                      child: Row(
+                        children: [
+                          const Expanded(child: Text('قائمة العناصر\\nعنصر 1\\nعنصر 2', style: TextStyle(fontSize: 10))),
+                          const VerticalDivider(width: 12),
+                          const Expanded(child: Text('تفاصيل العنصر المحدد', style: TextStyle(fontSize: 10))),
+                        ],
+                      ),
+                    );
+                  }
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(7),
+                    decoration: dataDecoration,
+                    child: Column(
+                      children: [
+                        Container(
+                          height: 28,
+                          alignment: Alignment.centerRight,
+                          color: _primary.withValues(alpha: .10),
+                          child: const Text('الكود     اسم الصنف     الرصيد', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
+                        ),
+                        for (var i = 0; i < 3; i++)
+                          Container(
+                            height: _rowHeight / 1.7,
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.symmetric(horizontal: 5),
+                            color: i.isEven ? Colors.white : const Color(0xFFFAF8FC),
+                            child: Text('ITM-00${i + 1}     صنف تجريبي     120', style: const TextStyle(fontSize: 9)),
+                          ),
+                      ],
+                    ),
+                  );
+                }
                 final dateWidget=_showDate&&_datePosition!='hidden'?date():null;
                 final tabsWidget=_showTabs&&_tabsPosition!='hidden'?tabs():null;
                 final tasksWidget=_showTasks&&_tasksPosition!='hidden'?tasks():null;
