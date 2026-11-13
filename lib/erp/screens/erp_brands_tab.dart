@@ -21,6 +21,8 @@ class ErpBrandsTab extends StatefulWidget {
 class _ErpBrandsTabState extends State<ErpBrandsTab> {
   final _search = TextEditingController();
   List<Map<String,dynamic>> _rows = [];
+  List<Map<String,dynamic>> _groups = [];
+  bool _showGroups = false;
   String? _selectedId;
   bool _loading = false;
   bool _saving = false;
@@ -51,11 +53,13 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     setState(() { _loading = true; _error = null; });
     try {
       final rows = await _db.from('erp_brands')
-        .select('id,brand_code,brand_name,brand_name_en,brand_group,display_order,is_active,is_system,logo_data,logo_mime_type')
+        .select('id,brand_code,brand_name,brand_name_en,brand_group,brand_group_id,display_order,is_active,is_system,logo_data,logo_mime_type')
         .eq('company_id', widget.companyId.trim())
         .order('brand_code');
+      final groups = await _db.from('erp_brand_groups').select('id,group_code,group_name,is_active').eq('company_id', widget.companyId.trim()).order('group_code');
       if (!mounted) return;
       setState(() {
+        _groups = List<Map<String,dynamic>>.from(groups);
         _rows = List<Map<String,dynamic>>.from(rows);
         if (!_rows.any((row) => _s(row['id']) == _selectedId)) {
           _selectedId = _rows.isEmpty ? null : _s(_rows.first['id']);
@@ -330,8 +334,38 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
 
   String _groupKey(Map<String,dynamic> row) {
-    final group = _s(row['brand_group']).trim();
-    return group.isEmpty ? 'بدون مجموعة' : group;
+    final id = _s(row['brand_group_id']);
+    final matches = _groups.where((g) => _s(g['id']) == id);
+    if (matches.isNotEmpty) return _s(matches.first['group_name']);
+    final legacy = _s(row['brand_group']).trim();
+    return legacy.isEmpty ? 'بدون مجموعة' : legacy;
+  }
+
+  Future<void> _addGroup() async {
+    final name = TextEditingController();
+    final ok = await showDialog<bool>(context: context, builder: (ctx) => Directionality(
+      textDirection: TextDirection.rtl,
+      child: AlertDialog(title: const Text('إضافة مجموعة براندات'), content: SizedBox(width: 360,
+        child: TextField(controller: name, autofocus: true, decoration: const InputDecoration(labelText: 'اسم المجموعة *'))),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx,false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(ctx,name.text.trim().isNotEmpty), child: const Text('حفظ'))])));
+    if (ok != true) { name.dispose(); return; }
+    setState(() => _saving = true);
+    try {
+      final inserted = await _db.from('erp_brand_groups').insert({'company_id':widget.companyId.trim(),'group_name':name.text.trim()})
+        .select('id,group_code,group_name,is_active').single();
+      await _load();
+      if (mounted) ErpCenterToast.show(context, 'تم إنشاء المجموعة بالكود ${_s(inserted['group_code'])}.');
+    } catch (e) { if (mounted) ErpCenterToast.show(context, 'تعذر إنشاء المجموعة: $e', isError: true); }
+    finally { name.dispose(); if (mounted) setState(() => _saving = false); }
+  }
+
+  Future<void> _assignGroup(Map<String,dynamic> row, String? groupId) async {
+    try {
+      await _db.from('erp_brands').update({'brand_group_id':groupId})
+        .eq('id',_s(row['id'])).eq('company_id',widget.companyId.trim()).select('id').single();
+      await _load();
+    } catch (e) { if (mounted) ErpCenterToast.show(context, 'تعذر تغيير مجموعة البراند: $e', isError: true); }
   }
 
   List<String> get _groupNames {
@@ -500,7 +534,9 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: [
+                ErpQuickTaskButton(label:'مجموعات البراندات', icon:Icons.folder_copy_outlined, onPressed:() => setState(() => _showGroups = true)),
                 ErpQuickTaskButton(label:'تحديث', icon:Icons.refresh_rounded, onPressed:_loading || _saving ? null : _load),
+                ErpQuickTaskButton(label:'البراندات', icon:Icons.sell_outlined, onPressed:() => setState(() => _showGroups = false)),
                 ErpQuickTaskButton(label:'عرض شجرة', icon:Icons.account_tree_outlined, onPressed:() => setState(() => _viewMode = 'tree')),
                 ErpQuickTaskButton(label:'عرض جدول', icon:Icons.table_rows_outlined, onPressed:() => setState(() => _viewMode = 'grid')),
                 ErpQuickTaskButton(label:'إضافة جديد', icon:Icons.add_circle_outline, onPressed:_saving ? null : () => _edit()),
@@ -511,6 +547,16 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
               ]),
             ),
           ),
+          if (_showGroups) ...[
+            Padding(padding: const EdgeInsets.symmetric(horizontal:12, vertical:6), child: Row(children:[
+              Expanded(child:Text('عدد مجموعات البراندات: ${_groups.length}', style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              FilledButton.icon(onPressed:_saving ? null : _addGroup, icon:const Icon(Icons.add), label:const Text('إضافة مجموعة')),
+            ])),
+            Expanded(child:_loading ? const Center(child:CircularProgressIndicator()) : _groups.isEmpty ? const Center(child:Text('لم تنشئ مجموعات بعد.')) : ListView.builder(
+              padding:const EdgeInsets.all(10), itemCount:_groups.length, itemBuilder:(ctx,i) { final g=_groups[i]; final count=_rows.where((r) => _s(r['brand_group_id'])==_s(g['id'])).length;
+                return Card(child:ListTile(leading:const Icon(Icons.folder_outlined,color:_brandPurple), title:Text(_s(g['group_name']),style:const TextStyle(fontWeight:FontWeight.bold)), subtitle:Text(_s(g['group_code'])), trailing:Text('$count براند')));
+              })),
+          ] else ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(12,7,12,3),
             child: TextField(
@@ -585,7 +631,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                                 DataCell(SizedBox(width:180,child:Text(_s(row['brand_name'])))),
                                 DataCell(SizedBox(width:150,child:Text(_s(row['brand_name_en'])))),
                                 DataCell(_logoPreview(row,size:46)),
-                                DataCell(Text(_s(row['brand_group']).isEmpty ? '—' : _s(row['brand_group']))),
+                                DataCell(SizedBox(width:170, child: DropdownButton<String?>(isExpanded:true, value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : null, hint: const Text('بدون مجموعة'), items: [const DropdownMenuItem<String?>(value:null, child:Text('بدون مجموعة')), ..._groups.map((g) => DropdownMenuItem<String?>(value:_s(g['id']), child:Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow:TextOverflow.ellipsis)))], onChanged: system ? null : (v) => _assignGroup(row,v)))),
                                 DataCell(Text(system ? 'افتراضي' : 'براند')),
                                 DataCell(Checkbox(
                                   shape:const CircleBorder(), value:row['is_active'] == true,
@@ -604,6 +650,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       ),
                     ),
           ),
+          ],
         ],
       ),
     );
