@@ -5,6 +5,7 @@ import '../services/erp_studio_draft_store.dart';
 import '../services/erp_studio_repository.dart';
 import '../services/studio_document.dart';
 import '../services/studio_renderer.dart';
+import 'erp_screen_layout_studio_screen.dart';
 
 const _studioPurple = Color(0xFF3E007D);
 const _studioOrange = Color(0xFFFFA015);
@@ -22,6 +23,8 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   String? _selectedId;
   bool _preview = false;
   bool _busy = false;
+  int _activeTab = 0;
+  static const _studioTabs = <String>['لوحة الاستوديو','مصمم الشاشات','مصمم التقارير','مصمم الأيقونات والعناصر','مصمم الجداول وGrid','مصادر البيانات والربط','تخطيط وتنسيق الشاشات','المعاينة والاختبار','الإصدارات والاستعادة','الاعتماد والنشر'];
   final List<StudioDocument> _undo = [];
   final List<StudioDocument> _redo = [];
 
@@ -179,7 +182,9 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
           ],
         ),
         body: Column(children: [
-          Material(
+          Container(color: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [for (var i = 0; i < _studioTabs.length; i++) Padding(padding: const EdgeInsets.symmetric(horizontal: 3), child: ChoiceChip(label: Text(_studioTabs[i]), selected: _activeTab == i, selectedColor: const Color(0xFFF0E7FA), labelStyle: TextStyle(color: _activeTab == i ? _studioPurple : Colors.black87, fontWeight: FontWeight.w700), onSelected: (_) => setState(() => _activeTab = i)))]))),
+          if (_activeTab == 0) _overviewPanel(),
+          if (_activeTab == 1) Material(
             color: Colors.white,
             child: Padding(
               padding: const EdgeInsets.all(5),
@@ -196,7 +201,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
               ]),
             ),
           ),
-          Expanded(child: _preview
+          if (_activeTab == 1) Expanded(child: _preview
             ? Container(color: Colors.white, margin: const EdgeInsets.all(8), child: StudioDocumentRenderer(document: _doc, interactive: true))
             : wide
               ? Row(children: [
@@ -212,7 +217,9 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
                   SizedBox(height: 180, child: _properties()),
                 ]),
           ),
-          Container(
+          if (_activeTab == 6) const Expanded(child: ErpScreenLayoutStudioScreen()),
+          if (_activeTab >= 2 && _activeTab != 6) Expanded(child: _plannedPanel(_activeTab)),
+          if (_activeTab == 1) Container(
             height: 30, color: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(children: [
@@ -227,6 +234,28 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       ),
     );
   }
+
+
+  Widget _overviewPanel() => Expanded(child: ListView(padding: const EdgeInsets.all(14), children: [
+    const Text('مساحة موحدة لتصميم وتطوير واجهات سلسلة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _studioPurple)),
+    const SizedBox(height: 8),
+    const Text('اختر مجال العمل من التبويبات. مصمم الشاشات وتخطيط الواجهات متاحان الآن؛ بقية المصممين ستظهر هنا ضمن نفس الاستوديو لحين استكمال وظائفها واختبارها.'),
+    const SizedBox(height: 14),
+    Wrap(spacing: 8, runSpacing: 8, children: [
+      for (var i = 1; i < _studioTabs.length; i++)
+        SizedBox(width: 220, child: Card(child: ListTile(leading: Icon(i == 6 ? Icons.dashboard_customize_outlined : Icons.design_services_outlined, color: _studioPurple), title: Text(_studioTabs[i], style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12)), onTap: () => setState(() => _activeTab = i)))),
+    ]),
+  ]));
+
+  Widget _plannedPanel(int index) => Expanded(child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: Card(child: Padding(padding: const EdgeInsets.all(22), child: Column(mainAxisSize: MainAxisSize.min, children: [
+    const Icon(Icons.construction_outlined, size: 42, color: _studioPurple),
+    const SizedBox(height: 10),
+    Text(_studioTabs[index], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _studioPurple)),
+    const SizedBox(height: 8),
+    const Text('هذا التبويب أصبح جزءاً من استوديو سلسلة الموحد. واجهته التشغيلية وربطه الفعلي لم يكتمل بعد، لذلك لن نعرض أزراراً شكلية أو ندّعي أن الوظيفة جاهزة.', textAlign: TextAlign.center),
+    const SizedBox(height: 12),
+    OutlinedButton.icon(onPressed: () => setState(() => _activeTab = 1), icon: const Icon(Icons.edit_outlined), label: const Text('الانتقال إلى مصمم الشاشات المتاح')),
+  ]))))));
 
   Widget _command(String label, IconData icon, VoidCallback action) => OutlinedButton.icon(
     onPressed: action, icon: Icon(icon, size: 16), label: Text(label),
