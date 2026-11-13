@@ -5,8 +5,9 @@ import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_inventory_repository.dart';
 
 class ErpInventoryScreen extends StatefulWidget {
-  const ErpInventoryScreen({super.key, this.initialCompanyId});
+  const ErpInventoryScreen({super.key, this.initialCompanyId, this.layoutScreenKey});
   final String? initialCompanyId;
+  final String? layoutScreenKey;
 
   @override
   State<ErpInventoryScreen> createState() => _ErpInventoryScreenState();
@@ -253,6 +254,7 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
       textDirection: TextDirection.rtl,
       child: ErpScreenFrame(
         title: 'إدارة المخزون والحركات',
+        profileKey: widget.layoutScreenKey,
         subtitle: 'أرصدة دفتر المخزون وتسجيل الحركات والتحويلات بين المخازن.',
         icon: Icons.inventory_2_outlined,
         actions: [
