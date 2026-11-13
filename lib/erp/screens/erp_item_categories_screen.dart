@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../services/erp_workspace_records_service.dart';
+import '../services/erp_screen_layout_profiles.dart';
 import 'erp_brands_tab.dart';
 
 const _catPurple = Color(0xFF3E007D);
@@ -331,6 +332,9 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   Uint8List? _categoryImageBytes(Map<String,dynamic> row) =>
       _imageBytes[_s(row['id'])] ?? _decodeBytea(row['image_data']);
 
+  bool get _showCategoryImages =>
+      ErpScreenLayoutProfiles.forScreen('فئات الأصناف')['showImages'] as bool? ?? true;
+
   Widget _imagePreview(Map<String,dynamic> row, {double size = 54}) {
     final bytes = _categoryImageBytes(row);
     final attribution = _s(row['image_attribution']).trim();
@@ -505,7 +509,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
               decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'اسم الفئة عربي'),
               onTap: () => setState(() => _selectedId = id))),
             const SizedBox(width: 8),
-            _imagePreview(row, size: 48),
+            if (_showCategoryImages) _imagePreview(row, size: 48),
           ]),
           Padding(
             padding: const EdgeInsetsDirectional.only(start: 34, top: 4),
@@ -567,7 +571,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         break;
       }
     }
-    final Widget? imagePanel = _catalogTab < 3 && selectedRow != null
+    final Widget? imagePanel = _showCategoryImages && _catalogTab < 3 && selectedRow != null
         ? Column(mainAxisSize: MainAxisSize.min, children: [
             _imagePreview(selectedRow, size: 124),
             const SizedBox(height: 7),
@@ -689,7 +693,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                   const SizedBox(width: 8),
                   const Text('في التطبيق'),
                   const SizedBox(width: 8),
-                  const Text('الصورة'),
+                  if (_showCategoryImages) const Text('الصورة'),
                   const Spacer(),
                   TextButton.icon(
                     onPressed: _loading || _all.isEmpty ? null : () => setState(() => _expandedIds.addAll(_all.map((r) => _s(r['id'])))),
@@ -722,7 +726,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                   DataColumn(label: Text('كود الفئة')),
                                   DataColumn(label: Text('اسم الفئة عربي')),
                                   DataColumn(label: Text('اسم الفئة إنجليزي')),
-                                  DataColumn(label: Text('الصورة')),
+                                  if (_showCategoryImages) DataColumn(label: Text('الصورة')),
                                   DataColumn(label: Text('المستوى')),
                                   DataColumn(label: Text('نشط')),
                                   DataColumn(label: Text('ظهور في التطبيق')),
@@ -738,7 +742,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                       DataCell(Text(_s(r['category_code']))),
                                       DataCell(SizedBox(width: 170, child: TextField(controller: _ar.putIfAbsent(id, () => TextEditingController(text: _s(r['category_name']))), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none)))),
                                       DataCell(SizedBox(width: 150, child: TextField(controller: _en.putIfAbsent(id, () => TextEditingController(text: _s(r['category_name_en']))), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none)))),
-                                      DataCell(_imagePreview(r, size: 48)),
+                                      if (_showCategoryImages) DataCell(_imagePreview(r, size: 48)),
                                       DataCell(Text(['رئيسية', 'فرعية', 'ثانوية'][_rowLevel(r)])),
                                       DataCell(Checkbox(shape: const CircleBorder(), value: r['is_active'] == true, activeColor: _catPurple, onChanged: _editing ? (v) => setState(() => r['is_active'] = v == true) : null)),
                                       DataCell(Checkbox(shape: const CircleBorder(), value: r['show_in_app'] == true, activeColor: _catOrange, onChanged: _editing ? (v) => setState(() => r['show_in_app'] = v == true) : null)),
