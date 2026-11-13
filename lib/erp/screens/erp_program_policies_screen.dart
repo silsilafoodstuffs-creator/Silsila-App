@@ -10,6 +10,7 @@ import 'package:printing/printing.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_screen_frame.dart';
 import '../widgets/erp_center_toast.dart';
 
 class ErpProgramPoliciesScreen extends StatefulWidget {
@@ -1360,55 +1361,53 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
 
     return WillPopScope(
       onWillPop: _onWillPop,
-      child: Column(children: [
-      Container(
-        color: const Color(0xFF3E007D),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            const Icon(Icons.policy_outlined, color: Color(0xFFFFA015), size: 23),
-            const SizedBox(width: 6),
-            const Expanded(child: Text('سياسات البرنامج', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17))),
-            SizedBox(width: 190, height: 40, child: TextField(
-              controller: _searchController,
-              style: const TextStyle(fontSize: 11),
-              textInputAction: TextInputAction.search,
-              onSubmitted: (v) => setState(() => policySearch = v),
-              decoration: InputDecoration(
-                hintText: 'ابحث باسم السياسة...',
-                hintStyle: const TextStyle(fontSize: 10),
-                filled: true, fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(5), borderSide: BorderSide.none),
-                isDense: true,
-              ),
-            )),
-            const SizedBox(width: 3),
-            SizedBox(height: 40, child: FilledButton.tonalIcon(
-              onPressed: () => setState(() => policySearch = _searchController.text),
-              icon: const Icon(Icons.search, size: 15),
-              label: const Text('بحث', style: TextStyle(fontSize: 11)),
-              style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), visualDensity: VisualDensity.compact),
-            )),
-          ]),
-          SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
-            ErpQuickTaskButton(label: 'تحديث', icon: Icons.refresh_rounded, compact: true, onPressed: loading || _hasUnsavedChanges ? null : _refreshCurrentTab),
-            ErpQuickTaskButton(label: 'إضافة', icon: Icons.add_circle_outline_rounded, compact: true, onPressed: null),
-            ErpQuickTaskButton(label: 'حفظ', icon: Icons.save_outlined, compact: true, onPressed: saving || !_isEditing ? null : _saveCurrentTab),
-            ErpQuickTaskButton(label: 'تعديل', icon: Icons.edit_outlined, compact: true, onPressed: loading || _isEditing ? null : _editCurrentTab),
-            ErpQuickTaskButton(label: 'حذف', icon: Icons.delete_outline_rounded, compact: true, onPressed: null),
-            ErpQuickTaskButton(label: 'معاينة', icon: Icons.preview_outlined, compact: true, onPressed: _previewCurrentTab),
-            ErpQuickTaskButton(label: 'طباعة', icon: Icons.print_outlined, compact: true, onPressed: _printCurrentPolicies),
-            ErpQuickTaskButton(label: 'Excel', icon: Icons.table_view_outlined, compact: true, onPressed: _exportCurrentExcel),
-            ErpQuickTaskButton(label: 'PDF', icon: Icons.picture_as_pdf_outlined, compact: true, onPressed: _exportCurrentPdf),
-          ])),
-        ]),
-      ),      if (error != null) Padding(padding: const EdgeInsets.all(4), child: Text(error!, style: const TextStyle(color: Colors.red, fontSize: 11))),
-      if (message != null) Padding(padding: const EdgeInsets.all(4), child: Text(message!, style: const TextStyle(color: Colors.green, fontSize: 11))),
-      SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: List.generate(tabs.length, (i) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-        child: ChoiceChip(label: Text(tabs[i]), selected: tab == i, onSelected: (_) => _selectPolicyTab(i), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
-      )))),
+      child: ErpScreenFrame(
+        title: 'سياسات البرنامج',
+        subtitle: 'إعدادات تشغيل البرنامج والسياسات العامة والتكويد',
+        icon: Icons.policy_outlined,
+        tabs: tabs,
+        selectedTab: tab,
+        onTabSelected: _selectPolicyTab,
+        actions: [
+          ErpQuickTaskButton(label: 'تحديث', icon: Icons.refresh_rounded, compact: true, onPressed: loading || _hasUnsavedChanges ? null : _refreshCurrentTab),
+          ErpQuickTaskButton(label: 'إضافة', icon: Icons.add_circle_outline_rounded, compact: true, onPressed: null),
+          ErpQuickTaskButton(label: 'حفظ', icon: Icons.save_outlined, compact: true, onPressed: saving || !_isEditing ? null : _saveCurrentTab),
+          ErpQuickTaskButton(label: 'تعديل', icon: Icons.edit_outlined, compact: true, onPressed: loading || _isEditing ? null : _editCurrentTab),
+          ErpQuickTaskButton(label: 'حذف', icon: Icons.delete_outline_rounded, compact: true, onPressed: null),
+          ErpQuickTaskButton(label: 'معاينة', icon: Icons.preview_outlined, compact: true, onPressed: _previewCurrentTab),
+          ErpQuickTaskButton(label: 'طباعة', icon: Icons.print_outlined, compact: true, onPressed: _printCurrentPolicies),
+          ErpQuickTaskButton(label: 'Excel', icon: Icons.table_view_outlined, compact: true, onPressed: _exportCurrentExcel),
+          ErpQuickTaskButton(label: 'PDF', icon: Icons.picture_as_pdf_outlined, compact: true, onPressed: _exportCurrentPdf),
+        ],
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          children: [
+            Row(children: [
+              Expanded(child: TextField(
+                controller: _searchController,
+                style: const TextStyle(fontSize: 11),
+                textInputAction: TextInputAction.search,
+                onSubmitted: (v) => setState(() => policySearch = v),
+                decoration: InputDecoration(
+                  hintText: 'ابحث باسم السياسة...',
+                  hintStyle: const TextStyle(fontSize: 10),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
+                  isDense: true,
+                ),
+              )),
+              const SizedBox(width: 6),
+              SizedBox(height: 40, child: FilledButton.tonalIcon(
+                onPressed: () => setState(() => policySearch = _searchController.text),
+                icon: const Icon(Icons.search, size: 15),
+                label: const Text('بحث', style: TextStyle(fontSize: 11)),
+                style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), visualDensity: VisualDensity.compact),
+              )),
+            ]),
+            if (error != null) Padding(padding: const EdgeInsets.all(4), child: Text(error!, style: const TextStyle(color: Colors.red, fontSize: 11))),
+            if (message != null) Padding(padding: const EdgeInsets.all(4), child: Text(message!, style: const TextStyle(color: Colors.green, fontSize: 11))),
       Expanded(
         child: tab == 8
                 ? _buildFontsColorsGrid()                    : loading
@@ -1597,6 +1596,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                       ),
                     ),
       ),
-    ]));
+          ],
+        ),
+      ),
+    );
   }
 }
