@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/erp_print_support.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_screen_frame.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as excel;
@@ -180,31 +181,52 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
   }
 
   @override
+  Widget   @override
   Widget build(BuildContext context) {
-    final debit = _rows.fold<double>(0, (s, r) =>
-        s + _num(r[_trial ? 'debit_total' : 'debit']));
-    final credit = _rows.fold<double>(0, (s, r) =>
-        s + _num(r[_trial ? 'credit_total' : 'credit']));
+    final debit = _rows.fold<double>(0, (s, r) => s + _num(r[_trial ? 'debit_total' : 'debit']));
+    final credit = _rows.fold<double>(0, (s, r) => s + _num(r[_trial ? 'credit_total' : 'credit']));
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(_title, style: const TextStyle(
-            color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900,
-          )),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              _reportAction('تحديث', Icons.refresh_rounded, const Color(0xFF2475B8), _loading ? null : _load),
-              _reportAction('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), _previewReport),
-              _reportAction('طباعة', Icons.print_outlined, const Color(0xFFFF27C3), _printReportPdf),
-              _reportAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importReportExcel),
-              _reportAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printReportPdf),
-              _reportAction('كل الفترات', Icons.date_range_outlined, const Color(0xFF6E2BA6), () => setState(() { _start = null; _end = null; })),
-            ]),
-          ),
+      child: ErpScreenFrame(
+        title: _title,
+        subtitle: 'يعرض التقرير الحركات المرحلة فقط؛ المسودات والقيود المعكوسة مستبعدة.',
+        icon: Icons.account_balance_outlined,
+        actions: [
+          _reportAction('تحديث', Icons.refresh_rounded, const Color(0xFF2475B8), _loading ? null : _load),
+          _reportAction('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), _previewReport),
+          _reportAction('طباعة', Icons.print_outlined, const Color(0xFFFF27C3), _printReportPdf),
+          _reportAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importReportExcel),
+          _reportAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printReportPdf),
+        ],
+        dateFilter:         Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _pickDate(true),
+                      icon: const Icon(Icons.calendar_month),
+                      label: Text('من: ${_start == null ? 'البداية' : _date(_start)}'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _pickDate(false),
+                      icon: const Icon(Icons.calendar_month),
+                      label: Text('إلى: ${_end == null ? 'النهاية' : _date(_end)}'),
+                    ),
+                    TextButton(
+                      onPressed: () => setState(() { _start = null; _end = null; }),
+                      child: const Text('كل الفترات'),
+                    ),
+                    FilledButton.icon(
+                      onPressed: _loading ? null : _load,
+                      icon: const Icon(Icons.search),
+                      label: const Text('عرض التقرير'),
+                    ),
+                  ],
+                ),
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           if (_message != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_message!, style: const TextStyle(color: Color(0xFF16834A)))),
           const SizedBox(height: 6),
           const Text(
@@ -231,31 +253,6 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
             ),
           ],
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              OutlinedButton.icon(
-                onPressed: () => _pickDate(true),
-                icon: const Icon(Icons.calendar_month),
-                label: Text('من: ${_start == null ? 'البداية' : _date(_start)}'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => _pickDate(false),
-                icon: const Icon(Icons.calendar_month),
-                label: Text('إلى: ${_end == null ? 'النهاية' : _date(_end)}'),
-              ),
-              TextButton(
-                onPressed: () => setState(() { _start = null; _end = null; }),
-                child: const Text('كل الفترات'),
-              ),
-              FilledButton.icon(
-                onPressed: _loading ? null : _load,
-                icon: const Icon(Icons.search),
-                label: const Text('عرض التقرير'),
-              ),
-            ],
-          ),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -316,8 +313,11 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
         ],
       ),
     );
+        ],
+      ),
+    ),
+    );
   }
-
   Widget _metric(String label, double value) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     decoration: BoxDecoration(
