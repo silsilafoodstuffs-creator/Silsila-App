@@ -1,6 +1,6 @@
-# Silsila Studio — implementation status
+# Silsila Studio — implementation and verification status
 
-Silsila Studio is the single integrated design workspace in the ERP navigation under **إعدادات عامة → سلسلة ستوديو**. The previous standalone screen-layout entry is not exposed as a separate destination.
+Silsila Studio is the single integrated design workspace in ERP navigation under **إعدادات عامة → سلسلة ستوديو**. The former standalone screen-layout editor is embedded as tab 7. A separate **شاشات الاستوديو المنشورة** destination provides a read-only viewer for published designs.
 
 ## Integrated workspace tabs
 
@@ -15,31 +15,37 @@ Silsila Studio is the single integrated design workspace in the ERP navigation u
 9. الإصدارات والاستعادة
 10. الاعتماد والنشر
 
-The former screen-layout editor is embedded in tab 7 and retains its local layout-profile controls. Its profiles are still local preferences and do not yet drive every ERP screen's live renderer.
+## Implemented
 
-## Implemented foundation
+- Versioned data-only design schema v2 with backwards reading of v1 documents, component allow-list, duplicate-ID rejection, bounded node/property counts, and JSON-only property validation.
+- Flutter component registry and renderer for text, buttons, fields, cards, dividers, spacing, grids, trees, tables, icons, images (HTTPS only), charts, tabs, forms, lists, badges, progress indicators, stat cards, containers, and filters.
+- Screen editor: add/select/multi-select, drag reorder, property editing, width/height resizing controls, duplicate, delete, group/ungroup metadata, hide/show, lock/unlock, layer ordering, undo/redo, local draft save/open, and JSON clipboard import/export.
+- Report, icon/element, and table/Grid tabs use the same schema-driven editor with focused component libraries and document kinds.
+- Preview supports editable form controls and simulated button actions. Simulated actions never execute ERP business transactions.
+- Safe read-only data binding for explicitly allow-listed company-scoped sources: items, brands, item categories, warehouses, sales documents, purchase documents, and stock balances. The app filters demo documents where the source exposes an `is_demo_data` flag and applies the active company ID plus Supabase RLS.
+- Repository workflows: list/open designs, read revision history, save drafts, restore prior revisions, approve, publish, and read bound data for preview.
+- Company-scoped Supabase persistence for design documents, immutable revisions, audit events, and layout profiles. RLS is enabled on all four tables.
+- Studio mutation RPCs use `SECURITY INVOKER`; Supabase Security Advisor reports no Studio-specific security findings.
+- Postgres validation triggers enforce supported schema versions, node limits, unique IDs, allow-listed component types, and allowed data-source fields for designs and revisions.
+- Offline draft cache tracks pending changes and provides batch, optimistic-revision synchronization to Supabase.
+- Layout profiles are cached locally, queued while offline, and synchronized per company. Global color/density tokens are applied to ERP pages through the dashboard runtime; the shared `ErpScreenFrame` also applies title/tab/task/footer visibility and content-width settings.
 
-- Versioned, data-only JSON document schema (schemaVersion 1), strict component allow-list, unique component identifiers, and a bounded component count.
-- Flutter component registry and schema-driven renderer for text, buttons, fields, cards, dividers, spacing, grids, trees, and tables.
-- Screen editor supports adding/selecting components, drag reordering, editing exposed properties, deletion, undo/redo, preview, local draft save/open, and JSON clipboard import/export.
-- Supabase repository client includes design listing, version listing, draft save, approval, publish, and restore RPC calls.
-- Supabase migration is applied to the configured project. It creates company-scoped design records, immutable revision records, audit records, RLS policies, and role-checked RPC functions.
-- The four Studio RPC functions use `SECURITY INVOKER` with a hardened `pg_catalog, public` search path, so table RLS remains authoritative. Authenticated users can execute them and anonymous users cannot. Supabase Security Advisor reports no Studio-specific findings after this hardening.
-- Schema tests cover round-trip, unsupported schema version, unknown component type, duplicate IDs, and oversized component collections.
+## Known functional boundaries — do not treat these as complete
 
-## Explicit limitations
+- Data bindings are read-only for preview and published display. They do not execute create/update/delete operations against ERP business tables.
+- Button actions in preview are simulations. There is no general-purpose action/workflow binding engine for arbitrary ERP commands.
+- The published-design viewer displays published custom designs, but publishing does not replace the internals of an existing dedicated ERP screen or automatically remap all existing controls.
+- Width/height are adjusted through property controls, not freehand drag-resize handles. Grouping currently records group membership metadata; nested visual group containers and a full hierarchical layer tree are not implemented.
+- Report, chart, grid, tree, form, and icon components are foundational configurable components, not a full BI/reporting suite or a custom vector/icon drawing tool.
+- Image components accept HTTPS image sources; a dedicated upload/crop/asset-library workflow is not implemented.
+- Per-screen visibility and content-width controls are fully honored by screens using the shared frame. Global theme and data-density tokens apply through the ERP dashboard runtime; dedicated screens may still need conversion to the shared frame for every layout-position option to control their internal title bars, tabs, and toolbars.
+- Local drafts and layout profiles use SharedPreferences. Offline synchronization is manual/retryable and revision-conflict aware; encrypted local storage and background automatic synchronization are not implemented.
+- A live authenticated owner/admin end-to-end workflow test is still required for central save, restore, approval, and publish. UI and database paths exist, but no claim of full production certification is made until CI and account-level testing pass.
 
-- The report designer, icon designer, full data-binding workflow, and advanced table/Grid/tree/form designers are still planned tabs, not finished tools.
-- Drag-to-reorder exists; resize handles, responsive breakpoint editing, grouping, locking, and a full layer manager are not implemented yet.
-- Binding definitions are not yet connected to live ERP query/data-source execution. Imported JSON is presentation data only and never executes Dart, SQL, or arbitrary callbacks.
-- Approval, publish, and restore repository methods exist, but the corresponding full UI workflows, review gates, and end-to-end tests are not complete.
-- Local drafts use SharedPreferences; encrypted offline storage, conflict-aware synchronization, and multi-device draft sync are not implemented.
-- The layout editor saves per-device preferences and currently previews changes; it does not yet apply its settings globally to existing ERP screen renderers.
-- Live RPC behavior still needs an authenticated owner/admin end-to-end test. No claim is made that every Studio tab is production-complete.
+## Security boundaries
 
-## Security
-
-- Studio tables have RLS enabled and company-scoped policies.
-- Studio write/status changes go through RPC functions with an explicit authenticated-user and owner/admin company-role check; anonymous execution is revoked.
-- JSON is constrained to a fixed schema and allow-listed component types. It cannot execute imported code or SQL.
-- Do not publish a design to end users until binding validation, permission review, UI approval workflow, and end-to-end tests are complete.
+- Imported JSON is presentation data only. No imported Dart, JavaScript, SQL, arbitrary callback, or executable expression is accepted.
+- Database-side validation independently enforces the supported node types and the source/field allow-list.
+- Data-source table names and column names come from a fixed registry; callers cannot supply arbitrary identifiers.
+- Company isolation and write permissions are enforced by RLS and owner/admin role policies. Anonymous access is revoked.
+- Published custom designs render read-only in the published-design viewer. Business mutations must continue through the ERP's existing validated business workflows.
