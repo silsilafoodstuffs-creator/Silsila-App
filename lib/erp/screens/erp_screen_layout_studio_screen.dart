@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/erp_screen_frame.dart';
 import '../services/erp_screen_layout_profiles.dart';
 
@@ -102,7 +100,6 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   };
 
   Future<void> _save() async {
-    final next = Map<String,dynamic>.from(_profiles)..[_screen] = _serialize();
     await ErpScreenLayoutProfiles.save(_screen, _serialize());
     if (!mounted) return;
     setState(() => _profiles = Map<String, dynamic>.from(ErpScreenLayoutProfiles.profiles.value));
