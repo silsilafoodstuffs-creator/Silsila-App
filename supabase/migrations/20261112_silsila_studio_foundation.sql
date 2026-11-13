@@ -141,7 +141,7 @@ create or replace function public.erp_studio_save_draft(
 ) returns uuid
 language plpgsql
 security definer
-set search_path = public
+set search_path = pg_catalog, public
 set row_security = off
 as $studio$
 declare
@@ -212,7 +212,7 @@ create or replace function public.erp_studio_approve_design(
 ) returns boolean
 language plpgsql
 security definer
-set search_path = public
+set search_path = pg_catalog, public
 set row_security = off
 as $studio$
 declare v_revision integer;
@@ -241,7 +241,7 @@ create or replace function public.erp_studio_publish_design(
 ) returns boolean
 language plpgsql
 security definer
-set search_path = public
+set search_path = pg_catalog, public
 set row_security = off
 as $studio$
 declare v_revision integer;
@@ -274,7 +274,7 @@ create or replace function public.erp_studio_restore_version(
 ) returns integer
 language plpgsql
 security definer
-set search_path = public
+set search_path = pg_catalog, public
 set row_security = off
 as $studio$
 declare
