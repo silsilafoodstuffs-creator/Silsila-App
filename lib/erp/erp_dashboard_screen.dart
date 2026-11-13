@@ -19,6 +19,7 @@ import 'screens/hr_attendance_rules_screen.dart';
 import 'screens/erp_app_assets_screen.dart';
 import 'screens/erp_app_advertisements_screen.dart';
 import 'screens/erp_program_policies_screen.dart';
+import 'screens/erp_studio_published_designs_screen.dart';
 import 'screens/erp_supplier_deferred_commissions_screen.dart';
 import 'screens/erp_delegate_allocation_screen.dart';
 import 'screens/erp_company_profile_screen.dart';
@@ -90,7 +91,7 @@ const _canvas = Color(0xFFF7F5FA);
 
 const Map<String, Map<String, List<String>>> _modules = {
   'إعدادات عامة': {
-    'بيانات أساسية': ['الملخص التنفيذي', 'سياسات البرنامج', 'سلسلة ستوديو', 'بيانات الشركة', 'فروع النشاطات', 'عملاء النشاطات', 'مراكز التكلفة', 'بيانات جغرافية', 'أنواع الأنشطة', 'المستخدمين', 'صلاحيات المستخدمين', 'قوالب صلاحيات المستخدمين', 'سجل العمليات', 'إدارة مفاتيح API', 'سجلات التكامل والطلبات'],
+    'بيانات أساسية': ['الملخص التنفيذي', 'سياسات البرنامج', 'سلسلة ستوديو', 'شاشات الاستوديو المنشورة', 'بيانات الشركة', 'فروع النشاطات', 'عملاء النشاطات', 'مراكز التكلفة', 'بيانات جغرافية', 'أنواع الأنشطة', 'المستخدمين', 'صلاحيات المستخدمين', 'قوالب صلاحيات المستخدمين', 'سجل العمليات', 'إدارة مفاتيح API', 'سجلات التكامل والطلبات'],
     'حركات': ['مراجعة الحركات', 'قائمة اعتماد القيود', 'إدارة الجلسات', 'سجل الدخول والخروج', 'النسخ الاحتياطي', 'مسح جميع البيانات', 'إعداد نقاط الربط', 'اختبار الاتصال الخارجي'],
     'تقارير': ['تقرير المستخدمين', 'تقرير نشاط النظام', 'تقرير استهلاك API', 'تقرير أخطاء التكامل'],
   },
@@ -1269,6 +1270,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                       _page == 'صلاحيات المستخدمين' ||
                       _page == 'سياسات البرنامج' ||
                       _page == 'سلسلة ستوديو' ||
+                      _page == 'شاشات الاستوديو المنشورة' ||
                       _page == 'بيانات المخازن' ||
                       _page == 'دليل المخازن والفروع' ||
                       _page == 'دليل المخازن' ||
@@ -1299,6 +1301,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                                       ? ErpCostCentersScreen(companyId: _appManagementCompanyId)
                                        : _page == 'سلسلة ستوديو'
                                       ? SilsilaStudioScreen(companyId: _appManagementCompanyId)
+                                      : _page == 'شاشات الاستوديو المنشورة'
+                                      ? ErpStudioPublishedDesignsScreen(companyId: _appManagementCompanyId)
                                       : _page == 'سياسات البرنامج'
                                       ? ErpProgramPoliciesScreen(
                                           companyId: _appManagementCompanyId,
