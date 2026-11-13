@@ -317,37 +317,53 @@ class StudioDocumentRenderer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final renderedGroups = <String>{};
+    final nodes = document.nodes;
+    final renderedLegacyGroups = <String>{};
+
+    Widget renderNode(StudioNode node, Set<String> ancestors) {
+      if (ancestors.contains(node.id)) return const Text('تعذر عرض مجموعة بسبب تداخل دائري.', style: TextStyle(color: Colors.red));
+      if (node.type == 'container') {
+        final children = nodes.where((child) => child.parentId == node.id && !child.hidden).toList();
+        if (children.isNotEmpty) {
+          final nextAncestors = <String>{...ancestors, node.id};
+          return Card(
+            margin: const EdgeInsets.symmetric(vertical: 3),
+            child: Padding(
+              padding: EdgeInsets.all((node.props['padding'] as num?)?.toDouble() ?? 8),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Text((node.props['label'] ?? 'مجموعة عناصر').toString(), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _studioPrimary)),
+                const SizedBox(height: 5),
+                for (final child in children)
+                  Padding(padding: const EdgeInsets.only(bottom: 5), child: renderNode(child, nextAncestors)),
+              ]),
+            ),
+          );
+        }
+      }
+      return StudioComponentRegistry.build(node, interactive: interactive, dataBySource: dataBySource, onAction: onAction);
+    }
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: ListView(
         padding: const EdgeInsets.all(10),
         children: [
-          for (final node in document.nodes.where((e) => !e.hidden))
+          for (final node in nodes.where((item) => item.parentId == null && !item.hidden))
             if (node.groupId == null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 5),
-                child: StudioComponentRegistry.build(node, interactive: interactive, dataBySource: dataBySource, onAction: onAction),
-              )
-            else if (renderedGroups.add(node.groupId!))
+              Padding(padding: const EdgeInsets.only(bottom: 5), child: renderNode(node, <String>{}))
+            else if (renderedLegacyGroups.add(node.groupId!))
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Card(
                   margin: EdgeInsets.zero,
                   child: Padding(
                     padding: const EdgeInsets.all(8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Text('مجموعة عناصر', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _studioPrimary)),
-                        const SizedBox(height: 5),
-                        for (final child in document.nodes.where((e) => e.groupId == node.groupId && !e.hidden))
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 5),
-                            child: StudioComponentRegistry.build(child, interactive: interactive, dataBySource: dataBySource, onAction: onAction),
-                          ),
-                      ],
-                    ),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      const Text('مجموعة عناصر', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _studioPrimary)),
+                      const SizedBox(height: 5),
+                      for (final child in nodes.where((item) => item.parentId == null && item.groupId == node.groupId && !item.hidden))
+                        Padding(padding: const EdgeInsets.only(bottom: 5), child: renderNode(child, <String>{})),
+                    ]),
                   ),
                 ),
               ),
