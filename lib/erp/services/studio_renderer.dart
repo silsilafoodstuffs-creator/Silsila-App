@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'studio_document.dart';
 
@@ -174,11 +176,28 @@ class StudioComponentRegistry {
             color: Color(_integer(p['color'], 0xFF3E007D)));
         break;
       case 'image':
-        final uri = Uri.tryParse((p['url'] ?? '').toString());
-        content = uri != null && uri.scheme == 'https'
-            ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(uri.toString(), height: _number(p['height'], 120), fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined)))
-            : const Icon(Icons.image_outlined, size: 42, color: Colors.black38);
+        final source = (p['url'] ?? '').toString();
+        final uri = Uri.tryParse(source);
+        if (source.startsWith('data:image/') && source.contains(';base64,')) {
+          try {
+            final bytes = base64Decode(source.substring(source.indexOf(',') + 1));
+            content = ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.memory(bytes, height: _number(p['height'], 120), fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined)),
+            );
+          } catch (_) {
+            content = const Icon(Icons.broken_image_outlined);
+          }
+        } else if (uri != null && uri.scheme == 'https') {
+          content = ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(uri.toString(), height: _number(p['height'], 120), fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined)),
+          );
+        } else {
+          content = const Icon(Icons.image_outlined, size: 42, color: Colors.black38);
+        }
         break;
       case 'chart':
         final valueField = (p['valueField'] ?? 'grand_total').toString();
