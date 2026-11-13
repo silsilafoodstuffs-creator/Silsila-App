@@ -99,7 +99,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     if (_undo.length > 60) _undo.removeAt(0);
     _redo.clear();
     setState(() {
-      _doc = next;
+      _doc = next.copyWith(pendingSync: true);
       _dirty = true;
       _testedRevision = null;
       _lastTestReport = null;
@@ -120,7 +120,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       'form': 'نموذج جديد',
       'component': 'عنصر مشترك جديد',
     };
-    final next = StudioDocument.create(labels[kind] ?? 'تصميم جديد', designKind: kind);
+    final next = StudioDocument.create(labels[kind] ?? 'تصميم جديد', designKind: kind).copyWith(pendingSync: true);
     setState(() {
       _doc = next;
       _nameController.text = next.name;
@@ -315,7 +315,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
         expectedRevision: _remoteRevision == 0 ? null : _remoteRevision,
       );
       final nextRevision = _remoteRevision + 1;
-      final next = _doc.copyWith(remoteId: id, remoteRevision: nextRevision);
+      final next = _doc.copyWith(remoteId: id, remoteRevision: nextRevision, pendingSync: false);
       await _store.save(next);
       if (!mounted) return;
       setState(() {
@@ -335,12 +335,58 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     }
   }
 
-  Future<void> _syncCurrentDraft() async {
-    if (_doc.remoteId == null || _remoteRevision == 0) {
-      await _saveCloud();
+  Future<void> _syncPendingDrafts() async {
+    final company = _companyId;
+    if (company == null) {
+      _notice('يجب اختيار شركة نشطة لمزامنة المسودات.', error: true);
       return;
     }
-    await _saveCloud();
+    setState(() => _busy = true);
+    var synced = 0;
+    final failures = <String>[];
+    try {
+      final drafts = await _store.list();
+      final pending = drafts.where((draft) => draft.pendingSync || draft.remoteId == null).toList();
+      for (final draft in pending) {
+        try {
+          final id = await _repository.saveDraft(
+            companyId: company,
+            document: draft,
+            designKey: 'studio_${draft.id}',
+            remoteId: draft.remoteId,
+            expectedRevision: draft.remoteRevision == 0 ? null : draft.remoteRevision,
+            changeNote: 'مزامنة مسودة محلية',
+          );
+          final next = draft.copyWith(
+            remoteId: id,
+            remoteRevision: draft.remoteRevision + 1,
+            pendingSync: false,
+          );
+          await _store.save(next);
+          if (_doc.id == draft.id) {
+            _doc = next;
+            _remoteDesignId = id;
+            _remoteRevision = next.remoteRevision;
+            _remoteStatus = 'draft';
+            _dirty = false;
+            _testedRevision = null;
+          }
+          synced++;
+        } catch (e) {
+          failures.add('${draft.name}: $e');
+        }
+      }
+      await _loadRemoteDesigns();
+      if (failures.isEmpty) {
+        _notice(pending.isEmpty ? 'لا توجد مسودات معلقة للمزامنة.' : 'تمت مزامنة $synced مسودة مركزياً.');
+      } else {
+        _notice('تمت مزامنة $synced مسودة، وتعذرت مزامنة ${failures.length}: ${failures.take(2).join('؛ ')}', error: true);
+      }
+    } catch (e) {
+      _notice('تعذرت قراءة قائمة المسودات للمزامنة: $e', error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _openLocalDrafts() async {
@@ -686,7 +732,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
             IconButton(tooltip: 'استيراد JSON', onPressed: _importJson, icon: const Icon(Icons.file_open)),
             IconButton(tooltip: 'تصدير JSON', onPressed: _exportJson, icon: const Icon(Icons.code)),
             IconButton(tooltip: 'حفظ محلي', onPressed: _busy ? null : _saveLocal, icon: const Icon(Icons.save_outlined)),
-            IconButton(tooltip: 'حفظ مركزي ومزامنة', onPressed: _busy ? null : _syncCurrentDraft, icon: const Icon(Icons.cloud_upload_outlined)),
+            IconButton(tooltip: 'حفظ مركزي ومزامنة', onPressed: _busy ? null : _syncPendingDrafts, icon: const Icon(Icons.cloud_sync_outlined)),
           ],
         ),
         body: Column(children: [
