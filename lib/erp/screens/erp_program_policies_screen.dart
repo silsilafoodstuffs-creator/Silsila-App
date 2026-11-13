@@ -843,10 +843,13 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
             (tabs[tab] == 'الكل' || p['category'] == tabs[tab]))
         .toList();
 
-    if (tab == 0 || tab == 2) {
-      current.sort((a, b) => _programPolicyCode((a['key'] ?? '').toString())
-          .compareTo(_programPolicyCode((b['key'] ?? '').toString())));
-    }
+    current.sort((a, b) {
+      final aCode = _programPolicyCode((a['key'] ?? '').toString());
+      final bCode = _programPolicyCode((b['key'] ?? '').toString());
+      if (aCode.isEmpty) return bCode.isEmpty ? 0 : 1;
+      if (bCode.isEmpty) return -1;
+      return aCode.compareTo(bCode);
+    });
 
     String zeros(int count) => List.filled(count > 0 ? count : 0, '0').join();
 
@@ -1347,10 +1350,13 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final key = (p['key'] ?? '').toString().toLowerCase();
       return ar.contains(query) || en.contains(query) || key.contains(query);
     }).toList();
-    if (tabs[tab] == 'الكل' || tabs[tab] == 'تكويدية') {
-      list.sort((a, b) => _programPolicyCode((a['key'] ?? '').toString())
-          .compareTo(_programPolicyCode((b['key'] ?? '').toString())));
-    }
+    list.sort((a, b) {
+      final aCode = _programPolicyCode((a['key'] ?? '').toString());
+      final bCode = _programPolicyCode((b['key'] ?? '').toString());
+      if (aCode.isEmpty) return bCode.isEmpty ? 0 : 1;
+      if (bCode.isEmpty) return -1;
+      return aCode.compareTo(bCode);
+    });
 
     return WillPopScope(
       onWillPop: _onWillPop,
