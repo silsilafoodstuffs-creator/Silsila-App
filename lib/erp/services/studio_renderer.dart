@@ -265,7 +265,10 @@ class StudioComponentRegistry {
         content = const Text('مكون غير مدعوم');
     }
 
-    if (width != null) return SizedBox(width: width, child: content);
+    final height = p['height'] is num ? (p['height'] as num).toDouble().clamp(20, 1200).toDouble() : null;
+    if (width != null || height != null) {
+      return SizedBox(width: width, height: height, child: Align(alignment: AlignmentDirectional.centerStart, child: content));
+    }
     return content;
   }
 
@@ -294,17 +297,43 @@ class StudioDocumentRenderer extends StatelessWidget {
   final ValueChanged<String>? onAction;
 
   @override
-  Widget build(BuildContext context) => Directionality(
-    textDirection: TextDirection.rtl,
-    child: ListView(
-      padding: const EdgeInsets.all(10),
-      children: [
-        for (final node in document.nodes.where((e) => !e.hidden))
-          Padding(
-            padding: const EdgeInsets.only(bottom: 5),
-            child: StudioComponentRegistry.build(node, interactive: interactive, dataBySource: dataBySource, onAction: onAction),
-          ),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final renderedGroups = <String>{};
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: ListView(
+        padding: const EdgeInsets.all(10),
+        children: [
+          for (final node in document.nodes.where((e) => !e.hidden))
+            if (node.groupId == null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 5),
+                child: StudioComponentRegistry.build(node, interactive: interactive, dataBySource: dataBySource, onAction: onAction),
+              )
+            else if (renderedGroups.add(node.groupId!))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text('مجموعة عناصر', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _studioPrimary)),
+                        const SizedBox(height: 5),
+                        for (final child in document.nodes.where((e) => e.groupId == node.groupId && !e.hidden))
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 5),
+                            child: StudioComponentRegistry.build(child, interactive: interactive, dataBySource: dataBySource, onAction: onAction),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+        ],
+      ),
+    );
+  }
 }
