@@ -50,6 +50,7 @@ class StudioComponentRegistry {
     StudioNode node, {
     bool interactive = false,
     Map<String, List<Map<String, dynamic>>> dataBySource = const {},
+    ValueChanged<String>? onAction,
   }) {
     if (node.hidden) return const SizedBox.shrink();
     final p = node.props;
@@ -79,7 +80,9 @@ class StudioComponentRegistry {
         content = Align(
           alignment: AlignmentDirectional.centerStart,
           child: FilledButton.tonalIcon(
-            onPressed: interactive ? () {} : null,
+            onPressed: interactive && onAction != null
+                ? () => onAction((p['actionKey'] ?? 'preview').toString())
+                : null,
             icon: Icon(_icon(p['icon']?.toString()), size: 18),
             label: Text((p['text'] ?? 'زر جديد').toString()),
           ),
@@ -282,11 +285,13 @@ class StudioDocumentRenderer extends StatelessWidget {
     required this.document,
     this.interactive = false,
     this.dataBySource = const {},
+    this.onAction,
   });
 
   final StudioDocument document;
   final bool interactive;
   final Map<String, List<Map<String, dynamic>>> dataBySource;
+  final ValueChanged<String>? onAction;
 
   @override
   Widget build(BuildContext context) => Directionality(
@@ -297,7 +302,7 @@ class StudioDocumentRenderer extends StatelessWidget {
         for (final node in document.nodes.where((e) => !e.hidden))
           Padding(
             padding: const EdgeInsets.only(bottom: 5),
-            child: StudioComponentRegistry.build(node, interactive: interactive, dataBySource: dataBySource),
+            child: StudioComponentRegistry.build(node, interactive: interactive, dataBySource: dataBySource, onAction: onAction),
           ),
       ],
     ),
