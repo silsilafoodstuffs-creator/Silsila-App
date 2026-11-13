@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_center_toast.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_screen_frame.dart';
 import 'package:flutter/services.dart';
 import '../services/erp_movement_audit_repository.dart';
 import 'erp_accounts_screen.dart';
@@ -298,74 +299,74 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
   Widget build(BuildContext context) {
     final errors = _issues.where((r) => r['severity'] == 'خطأ').length;
     final warnings = _issues.where((r) => r['severity'] == 'تحذير').length;
+    final actions = <Widget>[
+      _quickTask('تحديث / تشغيل الفحص', Icons.refresh, Colors.blue, _loading ? null : _run),
+      _quickTask('معاينة التقرير', Icons.visibility_outlined, const Color(0xFF6841A5), _previewAudit),
+      _quickTask('نسخ التقرير', Icons.copy_outlined, const Color(0xFF137C8B), _copyReport),
+    ];
+    final dateFilter = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      TextField(
+        controller: _company,
+        decoration: const InputDecoration(
+          labelText: 'معرّف الشركة (UUID)',
+          prefixIcon: Icon(Icons.business),
+          border: OutlineInputBorder(),
+        ),
+      ),
+      const SizedBox(height: 8),
+      DropdownButtonFormField<String>(
+        itemHeight: 48,
+        value: _area,
+        decoration: const InputDecoration(labelText: 'مجال الفحص', border: OutlineInputBorder()),
+        items: _areas.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
+        onChanged: (v) => setState(() => _area = v ?? _area),
+      ),
+      const SizedBox(height: 8),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        OutlinedButton.icon(
+          onPressed: () => _chooseDate(true),
+          icon: const Icon(Icons.calendar_month),
+          label: Text('من: ${_dateText(_startDate)}'),
+        ),
+        OutlinedButton.icon(
+          onPressed: () => _chooseDate(false),
+          icon: const Icon(Icons.calendar_month),
+          label: Text('إلى: ${_dateText(_endDate)}'),
+        ),
+        OutlinedButton.icon(
+          onPressed: () => _setMonthRange(previousMonth: false),
+          icon: const Icon(Icons.calendar_view_month),
+          label: const Text('هذا الشهر'),
+        ),
+        OutlinedButton.icon(
+          onPressed: () => _setMonthRange(previousMonth: true),
+          icon: const Icon(Icons.history),
+          label: const Text('الشهر السابق'),
+        ),
+        TextButton(
+          onPressed: () => setState(() { _startDate = null; _endDate = null; }),
+          child: const Text('من بداية النظام'),
+        ),
+      ]),
+    ]);
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Card(color: const Color(0xFF3E007D), child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              const Text('مراجعة الحركات', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
-              const Text('فحص بيانات ERP وعرض الأخطاء والتحذيرات وروابط المعالجة.', style: TextStyle(color: Colors.white70, height: 1.5)),
-              const SizedBox(height: 8),
-              SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
-                _quickTask('تحديث / تشغيل الفحص', Icons.refresh, Colors.blue, _loading ? null : _run),
-                _quickTask('معاينة التقرير', Icons.visibility_outlined, const Color(0xFF6841A5), _previewAudit),
-                _quickTask('نسخ التقرير', Icons.copy_outlined, const Color(0xFF137C8B), _copyReport),
-              ])),
-            ]),
-          )),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _company,
-            decoration: const InputDecoration(
-              labelText: 'معرّف الشركة (UUID)',
-              prefixIcon: Icon(Icons.business),
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<String>(itemHeight: 48, 
-            value: _area,
-            decoration: const InputDecoration(labelText: 'مجال الفحص', border: OutlineInputBorder()),
-            items: _areas.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
-            onChanged: (v) => setState(() => _area = v ?? _area),
-          ),
-          const SizedBox(height: 10),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            OutlinedButton.icon(
-              onPressed: () => _chooseDate(true),
-              icon: const Icon(Icons.calendar_month),
-              label: Text('من: ${_dateText(_startDate)}'),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => _chooseDate(false),
-              icon: const Icon(Icons.calendar_month),
-              label: Text('إلى: ${_dateText(_endDate)}'),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => _setMonthRange(previousMonth: false),
-              icon: const Icon(Icons.calendar_view_month),
-              label: const Text('هذا الشهر'),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => _setMonthRange(previousMonth: true),
-              icon: const Icon(Icons.history),
-              label: const Text('الشهر السابق'),
-            ),
-            TextButton(
-              onPressed: () => setState(() { _startDate = null; _endDate = null; }),
-              child: const Text('من بداية النظام'),
-            ),
-            FilledButton.icon(
-              onPressed: _loading ? null : _run,
-              icon: const Icon(Icons.fact_check_outlined),
-              label: const Text('فحص وعرض التقرير'),
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF3E007D)),
-            ),
-          ]),
-          const SizedBox(height: 14),
+      child: ErpScreenFrame(
+        title: 'مراجعة الحركات',
+        subtitle: 'فحص بيانات ERP وعرض الأخطاء والتحذيرات وروابط المعالجة',
+        icon: Icons.fact_check_outlined,
+        applyContentWidth: false,
+        actions: actions,
+        dateFilter: dateFilter,
+        footer: Row(children: [
+          Expanded(child: Text('الملاحظات: ${_issues.length}')),
+          Text('أخطاء: $errors  •  تحذيرات: $warnings'),
+        ]),
+        padding: EdgeInsets.zero,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
           const Text(
             'مراجعة كل حركة على حدة',
             style: TextStyle(color: Color(0xFF3E007D), fontSize: 16, fontWeight: FontWeight.w900),
@@ -468,11 +469,12 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
               padding: EdgeInsets.all(22),
               child: Text('لا توجد ملاحظات ضمن النطاق المحدد، أو لم توجد بيانات متاحة للفحص. تأكد من اختيار الشركة وتطبيق ملف SQL ومنح المستخدم صلاحيات القراءة.', textAlign: TextAlign.center),
             ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
-
   Widget _metric(String label, String value, Color color) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     decoration: BoxDecoration(color: color.withValues(alpha: .09), borderRadius: BorderRadius.circular(10)),
