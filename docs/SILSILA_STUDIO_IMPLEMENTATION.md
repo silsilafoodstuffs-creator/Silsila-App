@@ -28,7 +28,17 @@ Silsila Studio is the single integrated design workspace in ERP navigation under
 - Studio mutation RPCs use `SECURITY INVOKER`; Supabase Security Advisor reports no Studio-specific security findings.
 - Postgres validation triggers enforce supported schema versions, node limits, unique IDs, allow-listed component types, and allowed data-source fields for designs and revisions.
 - Offline draft cache tracks pending changes and provides batch, optimistic-revision synchronization to Supabase.
-- Layout profiles are cached locally, queued while offline, and synchronized per company. Global color/density tokens are applied to ERP pages through the dashboard runtime; the shared `ErpScreenFrame` also applies title/tab/task/footer visibility and content-width settings.
+- Layout profiles are cached locally, queued while offline, and synchronized per company. Global color/density tokens, main navigation visibility, and configurable scrollbar side/visibility are applied through the dashboard runtime. The shared outer `ErpScreenFrame` applies configurable group-tab placement across all ERP routes without duplicating dedicated screen titles. Workspace pages also pass individual task buttons into the frame, so task placement controls affect the real buttons there. The frame exposes optional date/image/sidebar slots and content-width control. The layout editor receives its target list from the complete ERP navigation tree rather than a short hard-coded list. Generic workspace data renders as table, tree, grid cards, or split list/details.
+
+
+
+## Current layout integration work — PR 28
+
+- Branch: `feature/silsila-studio-layout-controls`.
+- Pull request: https://github.com/silsilafoodstuffs-creator/Silsila-App/pull/28 (open draft; do not merge before validation).
+- Current work adds the full ERP menu catalog to the screen selector, live tab/task positioning (including vertical RTL side rails), actual workspace table/tree/grid/split modes, global group-tab placement, main sidebar visibility, and configurable dashboard scrollbar orientation/visibility.
+- Widget tests cover frame positioning, RTL side placement, optional date/image/sidebar slots, Studio preview controls, and selecting a screen from the supplied ERP route catalog.
+- GitHub Actions results for the current head have not yet been confirmed; no CI pass is claimed.
 
 ## Known functional boundaries — do not treat these as complete
 
@@ -38,7 +48,7 @@ Silsila Studio is the single integrated design workspace in ERP navigation under
 - Width/height are adjusted through property controls, not freehand drag-resize handles. Grouping currently records group membership metadata; nested visual group containers and a full hierarchical layer tree are not implemented.
 - Report, chart, grid, tree, form, and icon components are foundational configurable components, not a full BI/reporting suite or a custom vector/icon drawing tool.
 - Image components accept HTTPS image sources; a dedicated upload/crop/asset-library workflow is not implemented.
-- Per-screen visibility and content-width controls are fully honored by screens using the shared frame. Global theme and data-density tokens apply through the ERP dashboard runtime; dedicated screens may still need conversion to the shared frame for every layout-position option to control their internal title bars, tabs, and toolbars.
+- Group-tab placement is applied globally by the shared outer frame. Per-screen content width, title/footer visibility, task placement, and generic data-view modes are honored by the shared-frame workspace. Main navigation visibility and scrollbar settings apply at the dashboard runtime. Dedicated screens that build their own taskbars, date filters, or image panels still need explicit adapters before those individual elements can be repositioned; the frame's date/image slots are available but do not automatically discover widgets inside arbitrary screens.
 - Local drafts use platform secure storage where available, with a SharedPreferences fallback. Layout profiles remain local preferences plus company-scoped cloud copies. Offline synchronization is manual/retryable and revision-conflict aware; background automatic synchronization is not implemented.
 - A live authenticated owner/admin end-to-end workflow test is still required for central save, restore, approval, and publish. UI and database paths exist, but no claim of full production certification is made until CI and account-level testing pass.
 
