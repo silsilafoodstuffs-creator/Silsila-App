@@ -470,7 +470,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       final parsed = jsonDecode(controller.text);
       if (parsed is! Map) throw const FormatException('يجب أن يكون جذر الملف كائناً.');
       final importMap = Map<String, dynamic>.from(parsed)..remove('remoteId')..['remoteRevision'] = 0;
-      final imported = StudioDocument.fromJson(importMap);
+      final imported = StudioDocument.fromJson(importMap).copyWith(pendingSync: true);
       setState(() {
         _doc = imported;
         _nameController.text = imported.name;
