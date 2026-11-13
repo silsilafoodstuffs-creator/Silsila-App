@@ -269,7 +269,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             _ => '',
           };
           final bytes = file.bytes!;
-          final hex = r'\\x' + bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+          final hex = r'\x' + bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
           batch.add({
             'company_id': widget.companyId.trim(),
             'brand_name': 'مراجعة شعار $sequence - $stamp',
