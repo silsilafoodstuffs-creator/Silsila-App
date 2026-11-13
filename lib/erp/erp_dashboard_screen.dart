@@ -2200,6 +2200,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _executiveMetricsLoading = false;
       });
       await _loadExecutiveStaffPerformance(companyId, bounds.start, bounds.end);
+      await _loadExecutiveExpiryMetrics(companyId);
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -2210,34 +2211,116 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }
 
   Future<void> _loadExecutiveStaffPerformance(String companyId, DateTime start, DateTime end) async {
-    try {
-      final client = Supabase.instance.client;
-      final from = start.toIso8601String().substring(0, 10);
-      final to = end.toIso8601String().substring(0, 10);
-      final month = DateTime(start.year, start.month).toIso8601String().substring(0, 10);
-      final results = await Future.wait<dynamic>([
-        client.from('erp_sales_representatives').select('*').eq('company_id', companyId).eq('is_active', true).order('rep_name'),
-        client.from('erp_sales_documents').select('id,sales_rep_id,document_type,grand_total,status,document_date,is_demo_data').eq('company_id', companyId).eq('status', 'posted').eq('is_demo_data', false).gte('document_date', from).lt('document_date', to),
-        client.from('erp_employees').select('id,employee_code,full_name,job_title,department_name,is_active').eq('company_id', companyId).eq('is_active', true).order('full_name'),
-        client.from('erp_purchase_documents').select('id,created_by,document_type,grand_total,status,document_date,is_demo_data').eq('company_id', companyId).eq('status', 'posted').eq('is_demo_data', false).gte('document_date', from).lt('document_date', to),
-        client.from('erp_employee_monthly_targets').select('employee_id,target_type,target_month,target_amount').eq('company_id', companyId).eq('target_month', month),
-      ]);
-      if (!mounted) return;
-      final allEmployees = (results[2] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-      final purchasingEmployees = allEmployees.where((employee) {
-        final role = '${employee['job_title'] ?? ''} ${employee['department_name'] ?? ''}'.toLowerCase();
-        return role.contains('مشت') || role.contains('شراء') || role.contains('procurement') || role.contains('purchas');
-      }).toList();
-      setState(() {
-        _executiveSalesReps = (results[0] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        _executiveSalesDocuments = (results[1] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        _executivePurchaseEmployees = purchasingEmployees;
-        _executivePurchaseDocuments = (results[3] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        _executiveEmployeeTargets = (results[4] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-      });
-    } catch (_) {
-      // Staff performance is supplemental; keep the financial summary available if optional tables are not deployed yet.
+    // Load each optional source independently. A missing column/table or an RLS
+    // restriction must not hide the names returned successfully by other sources.
+    Future<List<dynamic>> safeRows(dynamic Function() request) async {
+      try {
+        final result = await request();
+        return result is List ? result : <dynamic>[];
+      } catch (_) {
+        return <dynamic>[];
+      }
     }
+
+    final from = start.toIso8601String().substring(0, 10);
+    final to = end.toIso8601String().substring(0, 10);
+    final month = DateTime(start.year, start.month).toIso8601String().substring(0, 10);
+    final results = await Future.wait<List<dynamic>>([
+      safeRows(() => Supabase.instance.client
+          .from('erp_sales_representatives').select('*')
+          .eq('company_id', companyId).eq('is_active', true)),
+      safeRows(() => Supabase.instance.client
+          .from('erp_sales_documents').select('*')
+          .eq('company_id', companyId).eq('status', 'posted')
+          .gte('document_date', from).lt('document_date', to)),
+      safeRows(() => Supabase.instance.client
+          .from('erp_employee_directory').select('*')
+          .eq('company_id', companyId).eq('is_active', true)),
+      safeRows(() => Supabase.instance.client
+          .from('erp_purchase_documents').select('*')
+          .eq('company_id', companyId).eq('status', 'posted')
+          .gte('document_date', from).lt('document_date', to)),
+      safeRows(() => Supabase.instance.client
+          .from('erp_employee_monthly_targets')
+          .select('employee_id,target_type,target_month,target_amount')
+          .eq('company_id', companyId).eq('target_month', month)),
+      safeRows(() => Supabase.instance.client
+          .from('erp_users').select('auth_user_id,employee_id')
+          .eq('company_id', companyId).eq('is_active', true)),
+    ]);
+    if (!mounted) return;
+
+    final salesReps = results[0]
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .where((row) => row['is_demo_data'] != true)
+        .toList()
+      ..sort((a, b) => _staffName(a, const ['rep_name', 'full_name', 'name_ar', 'name'])
+          .compareTo(_staffName(b, const ['rep_name', 'full_name', 'name_ar', 'name'])));
+
+    final salesDocuments = results[1]
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .where((row) => row['is_demo_data'] != true)
+        .toList();
+
+    final employeeAuthIds = <String, String>{};
+    for (final raw in results[5]) {
+      if (raw is! Map) continue;
+      final row = Map<String, dynamic>.from(raw);
+      final employeeId = row['employee_id']?.toString() ?? '';
+      final authUserId = row['auth_user_id']?.toString() ?? '';
+      if (employeeId.isNotEmpty && authUserId.isNotEmpty) {
+        employeeAuthIds[employeeId] = authUserId;
+      }
+    }
+    final employees = results[2]
+        .whereType<Map>()
+        .map((row) {
+          final employee = Map<String, dynamic>.from(row);
+          employee['auth_user_id'] ??= employeeAuthIds[employee['id']?.toString()];
+          return employee;
+        })
+        .toList();
+
+    final purchaseDocuments = results[3]
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .where((row) => row['is_demo_data'] != true)
+        .toList();
+
+    final purchaseCreatorIds = purchaseDocuments
+        .map((row) => row['created_by']?.toString())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    final purchasingEmployees = employees.where((employee) {
+      final role = [
+        employee['job_title'], employee['department_name'],
+        employee['job_name'], employee['department'], employee['role_name'],
+      ].whereType<Object>().join(' ').toLowerCase();
+      final employeeIds = [
+        employee['id'], employee['user_id'], employee['auth_user_id'],
+      ].whereType<Object>().map((value) => value.toString()).toSet();
+      final isPurchasingRole = role.contains('مشت') ||
+          role.contains('شراء') || role.contains('procurement') ||
+          role.contains('purchas');
+      return isPurchasingRole || employeeIds.intersection(purchaseCreatorIds).isNotEmpty;
+    }).toList()
+      ..sort((a, b) => _staffName(a, const ['full_name', 'name_ar', 'employee_name', 'name'])
+          .compareTo(_staffName(b, const ['full_name', 'name_ar', 'employee_name', 'name'])));
+
+    setState(() {
+      _executiveSalesReps = salesReps;
+      _executiveSalesDocuments = salesDocuments;
+      _executivePurchaseEmployees = purchasingEmployees;
+      _executivePurchaseDocuments = purchaseDocuments;
+      _executiveEmployeeTargets = results[4]
+          .whereType<Map>()
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList();
+    });
   }
 
   String _staffName(Map<String, dynamic> row, List<String> candidates) {
@@ -2261,8 +2344,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }
 
   double _purchaseEmployeeActual(Map<String, dynamic> employee) {
-    final id = employee['id']?.toString();
-    return _executivePurchaseDocuments.where((doc) => doc['created_by']?.toString() == id).fold<double>(0, (sum, doc) {
+    final employeeIds = <String>{
+      employee['id']?.toString() ?? '',
+      employee['auth_user_id']?.toString() ?? '',
+    }..remove('');
+    return _executivePurchaseDocuments.where((doc) =>
+      employeeIds.contains(doc['created_by']?.toString())
+    ).fold<double>(0, (sum, doc) {
       final amount = _performanceNumber(doc['grand_total']);
       return sum + (doc['document_type']?.toString() == 'return' ? -amount : amount);
     });
