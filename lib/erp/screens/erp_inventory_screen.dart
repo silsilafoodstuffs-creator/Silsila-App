@@ -397,7 +397,9 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
         ],
       ),
     ),
+    );
   }
+
   Widget _message(String text, Color color) => Container(
     margin: const EdgeInsets.only(top: 8),
     padding: const EdgeInsets.all(10),
