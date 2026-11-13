@@ -58,6 +58,25 @@ void main() {
       expect(find.text('مخفي'), findsNothing);
     });
 
+    testWidgets('renders grouped components inside a shared visual container', (tester) async {
+      final document = StudioDocument(
+        id: 'group-test',
+        name: 'اختبار التجميع',
+        nodes: [
+          StudioNode(id: 'a', type: 'text', props: {'text': 'عنصر أول'}, groupId: 'g1'),
+          StudioNode(id: 'b', type: 'text', props: {'text': 'عنصر ثان'}, groupId: 'g1'),
+        ],
+      );
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(body: StudioDocumentRenderer(document: document)),
+      ));
+
+      expect(find.text('مجموعة عناصر'), findsOneWidget);
+      expect(find.text('عنصر أول'), findsOneWidget);
+      expect(find.text('عنصر ثان'), findsOneWidget);
+    });
+
     testWidgets('simulates an allow-listed button action only in interactive preview', (tester) async {
       String? action;
       final document = StudioDocument(
