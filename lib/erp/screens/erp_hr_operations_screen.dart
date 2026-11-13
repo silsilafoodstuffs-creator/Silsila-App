@@ -8,6 +8,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_screen_frame.dart';
 
 class ErpHrOperationsScreen extends StatefulWidget {
   const ErpHrOperationsScreen({super.key,this.initialCompanyId});
@@ -499,64 +500,59 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
   @override
   Widget build(BuildContext context) {
     final tab = _tabs.index;
-    final headerTasks = Row(children: [
-      task('تحديث', Icons.refresh, Colors.blue, loading ? null : load),
-      task('إضافة', Icons.add_circle_outline, const Color(0xFF168447), saving ? null : () => masterDialog(tab == 0 ? 'location' : 'job')),
-      task('حفظ', Icons.save_outlined, const Color(0xFF168447), tab == 1 && !saving && !locked ? saveAttendance : null),
-      task('تعديل', Icons.edit_outlined, orange, tab == 0 && jobs.isNotEmpty ? () => masterDialog('job', row: jobs.first) : null),
-      task('حذف', Icons.delete_outline, Colors.red, tab == 0 && jobs.isNotEmpty ? () => deleteRow('job', jobs.first) : null),
-      task('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), preview),
-      task('طباعة', Icons.print_outlined, const Color(0xFF536DFE), loading ? null : printReport),
-      task('Excel', Icons.table_view_outlined, const Color(0xFF168447), loading ? null : exportExcel),
-      task('PDF', Icons.picture_as_pdf_outlined, Colors.red, loading ? null : exportPdf),
-    ]);
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Card(
-            color: purple,
-            child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: ErpScreenFrame(
+        title: 'الحضور والانصراف',
+        subtitle: 'قوة العمل • الحضور اليدوي • حضور جهاز البصمة',
+        icon: Icons.access_time_filled_outlined,
+        tabs: const ['قوة العمل', 'الحضور اليدوي', 'حضور جهاز البصمة'],
+        selectedTab: tab,
+        onTabSelected: _tabs.animateTo,
+        actions: [
+          task('تحديث', Icons.refresh, Colors.blue, loading ? null : load),
+          task('إضافة', Icons.add_circle_outline, const Color(0xFF168447),
+              saving ? null : () => masterDialog(tab == 0 ? 'location' : 'job')),
+          task('حفظ', Icons.save_outlined, const Color(0xFF168447),
+              tab == 1 && !saving && !locked ? saveAttendance : null),
+          task('تعديل', Icons.edit_outlined, orange,
+              tab == 0 && jobs.isNotEmpty ? () => masterDialog('job', row: jobs.first) : null),
+          task('حذف', Icons.delete_outline, Colors.red,
+              tab == 0 && jobs.isNotEmpty ? () => deleteRow('job', jobs.first) : null),
+          task('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), preview),
+          task('طباعة', Icons.print_outlined, const Color(0xFF536DFE), loading ? null : printReport),
+          task('Excel', Icons.table_view_outlined, const Color(0xFF168447), loading ? null : exportExcel),
+          task('PDF', Icons.picture_as_pdf_outlined, Colors.red, loading ? null : exportPdf),
+        ],
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _company,
+              decoration: const InputDecoration(
+                labelText: 'معرّف الشركة (UUID)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.business),
+              ),
+            ),
+            if (error != null) notice(error!, Colors.red),
+            if (message != null) notice(message!, Colors.green),
+            if (loading || saving) const LinearProgressIndicator(),
+            Expanded(
+              child: TabBarView(
+                controller: _tabs,
                 children: [
-                  const Text('الحضور والانصراف', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
-                  const Text('قوة العمل • الحضور اليدوي • حضور جهاز البصمة', style: TextStyle(color: Colors.white70)),
-                  const SizedBox(height: 6),
-                  SingleChildScrollView(scrollDirection: Axis.horizontal, child: headerTasks),
+                  SingleChildScrollView(child: workforce()),
+                  SingleChildScrollView(child: manual()),
+                  SingleChildScrollView(child: fingerprint()),
                 ],
               ),
             ),
-          ),
-          TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.business))),
-          if (error != null) notice(error!, Colors.red),
-          if (message != null) notice(message!, Colors.green),
-          if (loading || saving) const LinearProgressIndicator(),
-          TabBar(
-            controller: _tabs,
-            isScrollable: true,
-            labelColor: purple,
-            indicatorColor: orange,
-            tabs: const [
-              Tab(icon: Icon(Icons.account_tree_outlined), text: 'قوة العمل'),
-              Tab(icon: Icon(Icons.calendar_month_outlined), text: 'الحضور اليدوي'),
-              Tab(icon: Icon(Icons.fingerprint), text: 'حضور جهاز البصمة'),
-            ],
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabs,
-              children: [
-                SingleChildScrollView(child: workforce()),
-                SingleChildScrollView(child: manual()),
-                SingleChildScrollView(child: fingerprint()),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+
 }
