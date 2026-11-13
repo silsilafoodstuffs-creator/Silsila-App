@@ -189,6 +189,7 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
       textDirection: TextDirection.rtl,
       child: ErpScreenFrame(
         title: _title,
+        applyContentWidth: false,
         subtitle: 'يعرض التقرير الحركات المرحلة فقط؛ المسودات والقيود المعكوسة مستبعدة.',
         icon: Icons.account_balance_outlined,
         actions: [
