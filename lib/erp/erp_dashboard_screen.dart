@@ -3,6 +3,7 @@ import 'services/erp_print_support.dart';
 import 'widgets/erp_center_toast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'widgets/erp_quick_task_button.dart';
+import 'widgets/erp_screen_frame.dart';
 import '../widgets/silsila_white_logo.dart';
 import 'widgets/erp_keyboard_navigation.dart';
 import 'package:flutter/services.dart';
@@ -3088,47 +3089,68 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ),
   );
 
-  Widget _workspace() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-    Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFECE7F2))), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      LayoutBuilder(builder: (context, constraints) {
-        final titleBlock = Row(children: [
-          Container(width: 44, height: 44, decoration: BoxDecoration(color: const Color(0xFFF1E9FA), borderRadius: BorderRadius.circular(13)), child: Icon(_iconFor(_module), color: _purple)),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(_page, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _purple)),
-            const SizedBox(height: 4),
-            Text('$_module • $_group', style: const TextStyle(color: Colors.black54, fontSize: 12)),
-          ])),
-        ]);
-        final toolbar = _recordToolbar(includeAdd: _group != 'تقارير');
-        if (constraints.maxWidth >= 760) {
-          return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-            Expanded(child: titleBlock),
-            const SizedBox(width: 12),
-            Flexible(child: Align(alignment: Alignment.centerLeft, child: toolbar)),
-          ]);
-        }
-        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          titleBlock,
-          const SizedBox(height: 12),
-          toolbar,
-        ]);
-      }),
-      const SizedBox(height: 16),
-      if (_group == 'تقارير') Padding(padding: EdgeInsets.only(bottom: 12), child: Text(silsilaText('لم يتم ربط مصدر البيانات الفعلي لهذا التقرير بعد.'), style: TextStyle(color: Colors.black54, height: 1.6))),
-      if (_group != 'تقارير') Padding(padding: const EdgeInsets.only(bottom: 12), child: Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: const Color(0xFFFFF4DF), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFFFA015))), child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(Icons.info_outline, color: Color(0xFF8A4B00), size: 19), SizedBox(width: 8), Expanded(child: Text('تنبيه مراجعة: هذه شاشة عامة غير مرتبطة حتى الآن بجدول الحركة المتخصص. السجلات هنا تحفظ كسجلات مساحة عمل، ولا تُعد قيودًا محاسبية أو حركات مخزون أو مستندات بيع/شراء معتمدة.', style: TextStyle(color: Color(0xFF6D4100), height: 1.45, fontSize: 12, fontWeight: FontWeight.w600)))]))),
-      if (_rows.isEmpty && _page != 'الهيكل الوظيفي') Padding(padding: EdgeInsets.all(28), child: Text(silsilaText('لا توجد نتائج مطابقة.'), textAlign: TextAlign.center))
-       else SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F0FA)), showCheckboxColumn: true, columns: _gridKeys.map((k) => DataColumn(label: Text(k, style: const TextStyle(color: _purple, fontWeight: FontWeight.w800)))).toList(), rows: _rows.map((r) => DataRow(selected: _selectedRecord != null && _sameRecord(r, _selectedRecord!), onSelectChanged: (selected) => setState(() => _selectedRecord = selected == true ? Map<String, String>.from(r) : null), cells: _gridKeys.map((k) => DataCell(Text(r[k] ?? '—'), onTap: () => setState(() => _selectedRecord = Map<String, String>.from(r)))).toList())).toList())),
-      const SizedBox(height: 12),
-      Text('عدد السجلات المعروضة: ${_rows.length} • إجمالي السجلات المحمّلة: ${(_saved[_page] ?? <Map<String, String>>[]).length}', style: const TextStyle(color: Colors.black45, fontSize: 11)),
-      if (_workspaceHasMore[_page] == true || _workspacePageLoadsInProgress.contains(_page))
-        Align(alignment: Alignment.center, child: Padding(padding: const EdgeInsets.only(top: 10), child: OutlinedButton.icon(
-          onPressed: _workspacePageLoadsInProgress.contains(_page) ? null : () => _loadWorkspacePage(_page, loadMore: true),
-          icon: _workspacePageLoadsInProgress.contains(_page) ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.expand_more),
-          label: Text(_workspacePageLoadsInProgress.contains(_page) ? 'جارٍ تحميل السجلات...' : 'تحميل 500 سجل إضافي'),
-        ))),
-    ])),
-  ]);
+  Widget _workspace() {
+    final rows = _rows;
+    final loadedCount = (_saved[_page] ?? <Map<String, String>>[]).length;
+    final toolbar = _recordToolbar(includeAdd: _group != 'تقارير');
+    return ErpScreenFrame(
+      title: _page,
+      subtitle: '$_module • $_group',
+      icon: _iconFor(_module),
+      actions: [toolbar],
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+      footer: Row(children: [
+        Expanded(child: Text('عدد السجلات المعروضة: ${rows.length}')),
+        Text('إجمالي السجلات المحمّلة: $loadedCount'),
+      ]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (_group == 'تقارير')
+          Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(
+            silsilaText('لم يتم ربط مصدر البيانات الفعلي لهذا التقرير بعد.'),
+            style: const TextStyle(color: Colors.black54, height: 1.6),
+          )),
+        if (_group != 'تقارير')
+          Padding(padding: const EdgeInsets.only(bottom: 12), child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: const Color(0xFFFFF4DF), borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFFFA015))),
+            child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(Icons.info_outline, color: Color(0xFF8A4B00), size: 19),
+              SizedBox(width: 8),
+              Expanded(child: Text(
+                'تنبيه مراجعة: هذه شاشة عامة غير مرتبطة حتى الآن بجدول الحركة المتخصص. السجلات هنا تحفظ كسجلات مساحة عمل، ولا تُعد قيودًا محاسبية أو حركات مخزون أو مستندات بيع/شراء معتمدة.',
+                style: TextStyle(color: Color(0xFF6D4100), height: 1.45, fontSize: 12, fontWeight: FontWeight.w600),
+              )),
+            ]),
+          )),
+        Expanded(child: rows.isEmpty && _page != 'الهيكل الوظيفي'
+          ? Center(child: Text(silsilaText('لا توجد نتائج مطابقة.'), textAlign: TextAlign.center))
+          : SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F0FA)),
+                showCheckboxColumn: true,
+                columns: _gridKeys.map((k) => DataColumn(label: Text(k, style: const TextStyle(color: _purple, fontWeight: FontWeight.w800)))).toList(),
+                rows: rows.map((r) => DataRow(
+                  selected: _selectedRecord != null && _sameRecord(r, _selectedRecord!),
+                  onSelectChanged: (selected) => setState(() => _selectedRecord = selected == true ? Map<String, String>.from(r) : null),
+                  cells: _gridKeys.map((k) => DataCell(Text(r[k] ?? '—'),
+                    onTap: () => setState(() => _selectedRecord = Map<String, String>.from(r)))).toList(),
+                )).toList(),
+              ),
+            ),
+        ),
+        if (_workspaceHasMore[_page] == true || _workspacePageLoadsInProgress.contains(_page))
+          Align(alignment: Alignment.center, child: Padding(padding: const EdgeInsets.only(top: 10), child: OutlinedButton.icon(
+            onPressed: _workspacePageLoadsInProgress.contains(_page) ? null : () => _loadWorkspacePage(_page, loadMore: true),
+            icon: _workspacePageLoadsInProgress.contains(_page)
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.expand_more),
+            label: Text(_workspacePageLoadsInProgress.contains(_page) ? 'جارٍ تحميل السجلات...' : 'تحميل 500 سجل إضافي'),
+          ))),
+      ]),
+    );
+  }
 
   final Map<String, bool> _permissionDraft = {};
   String _pricingMode = 'نسبة';
