@@ -5,6 +5,7 @@ import '../widgets/erp_keyboard_navigation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_screen_frame.dart';
 import '../services/erp_workspace_records_service.dart';
 import '../services/erp_screen_layout_profiles.dart';
 import 'erp_brands_tab.dart';
