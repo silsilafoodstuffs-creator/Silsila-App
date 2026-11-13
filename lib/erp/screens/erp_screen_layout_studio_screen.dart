@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_screen_frame.dart';
 import '../services/erp_screen_layout_profiles.dart';
+import '../services/erp_studio_repository.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
 
 class ErpScreenLayoutStudioScreen extends StatefulWidget {
-  const ErpScreenLayoutStudioScreen({super.key});
+  const ErpScreenLayoutStudioScreen({super.key, this.companyId});
+  final String? companyId;
   @override
   State<ErpScreenLayoutStudioScreen> createState() => _ErpScreenLayoutStudioScreenState();
 }
 
 class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScreen> {
+  final _repository = ErpStudioRepository();
+  String? _syncMessage;
   static const _screens = <String>[
     'كل الشاشات - الإعداد الافتراضي', 'فئات الأصناف', 'دليل الأصناف', 'بيانات المخازن',
     'سياسات البرنامج', 'بيانات الشركة', 'المستخدمين', 'الملخص التنفيذي',
@@ -58,6 +62,15 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   Future<void> _load() async {
     try {
       await ErpScreenLayoutProfiles.load();
+      final company = widget.companyId;
+      if (company != null && company.trim().isNotEmpty) {
+        try {
+          final remote = await _repository.loadLayoutProfiles(company);
+          await ErpScreenLayoutProfiles.mergeRemote(remote);
+        } catch (error) {
+          _syncMessage = 'تعذر تحميل التخطيطات المركزية؛ تم الاحتفاظ بالنسخ المحلية: $error';
+        }
+      }
       _profiles = Map<String, dynamic>.from(ErpScreenLayoutProfiles.profiles.value);
       _apply(_current);
     } catch (_) {
@@ -103,15 +116,65 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
 
   Future<void> _save() async {
     await ErpScreenLayoutProfiles.save(_profileKey, _serialize());
+    final company = widget.companyId;
+    if (company != null && company.trim().isNotEmpty) {
+      try {
+        await _repository.saveLayoutProfile(companyId: company, profileKey: _profileKey, profile: _serialize());
+        await ErpScreenLayoutProfiles.markSynced(_profileKey);
+        _syncMessage = 'تم حفظ التخطيط محلياً ومركزياً.';
+      } catch (error) {
+        _syncMessage = 'حُفظ التخطيط محلياً، والمزامنة المركزية معلقة: $error';
+      }
+    } else {
+      _syncMessage = 'تم حفظ التخطيط محلياً؛ اختر شركة نشطة للمزامنة المركزية.';
+    }
     if (!mounted) return;
     setState(() => _profiles = Map<String, dynamic>.from(ErpScreenLayoutProfiles.profiles.value));
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ التخطيط وتطبيقه فورياً على الشاشات التي تستخدم الإطار الموحد.')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_syncMessage!)));
   }
 
   Future<void> _reset() async {
+    final company = widget.companyId;
+    if (company != null && company.trim().isNotEmpty) {
+      try {
+        await _repository.deleteLayoutProfile(companyId: company, profileKey: _profileKey);
+      } catch (error) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حذف النسخة المركزية: $error'), backgroundColor: Colors.red));
+        return;
+      }
+    }
     await ErpScreenLayoutProfiles.reset(_profileKey);
     if (!mounted) return;
     setState(() { _profiles = Map<String, dynamic>.from(ErpScreenLayoutProfiles.profiles.value); _apply(_current); });
+  }
+
+  Future<void> _syncPendingProfiles() async {
+    final company = widget.companyId;
+    if (company == null || company.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يجب اختيار شركة نشطة للمزامنة المركزية.')));
+      return;
+    }
+    try {
+      final pending = ErpScreenLayoutProfiles.pendingProfiles();
+      var synced = 0;
+      final errors = <String>[];
+      for (final entry in pending.entries) {
+        try {
+          await _repository.saveLayoutProfile(companyId: company, profileKey: entry.key, profile: entry.value);
+          await ErpScreenLayoutProfiles.markSynced(entry.key);
+          synced++;
+        } catch (error) {
+          errors.add('${entry.key}: $error');
+        }
+      }
+      if (!mounted) return;
+      setState(() => _syncMessage = errors.isEmpty
+          ? 'تمت مزامنة $synced تخطيط.'
+          : 'تمت مزامنة $synced، وتعذرت مزامنة ${errors.length}.');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_syncMessage!)));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('فشلت المزامنة: $error'), backgroundColor: Colors.red));
+    }
   }
 
   Widget _section(String title, IconData icon, List<Widget> children) => Card(
@@ -158,9 +221,11 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
       actions:[
         ElevatedButton.icon(onPressed:_loading?null:_save,icon:const Icon(Icons.save_outlined),label:const Text('حفظ الإعدادات')),
         const SizedBox(width:6),
+        OutlinedButton.icon(onPressed:_loading?null:_syncPendingProfiles,icon:const Icon(Icons.cloud_sync_outlined),label:const Text('مزامنة التخطيطات')),
+        const SizedBox(width:6),
         OutlinedButton.icon(onPressed:_loading?null:_reset,icon:const Icon(Icons.restart_alt),label:const Text('استعادة الافتراضي')),
       ],
-      footer:const Text('الإصدار الحالي يحفظ ملفات التخطيط محليًا على الجهاز؛ ربطها بتطبيقات المستخدمين ومزامنتها مركزيًا مرحلة تالية.'),
+      footer:Text(_syncMessage ?? 'التخطيطات تحفظ محلياً وتتم مزامنتها مركزياً عند توفر الاتصال وصلاحية مدير الشركة. إعدادات الألوان والكثافة تطبق على صفحات ERP؛ خيارات إظهار عناصر العنوان تعمل مع الإطار الموحد.'),
       child:_loading?const Center(child:CircularProgressIndicator()):SingleChildScrollView(
         padding:const EdgeInsets.all(4),
         child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
