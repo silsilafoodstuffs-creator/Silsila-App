@@ -312,12 +312,10 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
             ),
         ],
       ),
-    );
-        ],
       ),
-    ),
     );
   }
+
   Widget _metric(String label, double value) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     decoration: BoxDecoration(
