@@ -7,6 +7,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_screen_frame.dart';
 import '../services/erp_hr_repository.dart';
 
 class ErpHrLeaveScreen extends StatefulWidget {
@@ -123,37 +124,28 @@ class _ErpHrLeaveScreenState extends State<ErpHrLeaveScreen>{
   Future<void> preview()async{await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(title:const Text('معاينة الإجازات'),content:SizedBox(width:650,child:requests.isEmpty?const Text('لا توجد طلبات إجازة.'):SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:requests.take(100).map((r)=>ListTile(title:Text(name(r['employee_id'])),subtitle:Text('${s(r['leave_type'])} • ${s(r['starts_on'])} إلى ${s(r['ends_on'])} • ${s(r['status'])}'))).toList()))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق'))]));}
   @override
   Widget build(BuildContext context) {
-    final tasks = Row(children: [
-      task('تحديث', Icons.refresh, Colors.blue, loading ? null : load),
-      task('إضافة', Icons.add_circle_outline, const Color(0xFF168447), saving ? null : createLeave),
-      task('حفظ', Icons.save_outlined, const Color(0xFF168447), null),
-      task('تعديل', Icons.edit_outlined, orange, null),
-      task('حذف', Icons.delete_outline, Colors.red, null),
-      task('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), preview),
-      task('طباعة', Icons.print_outlined, const Color(0xFF536DFE), loading ? null : printLeaves),
-      task('Excel', Icons.table_view_outlined, const Color(0xFF168447), loading ? null : exportExcel),
-      task('PDF', Icons.picture_as_pdf_outlined, Colors.red, loading ? null : exportPdf),
-    ]);
+    final tabTitle = 'الإجازات والأذونات';
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Card(
-            color: purple,
-            child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text('الإجازات والأذونات', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
-                  const Text('طلبات الإجازة • الاعتماد • سجل القرارات', style: TextStyle(color: Colors.white70)),
-                  const SizedBox(height: 6),
-                  SingleChildScrollView(scrollDirection: Axis.horizontal, child: tasks),
-                ],
-              ),
-            ),
-          ),
+      child: ErpScreenFrame(
+        title: tabTitle,
+        subtitle: 'طلبات الإجازة • الاعتماد • سجل القرارات',
+        icon: Icons.event_available_outlined,
+        applyContentWidth: false,
+        actions: [
+          task('تحديث', Icons.refresh, Colors.blue, loading ? null : load),
+          task('إضافة', Icons.add_circle_outline, const Color(0xFF168447), saving ? null : createLeave),
+          task('حفظ', Icons.save_outlined, const Color(0xFF168447), null),
+          task('تعديل', Icons.edit_outlined, orange, null),
+          task('حذف', Icons.delete_outline, Colors.red, null),
+          task('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), preview),
+          task('طباعة', Icons.print_outlined, const Color(0xFF536DFE), loading ? null : printLeaves),
+          task('Excel', Icons.table_view_outlined, const Color(0xFF168447), loading ? null : exportExcel),
+          task('PDF', Icons.picture_as_pdf_outlined, Colors.red, loading ? null : exportPdf),
+        ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.business))),
           if (error != null) notice(error!, Colors.red),
           if (message != null) notice(message!, Colors.green),
@@ -198,5 +190,7 @@ class _ErpHrLeaveScreenState extends State<ErpHrLeaveScreen>{
         ],
       ),
     );
-  }
-}
+        ],
+      ),
+    ),
+  }}
