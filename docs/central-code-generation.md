@@ -18,16 +18,16 @@
 The current item-code format is:
 
 ```text
-[Itm: 3 letters][primary category: 2 digits][secondary category: 2 digits][tertiary category: 2 digits][brand: 2 digits][serial: 3 digits]
+[Itm: 3 letters][primary category: 2 digits][secondary category: 2 digits][tertiary category: 2 digits][brand: 4 digits][serial: 3 digits]
 ```
 
-The default first-code example is `Itm01010101001`:
+The default first-code example is `Itm0101010001001`:
 - `Itm`: item prefix.
 - `010101`: the three inherited category levels, each two digits.
 - `0001`: the four-digit numeric part of the selected brand code; the brand prefix is omitted.
 - `001`: the serial within the company/category/brand combination.
 
-The database resolves the selected secondary category and active company brand, then generates the next serial under a transaction-scoped advisory lock. A missing brand selection resolves to the system brand `بدون علامة تجارية` (brand code `Bra00`). Workspace item proposal approval requires a valid secondary category and leaves `item_code` blank for the same database trigger; the former random `PRP-` placeholder is not used.
+The database resolves the selected secondary category and active company brand, then generates the next serial under a transaction-scoped advisory lock. A missing brand selection resolves to the system brand `بدون علامة تجارية` (brand code `Bra0000`). Workspace item proposal approval requires a valid secondary category and leaves `item_code` blank for the same database trigger; the former random `PRP-` placeholder is not used.
 
 ## Brand identifiers
 
