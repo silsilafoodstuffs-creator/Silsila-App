@@ -2197,7 +2197,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           .eq('company_id', companyId).eq('status', 'posted')
           .gte('document_date', from).lt('document_date', to)),
       safeRows(() => Supabase.instance.client
-          .from('erp_employees').select('*')
+          .from('erp_employee_directory').select('*')
           .eq('company_id', companyId).eq('is_active', true)),
       safeRows(() => Supabase.instance.client
           .from('erp_purchase_documents').select('*')
