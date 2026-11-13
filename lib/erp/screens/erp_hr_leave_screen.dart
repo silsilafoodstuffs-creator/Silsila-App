@@ -189,8 +189,7 @@ class _ErpHrLeaveScreenState extends State<ErpHrLeaveScreen>{
           ),
         ],
       ),
-    );
-        ],
       ),
-    ),
-  }}
+    );
+  }
+}
