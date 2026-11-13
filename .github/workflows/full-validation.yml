@@ -17,6 +17,7 @@ on:
       - "tools/web_view_test.mjs"
       - "supabase/**"
       - ".github/workflows/full-validation.yml"
+      - ".github/workflows/build.yml"
   workflow_dispatch:
 
 permissions:
