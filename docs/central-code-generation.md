@@ -24,7 +24,7 @@ The current item-code format is:
 The default first-code example is `Itm01010101001`:
 - `Itm`: item prefix.
 - `010101`: the three inherited category levels, each two digits.
-- `01`: the numeric part of the selected brand code; the brand prefix is omitted.
+- `0001`: the four-digit numeric part of the selected brand code; the brand prefix is omitted.
 - `001`: the serial within the company/category/brand combination.
 
 The database resolves the selected secondary category and active company brand, then generates the next serial under a transaction-scoped advisory lock. A missing brand selection resolves to the system brand `بدون علامة تجارية` (brand code `Bra00`). Workspace item proposal approval requires a valid secondary category and leaves `item_code` blank for the same database trigger; the former random `PRP-` placeholder is not used.
@@ -32,8 +32,8 @@ The database resolves the selected secondary category and active company brand, 
 ## Brand identifiers
 
 - The company-scoped brand master is `erp_brands`; each row has a unique `brand_code` within its company.
-- Brand codes use a three-letter prefix (default `Bra`) followed by two digits (default first assigned code `Bra01`).
-- The system brand `بدون علامة تجارية` uses `Bra00`; item codes inherit only its numeric segment (`00`).
+- Brand codes use a three-letter prefix (default `Bra`) followed by four digits (default first assigned code `Bra0001`).
+- The system brand `بدون علامة تجارية` uses `Bra0000`; item codes inherit only its numeric segment (`0000`).
 - Item-to-brand links use `erp_items.brand_id` with a company-scoped foreign key. The brand name stored on an item is synchronized from the selected active brand.
 
 ## Customer, category, and geographic identifiers
