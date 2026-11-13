@@ -29,6 +29,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
 
   StudioDocument _doc = StudioDocument.create('شاشة جديدة');
   final Set<String> _selectedIds = <String>{};
+  final Map<String, Offset> _resizeDelta = <String, Offset>{};
   final List<StudioDocument> _undo = <StudioDocument>[];
   final List<StudioDocument> _redo = <StudioDocument>[];
   List<Map<String, dynamic>> _remoteDesigns = <Map<String, dynamic>>[];
@@ -260,6 +261,17 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     if (_selectedIds.isEmpty) return;
     _change(_doc.copyWith(nodes: _doc.nodes.map((node) =>
       _selectedIds.contains(node.id) && !node.locked ? node.copyWith(clearGroup: true) : node).toList()));
+  }
+
+  void _finishResize(StudioNode node) {
+    final delta = _resizeDelta.remove(node.id);
+    if (delta == null || node.locked) return;
+    final props = Map<String, dynamic>.from(node.props);
+    final baseWidth = props['width'] is num ? (props['width'] as num).toDouble() : 320.0;
+    final baseHeight = props['height'] is num ? (props['height'] as num).toDouble() : 60.0;
+    props['width'] = (baseWidth + delta.dx).clamp(80, 1200).toDouble();
+    props['height'] = (baseHeight + delta.dy).clamp(28, 900).toDouble();
+    _updateNode(node, props: props);
   }
 
   void _toggleLock(StudioNode node) => _updateNode(node, locked: !node.locked);
@@ -1006,6 +1018,17 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
                 ),
                 subtitle: Text('${StudioComponentRegistry.supportedTypes[node.type]} • ${node.groupId ?? 'بدون مجموعة'}${node.locked ? ' • مقفل' : ''}'),
                 trailing: Wrap(children: [
+                  GestureDetector(
+                    onPanStart: node.locked ? null : (_) => setState(() => _resizeDelta[node.id] = Offset.zero),
+                    onPanUpdate: node.locked ? null : (details) => setState(() {
+                      _resizeDelta[node.id] = (_resizeDelta[node.id] ?? Offset.zero) + details.delta;
+                    }),
+                    onPanEnd: node.locked ? null : (_) => _finishResize(node),
+                    child: const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Icon(Icons.open_in_full, size: 17, color: _studioPurple),
+                    ),
+                  ),
                   IconButton(
                     tooltip: node.hidden ? 'إظهار' : 'إخفاء',
                     icon: Icon(node.hidden ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 18),
