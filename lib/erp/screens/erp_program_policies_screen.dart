@@ -46,6 +46,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'category_code.sub','category':'تكويدية','ar':'تكويد فئات فرعية ( يرث ك ف رئيسية )','en':'Sub item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":2}','mandatory':true,'all':true},
     {'key':'category_code.secondary','category':'تكويدية','ar':'تكويد فئات ثانوية ( يرث ك ف فرعية )','en':'Secondary item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":4}','mandatory':true,'all':true},
     {'key':'brand_code','category':'تكويدية','ar':'تكويد البراند','en':'Brand coding policy','value':'{"prefix":"Bra","digits":4,"parent_digits":0}','mandatory':true,'all':true},
+    {'key':'code_type.brand_group','category':'تكويدية','ar':'مجموعات البراندات','en':'Brand groups','value':'Brg + 2 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'item_code','category':'تكويدية','ar':'تكويد الأصناف ( يرث كود الفئة الثانوية )','en':'Item coding policy','value':'{"prefix":"Itm","category_digits":6,"brand_digits":4,"serial_digits":3}','mandatory':true,'all':true},
     {'key':'code_policy.company','category':'تكويدية','ar':'الشركة','en':'Company','value':'Com + 2 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.program_policy','category':'تكويدية','ar':'البرنامج','en':'Program policies','value':'Pol + 3 أرقام تسلسلية','mandatory':true,'all':true},
@@ -521,6 +522,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   };
 
   static const List<Map<String, String>> _codePolicyTypeDefinitions = [
+    {'key':'brand_group','name':'مجموعات البراندات','en':'Brand groups','prefix':'Brg','digits':'2'},
     {'key':'payroll_run','name':'مسيرات الرواتب','en':'Payroll runs','prefix':'Prl','digits':'5'},
     {'key':'warehouse','name':'المخازن','en':'Warehouses','prefix':'Whs','digits':'5'},
     {'key':'unit','name':'وحدات الأصناف','en':'Item units','prefix':'UNT','digits':'4'},
