@@ -253,7 +253,7 @@ class ErpScreenFrame extends StatelessWidget {
             return const SizedBox.shrink();
           }
           return SizedBox(
-            width: 150,
+            width: MediaQuery.of(context).size.width < 600 ? 112 : 150,
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
