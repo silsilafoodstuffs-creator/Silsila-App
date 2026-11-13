@@ -344,6 +344,10 @@ class SilsilaApp extends StatelessWidget {
           seedColor: purple,
           primary: purple,
           secondary: orange,
+          tertiary: pink,
+          primaryContainer: const Color(0xFF6B2BB2),
+          secondaryContainer: const Color(0xFFFFE2B4),
+          surfaceTint: Colors.transparent,
         ),
         // Circular, modern checkbox styling shared by the customer app and ERP.
         checkboxTheme: CheckboxThemeData(
