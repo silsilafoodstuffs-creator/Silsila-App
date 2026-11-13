@@ -74,6 +74,21 @@ class StudioDocument {
       return StudioNode.fromJson(Map<String, dynamic>.from(e));
     }).toList();
     final ids = parsedNodes.map((e) => e.id).toSet();
+    final nodesById = <String, StudioNode>{for (final node in parsedNodes) node.id: node};
+    for (final node in parsedNodes) {
+      final visitedParents = <String>{node.id};
+      var parentId = node.parentId;
+      while (parentId != null) {
+        final parent = nodesById[parentId];
+        if (parent == null || parent.type != 'container') {
+          throw FormatException('الحاوية الأب للعنصر ${node.id} غير موجودة أو ليست حاوية.');
+        }
+        if (!visitedParents.add(parentId)) {
+          throw FormatException('يوجد تداخل دائري في طبقات التصميم عند ${node.id}.');
+        }
+        parentId = parent.parentId;
+      }
+    }
     if (ids.length != parsedNodes.length) {
       throw const FormatException('معرّفات المكونات يجب أن تكون فريدة.');
     }
