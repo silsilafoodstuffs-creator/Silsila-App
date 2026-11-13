@@ -45,8 +45,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'category_code.main','category':'تكويدية','ar':'تكويد فئات أصناف رئيسية','en':'Main item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":0}','mandatory':true,'all':true},
     {'key':'category_code.sub','category':'تكويدية','ar':'تكويد فئات فرعية ( يرث ك ف رئيسية )','en':'Sub item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":2}','mandatory':true,'all':true},
     {'key':'category_code.secondary','category':'تكويدية','ar':'تكويد فئات ثانوية ( يرث ك ف فرعية )','en':'Secondary item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":4}','mandatory':true,'all':true},
-    {'key':'brand_code','category':'تكويدية','ar':'تكويد البراند','en':'Brand coding policy','value':'{"prefix":"Bra","digits":2,"parent_digits":0}','mandatory':true,'all':true},
-    {'key':'item_code','category':'تكويدية','ar':'تكويد الأصناف ( يرث كود الفئة الثانوية )','en':'Item coding policy','value':'{"prefix":"Itm","category_digits":6,"brand_digits":2,"serial_digits":3}','mandatory':true,'all':true},
+    {'key':'brand_code','category':'تكويدية','ar':'تكويد البراند','en':'Brand coding policy','value':'{"prefix":"Bra","digits":4,"parent_digits":0}','mandatory':true,'all':true},
+    {'key':'item_code','category':'تكويدية','ar':'تكويد الأصناف ( يرث كود الفئة الثانوية )','en':'Item coding policy','value':'{"prefix":"Itm","category_digits":6,"brand_digits":4,"serial_digits":3}','mandatory':true,'all':true},
     {'key':'code_policy.company','category':'تكويدية','ar':'الشركة','en':'Company','value':'Com + 2 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.program_policy','category':'تكويدية','ar':'البرنامج','en':'Program policies','value':'Pol + 3 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.employee','category':'تكويدية','ar':'الموظفون','en':'Employees','value':'Emp + 5 أرقام تسلسلية','mandatory':true,'all':true},
@@ -416,7 +416,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       'category_code.main': {'prefix':'Cat','digits':2,'parent_digits':0},
       'category_code.sub': {'prefix':'Cat','digits':2,'parent_digits':2},
       'category_code.secondary': {'prefix':'Cat','digits':2,'parent_digits':4},
-      'brand_code': {'prefix':'Bra','digits':2,'parent_digits':0},
+      'brand_code': {'prefix':'Bra','digits':4,'parent_digits':0},
     };
     for (final entry in expectedCodePolicies.entries) {
       final config = _geoCodeConfig(values[entry.key]!);
@@ -427,11 +427,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final itemCode = _itemCodeConfig(values['item_code']!);
     final itemPrefix = (itemCode['prefix'] ?? '').toString().trim();
     final itemSerialDigits = int.tryParse((itemCode['serial_digits'] ?? '').toString());
-    if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(itemPrefix) || itemCode['category_digits'] != 6 || itemCode['brand_digits'] != 2 || itemSerialDigits == null || itemSerialDigits < 1 || itemSerialDigits > 8) {
-      throw StateError('سياسة كود الصنف تتطلب بادئة من ثلاثة أحرف، وستة أرقام للفئات، ورقمين للبراند، وتسلسلًا من 1 إلى 8 أرقام.');
+    if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(itemPrefix) || itemCode['category_digits'] != 6 || itemCode['brand_digits'] != 4 || itemSerialDigits == null || itemSerialDigits < 1 || itemSerialDigits > 8) {
+      throw StateError('سياسة كود الصنف تتطلب بادئة من ثلاثة أحرف، وستة أرقام للفئات، أربعة أرقام للبراند، وتسلسلًا من 1 إلى 8 أرقام.');
     }
     itemCode['prefix'] = itemPrefix;
-    itemCode['brand_digits'] = 2;
+    itemCode['brand_digits'] = 4;
     itemCode['serial_digits'] = itemSerialDigits;
     values['item_code']!['value'] = jsonEncode(itemCode);
     for (final key in ['geo_code.country','geo_code.governorate','geo_code.district','geo_code.area','category_code.main','brand_code']) {
@@ -648,7 +648,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       'geo_code.area': {'prefix':'Rig','digits':2,'parent_digits':6},      'category_code.main': {'prefix':'Cat','digits':2,'parent_digits':0},
       'category_code.sub': {'prefix':'Cat','digits':2,'parent_digits':2},
       'category_code.secondary': {'prefix':'Cat','digits':2,'parent_digits':4},
-      'brand_code': {'prefix':'Bra','digits':2,'parent_digits':0},
+      'brand_code': {'prefix':'Bra','digits':4,'parent_digits':0},
     };
     return Map<String, dynamic>.from(defaults[key] ?? defaults['geo_code.country']!);
   }
@@ -728,7 +728,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final parsed = jsonDecode((policy['value'] ?? '{}').toString());
       if (parsed is Map) return Map<String, dynamic>.from(parsed);
     } catch (_) {}
-    return {'prefix':'Itm','category_digits':6,'brand_digits':2,'serial_digits':3};
+    return {'prefix':'Itm','category_digits':6,'brand_digits':4,'serial_digits':3};
   }
 
   Widget _itemCodeEditor(Map<String, dynamic> policy) {
@@ -773,11 +773,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   Widget _geoCodeEditor(Map<String, dynamic> policy) {
     final config = _geoCodeConfig(policy);
     final prefix = (config['prefix'] ?? '').toString();
-    final digits = int.tryParse((config['digits'] ?? 2).toString()) ?? 2;
+    final digits = int.tryParse((config['digits'] ?? (key == 'brand_code' ? 4 : 2)).toString()) ?? (key == 'brand_code' ? 4 : 2);
     final parentDigits = int.tryParse((config['parent_digits'] ?? 0).toString()) ?? 0;
     final key = (policy['key'] ?? '').toString();
     final previewDigits = key == 'brand_code'
-        ? '01'
+        ? '0001'
         : key.startsWith('category_code.')
             ? List.filled((parentDigits ~/ 2) + 1, '01').join()
             : List.filled(parentDigits + digits, '0').join();
@@ -876,13 +876,13 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       if (key == 'item_code') {
         final config = _itemCodeConfig(policy);
         final categories = int.tryParse((config['category_digits'] ?? 6).toString()) ?? 6;
-        final brand = int.tryParse((config['brand_digits'] ?? 2).toString()) ?? 2;
+        final brand = int.tryParse((config['brand_digits'] ?? 4).toString()) ?? 4;
         final serial = int.tryParse((config['serial_digits'] ?? 3).toString()) ?? 3;
         return '$categories أرقام فئات + $brand للبراند + $serial للتسلسل';
       }
       if (key.startsWith('geo_code.') || key.startsWith('category_code.') || key == 'brand_code') {
         final config = _geoCodeConfig(policy);
-        final own = int.tryParse((config['digits'] ?? 2).toString()) ?? 2;
+        final own = int.tryParse((config['digits'] ?? (key == 'brand_code' ? 4 : 2)).toString()) ?? (key == 'brand_code' ? 4 : 2);
         final parent = int.tryParse((config['parent_digits'] ?? 0).toString()) ?? 0;
         return parent > 0 ? '$parent أرقام موروثة + $own أرقام' : '$own أرقام';
       }
@@ -908,13 +908,13 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       if (key == 'item_code') {
         final config = _itemCodeConfig(policy);
         final categories = int.tryParse((config['category_digits'] ?? 6).toString()) ?? 6;
-        final brand = int.tryParse((config['brand_digits'] ?? 2).toString()) ?? 2;
+        final brand = int.tryParse((config['brand_digits'] ?? 4).toString()) ?? 4;
         final serial = int.tryParse((config['serial_digits'] ?? 3).toString()) ?? 3;
         return '$prefix${zeros(categories)}${zeros(brand)}${zeros(serial > 0 ? serial - 1 : 0)}1';
       }
       if (key.startsWith('geo_code.') || key.startsWith('category_code.') || key == 'brand_code') {
         final config = _geoCodeConfig(policy);
-        final own = int.tryParse((config['digits'] ?? 2).toString()) ?? 2;
+        final own = int.tryParse((config['digits'] ?? (key == 'brand_code' ? 4 : 2)).toString()) ?? (key == 'brand_code' ? 4 : 2);
         final parent = int.tryParse((config['parent_digits'] ?? 0).toString()) ?? 0;
         return '$prefix${zeros(parent + (own > 0 ? own - 1 : 0))}1';
       }
