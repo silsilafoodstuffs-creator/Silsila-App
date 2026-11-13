@@ -984,6 +984,18 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     );
   }
 
+  int _nodeDepth(StudioNode node) {
+    final byId = <String, StudioNode>{for (final item in _doc.nodes) item.id: item};
+    final visited = <String>{};
+    var parentId = node.parentId;
+    var depth = 0;
+    while (parentId != null && visited.add(parentId)) {
+      depth++;
+      parentId = byId[parentId]?.parentId;
+    }
+    return depth;
+  }
+
   Widget _canvas() => Container(
     margin: const EdgeInsets.all(8),
     decoration: BoxDecoration(
@@ -1026,7 +1038,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
               ),
               child: ListTile(
                 dense: true,
-                contentPadding: EdgeInsetsDirectional.only(start: node.parentId == null ? 8 : 26, end: 8),
+                contentPadding: EdgeInsetsDirectional.only(start: 8 + (_nodeDepth(node) * 18), end: 8),
                 leading: Row(mainAxisSize: MainAxisSize.min, children: [
                   Checkbox(
                     value: _selectedIds.contains(node.id),
