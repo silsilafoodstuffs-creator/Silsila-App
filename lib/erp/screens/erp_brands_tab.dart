@@ -231,6 +231,68 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     }
   }
 
+  Future<void> _bulkImportLogos() async {
+    if (widget.companyId.trim().isEmpty || _saving) return;
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.image, allowMultiple: true, withData: true,
+    );
+    if (picked == null || picked.files.isEmpty) return;
+    final files = picked.files.where((file) =>
+      file.bytes != null && file.bytes!.isNotEmpty &&
+      const {'jpg','jpeg','png','webp','gif'}.contains(file.extension?.toLowerCase())
+    ).toList()..sort((a,b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    if (files.isEmpty) {
+      if (mounted) ErpCenterToast.show(context, 'لم يتم اختيار صور مدعومة.', isError: true);
+      return;
+    }
+    final oversized = files.where((file) => file.bytes!.length > 256 * 1024).length;
+    if (oversized > 0) {
+      if (mounted) ErpCenterToast.show(context, 'تم إيقاف الاستيراد: يوجد $oversized ملف يتجاوز 256 كيلوبايت.', isError: true);
+      return;
+    }
+    final stamp = DateTime.now().microsecondsSinceEpoch;
+    setState(() { _saving = true; _error = null; });
+    var imported = 0;
+    try {
+      for (var start = 0; start < files.length; start += 10) {
+        final end = (start + 10 < files.length) ? start + 10 : files.length;
+        final batch = <Map<String,dynamic>>[];
+        for (var index = start; index < end; index++) {
+          final file = files[index];
+          final sequence = (index + 1).toString().padLeft(3, '0');
+          final ext = file.extension!.toLowerCase();
+          final mime = switch (ext) {
+            'jpg' || 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+            _ => '',
+          };
+          final bytes = file.bytes!;
+          final hex = r'\\x' + bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+          batch.add({
+            'company_id': widget.companyId.trim(),
+            'brand_name': 'مراجعة شعار $sequence - $stamp',
+            'brand_name_en': 'Review Logo $sequence - $stamp',
+            'brand_group': 'شعارات مستوردة للمراجعة',
+            'logo_data': hex,
+            'logo_mime_type': mime,
+            'display_order': 2000 + index,
+          });
+        }
+        await _db.from('erp_brands').insert(batch);
+        imported += batch.length;
+      }
+      await _load();
+      if (mounted) ErpCenterToast.show(context, 'تم استيراد $imported شعارًا كسجلات مستقلة بأكواد تلقائية.');
+    } catch (error) {
+      await _load();
+      if (mounted) ErpCenterToast.show(context, 'تم استيراد $imported من أصل ${files.length} صورة قبل حدوث خطأ: $error', isError: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _toggle(Map<String,dynamic> row) async {
     if (row['is_system'] == true) return;
     try {
@@ -444,6 +506,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 ErpQuickTaskButton(label:'إضافة جديد', icon:Icons.add_circle_outline, onPressed:_saving ? null : () => _edit()),
                 ErpQuickTaskButton(label:'تعديل', icon:Icons.edit_outlined, onPressed:_saving || selected == null || selected['is_system'] == true ? null : () => _edit(row:selected)),
                 ErpQuickTaskButton(label:'شعار البراند', icon:Icons.image_outlined, onPressed:_saving || selected == null ? null : () => _uploadLogo(selected)),
+                ErpQuickTaskButton(label:'استيراد شعارات متعددة', icon:Icons.collections_outlined, onPressed:_saving ? null : _bulkImportLogos),
                 ErpQuickTaskButton(label:'حذف', icon:Icons.delete_outline, onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
               ]),
             ),
