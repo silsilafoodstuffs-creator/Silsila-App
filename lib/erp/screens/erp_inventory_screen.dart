@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_screen_frame.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_inventory_repository.dart';
 
 class ErpInventoryScreen extends StatefulWidget {
-  const ErpInventoryScreen({super.key, this.initialCompanyId});
+  const ErpInventoryScreen({super.key, this.initialCompanyId, this.layoutScreenKey});
   final String? initialCompanyId;
+  final String? layoutScreenKey;
 
   @override
   State<ErpInventoryScreen> createState() => _ErpInventoryScreenState();
@@ -249,27 +251,23 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
     final negative = _balances.where((r) => _n(r['quantity_on_hand']) < 0).length;
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Card(color: const Color(0xFF3E007D), child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              const Text('إدارة المخزون والحركات', style: TextStyle(
-                color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 4),
-              const Text('أرصدة دفتر المخزون وتسجيل الحركات والتحويلات بين المخازن.',
-                style: TextStyle(color: Colors.white70, height: 1.4)),
-              const SizedBox(height: 8),
-              SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
-                _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
-                _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _newMovement),
-                _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _save),
-                _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewMovements),
-              ])),
-            ]),
-          )),
-          const SizedBox(height: 10),
+      child: ErpScreenFrame(
+        title: 'إدارة المخزون والحركات',
+        profileKey: widget.layoutScreenKey,
+        applyContentWidth: false,
+        shrinkWrap: true,
+        subtitle: 'أرصدة دفتر المخزون وتسجيل الحركات والتحويلات بين المخازن.',
+        icon: Icons.inventory_2_outlined,
+        actions: [
+          _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+          _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _newMovement),
+          _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _save),
+          _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewMovements),
+        ],
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           TextField(controller: _company, decoration: const InputDecoration(
             labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder(),
             prefixIcon: Icon(Icons.business))),
@@ -397,6 +395,7 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
             ));
           }),
         ],
+      ),
       ),
     );
   }

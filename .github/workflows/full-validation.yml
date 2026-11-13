@@ -7,6 +7,7 @@ on:
     branches:
       - main
       - feature/ticker-ads-15-slots
+      - feature/silsila-studio-layout-controls
     paths:
       - "lib/**"
       - "test/**"

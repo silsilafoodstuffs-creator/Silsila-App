@@ -5,7 +5,9 @@ import '../widgets/erp_keyboard_navigation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_screen_frame.dart';
 import '../services/erp_workspace_records_service.dart';
+import '../services/erp_screen_layout_profiles.dart';
 import 'erp_brands_tab.dart';
 
 const _catPurple = Color(0xFF3E007D);
@@ -331,6 +333,9 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   Uint8List? _categoryImageBytes(Map<String,dynamic> row) =>
       _imageBytes[_s(row['id'])] ?? _decodeBytea(row['image_data']);
 
+  bool get _showCategoryImages =>
+      ErpScreenLayoutProfiles.forScreen('فئات الأصناف')['showImages'] as bool? ?? true;
+
   Widget _imagePreview(Map<String,dynamic> row, {double size = 54}) {
     final bytes = _categoryImageBytes(row);
     final attribution = _s(row['image_attribution']).trim();
@@ -505,7 +510,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
               decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'اسم الفئة عربي'),
               onTap: () => setState(() => _selectedId = id))),
             const SizedBox(width: 8),
-            _imagePreview(row, size: 48),
+            if (_showCategoryImages) _imagePreview(row, size: 48),
           ]),
           Padding(
             padding: const EdgeInsetsDirectional.only(start: 34, top: 4),
@@ -560,216 +565,203 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   @override
   Widget build(BuildContext context) {
     ErpKeyboardNavigation.registerActions(add: _catalogTab == 3 ? null : _add, save: _catalogTab == 3 ? null : _save);
+    Map<String, dynamic>? selectedRow;
+    for (final row in _all) {
+      if (_s(row['id']) == _selectedId) {
+        selectedRow = row;
+        break;
+      }
+    }
+    final Widget? imagePanel = _showCategoryImages && _catalogTab < 3 && selectedRow != null
+        ? Column(mainAxisSize: MainAxisSize.min, children: [
+            _imagePreview(selectedRow, size: 124),
+            const SizedBox(height: 7),
+            Text(_s(selectedRow['category_name']), maxLines: 2, overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _catPurple)),
+            Text(_s(selectedRow['category_code']), style: const TextStyle(fontSize: 10, color: Colors.black54)),
+          ])
+        : null;
+    final actions = _catalogTab >= 3 ? <Widget>[] : <Widget>[
+      _task('تحديث', Icons.refresh, _loading ? null : _load),
+      _task('عرض شجرة', Icons.account_tree_outlined, () => setState(() => _viewMode = 'tree')),
+      _task('عرض جدول', Icons.table_rows_outlined, () => setState(() => _viewMode = 'grid')),
+      _task('نقل الصور للقاعدة', Icons.cloud_download_outlined, _saving || _loading ? null : _migrateImages),
+      _task('صور حقيقية', Icons.photo_library_outlined, _saving || _loading ? null : _importRealCategoryImages),
+      _task('إضافة جديد', Icons.add, _saving ? null : _add),
+      _task('حفظ', Icons.save, _saving || !_editing ? null : _save),
+      _task('تعديل', Icons.edit, _saving || _editing ? null : () => setState(() => _editing = true)),
+      _task('حذف', Icons.delete, _saving ? null : _delete),
+      _task('معاينة', Icons.preview, () => showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('معاينة الفئات'),
+          content: Text('عدد الفئات في هذا المستوى: ${_all.where((r) => _rowLevel(r) == _catalogTab).length}'),
+          actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
+        ),
+      )),
+      _task('استيراد', Icons.upload_file, null),
+      _task('طباعة', Icons.print, null),
+      _task('PDF', Icons.picture_as_pdf, null),
+    ];
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-            child: const Row(children: [
-              Icon(Icons.account_tree_outlined, color: _catPurple, size: 25),
-              SizedBox(width: 9),
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('فئات الأصناف', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: _catPurple)),
-                  Text('إدارة الفئات الرئيسية والفرعية والثانوية والبراندات/الماركات', style: TextStyle(fontSize: 11, color: Colors.black54)),
-                ],
-              )),
-            ]),
-          ),
-          Container(
-            color: _catCanvas,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(children: [
-                for (var tab = 0; tab < 5; tab++)
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 5),
-                    child: ChoiceChip(
-                      label: Text(const ['الفئة الرئيسية', 'الفئة الفرعية', 'الفئة الثانوية', 'البراندات/الماركات', 'مجموعات البراندات'][tab]),
-                      selected: _catalogTab == tab,
-                      onSelected: _saving ? null : (selected) {
-                        if (!selected) return;
-                        setState(() {
-                          _catalogTab = tab;
-                          if (tab < 3) {
-                            _level = tab;
-                            _parentFilter = null;
-                            _selectedId = null;
-                          }
-                        });
-                      },
-                      selectedColor: _catPurple,
-                      backgroundColor: Colors.white,
-                      side: const BorderSide(color: Color(0x223E007D)),
-                      labelStyle: TextStyle(
-                        color: _catalogTab == tab ? Colors.white : _catPurple,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 11,
-                      ),
-                      visualDensity: VisualDensity.compact,
+      child: ErpScreenFrame(
+        title: 'فئات الأصناف',
+        subtitle: 'إدارة الفئات الرئيسية والفرعية والثانوية والبراندات/الماركات',
+        icon: Icons.account_tree_outlined,
+        showFrameTitle: true,
+        applyContentWidth: false,
+        tabs: const ['الفئة الرئيسية', 'الفئة الفرعية', 'الفئة الثانوية', 'البراندات/الماركات', 'مجموعات البراندات'],
+        selectedTab: _catalogTab,
+        onTabSelected: _saving ? null : (tab) {
+          setState(() {
+            _catalogTab = tab;
+            if (tab < 3) {
+              _level = tab;
+              _parentFilter = null;
+              _selectedId = null;
+            }
+          });
+        },
+        actions: actions,
+        imagePanel: imagePanel,
+        footer: _catalogTab < 3 ? Row(children: [
+          Expanded(child: Text('عدد السجلات: ${_catalogTab < 3 ? _all.where((r) => _rowLevel(r) == _catalogTab).length : _all.length}')),
+          if (selectedRow != null) Text('المحدد: ${_s(selectedRow['category_code'])}'),
+        ]) : null,
+        padding: EdgeInsets.zero,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_catalogTab == 3 || _catalogTab == 4)
+              Expanded(child: ErpBrandsTab(
+                key: ValueKey('brands-tab-$_catalogTab'),
+                companyId: _company ?? '',
+                showGroupsOnly: _catalogTab == 4,
+              ))
+            else ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 7, 12, 3),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) => setState(() => _searchQuery = value.trim().toLowerCase()),
+                  decoration: InputDecoration(
+                    labelText: 'ابحث بكود الفئة أو اسمها',
+                    prefixIcon: const Icon(Icons.search, color: _catPurple),
+                    suffixIcon: _searchQuery.isEmpty ? null : IconButton(
+                      onPressed: () { _searchController.clear(); setState(() => _searchQuery = ''); },
+                      icon: const Icon(Icons.clear),
                     ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    isDense: true,
                   ),
-              ]),
-            ),
-          ),
-          if (_catalogTab == 3 || _catalogTab == 4)
-            Expanded(child: ErpBrandsTab(key: ValueKey('brands-tab-$_catalogTab'), companyId: _company ?? '', showGroupsOnly: _catalogTab == 4))
-          else ...[
-            Container(
-              color: _catCanvas,
-              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 3),
                 child: Row(children: [
-                  _task('تحديث', Icons.refresh, _loading ? null : _load),
-                  _task('عرض شجرة', Icons.account_tree_outlined, () => setState(() => _viewMode = 'tree')),
-                  _task('عرض جدول', Icons.table_rows_outlined, () => setState(() => _viewMode = 'grid')),
-                  _task('نقل الصور للقاعدة', Icons.cloud_download_outlined, _saving || _loading ? null : _migrateImages),
-                  _task('صور حقيقية', Icons.photo_library_outlined, _saving || _loading ? null : _importRealCategoryImages),
-                  _task('إضافة جديد', Icons.add, _saving ? null : _add),
-                  _task('حفظ', Icons.save, _saving || !_editing ? null : _save),
-                  _task('تعديل', Icons.edit, _saving || _editing ? null : () => setState(() => _editing = true)),
-                  _task('حذف', Icons.delete, _saving ? null : _delete),
-                  _task('معاينة', Icons.preview, () => showDialog<void>(
-                    context: context,
-                    builder: (dialogContext) => AlertDialog(
-                      title: const Text('معاينة الفئات'),
-                      content: Text('عدد الفئات في هذا المستوى: ${_all.where((r) => _rowLevel(r) == _catalogTab).length}'),
-                      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
+                  const SizedBox(width: 72, child: Text('النشاط', style: TextStyle(fontWeight: FontWeight.w800, color: _catPurple))),
+                  Expanded(child: DropdownButtonFormField<String>(
+                    itemHeight: 48,
+                    value: _selectedActivityCode,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     ),
+                    items: _activities.map((a) => DropdownMenuItem<String>(
+                      value: a['code'],
+                      child: Text('${a['code']} - ${a['name']}', overflow: TextOverflow.ellipsis),
+                    )).toList(),
+                    onChanged: _editing || _loading ? null : (value) {
+                      if (value == null) return;
+                      setState(() { _selectedActivityCode = value; _parentFilter = null; _selectedId = null; });
+                      _load();
+                    },
                   )),
-                  _task('استيراد', Icons.upload_file, null),
-                  _task('طباعة', Icons.print, null),
-                  _task('PDF', Icons.picture_as_pdf, null),
                 ]),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 7, 12, 3),
-              child: TextField(
-                controller: _searchController,
-                onChanged: (value) => setState(() => _searchQuery = value.trim().toLowerCase()),
-                decoration: InputDecoration(
-                  labelText: 'ابحث بكود الفئة أو اسمها',
-                  prefixIcon: const Icon(Icons.search, color: _catPurple),
-                  suffixIcon: _searchQuery.isEmpty ? null : IconButton(
-                    onPressed: () { _searchController.clear(); setState(() => _searchQuery = ''); },
-                    icon: const Icon(Icons.clear),
+              if (_error != null) Padding(padding: const EdgeInsets.all(7), child: Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 12))),
+              if (_message != null) Padding(padding: const EdgeInsets.all(7), child: Text(_message!, style: const TextStyle(color: Colors.green, fontSize: 12))),
+              if (_viewMode == 'tree') Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                child: Row(children: [
+                  const SizedBox(width: 84, child: Text('كود الفئة', style: TextStyle(fontWeight: FontWeight.w800))),
+                  const Expanded(flex: 3, child: Text('اسم الفئة عربي', style: TextStyle(fontWeight: FontWeight.w800))),
+                  const Expanded(flex: 2, child: Text('اسم الفئة إنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
+                  const Text('نشط'),
+                  const SizedBox(width: 8),
+                  const Text('في التطبيق'),
+                  const SizedBox(width: 8),
+                  if (_showCategoryImages) const Text('الصورة'),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: _loading || _all.isEmpty ? null : () => setState(() => _expandedIds.addAll(_all.map((r) => _s(r['id'])))),
+                    icon: const Icon(Icons.unfold_more, size: 18),
+                    label: const Text('فتح الكل'),
                   ),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  isDense: true,
-                ),
+                  TextButton.icon(
+                    onPressed: _loading ? null : () => setState(() => _expandedIds.clear()),
+                    icon: const Icon(Icons.unfold_less, size: 18),
+                    label: const Text('طي الكل'),
+                  ),
+                ]),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 3),
-              child: Row(children: [
-                const SizedBox(width: 72, child: Text('النشاط', style: TextStyle(fontWeight: FontWeight.w800, color: _catPurple))),
-                Expanded(child: DropdownButtonFormField<String>(
-                  itemHeight: 48,
-                  value: _selectedActivityCode,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  ),
-                  items: _activities.map((a) => DropdownMenuItem<String>(
-                    value: a['code'],
-                    child: Text('${a['code']} - ${a['name']}', overflow: TextOverflow.ellipsis),
-                  )).toList(),
-                  onChanged: _editing || _loading ? null : (value) {
-                    if (value == null) return;
-                    setState(() { _selectedActivityCode = value; _parentFilter = null; _selectedId = null; });
-                    _load();
-                  },
-                )),
-              ]),
-            ),
-            if (_error != null) Padding(padding: const EdgeInsets.all(7), child: Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 12))),
-            if (_message != null) Padding(padding: const EdgeInsets.all(7), child: Text(_message!, style: const TextStyle(color: Colors.green, fontSize: 12))),
-            if (_viewMode == 'tree') Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              child: Row(children: [
-                const SizedBox(width: 84, child: Text('كود الفئة', style: TextStyle(fontWeight: FontWeight.w800))),
-                const Expanded(flex: 3, child: Text('اسم الفئة عربي', style: TextStyle(fontWeight: FontWeight.w800))),
-                const Expanded(flex: 2, child: Text('اسم الفئة إنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
-                const Text('نشط'),
-                const SizedBox(width: 8),
-                const Text('في التطبيق'),
-                const SizedBox(width: 8),
-                const Text('الصورة'),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: _loading || _all.isEmpty ? null : () => setState(() => _expandedIds.addAll(_all.map((r) => _s(r['id'])))),
-                  icon: const Icon(Icons.unfold_more, size: 18),
-                  label: const Text('فتح الكل'),
-                ),
-                TextButton.icon(
-                  onPressed: _loading ? null : () => setState(() => _expandedIds.clear()),
-                  icon: const Icon(Icons.unfold_less, size: 18),
-                  label: const Text('طي الكل'),
-                ),
-              ]),
-            ),
-            Expanded(
-              child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _viewMode == 'tree'
-                  ? ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      children: (_all.where((r) => _rowLevel(r) == _catalogTab && _branchMatches(r)).toList()
-                        ..sort((a, b) => _s(a['category_code']).compareTo(_s(b['category_code']))))
-                        .map((row) => _treeNode(row, 0)).toList(),
-                    )
-                  : SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: SingleChildScrollView(
-                        child: DataTable(
-                          headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
-                          columns: const [
-                            DataColumn(label: Text('كود الفئة')),
-                            DataColumn(label: Text('اسم الفئة عربي')),
-                            DataColumn(label: Text('اسم الفئة إنجليزي')),
-                            DataColumn(label: Text('الصورة')),
-                            DataColumn(label: Text('المستوى')),
-                            DataColumn(label: Text('نشط')),
-                            DataColumn(label: Text('ظهور في التطبيق')),
-                            DataColumn(label: Text('إدارة الصورة')),
-                          ],
-                          rows: _all.where((r) => _rowLevel(r) == _catalogTab && _matchesSearch(r)).map((r) {
-                            final id = _s(r['id']);
-                            return DataRow(
-                              selected: _selectedId == id,
-                              onSelectChanged: (_) => setState(() => _selectedId = id),
-                              color: WidgetStateProperty.all(_rowLevel(r) == 0 ? const Color(0xFFEDE1F8) : _rowLevel(r) == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3)),
-                              cells: [
-                                DataCell(Text(_s(r['category_code']))),
-                                DataCell(SizedBox(width: 170, child: TextField(controller: _ar.putIfAbsent(id, () => TextEditingController(text: _s(r['category_name']))), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none)))),
-                                DataCell(SizedBox(width: 150, child: TextField(controller: _en.putIfAbsent(id, () => TextEditingController(text: _s(r['category_name_en']))), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none)))),
-                                DataCell(_imagePreview(r, size: 48)),
-                                DataCell(Text(['رئيسية', 'فرعية', 'ثانوية'][_rowLevel(r)])),
-                                DataCell(Checkbox(shape: const CircleBorder(), value: r['is_active'] == true, activeColor: _catPurple, onChanged: _editing ? (v) => setState(() => r['is_active'] = v == true) : null)),
-                                DataCell(Checkbox(shape: const CircleBorder(), value: r['show_in_app'] == true, activeColor: _catOrange, onChanged: _editing ? (v) => setState(() => r['show_in_app'] = v == true) : null)),
-                                DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
-                                  IconButton(tooltip: 'استيراد صورة', onPressed: _editing ? () => _pickImage(r, source: ImageSource.gallery) : null, icon: const Icon(Icons.photo_library_outlined, color: _catPurple)),
-                                  IconButton(tooltip: 'تصوير بالكاميرا', onPressed: _editing ? () => _pickImage(r, source: ImageSource.camera) : null, icon: const Icon(Icons.photo_camera_outlined, color: _catOrange)),
-                                  IconButton(tooltip: 'حذف الصورة', onPressed: _editing && _categoryImageBytes(r) != null ? () => _removeImage(r) : null, icon: const Icon(Icons.hide_image_outlined, color: Colors.redAccent)),
-                                ])),
-                              ],
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-            ),
+              Expanded(
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _viewMode == 'tree'
+                        ? ListView(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            children: (_all.where((r) => _rowLevel(r) == _catalogTab && _branchMatches(r)).toList()
+                              ..sort((a, b) => _s(a['category_code']).compareTo(_s(b['category_code']))))
+                              .map((row) => _treeNode(row, 0)).toList(),
+                          )
+                        : SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: SingleChildScrollView(
+                              child: DataTable(
+                                headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                                columns: [
+                                  DataColumn(label: Text('كود الفئة')),
+                                  DataColumn(label: Text('اسم الفئة عربي')),
+                                  DataColumn(label: Text('اسم الفئة إنجليزي')),
+                                  if (_showCategoryImages) DataColumn(label: Text('الصورة')),
+                                  DataColumn(label: Text('المستوى')),
+                                  DataColumn(label: Text('نشط')),
+                                  DataColumn(label: Text('ظهور في التطبيق')),
+                                  DataColumn(label: Text('إدارة الصورة')),
+                                ],
+                                rows: _all.where((r) => _rowLevel(r) == _catalogTab && _matchesSearch(r)).map((r) {
+                                  final id = _s(r['id']);
+                                  return DataRow(
+                                    selected: _selectedId == id,
+                                    onSelectChanged: (_) => setState(() => _selectedId = id),
+                                    color: WidgetStateProperty.all(_rowLevel(r) == 0 ? const Color(0xFFEDE1F8) : _rowLevel(r) == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3)),
+                                    cells: [
+                                      DataCell(Text(_s(r['category_code']))),
+                                      DataCell(SizedBox(width: 170, child: TextField(controller: _ar.putIfAbsent(id, () => TextEditingController(text: _s(r['category_name']))), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none)))),
+                                      DataCell(SizedBox(width: 150, child: TextField(controller: _en.putIfAbsent(id, () => TextEditingController(text: _s(r['category_name_en']))), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none)))),
+                                      if (_showCategoryImages) DataCell(_imagePreview(r, size: 48)),
+                                      DataCell(Text(['رئيسية', 'فرعية', 'ثانوية'][_rowLevel(r)])),
+                                      DataCell(Checkbox(shape: const CircleBorder(), value: r['is_active'] == true, activeColor: _catPurple, onChanged: _editing ? (v) => setState(() => r['is_active'] = v == true) : null)),
+                                      DataCell(Checkbox(shape: const CircleBorder(), value: r['show_in_app'] == true, activeColor: _catOrange, onChanged: _editing ? (v) => setState(() => r['show_in_app'] = v == true) : null)),
+                                      DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
+                                        IconButton(tooltip: 'استيراد صورة', onPressed: _editing ? () => _pickImage(r, source: ImageSource.gallery) : null, icon: const Icon(Icons.photo_library_outlined, color: _catPurple)),
+                                        IconButton(tooltip: 'تصوير بالكاميرا', onPressed: _editing ? () => _pickImage(r, source: ImageSource.camera) : null, icon: const Icon(Icons.photo_camera_outlined, color: _catOrange)),
+                                        IconButton(tooltip: 'حذف الصورة', onPressed: _editing && _categoryImageBytes(r) != null ? () => _removeImage(r) : null, icon: const Icon(Icons.hide_image_outlined, color: Colors.redAccent)),
+                                      ])),
+                                    ],
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
