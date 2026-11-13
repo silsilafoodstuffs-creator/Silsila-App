@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../services/erp_studio_draft_store.dart';
 import '../services/erp_studio_repository.dart';
@@ -1062,6 +1063,23 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     ]),
   );
 
+  Future<void> _pickImageForNode(StudioNode node) async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: false, withData: true);
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.single;
+    final bytes = file.bytes;
+    if (bytes == null || bytes.isEmpty) { _notice('تعذر قراءة الصورة المختارة.', error: true); return; }
+    if (bytes.length > 512 * 1024) { _notice('حجم صورة التصميم يجب ألا يتجاوز 512 كيلوبايت.', error: true); return; }
+    final extension = (file.extension ?? '').toLowerCase();
+    const mimeTypes = <String, String>{'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','gif':'image/gif'};
+    final mime = mimeTypes[extension];
+    if (mime == null) { _notice('الصيغ المدعومة: JPG وPNG وWEBP وGIF.', error: true); return; }
+    final props = Map<String, dynamic>.from(node.props)
+      ..['url'] = 'data:$mime;base64,' + base64Encode(bytes)
+      ..['alt'] = file.name;
+    _updateNode(node, props: props);
+    _notice('تم إدراج الصورة في التصميم. احفظ التصميم لمزامنة الصورة معه.');
+  }
   Widget _properties() {
     final node = _selected;
     if (node == null) {
@@ -1106,6 +1124,15 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
                 }
                 _updateNode(node, props: props);
               },
+            ),
+          ),
+        if (node.type == 'image')
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: OutlinedButton.icon(
+              onPressed: _busy ? null : () => _pickImageForNode(node),
+              icon: const Icon(Icons.add_photo_alternate_outlined),
+              label: const Text('رفع صورة من الجهاز'),
             ),
           ),
         const SizedBox(height: 10),
