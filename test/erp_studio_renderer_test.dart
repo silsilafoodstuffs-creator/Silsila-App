@@ -100,5 +100,27 @@ void main() {
       await tester.tap(find.text('حفظ تجريبي'));
       expect(action, 'preview');
     });
+    testWidgets('renders locally uploaded image data URIs', (tester) async {
+      final document = StudioDocument(
+        id: 'embedded-image-test',
+        name: 'اختبار الصورة المحلية',
+        nodes: [
+          StudioNode(
+            id: 'local-image',
+            type: 'image',
+            props: {
+              'height': 80,
+              'url': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=',
+            },
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(body: StudioDocumentRenderer(document: document)),
+      ));
+
+      expect(find.byType(Image), findsOneWidget);
+    });
   });
 }
