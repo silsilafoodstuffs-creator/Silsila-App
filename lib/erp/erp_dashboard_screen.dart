@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'services/erp_screen_layout_profiles.dart';
 import 'services/erp_print_support.dart';
@@ -337,6 +338,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    unawaited(ErpScreenLayoutProfiles.load().catchError((Object _) {}));
     if (widget.initialPage == 'بيانات الشركة') {
       _module = 'إعدادات عامة';
       _group = 'بيانات أساسية';
