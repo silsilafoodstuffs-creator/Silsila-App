@@ -57,6 +57,7 @@ import 'screens/erp_parties_screen.dart';
 import 'screens/erp_customer_credit_screen.dart';
 import 'screens/erp_inventory_master_screen.dart';
 import 'screens/erp_item_categories_screen.dart';
+import 'screens/erp_screen_layout_studio_screen.dart';
 import 'screens/erp_cashboxes_screen.dart';
 import 'screens/erp_price_lists_screen.dart';
 import 'screens/erp_sales_targets_commissions_screen.dart';
@@ -87,7 +88,7 @@ const _canvas = Color(0xFFF7F5FA);
 
 const Map<String, Map<String, List<String>>> _modules = {
   'إعدادات عامة': {
-    'بيانات أساسية': ['الملخص التنفيذي', 'سياسات البرنامج', 'بيانات الشركة', 'فروع النشاطات', 'عملاء النشاطات', 'مراكز التكلفة', 'بيانات جغرافية', 'أنواع الأنشطة', 'المستخدمين', 'صلاحيات المستخدمين', 'قوالب صلاحيات المستخدمين', 'سجل العمليات', 'إدارة مفاتيح API', 'سجلات التكامل والطلبات'],
+    'بيانات أساسية': ['الملخص التنفيذي', 'سياسات البرنامج', 'استوديو تخطيط الشاشات', 'بيانات الشركة', 'فروع النشاطات', 'عملاء النشاطات', 'مراكز التكلفة', 'بيانات جغرافية', 'أنواع الأنشطة', 'المستخدمين', 'صلاحيات المستخدمين', 'قوالب صلاحيات المستخدمين', 'سجل العمليات', 'إدارة مفاتيح API', 'سجلات التكامل والطلبات'],
     'حركات': ['مراجعة الحركات', 'قائمة اعتماد القيود', 'إدارة الجلسات', 'سجل الدخول والخروج', 'النسخ الاحتياطي', 'مسح جميع البيانات', 'إعداد نقاط الربط', 'اختبار الاتصال الخارجي'],
     'تقارير': ['تقرير المستخدمين', 'تقرير نشاط النظام', 'تقرير استهلاك API', 'تقرير أخطاء التكامل'],
   },
@@ -1262,6 +1263,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                       _page == 'قوالب صلاحيات المستخدمين' ||
                       _page == 'صلاحيات المستخدمين' ||
                       _page == 'سياسات البرنامج' ||
+                      _page == 'استوديو تخطيط الشاشات' ||
                       _page == 'بيانات المخازن' ||
                       _page == 'دليل المخازن والفروع' ||
                       _page == 'دليل المخازن' ||
@@ -1290,6 +1292,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                                       ? ErpActivityCustomersScreen(companyId: _appManagementCompanyId)
                                       : (_page == 'مراكز التكلفة' || _page == 'الفروع ومراكز التكلفة')
                                       ? ErpCostCentersScreen(companyId: _appManagementCompanyId)
+                                       : _page == 'استوديو تخطيط الشاشات'
+                                      ? const ErpScreenLayoutStudioScreen()
                                       : _page == 'سياسات البرنامج'
                                       ? ErpProgramPoliciesScreen(
                                           companyId: _appManagementCompanyId,
