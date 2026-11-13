@@ -223,7 +223,7 @@ class StudioComponentRegistry {
         content = Column(children: listRows.take(100).map((r) => ListTile(
           dense: true,
           leading: const Icon(Icons.circle, size: 7),
-          title: Text((r[field ?? 'item_name'] ?? r.values.firstOrNull ?? '').toString()),
+          title: Text((r[field ?? 'item_name'] ?? (r.isEmpty ? '' : r.values.first)).toString()),
         )).toList());
         break;
       case 'badge':
