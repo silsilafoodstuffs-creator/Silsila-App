@@ -220,21 +220,33 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   void _duplicateSelected() {
-    final selected = _doc.nodes.where((n) => _selectedIds.contains(n.id) && !n.locked).toList();
-    if (selected.isEmpty) return;
-    final copies = selected.map((node) => StudioNode(
-      id: '${node.type}_${DateTime.now().microsecondsSinceEpoch}_${selected.indexOf(node)}',
+    final ids = _doc.nodes.where((node) => _selectedIds.contains(node.id) && !node.locked).map((node) => node.id).toSet();
+    if (ids.isEmpty) return;
+    var expanded = true;
+    while (expanded) {
+      expanded = false;
+      for (final node in _doc.nodes) {
+        if (node.parentId != null && ids.contains(node.parentId) && ids.add(node.id)) expanded = true;
+      }
+    }
+    final originals = _doc.nodes.where((node) => ids.contains(node.id)).toList();
+    final stamp = DateTime.now().microsecondsSinceEpoch;
+    final idMap = <String, String>{for (var i = 0; i < originals.length; i++) originals[i].id: '${originals[i].type}_${stamp}_$i'};
+    final groupMap = <String, String>{};
+    for (final node in originals) {
+      if (node.groupId != null) groupMap.putIfAbsent(node.groupId!, () => 'group_${stamp}_${groupMap.length}');
+    }
+    final copies = originals.map((node) => StudioNode(
+      id: idMap[node.id]!,
       type: node.type,
       props: Map<String, dynamic>.from(node.props),
+      parentId: node.parentId == null ? null : idMap[node.parentId] ?? node.parentId,
+      groupId: node.groupId == null ? null : groupMap[node.groupId],
       hidden: node.hidden,
       locked: false,
     )).toList();
     _change(_doc.copyWith(nodes: [..._doc.nodes, ...copies]));
-    setState(() {
-      _selectedIds
-        ..clear()
-        ..addAll(copies.map((e) => e.id));
-    });
+    setState(() { _selectedIds..clear()..addAll(copies.map((node) => node.id)); });
   }
 
   void _deleteSelected() {
