@@ -85,6 +85,13 @@ class StudioDocument {
     if (rawSettings != null && rawSettings is! Map) {
       throw const FormatException('إعدادات التصميم غير صالحة.');
     }
+    final resolvedBindings = rawBindings == null
+        ? <String, dynamic>{}
+        : Map<String, dynamic>.from(rawBindings as Map);
+    for (final node in parsedNodes) {
+      final binding = node.props['binding'];
+      if (binding is Map) resolvedBindings[node.id] = Map<String, dynamic>.from(binding);
+    }
     final kind = json['designKind']?.toString() ?? 'screen';
     const kinds = {'screen', 'report', 'icon', 'tree', 'table', 'grid', 'form', 'component'};
     if (!kinds.contains(kind)) throw FormatException('نوع التصميم غير مسجل: $kind');
@@ -97,7 +104,7 @@ class StudioDocument {
       remoteId: json['remoteId'] is String ? json['remoteId'] as String : null,
       remoteRevision: json['remoteRevision'] is int ? json['remoteRevision'] as int : 0,
       pendingSync: json['pendingSync'] == true,
-      bindings: rawBindings == null ? const {} : Map<String, dynamic>.from(rawBindings as Map),
+      bindings: resolvedBindings,
       settings: rawSettings == null ? const {} : Map<String, dynamic>.from(rawSettings as Map),
       nodes: parsedNodes,
     );
