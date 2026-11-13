@@ -100,6 +100,51 @@ class ErpStudioRepository {
     return result;
   }
 
+
+  Future<Map<String, Map<String, dynamic>>> loadLayoutProfiles(String companyId) async {
+    _requireCompany(companyId);
+    final rows = await _client.from('erp_studio_layout_profiles')
+        .select('profile_key,profile_json')
+        .eq('company_id', companyId)
+        .limit(100);
+    final result = <String, Map<String, dynamic>>{};
+    for (final row in rows as List) {
+      final data = Map<String, dynamic>.from(row as Map);
+      final raw = data['profile_json'];
+      if (raw is Map) {
+        result[data['profile_key'].toString()] = Map<String, dynamic>.from(raw);
+      }
+    }
+    return result;
+  }
+
+  Future<void> saveLayoutProfile({
+    required String companyId,
+    required String profileKey,
+    required Map<String, dynamic> profile,
+  }) async {
+    _requireCompany(companyId);
+    final userId = _client.auth.currentUser!.id;
+    await _client.from('erp_studio_layout_profiles').upsert({
+      'company_id': companyId,
+      'profile_key': profileKey,
+      'profile_json': profile,
+      'updated_by': userId,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    }, onConflict: 'company_id,profile_key');
+  }
+
+  Future<void> deleteLayoutProfile({
+    required String companyId,
+    required String profileKey,
+  }) async {
+    _requireCompany(companyId);
+    await _client.from('erp_studio_layout_profiles')
+        .delete()
+        .eq('company_id', companyId)
+        .eq('profile_key', profileKey);
+  }
+
   Future<String> saveDraft({
     required String companyId,
     required StudioDocument document,
