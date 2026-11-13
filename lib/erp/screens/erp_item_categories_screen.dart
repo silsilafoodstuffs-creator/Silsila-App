@@ -576,7 +576,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
             Text(_s(selectedRow['category_code']), style: const TextStyle(fontSize: 10, color: Colors.black54)),
           ])
         : null;
-    final actions = <Widget>[
+    final actions = _catalogTab >= 3 ? <Widget>[] : <Widget>[
       _task('تحديث', Icons.refresh, _loading ? null : _load),
       _task('عرض شجرة', Icons.account_tree_outlined, () => setState(() => _viewMode = 'tree')),
       _task('عرض جدول', Icons.table_rows_outlined, () => setState(() => _viewMode = 'grid')),
@@ -620,10 +620,10 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         },
         actions: actions,
         imagePanel: imagePanel,
-        footer: Row(children: [
+        footer: _catalogTab < 3 ? Row(children: [
           Expanded(child: Text('عدد السجلات: ${_catalogTab < 3 ? _all.where((r) => _rowLevel(r) == _catalogTab).length : _all.length}')),
           if (selectedRow != null) Text('المحدد: ${_s(selectedRow['category_code'])}'),
-        ]),
+        ]) : null,
         padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
