@@ -773,9 +773,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   Widget _geoCodeEditor(Map<String, dynamic> policy) {
     final config = _geoCodeConfig(policy);
     final prefix = (config['prefix'] ?? '').toString();
+    final key = (policy['key'] ?? '').toString();
     final digits = int.tryParse((config['digits'] ?? (key == 'brand_code' ? 4 : 2)).toString()) ?? (key == 'brand_code' ? 4 : 2);
     final parentDigits = int.tryParse((config['parent_digits'] ?? 0).toString()) ?? 0;
-    final key = (policy['key'] ?? '').toString();
     final previewDigits = key == 'brand_code'
         ? '0001'
         : key.startsWith('category_code.')
