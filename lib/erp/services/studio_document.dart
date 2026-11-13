@@ -11,6 +11,7 @@ class StudioDocument {
     this.updatedAt,
     this.remoteId,
     this.remoteRevision = 0,
+    this.pendingSync = false,
     Map<String, dynamic>? bindings,
     Map<String, dynamic>? settings,
   })  : bindings = Map<String, dynamic>.from(bindings ?? const {}),
@@ -23,6 +24,7 @@ class StudioDocument {
   final DateTime? updatedAt;
   final String? remoteId;
   final int remoteRevision;
+  final bool pendingSync;
   final List<StudioNode> nodes;
   final Map<String, dynamic> bindings;
   final Map<String, dynamic> settings;
@@ -50,6 +52,7 @@ class StudioDocument {
         'updatedAt': (updatedAt ?? DateTime.now()).toUtc().toIso8601String(),
         'remoteId': remoteId,
         'remoteRevision': remoteRevision,
+        'pendingSync': pendingSync,
         'bindings': bindings,
         'settings': settings,
         'nodes': nodes.map((e) => e.toJson()).toList(),
@@ -93,6 +96,7 @@ class StudioDocument {
       updatedAt: DateTime.tryParse(json['updatedAt']?.toString() ?? ''),
       remoteId: json['remoteId'] is String ? json['remoteId'] as String : null,
       remoteRevision: json['remoteRevision'] is int ? json['remoteRevision'] as int : 0,
+      pendingSync: json['pendingSync'] == true,
       bindings: rawBindings == null ? const {} : Map<String, dynamic>.from(rawBindings as Map),
       settings: rawSettings == null ? const {} : Map<String, dynamic>.from(rawSettings as Map),
       nodes: parsedNodes,
@@ -112,6 +116,7 @@ class StudioDocument {
     List<StudioNode>? nodes,
     String? remoteId,
     int? remoteRevision,
+    bool? pendingSync,
     Map<String, dynamic>? bindings,
     Map<String, dynamic>? settings,
   }) =>
@@ -124,6 +129,7 @@ class StudioDocument {
         updatedAt: DateTime.now(),
         remoteId: remoteId ?? this.remoteId,
         remoteRevision: remoteRevision ?? this.remoteRevision,
+        pendingSync: pendingSync ?? this.pendingSync,
         bindings: bindings ?? this.bindings,
         settings: settings ?? this.settings,
       );
