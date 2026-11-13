@@ -134,7 +134,7 @@ class StudioComponentRegistry {
             decoration: BoxDecoration(color: const Color(0xFFF5EFFB), borderRadius: BorderRadius.circular(6)),
             child: Center(child: Padding(
               padding: const EdgeInsets.all(4),
-              child: Text((row[labelField] ?? row.values.firstOrNull ?? 'عنصر').toString(), textAlign: TextAlign.center),
+              child: Text((row[labelField] ?? _firstValue(row) ?? 'عنصر').toString(), textAlign: TextAlign.center),
             )),
           )).toList(),
         );
@@ -145,7 +145,7 @@ class StudioComponentRegistry {
             ListTile(
               dense: true,
               leading: const Icon(Icons.folder_outlined),
-              title: Text((row[field ?? 'label'] ?? row.values.firstOrNull ?? 'عنصر').toString()),
+              title: Text((row[field ?? 'label'] ?? _firstValue(row) ?? 'عنصر').toString()),
             ),
         ]);
         break;
@@ -267,6 +267,7 @@ class StudioComponentRegistry {
     return content;
   }
 
+  static dynamic _firstValue(Map<String, dynamic> row) => row.isEmpty ? null : row.values.first;
   static IconData _icon(String? name) => iconNames[name] ?? Icons.widgets_outlined;
   static double _number(dynamic value, num fallback) =>
       value is num ? value.toDouble() : fallback.toDouble();
