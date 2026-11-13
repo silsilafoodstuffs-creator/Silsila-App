@@ -260,7 +260,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
         if (node.parentId != null && ids.contains(node.parentId) && ids.add(node.id)) expanded = true;
       }
     }
-    if (_doc.nodes.any((node) => ids.contains(node.id) && node.locked && !_selectedIds.contains(node.id))) {
+    if (_doc.nodes.any((node) => ids.contains(node.id) && node.locked)) {
       _notice('لا يمكن حذف المجموعة لأنها تحتوي على مكون مقفل. أزل القفل عن المكون أولاً.');
       return;
     }
