@@ -19,7 +19,7 @@ Silsila Studio is the single integrated design workspace in ERP navigation under
 
 - Versioned data-only design schema v2 with backwards reading of v1 documents, component allow-list, duplicate-ID rejection, bounded node/property counts, and JSON-only property validation.
 - Flutter component registry and renderer for text, buttons, fields, cards, dividers, spacing, grids, trees, tables, icons, images (HTTPS only), charts, tabs, forms, lists, badges, progress indicators, stat cards, containers, and filters.
-- Screen editor: add/select/multi-select, drag reorder, property editing, width/height resizing controls, duplicate, delete, group/ungroup metadata, hide/show, lock/unlock, layer ordering, undo/redo, local draft save/open, and JSON clipboard import/export.
+- Screen editor: add/select/multi-select, drag reorder with an explicit layer handle, direct drag-resize handles plus numeric width/height controls, duplicate, delete, group/ungroup with visual group containers, hide/show, lock/unlock, layer ordering, undo/redo, encrypted local draft save/open with a fallback cache, and JSON clipboard import/export.
 - Report, icon/element, and table/Grid tabs use the same schema-driven editor with focused component libraries and document kinds.
 - Preview supports editable form controls and simulated button actions. Simulated actions never execute ERP business transactions.
 - Safe read-only data binding for explicitly allow-listed company-scoped sources: items, brands, item categories, warehouses, sales documents, purchase documents, and stock balances. The app filters demo documents where the source exposes an `is_demo_data` flag and applies the active company ID plus Supabase RLS.
@@ -39,7 +39,7 @@ Silsila Studio is the single integrated design workspace in ERP navigation under
 - Report, chart, grid, tree, form, and icon components are foundational configurable components, not a full BI/reporting suite or a custom vector/icon drawing tool.
 - Image components accept HTTPS image sources; a dedicated upload/crop/asset-library workflow is not implemented.
 - Per-screen visibility and content-width controls are fully honored by screens using the shared frame. Global theme and data-density tokens apply through the ERP dashboard runtime; dedicated screens may still need conversion to the shared frame for every layout-position option to control their internal title bars, tabs, and toolbars.
-- Local drafts and layout profiles use SharedPreferences. Offline synchronization is manual/retryable and revision-conflict aware; encrypted local storage and background automatic synchronization are not implemented.
+- Local drafts use platform secure storage where available, with a SharedPreferences fallback. Layout profiles remain local preferences plus company-scoped cloud copies. Offline synchronization is manual/retryable and revision-conflict aware; background automatic synchronization is not implemented.
 - A live authenticated owner/admin end-to-end workflow test is still required for central save, restore, approval, and publish. UI and database paths exist, but no claim of full production certification is made until CI and account-level testing pass.
 
 ## Security boundaries
