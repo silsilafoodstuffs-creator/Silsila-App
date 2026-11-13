@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/erp_screen_frame.dart';
+import '../services/erp_screen_layout_profiles.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
@@ -13,7 +14,6 @@ class ErpScreenLayoutStudioScreen extends StatefulWidget {
 }
 
 class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScreen> {
-  static const _storageKey = 'silsila_screen_layout_profiles_v1';
   static const _screens = <String>[
     'كل الشاشات - الإعداد الافتراضي', 'فئات الأصناف', 'دليل الأصناف', 'بيانات المخازن',
     'سياسات البرنامج', 'بيانات الشركة', 'المستخدمين', 'الملخص التنفيذي',
@@ -57,12 +57,8 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
 
   Future<void> _load() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_storageKey);
-      if (raw != null) {
-        final decoded = jsonDecode(raw);
-        if (decoded is Map) _profiles = Map<String,dynamic>.from(decoded);
-      }
+      await ErpScreenLayoutProfiles.load();
+      _profiles = Map<String, dynamic>.from(ErpScreenLayoutProfiles.profiles.value);
       _apply(_current);
     } catch (_) {
       // Keep usable defaults if local preferences are unavailable.
@@ -107,17 +103,16 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
 
   Future<void> _save() async {
     final next = Map<String,dynamic>.from(_profiles)..[_screen] = _serialize();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_storageKey, jsonEncode(next));
+    await ErpScreenLayoutProfiles.save(_screen, _serialize());
     if (!mounted) return;
-    setState(() => _profiles = next);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ إعدادات تخطيط الشاشة على هذا الجهاز.')));
+    setState(() => _profiles = Map<String, dynamic>.from(ErpScreenLayoutProfiles.profiles.value));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ التخطيط وتطبيقه فورياً على الشاشات التي تستخدم الإطار الموحد.')));
   }
 
   Future<void> _reset() async {
-    setState(() { _profiles.remove(_screen); _apply(_current); });
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_storageKey, jsonEncode(_profiles));
+    await ErpScreenLayoutProfiles.reset(_screen);
+    if (!mounted) return;
+    setState(() { _profiles = Map<String, dynamic>.from(ErpScreenLayoutProfiles.profiles.value); _apply(_current); });
   }
 
   Widget _section(String title, IconData icon, List<Widget> children) => Card(
