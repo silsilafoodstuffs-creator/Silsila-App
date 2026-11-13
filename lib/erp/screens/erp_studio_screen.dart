@@ -252,14 +252,14 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     }
     final groupId = 'group_${DateTime.now().microsecondsSinceEpoch}';
     _change(_doc.copyWith(nodes: _doc.nodes.map((node) =>
-      _selectedIds.contains(node.id) ? node.copyWith(groupId: groupId) : node).toList()));
+      _selectedIds.contains(node.id) && !node.locked ? node.copyWith(groupId: groupId) : node).toList()));
     _notice('تم تجميع العناصر المحددة.');
   }
 
   void _ungroupSelected() {
     if (_selectedIds.isEmpty) return;
     _change(_doc.copyWith(nodes: _doc.nodes.map((node) =>
-      _selectedIds.contains(node.id) ? node.copyWith(clearGroup: true) : node).toList()));
+      _selectedIds.contains(node.id) && !node.locked ? node.copyWith(clearGroup: true) : node).toList()));
   }
 
   void _toggleLock(StudioNode node) => _updateNode(node, locked: !node.locked);
@@ -698,20 +698,34 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       _notice('حدد المكون ومصدر البيانات والحقل.');
       return;
     }
+    if (node.locked) {
+      _notice('أزل قفل المكون قبل تغيير ربط البيانات.', error: true);
+      return;
+    }
     final binding = {'source': source, 'field': field, 'mode': 'read'};
     final props = Map<String, dynamic>.from(node.props)..['binding'] = binding;
-    _updateNode(node, props: props);
-    _change(_doc.copyWith(bindings: {..._doc.bindings, node.id: binding}));
+    final updated = node.copyWith(props: props);
+    _change(_doc.copyWith(
+      nodes: _doc.nodes.map((entry) => entry.id == node.id ? updated : entry).toList(),
+      bindings: {..._doc.bindings, node.id: binding},
+    ));
     _notice('تم ربط المكون بمصدر البيانات. احفظ التصميم مركزياً لتثبيت الربط.');
   }
 
   void _clearBinding() {
     final node = _selected;
     if (node == null) return;
+    if (node.locked) {
+      _notice('أزل قفل المكون قبل إلغاء ربط البيانات.', error: true);
+      return;
+    }
     final props = Map<String, dynamic>.from(node.props)..remove('binding');
     final bindings = Map<String, dynamic>.from(_doc.bindings)..remove(node.id);
-    _updateNode(node, props: props);
-    _change(_doc.copyWith(bindings: bindings));
+    final updated = node.copyWith(props: props);
+    _change(_doc.copyWith(
+      nodes: _doc.nodes.map((entry) => entry.id == node.id ? updated : entry).toList(),
+      bindings: bindings,
+    ));
   }
 
   @override
