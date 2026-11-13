@@ -271,7 +271,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     final firstIndex = _doc.nodes.indexWhere((node) => _selectedIds.contains(node.id));
     final selectedIds = selected.map((node) => node.id).toSet();
     final remaining = _doc.nodes.where((node) => !selectedIds.contains(node.id)).toList();
-    final insertion = firstIndex.clamp(0, remaining.length);
+    final insertion = firstIndex.clamp(0, remaining.length).toInt();
     final group = StudioNode(id: groupId, type: 'container', props: {'label': 'مجموعة عناصر', 'padding': 8});
     remaining.insert(insertion, group);
     final children = selected.map((node) => node.copyWith(clearGroup: true, parentId: groupId)).toList();
