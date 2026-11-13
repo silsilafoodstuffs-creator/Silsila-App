@@ -351,6 +351,31 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     finally { name.dispose(); if (mounted) setState(() => _saving = false); }
   }
 
+  Future<void> _editGroup(Map<String,dynamic> group) async {
+    final name = TextEditingController(text:_s(group['group_name']));
+    final ok = await showDialog<bool>(context:context,builder:(ctx)=>Directionality(
+      textDirection:TextDirection.rtl, child:AlertDialog(title:const Text('تعديل مجموعة البراندات'),
+        content:SizedBox(width:360,child:TextField(controller:name,decoration:const InputDecoration(labelText:'اسم المجموعة *'))),
+        actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),
+          FilledButton(onPressed:()=>Navigator.pop(ctx,name.text.trim().isNotEmpty),child:const Text('حفظ'))])));
+    if(ok!=true){name.dispose();return;}
+    try {
+      await _db.from('erp_brand_groups').update({'group_name':name.text.trim()})
+        .eq('id',_s(group['id'])).eq('company_id',widget.companyId.trim()).select('id').single();
+      await _load();
+      if(mounted) ErpCenterToast.show(context,'تم تعديل اسم المجموعة.');
+    } catch(e){if(mounted) ErpCenterToast.show(context,'تعذر تعديل المجموعة: $e',isError:true);}
+    finally{name.dispose();}
+  }
+
+  Future<void> _toggleGroup(Map<String,dynamic> group) async {
+    try {
+      await _db.from('erp_brand_groups').update({'is_active':group['is_active']!=true})
+        .eq('id',_s(group['id'])).eq('company_id',widget.companyId.trim()).select('id').single();
+      await _load();
+    } catch(e){if(mounted) ErpCenterToast.show(context,'تعذر تغيير حالة المجموعة: $e',isError:true);}
+  }
+
   Future<void> _assignGroup(Map<String,dynamic> row, String? groupId) async {
     try {
       await _db.from('erp_brands').update({'brand_group_id':groupId})
@@ -545,7 +570,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             ])),
             Expanded(child:_loading ? const Center(child:CircularProgressIndicator()) : _groups.isEmpty ? const Center(child:Text('لم تنشئ مجموعات بعد.')) : ListView.builder(
               padding:const EdgeInsets.all(10), itemCount:_groups.length, itemBuilder:(ctx,i) { final g=_groups[i]; final count=_rows.where((r) => _s(r['brand_group_id'])==_s(g['id'])).length;
-                return Card(child:ListTile(leading:const Icon(Icons.folder_outlined,color:_brandPurple), title:Text(_s(g['group_name']),style:const TextStyle(fontWeight:FontWeight.bold)), subtitle:Text(_s(g['group_code'])), trailing:Text('$count براند')));
+                return Card(child:ListTile(leading:const Icon(Icons.folder_outlined,color:_brandPurple), title:Text(_s(g['group_name']),style:const TextStyle(fontWeight:FontWeight.bold)), subtitle:Text(_s(g['group_code'])), trailing:Row(mainAxisSize:MainAxisSize.min,children:[Text('$count براند'),Checkbox(shape:const CircleBorder(),value:g['is_active']==true,onChanged:(_) => _toggleGroup(g)),IconButton(tooltip:'تعديل المجموعة',onPressed:()=>_editGroup(g),icon:const Icon(Icons.edit_outlined,color:_brandPurple))])));
               })),
           ] else ...[
           Padding(
