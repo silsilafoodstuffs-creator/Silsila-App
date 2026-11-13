@@ -504,6 +504,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
       textDirection: TextDirection.rtl,
       child: ErpScreenFrame(
         title: 'الحضور والانصراف',
+        applyContentWidth: false,
         subtitle: 'قوة العمل • الحضور اليدوي • حضور جهاز البصمة',
         icon: Icons.access_time_filled_outlined,
         tabs: const ['قوة العمل', 'الحضور اليدوي', 'حضور جهاز البصمة'],
