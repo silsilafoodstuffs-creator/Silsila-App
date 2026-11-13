@@ -722,7 +722,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                             child: SingleChildScrollView(
                               child: DataTable(
                                 headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
-                                columns: const [
+                                columns: [
                                   DataColumn(label: Text('كود الفئة')),
                                   DataColumn(label: Text('اسم الفئة عربي')),
                                   DataColumn(label: Text('اسم الفئة إنجليزي')),
