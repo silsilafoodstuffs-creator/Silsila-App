@@ -454,7 +454,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
               const SizedBox(width: 8),
               Expanded(child: Text(group == 'بدون مجموعة' ? 'براندات بدون مجموعة' : group,
                 style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
-              Text('\${children.length} براند',
+              Text('${children.length} براند',
                 style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w700)),
             ]),
           ),
@@ -488,7 +488,12 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   Widget build(BuildContext context) {
     final rows = _visibleRows;
     final selected = _selectedRow();
-    final visibleGroups = _groupNames.where((group) => _rowsInGroup(group).isNotEmpty).toList();
+    final visibleGroups = rows.map(_groupKey).toSet().toList()
+      ..sort((a,b) {
+        if (a == 'بدون مجموعة') return 1;
+        if (b == 'بدون مجموعة') return -1;
+        return a.compareTo(b);
+      });
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Column(
@@ -533,7 +538,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
           Padding(
             padding:const EdgeInsets.symmetric(horizontal:12,vertical:3),
             child:Row(children:[
-              Expanded(child:Text('عدد البراندات/الماركات: \${rows.length}',
+              Expanded(child:Text('عدد البراندات/الماركات: ${rows.length}',
                 style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
               if (_viewMode == 'tree') ...[
                 TextButton.icon(
