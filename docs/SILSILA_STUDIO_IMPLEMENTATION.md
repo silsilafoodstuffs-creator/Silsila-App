@@ -76,3 +76,7 @@ Silsila Studio is the single integrated design workspace in ERP navigation under
 - The shared frame is now integrated into HR operations, stocktake, and program policies in addition to the earlier category and movement-audit adapters.
 
 - Nested container grouping is represented by the existing parentId field, validated against missing parents and cycles, and rendered as nested cards; ungrouping promotes child nodes while deleting a group removes its descendants.
+
+
+- Specialized inner frames use the exact navigation route as `profileKey` and disable a second content-width pass, so the global dashboard frame does not shrink the page twice.
+- The employee master and HR leave screens now expose their existing task actions through the same movable action slot.
