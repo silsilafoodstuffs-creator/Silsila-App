@@ -393,10 +393,7 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
           }),
         ],
       ),
-    );
-        ],
       ),
-    ),
     );
   }
 
