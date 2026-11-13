@@ -142,7 +142,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       case 'text':
         return {'text': 'نص جديد', 'size': 14};
       case 'button':
-        return {'text': 'زر جديد', 'icon': 'check'};
+        return {'text': 'زر جديد', 'icon': 'check', 'actionKey': 'preview'};
       case 'field':
         return {'label': 'اسم الحقل', 'hint': 'أدخل القيمة'};
       case 'card':
@@ -889,7 +889,12 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
             ? Container(
                 color: Colors.white,
                 margin: const EdgeInsets.all(8),
-                child: StudioDocumentRenderer(document: _doc, dataBySource: _previewData),
+                child: StudioDocumentRenderer(
+                  document: _doc,
+                  interactive: true,
+                  dataBySource: _previewData,
+                  onAction: (action) => _notice('تم اختبار تفاعل الزر ($action) في وضع المعاينة فقط؛ لم يتم تنفيذ حركة فعلية.'),
+                ),
               )
             : wide
                 ? Row(children: [
@@ -1217,7 +1222,12 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
         child: SelectableText(_lastTestReport!, style: const TextStyle(height: 1.6)),
       )),
     if (_preview)
-      SizedBox(height: 520, child: StudioDocumentRenderer(document: _doc, dataBySource: _previewData)),
+      SizedBox(height: 520, child: StudioDocumentRenderer(
+      document: _doc,
+      interactive: true,
+      dataBySource: _previewData,
+      onAction: (action) => _notice('تم اختبار تفاعل الزر ($action) في وضع المعاينة فقط.'),
+    )),
   ]));
 
   Widget _versionsPanel() => Expanded(child: ListView(padding: const EdgeInsets.all(14), children: [
