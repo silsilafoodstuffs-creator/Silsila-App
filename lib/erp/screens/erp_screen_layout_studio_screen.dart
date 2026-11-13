@@ -18,7 +18,7 @@ class ErpScreenLayoutStudioScreen extends StatefulWidget {
   State<ErpScreenLayoutStudioScreen> createState() => _ErpScreenLayoutStudioScreenState();
 }
 
-class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScreen> {
+class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScreen> with WidgetsBindingObserver {
   final _repository = ErpStudioRepository();
   String? _syncMessage;
   static const _defaultScreen = 'كل الشاشات - الإعداد الافتراضي';
@@ -70,7 +70,24 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        !_loading &&
+        widget.companyId != null &&
+        ErpScreenLayoutProfiles.pendingProfiles().isNotEmpty) {
+      _syncPendingProfiles();
+    }
   }
 
   Future<void> _load() async {
@@ -91,6 +108,9 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
       // Keep usable defaults if local preferences are unavailable.
     }
     if (mounted) setState(() => _loading = false);
+    if (widget.companyId != null && ErpScreenLayoutProfiles.pendingProfiles().isNotEmpty) {
+      await _syncPendingProfiles();
+    }
   }
 
   void _apply(Map<String, dynamic> value) {
