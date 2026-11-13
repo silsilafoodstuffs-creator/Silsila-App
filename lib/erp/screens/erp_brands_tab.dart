@@ -91,7 +91,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     }
     final name = TextEditingController(text: _s(row?['brand_name']));
     final english = TextEditingController(text: _s(row?['brand_name_en']));
-    final group = TextEditingController(text: _s(row?['brand_group']));
     final formKey = GlobalKey<FormState>();
     final result = await showDialog<bool>(
       context: context,
@@ -117,11 +116,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                     controller: english,
                     decoration: const InputDecoration(labelText: 'الاسم بالإنجليزية'),
                   ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: group,
-                    decoration: const InputDecoration(labelText: 'المجموعة (إن وجدت)'),
-                  ),
                 ],
               ),
             ),
@@ -138,7 +132,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     if (result != true) {
       name.dispose();
       english.dispose();
-      group.dispose();
       return;
     }
     setState(() => _saving = true);
@@ -146,7 +139,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       final payload = <String,dynamic>{
         'brand_name': name.text.trim(),
         'brand_name_en': english.text.trim().isEmpty ? null : english.text.trim(),
-        'brand_group': group.text.trim().isEmpty ? null : group.text.trim(),
       };
       if (row == null) {
         final inserted = await _db.from('erp_brands')
@@ -166,7 +158,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     } finally {
       name.dispose();
       english.dispose();
-      group.dispose();
       if (mounted) setState(() => _saving = false);
     }
   }
