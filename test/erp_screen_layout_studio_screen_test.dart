@@ -11,8 +11,8 @@ void main() {
   });
 
   testWidgets('shows layout controls and live placement preview', (tester) async {
-    await tester.view.setPhysicalSize(const Size(1200, 1800));
-    await tester.view.setDevicePixelRatio(1);
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
@@ -39,8 +39,8 @@ void main() {
   });
 
   testWidgets('image visibility toggle updates the live preview', (tester) async {
-    await tester.view.setPhysicalSize(const Size(1200, 1800));
-    await tester.view.setDevicePixelRatio(1);
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
