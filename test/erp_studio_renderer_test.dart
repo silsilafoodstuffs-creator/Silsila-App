@@ -144,5 +144,23 @@ void main() {
       expect(find.text('عنصر متداخل'), findsOneWidget);
       expect(find.byType(Card), findsNWidgets(2));
     });
+    test('rejects missing and cyclic parent references', () {
+      final missingParent = StudioDocument(
+        id: 'missing-parent',
+        name: 'اختبار الأب المفقود',
+        nodes: [StudioNode(id: 'child', type: 'text', parentId: 'missing')],
+      ).toJson();
+      expect(() => StudioDocument.fromJson(missingParent), throwsFormatException);
+
+      final cyclic = StudioDocument(
+        id: 'cyclic-parent',
+        name: 'اختبار التداخل الدائري',
+        nodes: [
+          StudioNode(id: 'a', type: 'container', parentId: 'b'),
+          StudioNode(id: 'b', type: 'container', parentId: 'a'),
+        ],
+      ).toJson();
+      expect(() => StudioDocument.fromJson(cyclic), throwsFormatException);
+    });
   });
 }
