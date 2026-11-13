@@ -255,6 +255,7 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
         title: 'إدارة المخزون والحركات',
         profileKey: widget.layoutScreenKey,
         applyContentWidth: false,
+        shrinkWrap: true,
         subtitle: 'أرصدة دفتر المخزون وتسجيل الحركات والتحويلات بين المخازن.',
         icon: Icons.inventory_2_outlined,
         actions: [
