@@ -181,7 +181,6 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
   }
 
   @override
-  Widget   @override
   Widget build(BuildContext context) {
     final debit = _rows.fold<double>(0, (s, r) => s + _num(r[_trial ? 'debit_total' : 'debit']));
     final credit = _rows.fold<double>(0, (s, r) => s + _num(r[_trial ? 'credit_total' : 'credit']));
