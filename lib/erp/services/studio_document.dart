@@ -212,12 +212,13 @@ class StudioNode {
     bool? hidden,
     bool? locked,
     bool clearGroup = false,
+    bool clearParent = false,
   }) =>
       StudioNode(
         id: id,
         type: type,
         props: props ?? this.props,
-        parentId: parentId ?? this.parentId,
+        parentId: clearParent ? null : parentId ?? this.parentId,
         groupId: clearGroup ? null : groupId ?? this.groupId,
         hidden: hidden ?? this.hidden,
         locked: locked ?? this.locked,
