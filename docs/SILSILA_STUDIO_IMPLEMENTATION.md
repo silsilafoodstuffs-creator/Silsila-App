@@ -24,7 +24,7 @@ The former screen-layout editor is embedded in tab 7 and retains its local layou
 - Screen editor supports adding/selecting components, drag reordering, editing exposed properties, deletion, undo/redo, preview, local draft save/open, and JSON clipboard import/export.
 - Supabase repository client includes design listing, version listing, draft save, approval, publish, and restore RPC calls.
 - Supabase migration is applied to the configured project. It creates company-scoped design records, immutable revision records, audit records, RLS policies, and role-checked RPC functions.
-- The migration's four Studio RPC functions use a hardened `pg_catalog, public` search path; authenticated users can execute them and anonymous users cannot.
+- The four Studio RPC functions use `SECURITY INVOKER` with a hardened `pg_catalog, public` search path, so table RLS remains authoritative. Authenticated users can execute them and anonymous users cannot. Supabase Security Advisor reports no Studio-specific findings after this hardening.
 - Schema tests cover round-trip, unsupported schema version, unknown component type, duplicate IDs, and oversized component collections.
 
 ## Explicit limitations
