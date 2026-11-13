@@ -10,9 +10,10 @@ import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_screen_frame.dart';
 
 class ErpStocktakeScreen extends StatefulWidget {
-  const ErpStocktakeScreen({super.key, required this.companyId, this.title = 'الجرد الفعلي للمخازن'});
+  const ErpStocktakeScreen({super.key, required this.companyId, this.title = 'الجرد الفعلي للمخازن', this.layoutScreenKey});
   final String companyId;
   final String title;
+  final String? layoutScreenKey;
   @override
   State<ErpStocktakeScreen> createState() => _ErpStocktakeScreenState();
 }
@@ -293,6 +294,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
       textDirection: TextDirection.rtl,
       child: ErpScreenFrame(
         title: widget.title,
+        profileKey: widget.layoutScreenKey,
         subtitle: 'لقطة أرصدة، إدخال الكميات الفعلية، مراجعة الفروقات ثم الترحيل.',
         icon: Icons.fact_check_outlined,
         actions: [
