@@ -518,7 +518,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
         _dirty = true;
         _testedRevision = null;
       });
-      await _store.save(imported);
+      await _store.save(imported, companyId: _companyId);
       _notice('تم التحقق من التصميم واستيراده كمسودة محلية.');
     } catch (e) {
       _notice('رفض الاستيراد: $e', error: true);
