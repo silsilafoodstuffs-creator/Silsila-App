@@ -130,13 +130,6 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
         _canEditStudio = false;
         _canPreviewStudio = false;
         _canDeleteStudio = false;
-        _undo.clear();
-        _redo.clear();
-        _resizeDelta.clear();
-        _selectedSource = null;
-        _selectedField = null;
-        _lastTestReport = null;
-        _activeTab = 0;
       });
       if (_companyId != null) {
         _loadRemoteDesigns();
@@ -451,7 +444,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
       await _loadRemoteDesigns();
       _notice('تم الحفظ المركزي كإصدار $nextRevision.');
     } catch (e) {
-      _notice('تعذر الحفظ المركزي. قد يكون هناك تعارض إصدار أو صلاحية غير كافية: $e', error: true);
+      if (mounted && company == _companyId) _notice('تعذر الحفظ المركزي. قد يكون هناك تعارض إصدار أو صلاحية غير كافية: $e', error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -563,6 +556,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
                       tooltip: 'حذف المسودة المحلية',
                       icon: const Icon(Icons.delete_outline),
                       onPressed: () async {
+                        if (company != _companyId) {
+                          if (dialogContext.mounted) Navigator.pop(dialogContext);
+                          return;
+                        }
                         await _store.delete(draft.id, companyId: company);
                         if (dialogContext.mounted) Navigator.pop(dialogContext);
                         _openLocalDrafts();
@@ -616,6 +613,8 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
       if (parsed is! Map) throw const FormatException('يجب أن يكون جذر الملف كائناً.');
       final importMap = Map<String, dynamic>.from(parsed)..remove('remoteId')..['remoteRevision'] = 0;
       final imported = StudioDocument.fromJson(importMap).copyWith(pendingSync: true);
+      await _store.save(imported, companyId: company);
+      if (!mounted || company != _companyId) return;
       setState(() {
         _doc = imported;
         _nameController.text = imported.name;
@@ -623,14 +622,15 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
         _remoteRevision = 0;
         _remoteStatus = 'draft';
         _selectedIds.clear();
+        _undo.clear();
+        _redo.clear();
         _preview = false;
         _dirty = true;
         _testedRevision = null;
       });
-      await _store.save(imported, companyId: company);
       _notice('تم التحقق من التصميم واستيراده كمسودة محلية.');
     } catch (e) {
-      _notice('رفض الاستيراد: $e', error: true);
+      if (mounted && company == _companyId) _notice('رفض الاستيراد: $e', error: true);
     } finally {
       controller.dispose();
     }
@@ -758,7 +758,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
       });
       _notice('تمت استعادة محتوى الإصدار $revision في إصدار جديد رقم $nextRevision.');
     } catch (e) {
-      _notice('فشلت الاستعادة: $e', error: true);
+      if (mounted && company == _companyId && id == _remoteDesignId) _notice('فشلت الاستعادة: $e', error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
