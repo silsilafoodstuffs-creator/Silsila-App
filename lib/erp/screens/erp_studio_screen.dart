@@ -79,6 +79,9 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
           ? widget.companyId
           : null;
 
+  bool get _canSaveCurrentStudio =>
+      (_remoteDesignId ?? _doc.remoteId) == null ? _canAddStudio : _canSaveStudio;
+
   @override
   void initState() {
     super.initState();
@@ -381,8 +384,8 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
 
   Future<void> _saveCloud() async {
     final company = _companyId;
-    if (!_canSaveStudio) {
-      _notice('لا تملك صلاحية حفظ تصميمات الاستوديو لهذه الشركة.', error: true);
+    if (!_canSaveCurrentStudio) {
+      _notice('لا تملك صلاحية إنشاء هذا التصميم أو حفظ تعديلاته.', error: true);
       return;
     }
     if (company == null) {
@@ -421,7 +424,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
 
   Future<void> _syncPendingDrafts() async {
     final company = _companyId;
-    if (!_canSaveStudio) {
+    if (!_canAddStudio && !_canSaveStudio) {
       _notice('لا تملك صلاحية مزامنة تصميمات الاستوديو لهذه الشركة.', error: true);
       return;
     }
@@ -436,6 +439,11 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       final drafts = await _store.list(companyId: _companyId);
       final pending = drafts.where((draft) => draft.pendingSync || draft.remoteId == null).toList();
       for (final draft in pending) {
+        final allowed = draft.remoteId == null ? _canAddStudio : _canSaveStudio;
+        if (!allowed) {
+          failures.add('${draft.name}: لا توجد صلاحية إنشاء أو حفظ هذا التصميم');
+          continue;
+        }
         try {
           final id = await _repository.saveDraft(
             companyId: company,
@@ -885,7 +893,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
             IconButton(tooltip: 'استيراد JSON', onPressed: _importJson, icon: const Icon(Icons.file_open)),
             IconButton(tooltip: 'تصدير JSON', onPressed: _exportJson, icon: const Icon(Icons.code)),
             IconButton(tooltip: 'حفظ محلي', onPressed: _busy ? null : _saveLocal, icon: const Icon(Icons.save_outlined)),
-            IconButton(tooltip: 'حفظ مركزي ومزامنة', onPressed: _busy || !_canSaveStudio ? null : _syncPendingDrafts, icon: const Icon(Icons.cloud_sync_outlined)),
+            IconButton(tooltip: 'حفظ مركزي ومزامنة', onPressed: _busy || (!_canSaveStudio && !_canAddStudio) ? null : _syncPendingDrafts, icon: const Icon(Icons.cloud_sync_outlined)),
           ],
         ),
         body: _companyId != null && !_studioAccessChecked
@@ -1022,7 +1030,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
             if (_companyId == null || _canAddStudio) _command('تصميم جديد', Icons.add, () => _newDesign(_activeTab == 2 ? 'report' : _activeTab == 3 ? 'icon' : _activeTab == 4 ? 'table' : 'screen')),
             _command(_preview ? 'المحرر' : 'المعاينة', Icons.preview, () => setState(() => _preview = !_preview)),
             if (_companyId == null || _canPreviewStudio) _command('اختبار', Icons.fact_check_outlined, _runTests),
-            if (_canSaveStudio) _command('حفظ مركزي', Icons.cloud_upload_outlined, _busy ? () {} : _saveCloud),
+            if (_canSaveCurrentStudio) _command('حفظ مركزي', Icons.cloud_upload_outlined, _busy ? () {} : _saveCloud),
             _command('نسخ العنصر', Icons.copy, _duplicateSelected),
             _command('تجميع', Icons.folder_copy_outlined, _groupSelected),
             _command('فك التجميع', Icons.folder_open, _ungroupSelected),
@@ -1439,7 +1447,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       child: Card(child: Padding(padding: const EdgeInsets.all(10), child: Text(_lastTestReport!))),
     ),
     Wrap(spacing: 8, runSpacing: 8, children: [
-      OutlinedButton.icon(onPressed: _busy || !_canSaveStudio ? null : _saveCloud, icon: const Icon(Icons.cloud_upload), label: const Text('حفظ مركزي')),
+      OutlinedButton.icon(onPressed: _busy || !_canSaveCurrentStudio ? null : _saveCloud, icon: const Icon(Icons.cloud_upload), label: const Text('حفظ مركزي')),
       OutlinedButton.icon(onPressed: _busy ? null : _runTests, icon: const Icon(Icons.fact_check), label: const Text('اختبار الإصدار الحالي')),
       FilledButton.icon(
         onPressed: _busy || !_canEditStudio || _remoteStatus == 'published' ? null : _approveDesign,
