@@ -95,6 +95,44 @@ void main() {
       );
     });
 
+    test('rejects invalid component bindings and oversized top-level settings', () {
+      expect(
+        () => StudioDocument.fromJson({
+          'schemaVersion': 2, 'id': 'x', 'name': 'x',
+          'nodes': [
+            {'id': 'a', 'type': 'text', 'props': {'binding': 'not-an-object'}},
+          ],
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => StudioDocument.fromJson({
+          'schemaVersion': 2, 'id': 'x', 'name': 'x',
+          'nodes': [],
+          'settings': {for (var i = 0; i < 81; i++) 'setting_$i': i},
+        }),
+        throwsFormatException,
+      );
+    });
+
+    test('validates nested values in top-level binding metadata', () {
+      final deeplyNested = <String, dynamic>{};
+      Map<String, dynamic> cursor = deeplyNested;
+      for (var i = 0; i < 10; i++) {
+        final child = <String, dynamic>{};
+        cursor['child'] = child;
+        cursor = child;
+      }
+      expect(
+        () => StudioDocument.fromJson({
+          'schemaVersion': 2, 'id': 'x', 'name': 'x',
+          'nodes': [],
+          'bindings': {'component': deeplyNested},
+        }),
+        throwsFormatException,
+      );
+    });
+
     test('rejects non-JSON property values and excessive nested data', () {
       expect(
         () => StudioDocument.fromJson({
