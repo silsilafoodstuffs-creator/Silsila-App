@@ -1,8 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silsila_app/erp/services/studio_data_sources.dart';
 import 'package:silsila_app/erp/services/studio_document.dart';
+import 'package:silsila_app/erp/services/erp_studio_draft_store.dart';
 
-void main() {
+void main() {\n  group('StudioDraftStore company isolation', () {\n    test('uses a local-only namespace when no company is selected', () {\n      expect(StudioDraftStore.scopeForCompany(null), 'local');\n      expect(StudioDraftStore.scopeForCompany('   '), 'local');\n    });\n\n    test('creates deterministic but distinct namespaces for separate companies', () {\n      final companyA = StudioDraftStore.scopeForCompany('company-a');\n      final companyAAgain = StudioDraftStore.scopeForCompany('company-a');\n      final companyB = StudioDraftStore.scopeForCompany('company-b');\n      expect(companyA, companyAAgain);\n      expect(companyA, isNot('local'));\n      expect(companyB, isNot('local'));\n      expect(companyA, isNot(companyB));\n    });\n  });\n
   group('StudioDocument schema', () {
     test('round trips a supported design document including metadata and bindings', () {
       final original = StudioDocument.create('اختبار', designKind: 'report').copyWith(
