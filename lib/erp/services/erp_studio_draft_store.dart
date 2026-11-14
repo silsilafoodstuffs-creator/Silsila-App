@@ -92,7 +92,7 @@ class StudioDraftStore {
   }
 
   Future<void> delete(String id, {String? companyId}) async {
-    final scope = _scope(companyId);
+    final scope = scopeForCompany(companyId);
     final drafts = await list(companyId: companyId);
     drafts.removeWhere((e) => e.id == id);
     await _writeRaw(scope, jsonEncode(drafts.map((e) => e.toJson()).toList()));
