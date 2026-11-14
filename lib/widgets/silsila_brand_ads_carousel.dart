@@ -62,7 +62,6 @@ class _SilsilaBrandAdsCarouselState extends State<SilsilaBrandAdsCarousel> {
         _brands = (rows as List)
             .whereType<Map>()
             .map((row) => Map<String, dynamic>.from(row))
-            .where((row) => row['logo_data'] != null)
             .toList(growable: false);
         _loading = false;
       });
