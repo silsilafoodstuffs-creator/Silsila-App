@@ -19,7 +19,7 @@ void main() {
   test('home ticker renders logo-only circular items with horizontal scrolling', () {
     final start = homeSource.indexOf('class _HomeTickerAdsStrip extends StatefulWidget');
     final end = homeSource.indexOf('class MainShell extends StatefulWidget', start);
-    expect(start, isNonNegative);
+    expect(start, greaterThanOrEqualTo(0));
     expect(end, greaterThan(start));
     final ticker = homeSource.substring(start, end);
 
