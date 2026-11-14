@@ -34,8 +34,8 @@ Silsila Studio is the single integrated design workspace in ERP navigation under
 
 - Data bindings are read-only for preview and published display. They do not execute create/update/delete operations against ERP business tables.
 - Button actions in preview are simulations. There is no general-purpose action/workflow binding engine for arbitrary ERP commands.
-- The published-design viewer displays published custom designs, but publishing does not replace the internals of an existing dedicated ERP screen or automatically remap all existing controls.
-- Width/height are adjusted through property controls, not freehand drag-resize handles. Grouping currently records group membership metadata; nested visual group containers and a full hierarchical layer tree are not implemented.
+- The published-design viewer renders the immutable version snapshot identified by `published_revision`, rather than the mutable current draft row. Publishing makes a custom design available in the published-design viewer; it does not replace the internals of an existing dedicated ERP screen or automatically remap all existing controls.
+- Direct drag-resize handles, numeric width/height controls, and visual group containers are implemented. A full hierarchical layer tree with nested parent-child layout constraints is not implemented.
 - Report, chart, grid, tree, form, and icon components are foundational configurable components, not a full BI/reporting suite or a custom vector/icon drawing tool.
 - Image components accept HTTPS image sources; a dedicated upload/crop/asset-library workflow is not implemented.
 - Per-screen visibility and content-width controls are fully honored by screens using the shared frame. Global theme and data-density tokens apply through the ERP dashboard runtime; dedicated screens may still need conversion to the shared frame for every layout-position option to control their internal title bars, tabs, and toolbars.
