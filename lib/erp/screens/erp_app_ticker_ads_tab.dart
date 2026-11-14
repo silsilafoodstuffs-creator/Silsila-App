@@ -29,6 +29,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
   String _activityCode = 'ALL';
   bool _loading = false;
   bool _saving = false;
+  bool _hasUnsavedChanges = false;
   String? _error;
   String? _message;
 
@@ -113,6 +114,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           ..addEntries(validAssignments.map((row) => MapEntry(
             (row['slot_no'] as num).toInt(), _s(row['brand_id']),
           )));
+        _hasUnsavedChanges = false;
         _loading = false;
       });
     } catch (error) {
@@ -171,6 +173,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
         _slotOwners.remove(slot);
       }
       _message = null;
+      _hasUnsavedChanges = true;
     });
   }
 
@@ -193,7 +196,38 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
         }
       }
       _message = null;
+      _hasUnsavedChanges = true;
     });
+  }
+
+  Future<void> _changeActivity(String nextCode) async {
+    if (nextCode == _activityCode) return;
+    if (_hasUnsavedChanges) {
+      final choice = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('تعديلات غير محفوظة'),
+          content: const Text('هل ترغب في الحفظ؟'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, 'cancel'), child: const Text('إلغاء الأمر')),
+            TextButton(onPressed: () => Navigator.pop(dialogContext, 'discard'), child: const Text('لأ')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, 'save'), child: const Text('نعم')),
+          ],
+        ),
+      );
+      if (!mounted || choice == null || choice == 'cancel') return;
+      if (choice == 'save') {
+        await _save();
+        if (!mounted || _error != null || _hasUnsavedChanges) return;
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _activityCode = nextCode;
+      _slotOwners.clear();
+      _hasUnsavedChanges = false;
+    });
+    await _load();
   }
 
   Future<void> _save() async {
@@ -224,8 +258,8 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
   Widget _brandLogo(Map<String, dynamic> brand) {
     final bytes = _logoBytes(brand['logo_data']);
     return Container(
-      width: 42,
-      height: 42,
+      width: 32,
+      height: 32,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: const Color(0xFFF5EFFB),
@@ -284,13 +318,8 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                   child: Text('${activity['name']} — ${activity['code']}'),
                 )),
               ],
-              onChanged: _loading || _saving ? null : (value) {
-                setState(() {
-                  _activityCode = value ?? 'ALL';
-                  _slotOwners.clear();
-                });
-                _load();
-              },
+              onChanged: _loading || _saving ? null : (value) =>
+                  _changeActivity(value ?? 'ALL'),
             ),
           ),
           Padding(
@@ -335,6 +364,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                             headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                             columnSpacing: 2.5,
                             horizontalMargin: 2.5,
+                            verticalMargin: 2,
                             headingRowHeight: 40,
                             dataRowMinHeight: 40,
                             dataRowMaxHeight: 44,
