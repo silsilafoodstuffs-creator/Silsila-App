@@ -162,6 +162,7 @@ AS $function$
     FROM public.erp_brands b
     JOIN app_scope s ON s.company_id = b.company_id
     WHERE b.is_active = true
+      AND b.is_system = false
       AND (
         NULLIF(btrim(p_activity_code), '') IS NULL
         OR b.activity_code = NULLIF(btrim(p_activity_code), '')
