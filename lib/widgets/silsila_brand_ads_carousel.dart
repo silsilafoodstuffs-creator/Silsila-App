@@ -78,7 +78,7 @@ class _SilsilaBrandAdsCarouselState extends State<SilsilaBrandAdsCarousel> {
   Uint8List? _bytes(dynamic value) {
     if (value == null) return null;
     final raw = value.toString();
-    final hex = raw.startsWith(r'\\x') ? raw.substring(2) : raw;
+    final hex = raw.startsWith(r'\x') ? raw.substring(2) : raw;
     if (hex.isEmpty || hex.length.isOdd) return null;
     try {
       return Uint8List.fromList(List<int>.generate(
