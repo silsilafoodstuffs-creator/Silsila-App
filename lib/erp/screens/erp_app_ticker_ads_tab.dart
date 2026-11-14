@@ -93,12 +93,21 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
     }
     setState(() { _loading = true; _error = null; _message = null; });
     try {
-      final brandRows = await _db.from('erp_brands')
-          .select('id,brand_code,brand_name,brand_name_en,logo_data,logo_mime_type,is_active')
+      final brandRowsResult = await _db.from('erp_brands')
+          .select('id,brand_code,brand_name,brand_name_en,logo_data,logo_mime_type,is_active,activity_code')
           .eq('company_id', widget.companyId!.trim())
           .eq('is_active', true)
+          .eq('is_system', false)
           .order('display_order')
           .order('brand_code');
+      final brandRows = List<Map<String, dynamic>>.from(brandRowsResult);
+      // Brand-to-activity ownership is explicit on the brand master.
+      // The global scope remains company-wide.
+      if (_activityCode != 'ALL') {
+        brandRows.removeWhere(
+          (brand) => _s(brand['activity_code']) != _activityCode,
+        );
+      }
       var query = _db.from('erp_app_ticker_ads')
           .select('slot_no,brand_id')
           .eq('app_id', widget.appId!);
@@ -111,15 +120,30 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           .map((brand) => _s(brand['id']))
           .toSet();
       final validAssignments = (assignedRows as List)
-          .where((row) => activeBrandIds.contains(_s(row['brand_id'])));
+          .where((row) => activeBrandIds.contains(_s(row['brand_id'])))
+          .toList();
+      final nextOwners = <int, String>{
+        for (final row in validAssignments)
+          (row['slot_no'] as num).toInt(): _s(row['brand_id']),
+      };
+      final assignedBrandIds = nextOwners.values.toSet();
+      var nextSlot = nextOwners.keys.isEmpty
+          ? 1
+          : nextOwners.keys.reduce((a, b) => a > b ? a : b) + 1;
+      // Append all remaining active brands in the selected activity scope
+      // without changing the user's existing manually assigned positions.
+      for (final brand in List<Map<String, dynamic>>.from(brandRows)) {
+        final brandId = _s(brand['id']);
+        if (assignedBrandIds.add(brandId)) {
+          nextOwners[nextSlot++] = brandId;
+        }
+      }
       setState(() {
         _brands = List<Map<String, dynamic>>.from(brandRows);
         _slotOwners
           ..clear()
-          ..addEntries(validAssignments.map((row) => MapEntry(
-            (row['slot_no'] as num).toInt(), _s(row['brand_id']),
-          )));
-        _hasUnsavedChanges = false;
+          ..addAll(nextOwners);
+        _hasUnsavedChanges = nextOwners.length != validAssignments.length;
         _loading = false;
       });
     } catch (error) {

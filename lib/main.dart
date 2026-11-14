@@ -1058,6 +1058,11 @@ class _HomeTickerAdsStrip extends StatefulWidget {
 }
 
 class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
+  static const double _itemWidth = 66;
+  static const double _itemGap = 4;
+  static const double _circleSize = 58;
+  final ScrollController _scrollController = ScrollController();
+  Timer? _autoScrollTimer;
   List<Map<String, dynamic>> _ads = const [];
   int _requestVersion = 0;
 
@@ -1065,6 +1070,18 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
   void initState() {
     super.initState();
     _load();
+    _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 24), (_) {
+      if (!mounted || !_scrollController.hasClients || _ads.length < 2) return;
+      final cycleExtent = _ads.length * _itemWidth;
+      final position = _scrollController.position;
+      if (position.pixels >= cycleExtent) {
+        _scrollController.jumpTo(position.pixels - cycleExtent);
+      } else {
+        _scrollController.jumpTo(
+          (position.pixels + .55).clamp(0.0, position.maxScrollExtent).toDouble(),
+        );
+      }
+    });
   }
 
   @override
@@ -1074,9 +1091,14 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
   }
 
   Future<void> _load() async {
+    final requestVersion = ++_requestVersion;
+    if (mounted) setState(() => _ads = const []);
+    final activityCode = widget.activityCode?.trim();
+    // Never briefly show the global catalogue while the selected activity
+    // code is still resolving during app startup or an activity switch.
+    if (activityCode == null || activityCode.isEmpty) return;
     final client = database;
     if (client == null) return;
-    final requestVersion = ++_requestVersion;
     try {
       final rows = await client.rpc('get_silsila_public_ticker_ads', params: {
         'p_activity_code': widget.activityCode,
@@ -1089,50 +1111,79 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
             .compareTo((b['slot_no'] as num?)?.toInt() ?? 0));
       if (!mounted || requestVersion != _requestVersion) return;
       setState(() => _ads = loaded);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _scrollController.hasClients) {
+          _scrollController.jumpTo(0);
+        }
+      });
     } catch (_) {
       // Optional ticker ads must never block the customer home screen.
-    } finally {
     }
+  }
+
+  @override
+  void dispose() {
+    _autoScrollTimer?.cancel();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     if (_ads.isEmpty) return const SizedBox.shrink();
+    final copies = _ads.length > 1
+        ? (MediaQuery.of(context).size.width / (_ads.length * _itemWidth)).ceil() + 2
+        : 1;
+    final repeatedCount = _ads.length * copies;
     return SizedBox(
-      height: 38,
-      child: ListView.separated(
+      height: 64,
+      child: ListView.builder(
+        controller: _scrollController,
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 2),
-        itemCount: _ads.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 2.5),
+        itemCount: repeatedCount,
         itemBuilder: (context, index) {
-          final ad = _ads[index];
+          final ad = _ads[index % _ads.length];
           final logo = _decodeDatabaseBytea(ad['logo_data']);
-          return Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: purple.withValues(alpha: .18)),
-            ),
-            clipBehavior: Clip.antiAlias,
-            alignment: Alignment.center,
-            padding: const EdgeInsets.all(2),
-            child: logo == null
-                ? const Icon(Icons.storefront_outlined, color: purple, size: 20)
-                : Image.memory(
-                    logo,
-                    width: 32,
-                    height: 32,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.storefront_outlined,
-                      color: purple,
-                      size: 20,
-                    ),
+          return SizedBox(
+            width: _itemWidth,
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(end: _itemGap),
+              child: Container(
+                width: _circleSize,
+                height: _circleSize,
+                padding: const EdgeInsets.all(3),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: SweepGradient(
+                    colors: [orange, pink, purple, orange],
                   ),
+                ),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                  ),
+                  padding: const EdgeInsets.all(4),
+                  clipBehavior: Clip.antiAlias,
+                  alignment: Alignment.center,
+                  child: logo == null
+                      ? const Icon(Icons.storefront_outlined, color: purple, size: 27)
+                      : Image.memory(
+                          logo,
+                          width: 46,
+                          height: 46,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.storefront_outlined,
+                            color: purple,
+                            size: 27,
+                          ),
+                        ),
+                ),
+              ),
+            ),
           );
         },
       ),

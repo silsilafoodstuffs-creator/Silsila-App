@@ -23,6 +23,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   final _search = TextEditingController();
   List<Map<String,dynamic>> _rows = [];
   List<Map<String,dynamic>> _groups = [];
+  List<Map<String,dynamic>> _activities = [];
   bool _showGroups = false;
   String? _selectedId;
   bool _loading = false;
@@ -55,12 +56,18 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     setState(() { _loading = true; _error = null; });
     try {
       final rows = await _db.from('erp_brands')
-        .select('id,brand_code,brand_name,brand_name_en,brand_group,brand_group_id,display_order,is_active,is_system,logo_data,logo_mime_type')
+        .select('id,brand_code,brand_name,brand_name_en,brand_group,brand_group_id,display_order,is_active,is_system,logo_data,logo_mime_type,activity_code')
         .eq('company_id', widget.companyId.trim())
         .order('brand_code');
       final groups = await _db.from('erp_brand_groups').select('id,group_code,group_name,is_active').eq('company_id', widget.companyId.trim()).order('group_code');
+      final activities = await _db.from('activity_types')
+          .select('code,name')
+          .eq('is_active', true)
+          .order('sort_order')
+          .order('code');
       if (!mounted) return;
       setState(() {
+        _activities = List<Map<String,dynamic>>.from(activities);
         _groups = List<Map<String,dynamic>>.from(groups);
         _rows = List<Map<String,dynamic>>.from(rows);
         if (!_rows.any((row) => _s(row['id']) == _selectedId)) {
@@ -93,6 +100,9 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     }
     final name = TextEditingController(text: _s(row?['brand_name']));
     final english = TextEditingController(text: _s(row?['brand_name_en']));
+    var activityCode = _s(row?['activity_code']).isEmpty
+        ? 'ACT001'
+        : _s(row?['activity_code']);
     final formKey = GlobalKey<FormState>();
     final result = await showDialog<bool>(
       context: context,
@@ -118,6 +128,24 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                     controller: english,
                     decoration: const InputDecoration(labelText: 'الاسم بالإنجليزية'),
                   ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: activityCode,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'نوع النشاط المرتبط بالبراند *',
+                    ),
+                    items: _activities.map((activity) => DropdownMenuItem<String>(
+                      value: _s(activity['code']),
+                      child: Text('${_s(activity['name'])} — ${_s(activity['code'])}'),
+                    )).toList(),
+                    onChanged: (value) {
+                      if (value != null) activityCode = value;
+                    },
+                    validator: (value) => value == null || value.isEmpty
+                        ? 'اختر نوع النشاط.'
+                        : null,
+                  ),
                 ],
               ),
             ),
@@ -141,6 +169,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       final payload = <String,dynamic>{
         'brand_name': name.text.trim(),
         'brand_name_en': english.text.trim().isEmpty ? null : english.text.trim(),
+        'activity_code': activityCode,
       };
       if (row == null) {
         final inserted = await _db.from('erp_brands')
