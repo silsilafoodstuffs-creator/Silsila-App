@@ -56,8 +56,20 @@ class _ErpStudioPublishedDesignsScreenState extends State<ErpStudioPublishedDesi
     try {
       final id = row['id'].toString();
       final remote = await _repository.getDesign(companyId: company, designId: id);
-      final raw = remote['design_json'];
-      if (raw is! Map) throw const FormatException('مخطط التصميم المنشور غير صالح.');
+      final publishedRevision = (remote['published_revision'] as num?)?.toInt();
+      if (remote['status'] != 'published' || publishedRevision == null || publishedRevision < 1) {
+        throw const StateError('هذا التصميم لا يحتوي على إصدار منشور صالح.');
+      }
+
+      // Always render the immutable snapshot that was actually published.
+      // The design row may already contain a newer, unpublished draft revision.
+      final published = await _repository.getVersion(
+        companyId: company,
+        designId: id,
+        revision: publishedRevision,
+      );
+      final raw = published['design_json'];
+      if (raw is! Map) throw const FormatException('مخطط الإصدار المنشور غير صالح.');
       final document = StudioDocument.fromJson(Map<String, dynamic>.from(raw));
       final data = await _repository.previewBindings(companyId: company, document: document, limit: 50);
       if (!mounted) return;
@@ -65,7 +77,7 @@ class _ErpStudioPublishedDesignsScreenState extends State<ErpStudioPublishedDesi
         builder: (_) => _PublishedDesignPreview(
           document: document,
           dataBySource: data,
-          revision: (remote['published_revision'] as num?)?.toInt() ?? (remote['revision'] as num?)?.toInt() ?? 0,
+          revision: publishedRevision,
         ),
       ));
     } catch (error) {
