@@ -45,6 +45,19 @@ class ErpStudioRepository {
     };
   }
 
+  Future<Map<String, dynamic>> getPublishedDesignMetadata({
+    required String companyId,
+    required String designId,
+  }) async {
+    _requireCompany(companyId);
+    final row = await _client.from('erp_studio_designs')
+        .select('id,name,design_kind,status,revision,published_revision')
+        .eq('company_id', companyId)
+        .eq('id', designId)
+        .single();
+    return Map<String, dynamic>.from(row);
+  }
+
   Future<List<Map<String, dynamic>>> listDesigns(String companyId) async {
     _requireCompany(companyId);
     final rows = await _client.from('erp_studio_designs')
