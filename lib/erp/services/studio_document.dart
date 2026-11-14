@@ -90,8 +90,16 @@ class StudioDocument {
         : Map<String, dynamic>.from(rawBindings as Map);
     for (final node in parsedNodes) {
       final binding = node.props['binding'];
+      if (binding != null && binding is! Map) {
+        throw const FormatException('تعريف ربط المكون يجب أن يكون كائن بيانات.');
+      }
       if (binding is Map) resolvedBindings[node.id] = Map<String, dynamic>.from(binding);
     }
+    _validateStudioMap(resolvedBindings, 'تعريفات الربط', maxEntries: 500);
+    final resolvedSettings = rawSettings == null
+        ? <String, dynamic>{}
+        : Map<String, dynamic>.from(rawSettings as Map);
+    _validateStudioMap(resolvedSettings, 'إعدادات التصميم', maxEntries: 80);
     final kind = json['designKind']?.toString() ?? 'screen';
     const kinds = {'screen', 'report', 'icon', 'tree', 'table', 'grid', 'form', 'component'};
     if (!kinds.contains(kind)) throw FormatException('نوع التصميم غير مسجل: $kind');
@@ -105,7 +113,7 @@ class StudioDocument {
       remoteRevision: json['remoteRevision'] is int ? json['remoteRevision'] as int : 0,
       pendingSync: json['pendingSync'] == true,
       bindings: resolvedBindings,
-      settings: rawSettings == null ? const {} : Map<String, dynamic>.from(rawSettings as Map),
+      settings: resolvedSettings,
       nodes: parsedNodes,
     );
   }
@@ -222,6 +230,22 @@ class StudioNode {
         hidden: hidden ?? this.hidden,
         locked: locked ?? this.locked,
       );
+}
+
+void _validateStudioMap(
+  Map<String, dynamic> value,
+  String label, {
+  required int maxEntries,
+}) {
+  if (value.length > maxEntries) {
+    throw FormatException('$label تجاوزت الحد المسموح.');
+  }
+  for (final entry in value.entries) {
+    if (entry.key.length > 160) {
+      throw FormatException('مفتاح داخل $label أطول من المسموح.');
+    }
+    _validateJsonValue(entry.value);
+  }
 }
 
 void _validateJsonValue(dynamic value, [int depth = 0]) {
