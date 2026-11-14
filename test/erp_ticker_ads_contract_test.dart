@@ -6,6 +6,7 @@ void main() {
   late String homeSource;
   late String adminSource;
   late String migrationSource;
+  late String activityMigrationSource;
 
   setUpAll(() {
     homeSource = File('lib/main.dart').readAsStringSync();
@@ -13,6 +14,9 @@ void main() {
         .readAsStringSync();
     migrationSource = File(
       'supabase/migrations/20261114140500_ticker_ads_unlimited_active_brands.sql',
+    ).readAsStringSync();
+    activityMigrationSource = File(
+      'supabase/migrations/20261114135000_remove_fixed_brand_ticker_limit.sql',
     ).readAsStringSync();
   });
 
@@ -42,6 +46,15 @@ void main() {
     expect(adminSource, contains('هل ترغب في الحفظ؟'));
     expect(adminSource, isNot(contains('slot <= 15')));
     expect(adminSource, isNot(contains('slot <= 25')));
+  });
+
+  test('public ticker automatically includes all active brands for the selected activity', () {
+    expect(activityMigrationSource, contains('activity_brand_catalog'));
+    expect(activityMigrationSource, contains('public.erp_item_categories'));
+    expect(activityMigrationSource, contains('c.activity_code = NULLIF'));
+    expect(activityMigrationSource, contains('public.erp_items i'));
+    expect(activityMigrationSource, contains('WHERE NOT EXISTS'));
+    expect(activityMigrationSource, contains('ORDER BY result.slot_no'));
   });
 
   test('database migration removes the fixed ticker slot ceiling', () {
