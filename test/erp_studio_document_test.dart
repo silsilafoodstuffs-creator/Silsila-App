@@ -51,7 +51,11 @@ void main() {
             ),
           ),
         ));
-        expect(find.byType(CustomPaint), findsOneWidget);
+        expect(
+          find.byWidgetPredicate((widget) =>
+            widget is CustomPaint && widget.painter is StudioChartPainter),
+          findsOneWidget,
+        );
         await tester.pumpAndSettle();
       });
     }
