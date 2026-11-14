@@ -97,6 +97,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           .select('id,brand_code,brand_name,brand_name_en,logo_data,logo_mime_type,is_active,activity_code')
           .eq('company_id', widget.companyId!.trim())
           .eq('is_active', true)
+          .eq('is_system', false)
           .order('display_order')
           .order('brand_code');
       // Brand-to-activity ownership is explicit on the brand master.
