@@ -22,7 +22,7 @@ class SilsilaStudioScreen extends StatefulWidget {
   State<SilsilaStudioScreen> createState() => _SilsilaStudioScreenState();
 }
 
-class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
+class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsBindingObserver {
   final _store = StudioDraftStore();
   final _repository = ErpStudioRepository();
   final _nameController = TextEditingController(text: 'شاشة جديدة');
@@ -52,6 +52,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   bool _canEditStudio = false;
   bool _canPreviewStudio = false;
   bool _canDeleteStudio = false;
+  DateTime? _lastAutoSyncAt;
   String? _lastTestReport;
 
   static const _studioTabs = <String>[
@@ -85,6 +86,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _nameController.text = _doc.name;
     if (_companyId != null) {
       _loadRemoteDesigns();
@@ -130,7 +132,19 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || _busy || !_studioAccessChecked ||
+        !_studioAccessAllowed || _companyId == null ||
+        (!_canAddStudio && !_canSaveStudio)) return;
+    final now = DateTime.now();
+    if (_lastAutoSyncAt != null && now.difference(_lastAutoSyncAt!) < const Duration(seconds: 45)) return;
+    _lastAutoSyncAt = now;
+    _syncPendingDrafts(silent: true);
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _nameController.dispose();
     super.dispose();
   }
@@ -422,7 +436,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     }
   }
 
-  Future<void> _syncPendingDrafts() async {
+  Future<void> _syncPendingDrafts({bool silent = false}) async {
     final company = _companyId;
     if (!_canAddStudio && !_canSaveStudio) {
       _notice('لا تملك صلاحية مزامنة تصميمات الاستوديو لهذه الشركة.', error: true);
@@ -474,12 +488,13 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       }
       await _loadRemoteDesigns();
       if (failures.isEmpty) {
-        _notice(pending.isEmpty ? 'لا توجد مسودات معلقة للمزامنة.' : 'تمت مزامنة $synced مسودة مركزياً.');
+        if (!silent && pending.isEmpty) _notice('لا توجد مسودات معلقة للمزامنة.');
+        if (!silent && pending.isNotEmpty) _notice('تمت مزامنة $synced مسودة مركزياً.');
       } else {
         _notice('تمت مزامنة $synced مسودة، وتعذرت مزامنة ${failures.length}: ${failures.take(2).join('؛ ')}', error: true);
       }
     } catch (e) {
-      _notice('تعذرت قراءة قائمة المسودات للمزامنة: $e', error: true);
+      if (!silent) _notice('تعذرت قراءة قائمة المسودات للمزامنة: $e', error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
