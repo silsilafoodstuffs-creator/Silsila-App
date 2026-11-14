@@ -241,7 +241,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
       case 'image':
         return {'height': 120, 'url': ''};
       case 'chart':
-        return {'valueField': 'grand_total', 'labelField': 'document_number'};
+        return {'valueField': 'grand_total', 'labelField': 'document_number', 'chartType': 'bar', 'chartHeight': 170};
       case 'tabs':
         return {'labels': ['بيانات', 'حركات', 'تقارير']};
       case 'form':
