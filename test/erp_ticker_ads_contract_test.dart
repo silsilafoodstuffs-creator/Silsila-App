@@ -40,6 +40,7 @@ void main() {
 
   test('admin ticker supports every active brand without a fixed 15 or 25 cap', () {
     expect(adminSource, contains('int get _slotCount'));
+    expect(adminSource, contains('final brandRows = List<Map<String, dynamic>>.from(brandRowsResult)'));
     expect(adminSource, contains('return _brands.length > lastAssigned'));
     expect(adminSource, contains("brand_name_en']).toLowerCase().contains(term"));
     expect(adminSource, contains('columnSpacing: 2.5'));
