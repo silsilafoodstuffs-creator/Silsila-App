@@ -1,3 +1,51 @@
+-- Give every brand an explicit activity scope. Existing brands with item
+-- usage inherit their most-used active category activity; unlinked legacy
+-- brands remain in the platform's primary foodstuffs activity.
+ALTER TABLE public.erp_brands
+  ADD COLUMN IF NOT EXISTS activity_code text;
+
+UPDATE public.erp_brands b
+SET activity_code = COALESCE((
+  SELECT c.activity_code
+  FROM public.erp_items i
+  JOIN public.erp_item_categories c
+    ON c.id = i.category_id
+   AND c.company_id = i.company_id
+  WHERE i.company_id = b.company_id
+    AND i.brand_id = b.id
+    AND i.is_active = true
+    AND c.is_active = true
+    AND NULLIF(btrim(c.activity_code), '') IS NOT NULL
+  GROUP BY c.activity_code
+  ORDER BY count(*) DESC, c.activity_code
+  LIMIT 1
+), 'ACT001')
+WHERE b.activity_code IS NULL OR btrim(b.activity_code) = '';
+
+ALTER TABLE public.erp_brands
+  ALTER COLUMN activity_code SET DEFAULT 'ACT001',
+  ALTER COLUMN activity_code SET NOT NULL;
+
+DO $brand_activity_fk$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'erp_brands_activity_code_fk'
+      AND conrelid = 'public.erp_brands'::regclass
+  ) THEN
+    ALTER TABLE public.erp_brands
+      ADD CONSTRAINT erp_brands_activity_code_fk
+      FOREIGN KEY (activity_code)
+      REFERENCES public.activity_types(code)
+      ON UPDATE CASCADE
+      ON DELETE RESTRICT;
+  END IF;
+END;
+$brand_activity_fk$;
+
+CREATE INDEX IF NOT EXISTS erp_brands_company_activity_active_idx
+  ON public.erp_brands(company_id, activity_code, is_active, display_order);
+
 -- Remove the fixed 15/25-position ceiling. Each active brand receives an ordered slot.
 ALTER TABLE public.erp_app_ticker_ads
   DROP CONSTRAINT IF EXISTS erp_app_ticker_ads_slot_no_check;
@@ -116,18 +164,7 @@ AS $function$
     WHERE b.is_active = true
       AND (
         NULLIF(btrim(p_activity_code), '') IS NULL
-        OR EXISTS (
-          SELECT 1
-          FROM public.erp_items i
-          JOIN public.erp_item_categories c
-            ON c.id = i.category_id
-           AND c.company_id = i.company_id
-          WHERE i.company_id = b.company_id
-            AND i.brand_id = b.id
-            AND i.is_active = true
-            AND c.is_active = true
-            AND c.activity_code = NULLIF(btrim(p_activity_code), '')
-        )
+        OR b.activity_code = NULLIF(btrim(p_activity_code), '')
       )
   ),
   specific_ranked AS (
