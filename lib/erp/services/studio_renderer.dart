@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'studio_document.dart';
 
@@ -183,22 +185,49 @@ class StudioComponentRegistry {
       case 'chart':
         final valueField = (p['valueField'] ?? 'grand_total').toString();
         final labelField = (p['labelField'] ?? 'document_number').toString();
-        final chartRows = rows.take(8).toList();
-        final maxValue = chartRows.fold<double>(0, (m, r) => _number(r[valueField], 0) > m ? _number(r[valueField], 0) : m);
-        content = Column(children: chartRows.isEmpty
-            ? const [Text('اربط مصدر بيانات لعرض الرسم البياني.')]
-            : chartRows.map((r) {
-                final value = _number(r[valueField], 0);
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(children: [
-                    SizedBox(width: 90, child: Text((r[labelField] ?? '').toString(), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                    Expanded(child: LinearProgressIndicator(value: maxValue <= 0 ? 0 : value / maxValue, minHeight: 12)),
-                    const SizedBox(width: 6),
-                    Text(value.toStringAsFixed(0)),
-                  ]),
-                );
-              }).toList());
+        final chartRows = rows.take(12).toList();
+        final values = chartRows.map((row) => _number(row[valueField], 0)).toList();
+        final labels = chartRows.map((row) => (row[labelField] ?? '').toString()).toList();
+        final chartType = (p['chartType'] ?? 'bar').toString().toLowerCase();
+        content = chartRows.isEmpty
+            ? const Padding(
+                padding: EdgeInsets.all(12),
+                child: Text('اربط مصدر بيانات لعرض الرسم البياني.'),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: _number(p['chartHeight'], 170).clamp(100, 420).toDouble(),
+                    child: CustomPaint(
+                      painter: StudioChartPainter(values: values, chartType: chartType),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 5,
+                    children: List.generate(chartRows.length, (index) => Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: StudioChartPainter.palette[index % StudioChartPainter.palette.length],
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${labels[index].isEmpty ? 'عنصر ${index + 1}' : labels[index]}: ${values[index].toStringAsFixed(0)}',
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                      ],
+                    )),
+                  ),
+                ],
+              );
         break;
       case 'tabs':
         final labels = (p['labels'] is List ? p['labels'] as List : const ['بيانات', 'حركات', 'تقارير'])
@@ -280,6 +309,114 @@ class StudioComponentRegistry {
   static TextAlign _align(dynamic value) => value == 'center'
       ? TextAlign.center
       : value == 'end' ? TextAlign.end : TextAlign.start;
+}
+
+
+/// Lightweight BI chart painter: vertical bars, horizontal bars, line, pie and donut.
+class StudioChartPainter extends CustomPainter {
+  const StudioChartPainter({required this.values, required this.chartType});
+
+  final List<double> values;
+  final String chartType;
+
+  static const palette = <Color>[
+    Color(0xFF3E007D), Color(0xFFFFA015), Color(0xFFFF27C3),
+    Color(0xFF26A69A), Color(0xFF5577CC), Color(0xFF9C6ADE),
+    Color(0xFFDB7A32), Color(0xFF4B9B69), Color(0xFF8A6F5A),
+    Color(0xFF5C7895), Color(0xFFAA4E7A), Color(0xFF777777),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.isEmpty || size.width <= 0 || size.height <= 0) return;
+    final positive = values.map((value) => value.isFinite && value > 0 ? value : 0.0).toList();
+    final total = positive.fold<double>(0, (sum, value) => sum + value);
+    final maxValue = positive.fold<double>(0, (max, value) => value > max ? value : max);
+    final bounds = Rect.fromLTWH(
+      10, 8,
+      (size.width - 20).clamp(0, double.infinity).toDouble(),
+      (size.height - 16).clamp(0, double.infinity).toDouble(),
+    );
+    if (bounds.width <= 0 || bounds.height <= 0) return;
+
+    if (chartType == 'pie' || chartType == 'donut') {
+      final radius = math.min(bounds.width, bounds.height).toDouble() / 2;
+      if (total <= 0) {
+        canvas.drawCircle(bounds.center, radius, Paint()..color = const Color(0xFFE8E2EF));
+        return;
+      }
+      final rect = Rect.fromCircle(center: bounds.center, radius: radius);
+      var start = -math.pi / 2;
+      for (var index = 0; index < positive.length; index++) {
+        final sweep = math.pi * 2 * positive[index] / total;
+        if (sweep > 0) {
+          canvas.drawArc(rect, start, sweep, true, Paint()..color = palette[index % palette.length]);
+        }
+        start += sweep;
+      }
+      if (chartType == 'donut') {
+        canvas.drawCircle(bounds.center, radius * .48, Paint()..color = Colors.white);
+      }
+      return;
+    }
+
+    final axisPaint = Paint()..color = const Color(0xFFD9D2E2)..strokeWidth = 1;
+    canvas.drawLine(Offset(bounds.left, bounds.bottom), Offset(bounds.right, bounds.bottom), axisPaint);
+    if (maxValue <= 0) return;
+
+    if (chartType == 'line') {
+      final path = Path();
+      final points = <Offset>[];
+      for (var index = 0; index < positive.length; index++) {
+        final x = positive.length == 1 ? bounds.center.dx : bounds.left + bounds.width * index / (positive.length - 1);
+        final y = bounds.bottom - bounds.height * positive[index] / maxValue;
+        final point = Offset(x, y);
+        points.add(point);
+        if (index == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
+      }
+      canvas.drawPath(path, Paint()
+        ..color = palette.first
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round);
+      for (var index = 0; index < points.length; index++) {
+        canvas.drawCircle(points[index], 4, Paint()..color = palette[index % palette.length]);
+        canvas.drawCircle(points[index], 1.7, Paint()..color = Colors.white);
+      }
+      return;
+    }
+
+    if (chartType == 'horizontal') {
+      final slot = bounds.height / positive.length;
+      for (var index = 0; index < positive.length; index++) {
+        final barWidth = bounds.width * positive[index] / maxValue;
+        final rect = Rect.fromLTWH(bounds.left, bounds.top + slot * index + slot * .2, barWidth, slot * .6);
+        canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(4)), Paint()..color = palette[index % palette.length]);
+      }
+      return;
+    }
+
+    final slot = bounds.width / positive.length;
+    for (var index = 0; index < positive.length; index++) {
+      final barHeight = bounds.height * positive[index] / maxValue;
+      final rect = Rect.fromLTWH(
+        bounds.left + slot * index + slot * .18,
+        bounds.bottom - barHeight,
+        slot * .64,
+        barHeight,
+      );
+      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(5)), Paint()..color = palette[index % palette.length]);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant StudioChartPainter oldDelegate) =>
+      oldDelegate.chartType != chartType || oldDelegate.values != values;
 }
 
 class StudioDocumentRenderer extends StatelessWidget {
