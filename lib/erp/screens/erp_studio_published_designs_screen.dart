@@ -55,7 +55,7 @@ class _ErpStudioPublishedDesignsScreenState extends State<ErpStudioPublishedDesi
     if (company == null) return;
     try {
       final id = row['id'].toString();
-      final remote = await _repository.getDesign(companyId: company, designId: id);
+      final remote = await _repository.getPublishedDesignMetadata(companyId: company, designId: id);
       final publishedRevision = (remote['published_revision'] as num?)?.toInt();
       if (publishedRevision == null || publishedRevision < 1) {
         throw StateError('هذا التصميم لا يحتوي على إصدار منشور صالح.');
