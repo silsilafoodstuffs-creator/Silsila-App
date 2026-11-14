@@ -93,19 +93,20 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
     }
     setState(() { _loading = true; _error = null; _message = null; });
     try {
-      var brandRows = await _db.from('erp_brands')
+      final brandRowsResult = await _db.from('erp_brands')
           .select('id,brand_code,brand_name,brand_name_en,logo_data,logo_mime_type,is_active,activity_code')
           .eq('company_id', widget.companyId!.trim())
           .eq('is_active', true)
           .eq('is_system', false)
           .order('display_order')
           .order('brand_code');
+      final brandRows = List<Map<String, dynamic>>.from(brandRowsResult);
       // Brand-to-activity ownership is explicit on the brand master.
       // The global scope remains company-wide.
       if (_activityCode != 'ALL') {
-        brandRows = (brandRows as List)
-            .where((brand) => _s(brand['activity_code']) == _activityCode)
-            .toList();
+        brandRows.removeWhere(
+          (brand) => _s(brand['activity_code']) != _activityCode,
+        );
       }
       var query = _db.from('erp_app_ticker_ads')
           .select('slot_no,brand_id')
