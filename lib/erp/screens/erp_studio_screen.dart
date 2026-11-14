@@ -82,6 +82,30 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   @override
+  void didUpdateWidget(covariant SilsilaStudioScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.companyId != widget.companyId) {
+      // A selected company change must not carry another company's draft
+      // identity or optimistic revision into the new workspace.
+      final next = StudioDocument.create('شاشة جديدة');
+      setState(() {
+        _doc = next;
+        _nameController.text = next.name;
+        _remoteDesignId = null;
+        _remoteRevision = 0;
+        _remoteStatus = 'draft';
+        _remoteDesigns = [];
+        _versions = [];
+        _selectedIds.clear();
+        _dirty = false;
+        _testedRevision = null;
+        _previewData = {};
+      });
+      if (_companyId != null) _loadRemoteDesigns();
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
@@ -302,7 +326,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   Future<void> _saveLocal() async {
     setState(() => _busy = true);
     try {
-      await _store.save(_doc);
+      await _store.save(_doc, companyId: _companyId);
       _notice('تم حفظ المسودة محلياً على هذا الجهاز.');
     } catch (e) {
       _notice('تعذر الحفظ المحلي: $e', error: true);
@@ -328,7 +352,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       );
       final nextRevision = _remoteRevision + 1;
       final next = _doc.copyWith(remoteId: id, remoteRevision: nextRevision, pendingSync: false);
-      await _store.save(next);
+      await _store.save(next, companyId: _companyId);
       if (!mounted) return;
       setState(() {
         _doc = next;
@@ -374,7 +398,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
             remoteRevision: draft.remoteRevision + 1,
             pendingSync: false,
           );
-          await _store.save(next);
+          await _store.save(next, companyId: _companyId);
           if (_doc.id == draft.id) {
             _doc = next;
             _remoteDesignId = id;
@@ -403,7 +427,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
 
   Future<void> _openLocalDrafts() async {
     try {
-      final drafts = await _store.list();
+      final drafts = await _store.list(companyId: _companyId);
       if (!mounted) return;
       await showDialog<void>(
         context: context,
@@ -525,7 +549,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       final decoded = StudioDocument.fromJson(Map<String, dynamic>.from(raw));
       final revision = (row['revision'] as num?)?.toInt() ?? 0;
       final next = decoded.copyWith(remoteId: id, remoteRevision: revision);
-      await _store.save(next);
+      await _store.save(next, companyId: _companyId);
       if (!mounted) return;
       setState(() {
         _doc = next;
