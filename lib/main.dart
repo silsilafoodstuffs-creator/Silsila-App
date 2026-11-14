@@ -1058,8 +1058,8 @@ class _HomeTickerAdsStrip extends StatefulWidget {
 }
 
 class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
-  static const double _itemWidth = 78;
-  static const double _itemGap = 5;
+  static const double _itemWidth = 66;
+  static const double _itemGap = 4;
   static const double _circleSize = 58;
   final ScrollController _scrollController = ScrollController();
   Timer? _autoScrollTimer;
@@ -1136,7 +1136,7 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
         : 1;
     final repeatedCount = _ads.length * copies;
     return SizedBox(
-      height: 88,
+      height: 64,
       child: ListView.builder(
         controller: _scrollController,
         scrollDirection: Axis.horizontal,
@@ -1146,64 +1146,42 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
         itemBuilder: (context, index) {
           final ad = _ads[index % _ads.length];
           final logo = _decodeDatabaseBytea(ad['logo_data']);
-          final brandName = (ad['brand_name'] ?? '').toString().trim();
           return SizedBox(
             width: _itemWidth,
             child: Padding(
               padding: const EdgeInsetsDirectional.only(end: _itemGap),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: _circleSize,
-                    height: _circleSize,
-                    padding: const EdgeInsets.all(3),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: SweepGradient(
-                        colors: [orange, pink, purple, orange],
-                      ),
-                    ),
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                      ),
-                      padding: const EdgeInsets.all(4),
-                      clipBehavior: Clip.antiAlias,
-                      alignment: Alignment.center,
-                      child: logo == null
-                          ? const Icon(Icons.storefront_outlined, color: purple, size: 27)
-                          : Image.memory(
-                              logo,
-                              width: 46,
-                              height: 46,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.storefront_outlined,
-                                color: purple,
-                                size: 27,
-                              ),
-                            ),
-                    ),
+              child: Container(
+                width: _circleSize,
+                height: _circleSize,
+                padding: const EdgeInsets.all(3),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: SweepGradient(
+                    colors: [orange, pink, purple, orange],
                   ),
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    width: _itemWidth,
-                    child: Text(
-                      brandName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: purple,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        height: 1.1,
-                      ),
-                    ),
+                ),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
                   ),
-                ],
+                  padding: const EdgeInsets.all(4),
+                  clipBehavior: Clip.antiAlias,
+                  alignment: Alignment.center,
+                  child: logo == null
+                      ? const Icon(Icons.storefront_outlined, color: purple, size: 27)
+                      : Image.memory(
+                          logo,
+                          width: 46,
+                          height: 46,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.storefront_outlined,
+                            color: purple,
+                            size: 27,
+                          ),
+                        ),
+                ),
               ),
             ),
           );
