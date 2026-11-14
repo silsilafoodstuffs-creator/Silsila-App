@@ -1072,7 +1072,7 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
     _load();
     _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 24), (_) {
       if (!mounted || !_scrollController.hasClients || _ads.length < 2) return;
-      final cycleExtent = _ads.length * (_itemWidth + _itemGap);
+      final cycleExtent = _ads.length * _itemWidth;
       final position = _scrollController.position;
       if (position.pixels >= cycleExtent) {
         _scrollController.jumpTo(position.pixels - cycleExtent);
