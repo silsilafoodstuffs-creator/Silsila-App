@@ -58,7 +58,7 @@ class _ErpStudioPublishedDesignsScreenState extends State<ErpStudioPublishedDesi
       final remote = await _repository.getDesign(companyId: company, designId: id);
       final publishedRevision = (remote['published_revision'] as num?)?.toInt();
       if (remote['status'] != 'published' || publishedRevision == null || publishedRevision < 1) {
-        throw const StateError('هذا التصميم لا يحتوي على إصدار منشور صالح.');
+        throw StateError('هذا التصميم لا يحتوي على إصدار منشور صالح.');
       }
 
       // Always render the immutable snapshot that was actually published.
