@@ -167,7 +167,7 @@ AS $function$
     JOIN activity_brand_catalog c ON c.brand_id = a.brand_id
     WHERE a.activity_code IS NULL
   ),
-  selected_ads AS (
+  selected_candidates AS (
     SELECT
       sp.slot_no, sp.brand_id, sp.brand_code, sp.brand_name,
       sp.logo_data, sp.logo_mime_type, sp.activity_code
@@ -183,6 +183,19 @@ AS $function$
         SELECT 1 FROM specific_ranked sp
         WHERE sp.slot_no = gp.slot_no AND sp.slot_rank = 1
       )
+  ),
+  selected_ads AS (
+    SELECT slot_no, brand_id, brand_code, brand_name,
+           logo_data, logo_mime_type, activity_code
+    FROM (
+      SELECT candidates.*,
+             row_number() OVER (
+               PARTITION BY brand_id
+               ORDER BY (activity_code IS NULL), slot_no
+             ) AS brand_rank
+      FROM selected_candidates candidates
+    ) unique_brands
+    WHERE brand_rank = 1
   ),
   last_slot AS (
     SELECT COALESCE(MAX(slot_no), 0)::integer AS slot_no
