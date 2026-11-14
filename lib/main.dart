@@ -1099,55 +1099,40 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
   Widget build(BuildContext context) {
     if (_ads.isEmpty) return const SizedBox.shrink();
     return SizedBox(
-      height: 34,
+      height: 38,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 2),
         itemCount: _ads.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 6),
+        separatorBuilder: (_, __) => const SizedBox(width: 2.5),
         itemBuilder: (context, index) {
           final ad = _ads[index];
           final logo = _decodeDatabaseBytea(ad['logo_data']);
           return Container(
-            width: 82,
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: purple.withValues(alpha: .12)),
+              shape: BoxShape.circle,
+              border: Border.all(color: purple.withValues(alpha: .18)),
             ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: logo == null
-                      ? const Icon(Icons.storefront_outlined, color: purple, size: 20)
-                      : Image.memory(
-                          logo,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.storefront_outlined,
-                            color: purple,
-                            size: 20,
-                          ),
-                        ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    (ad['brand_name'] ?? '').toString(),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+            clipBehavior: Clip.antiAlias,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.all(2),
+            child: logo == null
+                ? const Icon(Icons.storefront_outlined, color: purple, size: 20)
+                : Image.memory(
+                    logo,
+                    width: 32,
+                    height: 32,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.storefront_outlined,
                       color: purple,
-                      fontSize: 9,
-                      height: 1.05,
-                      fontWeight: FontWeight.w700,
+                      size: 20,
                     ),
                   ),
-                ),
-              ],
-            ),
           );
         },
       ),
