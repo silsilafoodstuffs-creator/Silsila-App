@@ -1091,9 +1091,14 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
   }
 
   Future<void> _load() async {
+    final requestVersion = ++_requestVersion;
+    if (mounted) setState(() => _ads = const []);
+    final activityCode = widget.activityCode?.trim();
+    // Never briefly show the global catalogue while the selected activity
+    // code is still resolving during app startup or an activity switch.
+    if (activityCode == null || activityCode.isEmpty) return;
     final client = database;
     if (client == null) return;
-    final requestVersion = ++_requestVersion;
     try {
       final rows = await client.rpc('get_silsila_public_ticker_ads', params: {
         'p_activity_code': widget.activityCode,
