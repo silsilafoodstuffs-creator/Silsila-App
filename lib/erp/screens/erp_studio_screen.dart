@@ -172,6 +172,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
   }
 
   void _change(StudioDocument next) {
+    if (_busy) {
+      _notice('انتظر انتهاء العملية الحالية قبل تعديل التصميم.');
+      return;
+    }
     _undo.add(_doc);
     if (_undo.length > 60) _undo.removeAt(0);
     _redo.clear();
@@ -187,6 +191,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
   }
 
   void _newDesign(String kind) {
+    if (_busy) return;
     if (_companyId != null && !_canAddStudio) {
       _notice('لا تملك صلاحية إضافة تصميمات جديدة.', error: true);
       return;
@@ -377,7 +382,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
   void _toggleHidden(StudioNode node) => _updateNode(node, hidden: !node.hidden);
 
   void _undoChange() {
-    if (_undo.isEmpty) return;
+    if (_busy || _undo.isEmpty) return;
     _redo.add(_doc);
     setState(() {
       _doc = _undo.removeLast();
@@ -388,7 +393,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
   }
 
   void _redoChange() {
-    if (_redo.isEmpty) return;
+    if (_busy || _redo.isEmpty) return;
     _undo.add(_doc);
     setState(() {
       _doc = _redo.removeLast();
@@ -521,6 +526,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
   }
 
   Future<void> _openLocalDrafts() async {
+    if (_busy) return;
     final company = _companyId;
     try {
       final drafts = await _store.list(companyId: company);
@@ -578,6 +584,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
   }
 
   Future<void> _importJson() async {
+    if (_busy) return;
     final company = _companyId;
     final controller = TextEditingController();
     final accepted = await showDialog<bool>(
