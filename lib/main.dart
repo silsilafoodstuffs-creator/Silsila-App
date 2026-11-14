@@ -1078,7 +1078,7 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
         _scrollController.jumpTo(position.pixels - cycleExtent);
       } else {
         _scrollController.jumpTo(
-          (position.pixels + .55).clamp(0.0, position.maxScrollExtent),
+          (position.pixels + .55).clamp(0.0, position.maxScrollExtent).toDouble(),
         );
       }
     });
