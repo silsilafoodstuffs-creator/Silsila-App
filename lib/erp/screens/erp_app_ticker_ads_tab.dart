@@ -34,7 +34,12 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
   String? _message;
 
   SupabaseClient get _db => Supabase.instance.client;
-  static const int _slotCount = 25;
+  int get _slotCount {
+    final assignedMax = _slotOwners.isEmpty
+        ? 0
+        : _slotOwners.keys.reduce((a, b) => a > b ? a : b);
+    return _brands.length > assignedMax ? _brands.length : assignedMax;
+  }
 
   String _s(dynamic value) => (value ?? '').toString();
 
@@ -106,14 +111,29 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           .map((brand) => _s(brand['id']))
           .toSet();
       final validAssignments = (assignedRows as List)
-          .where((row) => activeBrandIds.contains(_s(row['brand_id'])));
+          .where((row) => activeBrandIds.contains(_s(row['brand_id'])))
+          .toList();
+      final nextOwners = <int, String>{
+        for (final row in validAssignments)
+          (row['slot_no'] as num).toInt(): _s(row['brand_id']),
+      };
+      final assignedBrandIds = nextOwners.values.toSet();
+      var nextSlot = nextOwners.keys.isEmpty
+          ? 1
+          : nextOwners.keys.reduce((a, b) => a > b ? a : b) + 1;
+      // Keep every active brand in the activity's carousel. Existing manual
+      // order is preserved; newly added brands are appended automatically.
+      for (final brand in List<Map<String, dynamic>>.from(brandRows)) {
+        final brandId = _s(brand['id']);
+        if (assignedBrandIds.add(brandId)) {
+          nextOwners[nextSlot++] = brandId;
+        }
+      }
       setState(() {
         _brands = List<Map<String, dynamic>>.from(brandRows);
         _slotOwners
           ..clear()
-          ..addEntries(validAssignments.map((row) => MapEntry(
-            (row['slot_no'] as num).toInt(), _s(row['brand_id']),
-          )));
+          ..addAll(nextOwners);
         _hasUnsavedChanges = false;
         _loading = false;
       });
