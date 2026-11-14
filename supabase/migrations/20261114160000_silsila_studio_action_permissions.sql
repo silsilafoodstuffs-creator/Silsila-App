@@ -33,6 +33,7 @@ begin
     coalesce(pm.can_access, false)
     and case p_action
       when 'read' then true
+      when 'published_read' then true
       when 'save' then coalesce(pm.can_save, false)
       when 'approve' then coalesce(pm.can_edit, false)
       when 'publish' then coalesce(pm.can_edit, false)
@@ -47,7 +48,7 @@ begin
     and pm.user_id = auth.uid()
     and pm.menu_name = 'إعدادات عامة'
     and pm.submenu_name = 'بيانات أساسية'
-    and pm.page_name = 'سلسلة ستوديو'
+    and pm.page_name = case when p_action = 'published_read' then 'شاشات الاستوديو المنشورة' else 'سلسلة ستوديو' end
   limit 1;
 
   return coalesce(v_allowed, false);
@@ -257,6 +258,51 @@ begin
   return v_new_revision;
 end;
 $studio$;
+
+
+-- Read access is also action-scoped: ordinary company members must not be
+-- able to enumerate unpublished drafts or their historical revisions.
+drop policy if exists erp_studio_designs_read_member on public.erp_studio_designs;
+create policy erp_studio_designs_read_permission
+on public.erp_studio_designs
+for select to authenticated
+using (
+  public.erp_user_has_company_role(company_id, array['owner','admin']::text[])
+  or public.erp_studio_has_action_permission(company_id, 'read')
+  or (
+    coalesce(published_revision, 0) > 0
+    and public.erp_studio_has_action_permission(company_id, 'published_read')
+  )
+);
+
+drop policy if exists erp_studio_versions_read_member on public.erp_studio_design_versions;
+create policy erp_studio_versions_read_permission
+on public.erp_studio_design_versions
+for select to authenticated
+using (
+  public.erp_user_has_company_role(company_id, array['owner','admin']::text[])
+  or public.erp_studio_has_action_permission(company_id, 'read')
+  or (
+    public.erp_studio_has_action_permission(company_id, 'published_read')
+    and exists (
+      select 1
+      from public.erp_studio_designs d
+      where d.id = erp_studio_design_versions.design_id
+        and d.company_id = erp_studio_design_versions.company_id
+        and d.published_revision = erp_studio_design_versions.revision
+    )
+  )
+);
+
+drop policy if exists erp_studio_layout_profiles_read_member
+  on public.erp_studio_layout_profiles;
+create policy erp_studio_layout_profiles_read_permission
+on public.erp_studio_layout_profiles
+for select to authenticated
+using (
+  public.erp_user_has_company_role(company_id, array['owner','admin']::text[])
+  or public.erp_studio_has_action_permission(company_id, 'read')
+);
 
 -- Layout profiles are a separate mutable resource and use their own action grants.
 drop policy if exists erp_studio_layout_profiles_insert_admin
