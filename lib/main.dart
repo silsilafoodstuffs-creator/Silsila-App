@@ -1126,7 +1126,10 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
   @override
   Widget build(BuildContext context) {
     if (_ads.isEmpty) return const SizedBox.shrink();
-    final repeatedCount = _ads.length > 1 ? _ads.length * 2 : _ads.length;
+    final copies = _ads.length > 1
+        ? (MediaQuery.of(context).size.width / (_ads.length * _itemWidth)).ceil() + 2
+        : 1;
+    final repeatedCount = _ads.length * copies;
     return SizedBox(
       height: 88,
       child: ListView.builder(
