@@ -12,6 +12,7 @@ import 'studio_document.dart';
 /// namespace. They are never implicitly uploaded to whichever company happens
 /// to be selected later.
 class StudioDraftStore {
+  static const _legacySecureKey = 'silsila_studio_drafts_secure_v2';
   static const _legacyKey = 'silsila_studio_drafts_v1';
   static const _legacyFallbackKey = 'silsila_studio_drafts_fallback_v2';
   static const FlutterSecureStorage _secure = FlutterSecureStorage();
@@ -40,6 +41,16 @@ class StudioDraftStore {
     // Legacy unscoped data is quarantined in the local-only bucket. Never
     // migrate it into a company namespace because its original owner is unknown.
     if (scope == 'local') {
+      try {
+        final legacySecure = await _secure.read(key: _legacySecureKey);
+        if (legacySecure != null && legacySecure.isNotEmpty) {
+          await _secure.write(key: _secureKey('local'), value: legacySecure);
+          await _secure.delete(key: _legacySecureKey);
+          return legacySecure;
+        }
+      } catch (_) {
+        // Continue to the legacy SharedPreferences migration below.
+      }
       for (final legacyKey in [_legacyFallbackKey, _legacyKey]) {
         final legacy = prefs.getString(legacyKey);
         if (legacy == null || legacy.isEmpty) continue;
