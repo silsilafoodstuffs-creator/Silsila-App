@@ -1058,6 +1058,11 @@ class _HomeTickerAdsStrip extends StatefulWidget {
 }
 
 class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
+  static const double _itemWidth = 78;
+  static const double _itemGap = 5;
+  static const double _circleSize = 58;
+  final ScrollController _scrollController = ScrollController();
+  Timer? _autoScrollTimer;
   List<Map<String, dynamic>> _ads = const [];
   int _requestVersion = 0;
 
@@ -1065,6 +1070,18 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
   void initState() {
     super.initState();
     _load();
+    _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 24), (_) {
+      if (!mounted || !_scrollController.hasClients || _ads.length < 2) return;
+      final cycleExtent = _ads.length * (_itemWidth + _itemGap);
+      final position = _scrollController.position;
+      if (position.pixels >= cycleExtent) {
+        _scrollController.jumpTo(position.pixels - cycleExtent);
+      } else {
+        _scrollController.jumpTo(
+          (position.pixels + .55).clamp(0.0, position.maxScrollExtent),
+        );
+      }
+    });
   }
 
   @override
@@ -1089,50 +1106,98 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
             .compareTo((b['slot_no'] as num?)?.toInt() ?? 0));
       if (!mounted || requestVersion != _requestVersion) return;
       setState(() => _ads = loaded);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _scrollController.hasClients) {
+          _scrollController.jumpTo(0);
+        }
+      });
     } catch (_) {
       // Optional ticker ads must never block the customer home screen.
-    } finally {
     }
+  }
+
+  @override
+  void dispose() {
+    _autoScrollTimer?.cancel();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     if (_ads.isEmpty) return const SizedBox.shrink();
+    final repeatedCount = _ads.length > 1 ? _ads.length * 2 : _ads.length;
     return SizedBox(
-      height: 38,
-      child: ListView.separated(
+      height: 88,
+      child: ListView.builder(
+        controller: _scrollController,
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 2),
-        itemCount: _ads.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 2.5),
+        itemCount: repeatedCount,
         itemBuilder: (context, index) {
-          final ad = _ads[index];
+          final ad = _ads[index % _ads.length];
           final logo = _decodeDatabaseBytea(ad['logo_data']);
-          return Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: purple.withValues(alpha: .18)),
-            ),
-            clipBehavior: Clip.antiAlias,
-            alignment: Alignment.center,
-            padding: const EdgeInsets.all(2),
-            child: logo == null
-                ? const Icon(Icons.storefront_outlined, color: purple, size: 20)
-                : Image.memory(
-                    logo,
-                    width: 32,
-                    height: 32,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.storefront_outlined,
-                      color: purple,
-                      size: 20,
+          final brandName = (ad['brand_name'] ?? '').toString().trim();
+          return SizedBox(
+            width: _itemWidth,
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(end: _itemGap),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: _circleSize,
+                    height: _circleSize,
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: SweepGradient(
+                        colors: [orange, pink, purple, orange],
+                      ),
+                    ),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                      ),
+                      padding: const EdgeInsets.all(4),
+                      clipBehavior: Clip.antiAlias,
+                      alignment: Alignment.center,
+                      child: logo == null
+                          ? const Icon(Icons.storefront_outlined, color: purple, size: 27)
+                          : Image.memory(
+                              logo,
+                              width: 46,
+                              height: 46,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.storefront_outlined,
+                                color: purple,
+                                size: 27,
+                              ),
+                            ),
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    width: _itemWidth,
+                    child: Text(
+                      brandName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: purple,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        height: 1.1,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           );
         },
       ),
