@@ -113,8 +113,15 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
         _remoteDesigns = [];
         _versions = [];
         _selectedIds.clear();
+        _undo.clear();
+        _redo.clear();
+        _resizeDelta.clear();
+        _selectedSource = null;
+        _selectedField = null;
         _dirty = false;
         _testedRevision = null;
+        _lastTestReport = null;
+        _activeTab = 0;
         _previewData = {};
         _studioAccessChecked = _companyId == null;
         _studioAccessAllowed = _companyId == null;
@@ -408,17 +415,19 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
     }
     setState(() => _busy = true);
     try {
+      final document = _doc;
+      final currentRevision = _remoteRevision;
       final id = await _repository.saveDraft(
         companyId: company,
-        document: _doc,
-        designKey: 'studio_${_doc.id}',
-        remoteId: _remoteDesignId ?? _doc.remoteId,
-        expectedRevision: _remoteRevision == 0 ? null : _remoteRevision,
+        document: document,
+        designKey: 'studio_${document.id}',
+        remoteId: _remoteDesignId ?? document.remoteId,
+        expectedRevision: currentRevision == 0 ? null : currentRevision,
       );
-      final nextRevision = _remoteRevision + 1;
-      final next = _doc.copyWith(remoteId: id, remoteRevision: nextRevision, pendingSync: false);
-      await _store.save(next, companyId: _companyId);
-      if (!mounted) return;
+      final nextRevision = currentRevision + 1;
+      final next = document.copyWith(remoteId: id, remoteRevision: nextRevision, pendingSync: false);
+      await _store.save(next, companyId: company);
+      if (!mounted || company != _companyId || _doc.id != document.id) return;
       setState(() {
         _doc = next;
         _remoteDesignId = id;
@@ -450,7 +459,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
     var synced = 0;
     final failures = <String>[];
     try {
-      final drafts = await _store.list(companyId: _companyId);
+      final drafts = await _store.list(companyId: company);
       final pending = drafts.where((draft) => draft.pendingSync || draft.remoteId == null).toList();
       for (final draft in pending) {
         final allowed = draft.remoteId == null ? _canAddStudio : _canSaveStudio;
@@ -472,7 +481,8 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
             remoteRevision: draft.remoteRevision + 1,
             pendingSync: false,
           );
-          await _store.save(next, companyId: _companyId);
+          await _store.save(next, companyId: company);
+          if (!mounted || company != _companyId) return;
           if (_doc.id == draft.id) {
             _doc = next;
             _remoteDesignId = id;
@@ -486,6 +496,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
           failures.add('${draft.name}: $e');
         }
       }
+      if (company != _companyId) return;
       await _loadRemoteDesigns();
       if (failures.isEmpty) {
         if (!silent && pending.isEmpty) _notice('لا توجد مسودات معلقة للمزامنة.');
@@ -501,8 +512,9 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
   }
 
   Future<void> _openLocalDrafts() async {
+    final company = _companyId;
     try {
-      final drafts = await _store.list(companyId: _companyId);
+      final drafts = await _store.list(companyId: company);
       if (!mounted) return;
       await showDialog<void>(
         context: context,
@@ -516,6 +528,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
                     title: Text(draft.name),
                     subtitle: Text('${draft.designKind} • ${draft.nodes.length} مكون • إصدار مركزي ${draft.remoteRevision}'),
                     onTap: () {
+                      if (company != _companyId) {
+                        Navigator.pop(dialogContext);
+                        return;
+                      }
                       setState(() {
                         _doc = draft;
                         _nameController.text = draft.name;
@@ -532,7 +548,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
                       tooltip: 'حذف المسودة المحلية',
                       icon: const Icon(Icons.delete_outline),
                       onPressed: () async {
-                        await _store.delete(draft.id, companyId: _companyId);
+                        await _store.delete(draft.id, companyId: company);
                         if (dialogContext.mounted) Navigator.pop(dialogContext);
                         _openLocalDrafts();
                       },
@@ -553,6 +569,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
   }
 
   Future<void> _importJson() async {
+    final company = _companyId;
     final controller = TextEditingController();
     final accepted = await showDialog<bool>(
       context: context,
@@ -578,6 +595,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
       return;
     }
     try {
+      if (company != _companyId) throw StateError('تغيرت الشركة النشطة أثناء الاستيراد؛ أعد المحاولة.');
       final parsed = jsonDecode(controller.text);
       if (parsed is! Map) throw const FormatException('يجب أن يكون جذر الملف كائناً.');
       final importMap = Map<String, dynamic>.from(parsed)..remove('remoteId')..['remoteRevision'] = 0;
@@ -593,7 +611,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
         _dirty = true;
         _testedRevision = null;
       });
-      await _store.save(imported, companyId: _companyId);
+      await _store.save(imported, companyId: company);
       _notice('تم التحقق من التصميم واستيراده كمسودة محلية.');
     } catch (e) {
       _notice('رفض الاستيراد: $e', error: true);
@@ -638,7 +656,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
     if (company == null) return;
     try {
       final rows = await _repository.listDesigns(company);
-      if (mounted) setState(() => _remoteDesigns = rows);
+      if (mounted && company == _companyId) setState(() => _remoteDesigns = rows);
     } catch (e) {
       if (mounted) _notice('تعذر تحميل التصميمات المركزية: $e', error: true);
     }
@@ -650,13 +668,14 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
     setState(() => _busy = true);
     try {
       final row = await _repository.getDesign(companyId: company, designId: id);
+      if (!mounted || company != _companyId) return;
       final raw = row['design_json'];
       if (raw is! Map) throw const FormatException('مخطط التصميم المركزي غير صالح.');
       final decoded = StudioDocument.fromJson(Map<String, dynamic>.from(raw));
       final revision = (row['revision'] as num?)?.toInt() ?? 0;
       final next = decoded.copyWith(remoteId: id, remoteRevision: revision);
-      await _store.save(next, companyId: _companyId);
-      if (!mounted) return;
+      await _store.save(next, companyId: company);
+      if (!mounted || company != _companyId) return;
       setState(() {
         _doc = next;
         _nameController.text = next.name;
@@ -686,7 +705,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
     }
     try {
       final rows = await _repository.listVersions(companyId: company, designId: id);
-      if (mounted) setState(() => _versions = rows);
+      if (mounted && company == _companyId && id == _remoteDesignId) setState(() => _versions = rows);
     } catch (e) {
       _notice('تعذر تحميل سجل الإصدارات: $e', error: true);
     }
@@ -708,6 +727,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
         targetRevision: revision,
         expectedRevision: _remoteRevision,
       );
+      if (!mounted || company != _companyId || id != _remoteDesignId) return;
       await _loadRemoteDesign(id);
       if (!mounted) return;
       setState(() {
@@ -725,7 +745,9 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
   }
 
   Future<void> _runTests() async {
-    if (_companyId != null && !_canPreviewStudio) {
+    final company = _companyId;
+    final document = _doc;
+    if (company != null && !_canPreviewStudio) {
       _notice('لا تملك صلاحية معاينة واختبار التصميم.', error: true);
       return;
     }
@@ -733,8 +755,8 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
     final errors = <String>[];
     final notes = <String>[];
     try {
-      StudioDocument.fromJson(_doc.toJson());
-      for (final node in _doc.nodes) {
+      StudioDocument.fromJson(document.toJson());
+      for (final node in document.nodes) {
         final binding = node.props['binding'];
         if (binding is Map && binding['source'] is String) {
           try {
@@ -748,14 +770,15 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
           }
         }
       }
-      final company = _companyId;
       if (company != null) {
-        _previewData = await _repository.previewBindings(companyId: company, document: _doc, limit: 50);
+        final preview = await _repository.previewBindings(companyId: company, document: document, limit: 50);
+        if (!mounted || company != _companyId || document.id != _doc.id) return;
+        _previewData = preview;
         notes.add('تم اختبار مصادر البيانات الفعلية بصلاحيات المستخدم الحالي.');
       } else {
         notes.add('تم اختبار بنية التصميم فقط؛ لم تُختبر قاعدة البيانات لعدم تحديد شركة نشطة.');
       }
-      if (_doc.nodes.any((n) => n.locked && n.hidden)) {
+      if (document.nodes.any((n) => n.locked && n.hidden)) {
         notes.add('يوجد مكون مقفل ومخفي؛ تحقق من ظهوره قبل الاعتماد.');
       }
       if (errors.isEmpty) {
@@ -793,7 +816,9 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
     }
     setState(() => _busy = true);
     try {
-      await _repository.approve(companyId: company, designId: id, expectedRevision: _remoteRevision);
+      final revision = _remoteRevision;
+      await _repository.approve(companyId: company, designId: id, expectedRevision: revision);
+      if (!mounted || company != _companyId || id != _remoteDesignId) return;
       setState(() => _remoteStatus = 'approved');
       await _loadRemoteDesigns();
       _notice('تم اعتماد الإصدار $_remoteRevision.');
@@ -818,7 +843,9 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
     }
     setState(() => _busy = true);
     try {
-      await _repository.publish(companyId: company, designId: id, testedRevision: _remoteRevision);
+      final revision = _remoteRevision;
+      await _repository.publish(companyId: company, designId: id, testedRevision: revision);
+      if (!mounted || company != _companyId || id != _remoteDesignId) return;
       setState(() => _remoteStatus = 'published');
       await _loadRemoteDesigns();
       _notice('تم نشر التصميم المركزي.');
@@ -843,6 +870,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
     setState(() => _busy = true);
     try {
       final rows = await _repository.previewSource(companyId: company, sourceKey: source, limit: 20);
+      if (!mounted || company != _companyId || source != _selectedSource) return;
       setState(() => _previewData = {..._previewData, source: rows});
       _notice('تم جلب ${rows.length} سجل من المصدر المحدد.');
     } catch (e) {
