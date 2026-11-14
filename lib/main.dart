@@ -4645,7 +4645,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
   final storyService = StoryService();
   final picker = ImagePicker();
   String newStoryMediaType = 'image';
-  String storyFilter = 'الكل';
+  String storyFilter = 'كل';
   int durationMinutes = 60;
   XFile? selectedMedia;
   List<Map<String, dynamic>> stories = [];
@@ -5047,8 +5047,8 @@ class _StoriesScreenState extends State<StoriesScreen> {
     final filtered = stories.where((story) {
       if (hiddenStoryIds.contains((story['id'] ?? '').toString())) return false;
       final role = (story['user_role'] ?? story['role'] ?? '').toString().toLowerCase();
-      if (storyFilter == 'الموردون') return role == 'supplier' || role == 'مورد';
-      if (storyFilter == 'العملاء') return role == 'customer' || role == 'client' || role == 'عميل';
+      if (storyFilter == 'موردون') return role == 'supplier' || role == 'مورد';
+      if (storyFilter == 'عملاء') return role == 'customer' || role == 'client' || role == 'عميل';
       if (storyFilter == 'شركات شحن') return role == 'shipping_company' || role == 'شركة شحن';
       return true;
     }).toList();
@@ -5082,7 +5082,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
           ]),
           const SizedBox(height: 10),
           Row(
-            children: ['الكل', 'الموردون', 'العملاء', 'شركات شحن'].map((filter) => Expanded(
+            children: ['كل', 'موردون', 'عملاء', 'شركات شحن'].map((filter) => Expanded(
               child: Padding(
                 padding: const EdgeInsetsDirectional.symmetric(horizontal: 2),
                 child: ChoiceChip(
@@ -5114,70 +5114,91 @@ class _StoriesScreenState extends State<StoriesScreen> {
           if (groups.isEmpty && error == null)
             Padding(padding: const EdgeInsets.all(28), child: Text(silsilaText('لا توجد قصص نشطة حاليًا.'), textAlign: TextAlign.center)),
           if (groups.isNotEmpty)
-            SizedBox(
-              height: 126,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: groups.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  final owner = groups[index].key;
-                  final items = groups[index].value;
-                  final first = items.first;
-                  final allSeen = items.every((s) => viewedStoryIds.contains((s['id'] ?? '').toString()));
-                  final avatar = (first['avatar_url'] ?? '').toString();
-                  final name = (first['display_name'] ?? first['full_name'] ?? 'مستخدم سلسلة').toString();
-                  return SizedBox(
-                    width: 78,
-                    child: Column(children: [
-                      Stack(clipBehavior: Clip.none, children: [
-                        GestureDetector(
-                          onTap: () => _openStoryGroup(items, 0),
-                          child: CustomPaint(
-                            painter: _StoryRingPainter(segmentCount: items.length, viewed: allSeen),
-                            child: Padding(
-                              padding: const EdgeInsets.all(4),
-                              child: CircleAvatar(
-                                radius: 29,
-                                backgroundColor: orange.withValues(alpha: .16),
-                                backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
-                                child: avatar.isEmpty ? const Icon(Icons.person_outline, color: purple, size: 28) : null,
+            Column(
+              children: groups.map((entry) {
+                final owner = entry.key;
+                final items = entry.value;
+                final first = items.first;
+                final allSeen = items.every((s) => viewedStoryIds.contains((s['id'] ?? '').toString()));
+                final avatar = (first['avatar_url'] ?? '').toString();
+                final name = (first['display_name'] ?? first['full_name'] ?? 'مستخدم سلسلة').toString();
+                final latestCaption = (first['caption'] ?? '').toString().trim();
+                final subtitle = latestCaption.isNotEmpty
+                    ? latestCaption
+                    : items.length > 1
+                        ? '${items.length} قصص نشطة'
+                        : (first['media_type'] == 'video' ? 'فيديو' : first['media_type'] == 'text' ? 'قصة نصية' : 'صورة');
+                return Column(
+                  children: [
+                    InkWell(
+                      onTap: () => _openStoryGroup(items, 0),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+                        child: Row(
+                          children: [
+                            Stack(clipBehavior: Clip.none, children: [
+                              CustomPaint(
+                                painter: _StoryRingPainter(segmentCount: items.length, viewed: allSeen),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(4),
+                                  child: CircleAvatar(
+                                    radius: 27,
+                                    backgroundColor: orange.withValues(alpha: .16),
+                                    backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
+                                    child: avatar.isEmpty ? const Icon(Icons.person_outline, color: purple, size: 27) : null,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: -4, right: -5,
+                                child: Material(
+                                  color: Colors.white, shape: const CircleBorder(),
+                                  child: InkWell(
+                                    customBorder: const CircleBorder(),
+                                    onTap: () => _hideStoryGroup(items),
+                                    child: const Padding(padding: EdgeInsets.all(3), child: Icon(Icons.close, color: Colors.red, size: 14)),
+                                  ),
+                                ),
+                              ),
+                            ]),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                                  const SizedBox(height: 3),
+                                  Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                ],
                               ),
                             ),
-                          ),
-                        ),
-                        Positioned(
-                          top: -5, right: -7,
-                          child: Material(
-                            color: Colors.white, shape: const CircleBorder(),
-                            child: InkWell(
-                              customBorder: const CircleBorder(),
-                              onTap: () => _hideStoryGroup(items),
-                              child: const Padding(padding: EdgeInsets.all(3), child: Icon(Icons.close, color: Colors.red, size: 16)),
+                            IconButton(
+                              tooltip: 'تحديد كل القصص كمقروءة',
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () => _markStoryGroupViewed(items),
+                              icon: const Icon(Icons.done, size: 19, color: Colors.grey),
                             ),
-                          ),
+                            IconButton(
+                              tooltip: 'إضافة للمفضلة',
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () => _toggleFavoriteOwner(owner),
+                              icon: Icon(
+                                favoriteStoryOwnerIds.contains(owner) ? Icons.star : Icons.star_border,
+                                size: 19,
+                                color: favoriteStoryOwnerIds.contains(owner) ? orange : Colors.grey,
+                              ),
+                            ),
+                          ],
                         ),
-                      ]),
-                      const SizedBox(height: 4),
-                      Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)),
-                      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        InkWell(
-                          onTap: () => _markStoryGroupViewed(items),
-                          child: const Padding(padding: EdgeInsets.all(3), child: Icon(Icons.done, size: 16, color: Colors.grey)),
-                        ),
-                        InkWell(
-                          onTap: () => _toggleFavoriteOwner(owner),
-                          child: Padding(
-                            padding: const EdgeInsets.all(3),
-                            child: Icon(favoriteStoryOwnerIds.contains(owner) ? Icons.star : Icons.star_border,
-                              size: 16, color: favoriteStoryOwnerIds.contains(owner) ? orange : Colors.grey),
-                          ),
-                        ),
-                      ]),
-                    ]),
-                  );
-                },
-              ),
+                      ),
+                    ),
+                    const Divider(height: 1, indent: 72),
+                  ],
+                );
+              }).toList(),
             ),
           const SizedBox(height: 8),
           Text(silsilaText('اضغط على صورة صاحب القصة لفتح الحالات. علامة الصح تجعل القصة مقروءة، وX تخفيها لديك فقط.')),
