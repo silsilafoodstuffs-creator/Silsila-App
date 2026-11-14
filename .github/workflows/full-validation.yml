@@ -145,12 +145,18 @@ jobs:
           done
           node tools/web_view_test.mjs http://127.0.0.1:8765/Silsila-App/
 
+      # Reuse Gradle dependency and task caches to avoid repeating expensive
+      # Android dependency instrumentation on every validation run.
+      - name: Set up Gradle cache
+        if: always() && !cancelled()
+        uses: gradle/actions/setup-gradle@v4
+
       # Keep Android build and artifact collection running even when WebView
       # fails, so one failed browser assertion does not hide other build results.
       - name: Build Android debug APK
         id: android_debug
         if: always() && !cancelled()
-        run: flutter build apk --debug --verbose
+        run: flutter build apk --debug --no-pub
 
       - name: Verify Android APK output
         id: verify_android
