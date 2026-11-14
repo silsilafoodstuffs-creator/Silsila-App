@@ -41,7 +41,7 @@ class _ErpStudioPublishedDesignsScreenState extends State<ErpStudioPublishedDesi
     });
     try {
       final rows = await _repository.listDesigns(company);
-      final published = rows.where((row) => row['status'] == 'published').toList();
+      final published = rows.where((row) => ((row['published_revision'] as num?)?.toInt() ?? 0) > 0).toList();
       if (mounted) setState(() => _designs = published);
     } catch (error) {
       if (mounted) setState(() => _error = 'تعذر تحميل التصميمات المنشورة: $error');
@@ -57,7 +57,7 @@ class _ErpStudioPublishedDesignsScreenState extends State<ErpStudioPublishedDesi
       final id = row['id'].toString();
       final remote = await _repository.getDesign(companyId: company, designId: id);
       final publishedRevision = (remote['published_revision'] as num?)?.toInt();
-      if (remote['status'] != 'published' || publishedRevision == null || publishedRevision < 1) {
+      if (publishedRevision == null || publishedRevision < 1) {
         throw StateError('هذا التصميم لا يحتوي على إصدار منشور صالح.');
       }
 
@@ -113,7 +113,10 @@ class _ErpStudioPublishedDesignsScreenState extends State<ErpStudioPublishedDesi
                           child: ListTile(
                             leading: const Icon(Icons.web_asset_outlined, color: _publishedPurple),
                             title: Text((row['name'] ?? '').toString()),
-                            subtitle: Text('${row['design_kind']} • الإصدار المنشور ${row['published_revision'] ?? row['revision']}'),
+                            subtitle: Text(
+                              '${row['design_kind']} • الإصدار المنشور ${row['published_revision'] ?? row['revision']}'
+                              '${((row['revision'] as num?)?.toInt() ?? 0) > ((row['published_revision'] as num?)?.toInt() ?? 0) ? ' • توجد مسودة أحدث' : ''}',
+                            ),
                             trailing: const Icon(Icons.open_in_new),
                             onTap: () => _open(row),
                           ),
