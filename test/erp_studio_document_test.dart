@@ -1,7 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silsila_app/erp/services/studio_data_sources.dart';
 import 'package:silsila_app/erp/services/studio_document.dart';
 import 'package:silsila_app/erp/services/erp_studio_draft_store.dart';
+import 'package:silsila_app/erp/services/studio_renderer.dart';
 
 void main() {
   group('StudioDraftStore company isolation', () {
@@ -19,6 +21,40 @@ void main() {
       expect(companyB, isNot('local'));
       expect(companyA, isNot(companyB));
     });
+  });
+
+
+  group('Studio BI charts', () {
+    for (final chartType in ['bar', 'horizontal', 'line', 'pie', 'donut']) {
+      testWidgets('renders $chartType charts from bound data', (tester) async {
+        final node = StudioNode(
+          id: 'chart',
+          type: 'chart',
+          props: {
+            'chartType': chartType,
+            'valueField': 'value',
+            'labelField': 'label',
+            'binding': {'source': 'sales', 'field': 'value'},
+          },
+        );
+        await tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+            body: StudioComponentRegistry.build(
+              node,
+              dataBySource: {
+                'sales': [
+                  {'label': 'A', 'value': 10},
+                  {'label': 'B', 'value': 25},
+                  {'label': 'C', 'value': 15},
+                ],
+              },
+            ),
+          ),
+        ));
+        expect(find.byType(CustomPaint), findsOneWidget);
+        await tester.pumpAndSettle();
+      });
+    }
   });
 
   group('StudioDocument schema', () {
