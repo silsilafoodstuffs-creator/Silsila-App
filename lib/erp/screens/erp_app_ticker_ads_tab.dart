@@ -200,27 +200,35 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
     });
   }
 
-  Future<void> _changeActivity(String nextCode) async {
-    if (nextCode == _activityCode) return;
-    if (_hasUnsavedChanges) {
-      final choice = await showDialog<String>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('تعديلات غير محفوظة'),
-          content: const Text('هل ترغب في الحفظ؟'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, 'cancel'), child: const Text('إلغاء الأمر')),
-            TextButton(onPressed: () => Navigator.pop(dialogContext, 'discard'), child: const Text('لأ')),
-            FilledButton(onPressed: () => Navigator.pop(dialogContext, 'save'), child: const Text('نعم')),
-          ],
-        ),
-      );
-      if (!mounted || choice == null || choice == 'cancel') return;
-      if (choice == 'save') {
-        await _save();
-        if (!mounted || _error != null || _hasUnsavedChanges) return;
-      }
+  Future<bool> _confirmPendingChanges() async {
+    if (!_hasUnsavedChanges) return true;
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('تعديلات غير محفوظة'),
+        content: const Text('هل ترغب في الحفظ؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, 'cancel'), child: const Text('إلغاء الأمر')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, 'discard'), child: const Text('لأ')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, 'save'), child: const Text('نعم')),
+        ],
+      ),
+    );
+    if (!mounted || choice == null || choice == 'cancel') return false;
+    if (choice == 'save') {
+      await _save();
+      return mounted && _error == null && !_hasUnsavedChanges;
     }
+    return choice == 'discard';
+  }
+
+  Future<void> _refresh() async {
+    if (!await _confirmPendingChanges()) return;
+    await _load();
+  }
+
+  Future<void> _changeActivity(String nextCode) async {
+    if (nextCode == _activityCode || !await _confirmPendingChanges()) return;
     if (!mounted) return;
     setState(() {
       _activityCode = nextCode;
@@ -294,7 +302,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
               )),
               IconButton(
                 tooltip: 'تحديث',
-                onPressed: _loading || _saving ? null : _load,
+                onPressed: _loading || _saving ? null : _refresh,
                 icon: const Icon(Icons.refresh),
               ),
             ]),
@@ -328,7 +336,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
               controller: _search,
               onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(
-                labelText: 'ابحث باسم البراند أو كوده',
+                labelText: 'ابحث باسم البراند العربي أو الإنجليزي أو كوده',
                 prefixIcon: Icon(Icons.search, color: _tickerPurple),
                 isDense: true,
                 border: OutlineInputBorder(),
