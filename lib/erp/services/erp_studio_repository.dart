@@ -22,13 +22,20 @@ class ErpStudioRepository {
     return (rows as List).map((e) => Map<String, dynamic>.from(e as Map)).toList(growable: false);
   }
 
+  Future<Map<String, dynamic>> getDesign({required String companyId, required String designId}) async {
+    _requireCompany(companyId);
+    final row = await _client.from('erp_studio_designs').select('*')
+        .eq('company_id', companyId).eq('id', designId).single();
+    return Map<String, dynamic>.from(row);
+  }
+
   Future<List<Map<String, dynamic>>> listVersions({
     required String companyId,
     required String designId,
   }) async {
     _requireCompany(companyId);
     final rows = await _client.from('erp_studio_design_versions')
-        .select('id,revision,change_note,created_by,created_at')
+        .select('id,revision,change_note,created_by,created_at,design_json,binding_json')
         .eq('company_id', companyId)
         .eq('design_id', designId)
         .order('revision', ascending: false)
