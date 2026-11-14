@@ -377,7 +377,6 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                             headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                             columnSpacing: 2.5,
                             horizontalMargin: 2.5,
-                            verticalMargin: 2,
                             headingRowHeight: 40,
                             dataRowMinHeight: 40,
                             dataRowMaxHeight: 44,
