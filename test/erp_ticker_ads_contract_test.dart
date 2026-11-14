@@ -55,10 +55,10 @@ void main() {
     expect(activityMigrationSource, contains('activity_brand_catalog'));
     expect(activityMigrationSource, contains('public.erp_item_categories'));
     expect(activityMigrationSource, contains('ADD COLUMN IF NOT EXISTS activity_code text'));
-    expect(activityMigrationSource, contains('b.activity_code = NULLIF'));
+    expect(activityMigrationSource, contains('SET activity_code = COALESCE'));
     expect(activityMigrationSource, contains('REFERENCES public.activity_types(code)'));
     expect(brandSource, contains("'activity_code': activityCode"));
-    expect(adminSource, contains("_s(brand['activity_code']) == _activityCode"));
+    expect(adminSource, contains("_s(brand['activity_code']) != _activityCode"));
     expect(activityMigrationSource, contains('public.erp_items i'));
     expect(activityMigrationSource, contains('WHERE NOT EXISTS'));
     expect(activityMigrationSource, contains('ORDER BY result.slot_no'));
