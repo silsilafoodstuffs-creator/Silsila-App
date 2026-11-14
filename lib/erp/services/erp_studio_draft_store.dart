@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -15,7 +16,8 @@ class StudioDraftStore {
   static const _legacyFallbackKey = 'silsila_studio_drafts_fallback_v2';
   static const FlutterSecureStorage _secure = FlutterSecureStorage();
 
-  String _scope(String? companyId) {
+  @visibleForTesting
+  static String scopeForCompany(String? companyId) {
     final value = companyId?.trim();
     if (value == null || value.isEmpty) return 'local';
     return base64Url.encode(utf8.encode(value)).replaceAll('=', '');
@@ -69,7 +71,7 @@ class StudioDraftStore {
   }
 
   Future<List<StudioDocument>> list({String? companyId}) async {
-    final raw = await _readRaw(_scope(companyId));
+    final raw = await _readRaw(scopeForCompany(companyId));
     if (raw == null || raw.isEmpty) return [];
     final decoded = jsonDecode(raw);
     if (decoded is! List) return [];
@@ -78,7 +80,7 @@ class StudioDraftStore {
   }
 
   Future<void> save(StudioDocument document, {String? companyId}) async {
-    final scope = _scope(companyId);
+    final scope = scopeForCompany(companyId);
     final drafts = await list(companyId: companyId);
     final index = drafts.indexWhere((e) => e.id == document.id);
     if (index < 0) {
