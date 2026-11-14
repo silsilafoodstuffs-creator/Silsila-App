@@ -105,7 +105,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       _testedRevision = null;
       _lastTestReport = null;
     });
-    _store.save(_doc).catchError((Object error) {
+    _store.save(_doc, companyId: _companyId).catchError((Object error) {
       _notice('تعذر حفظ نسخة العمل المحلية: $error', error: true);
     });
   }
@@ -135,7 +135,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       _previewData = {};
       _activeTab = kind == 'report' ? 2 : kind == 'icon' ? 3 : kind == 'table' || kind == 'grid' || kind == 'tree' ? 4 : 1;
     });
-    _store.save(next);
+    _store.save(next, companyId: _companyId);
   }
 
   Map<String, dynamic> _defaultProps(String type) {
@@ -357,7 +357,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     var synced = 0;
     final failures = <String>[];
     try {
-      final drafts = await _store.list();
+      final drafts = await _store.list(companyId: _companyId);
       final pending = drafts.where((draft) => draft.pendingSync || draft.remoteId == null).toList();
       for (final draft in pending) {
         try {
@@ -433,7 +433,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
                       tooltip: 'حذف المسودة المحلية',
                       icon: const Icon(Icons.delete_outline),
                       onPressed: () async {
-                        await _store.delete(draft.id);
+                        await _store.delete(draft.id, companyId: _companyId);
                         if (dialogContext.mounted) Navigator.pop(dialogContext);
                         _openLocalDrafts();
                       },
