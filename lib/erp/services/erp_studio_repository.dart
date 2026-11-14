@@ -13,6 +13,38 @@ class ErpStudioRepository {
     if (_client.auth.currentUser == null) throw StateError('يجب تسجيل الدخول أولاً.');
   }
 
+  Future<Map<String, bool>> loadStudioPermissions(String companyId) async {
+    _requireCompany(companyId);
+    final userId = _client.auth.currentUser!.id;
+    final member = await _client.from('erp_company_members')
+        .select('member_role,is_active')
+        .eq('company_id', companyId)
+        .eq('user_id', userId)
+        .maybeSingle();
+    if (member == null || member['is_active'] != true) {
+      return const {'canAccess': false, 'canSave': false, 'canEdit': false, 'canDelete': false};
+    }
+    final role = (member['member_role'] ?? '').toString().trim().toLowerCase();
+    if (role == 'owner' || role == 'admin') {
+      return const {'canAccess': true, 'canSave': true, 'canEdit': true, 'canDelete': true};
+    }
+    final permission = await _client.from('erp_user_permission_matrix')
+        .select('can_access,can_save,can_edit,can_delete')
+        .eq('company_id', companyId)
+        .eq('user_id', userId)
+        .eq('menu_name', 'إعدادات عامة')
+        .eq('submenu_name', 'بيانات أساسية')
+        .eq('page_name', 'سلسلة ستوديو')
+        .maybeSingle();
+    final canAccess = permission?['can_access'] == true;
+    return {
+      'canAccess': canAccess,
+      'canSave': canAccess && permission?['can_save'] == true,
+      'canEdit': canAccess && permission?['can_edit'] == true,
+      'canDelete': canAccess && permission?['can_delete'] == true,
+    };
+  }
+
   Future<List<Map<String, dynamic>>> listDesigns(String companyId) async {
     _requireCompany(companyId);
     final rows = await _client.from('erp_studio_designs')
