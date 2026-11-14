@@ -34,7 +34,9 @@ begin
     and case p_action
       when 'read' then true
       when 'published_read' then true
+      when 'create' then coalesce(pm.can_add, false)
       when 'save' then coalesce(pm.can_save, false)
+      when 'preview' then coalesce(pm.can_preview, false)
       when 'approve' then coalesce(pm.can_edit, false)
       when 'publish' then coalesce(pm.can_edit, false)
       when 'restore' then coalesce(pm.can_edit, false)
@@ -83,8 +85,10 @@ declare
   v_id uuid;
   v_revision integer;
 begin
-  if not public.erp_studio_has_action_permission(p_company_id, 'save') then
-    raise exception 'غير مصرح بحفظ تصميمات الاستوديو لهذه الشركة';
+  if not public.erp_studio_has_action_permission(
+    p_company_id, case when p_design_id is null then 'create' else 'save' end
+  ) then
+    raise exception 'غير مصرح بإنشاء أو حفظ تصميمات الاستوديو لهذه الشركة';
   end if;
 
   if p_name is null or length(trim(p_name)) not between 1 and 160
