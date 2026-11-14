@@ -130,6 +130,13 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
         _canEditStudio = false;
         _canPreviewStudio = false;
         _canDeleteStudio = false;
+        _undo.clear();
+        _redo.clear();
+        _resizeDelta.clear();
+        _selectedSource = null;
+        _selectedField = null;
+        _lastTestReport = null;
+        _activeTab = 0;
       });
       if (_companyId != null) {
         _loadRemoteDesigns();
@@ -255,8 +262,8 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
   }
 
   void _add(String type, {Map<String, dynamic>? props}) {
-    if (_companyId != null && !_canEditStudio) {
-      _notice('لا تملك صلاحية تعديل مكونات التصميم.', error: true);
+    if (_companyId != null && !_canAddStudio) {
+      _notice('لا تملك صلاحية إضافة مكونات للتصميم.', error: true);
       return;
     }
     if (_doc.nodes.length >= 500) {
@@ -303,7 +310,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
   }
 
   void _duplicateSelected() {
-    if (_companyId != null && !_canEditStudio) return;
+    if (_companyId != null && !_canAddStudio) return;
     final selected = _doc.nodes.where((n) => _selectedIds.contains(n.id) && !n.locked).toList();
     if (selected.isEmpty) return;
     final copies = selected.map((node) => StudioNode(
@@ -460,8 +467,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
     final failures = <String>[];
     try {
       final drafts = await _store.list(companyId: company);
+      if (!mounted || company != _companyId) return;
       final pending = drafts.where((draft) => draft.pendingSync || draft.remoteId == null).toList();
       for (final draft in pending) {
+        if (!mounted || company != _companyId) return;
         final allowed = draft.remoteId == null ? _canAddStudio : _canSaveStudio;
         if (!allowed) {
           failures.add('${draft.name}: لا توجد صلاحية إنشاء أو حفظ هذا التصميم');
@@ -515,7 +524,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
     final company = _companyId;
     try {
       final drafts = await _store.list(companyId: company);
-      if (!mounted) return;
+      if (!mounted || company != _companyId) return;
       await showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
@@ -636,6 +645,9 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
         _canDeleteStudio = permissions['canDelete'] == true;
         _studioAccessChecked = true;
       });
+      if (_studioAccessAllowed && (_canAddStudio || _canSaveStudio)) {
+        await _syncPendingDrafts(silent: true);
+      }
     } catch (error) {
       if (!mounted || company != _companyId) return;
       setState(() {
@@ -658,7 +670,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
       final rows = await _repository.listDesigns(company);
       if (mounted && company == _companyId) setState(() => _remoteDesigns = rows);
     } catch (e) {
-      if (mounted) _notice('تعذر تحميل التصميمات المركزية: $e', error: true);
+      if (mounted && company == _companyId) _notice('تعذر تحميل التصميمات المركزية: $e', error: true);
     }
   }
 
@@ -688,9 +700,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
         _preview = false;
       });
       await _loadVersions();
+      if (!mounted || company != _companyId || id != _remoteDesignId) return;
       _notice('تم فتح التصميم المركزي — الإصدار $revision.');
     } catch (e) {
-      _notice('تعذر فتح التصميم: $e', error: true);
+      if (mounted && company == _companyId) _notice('تعذر فتح التصميم: $e', error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -707,7 +720,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
       final rows = await _repository.listVersions(companyId: company, designId: id);
       if (mounted && company == _companyId && id == _remoteDesignId) setState(() => _versions = rows);
     } catch (e) {
-      _notice('تعذر تحميل سجل الإصدارات: $e', error: true);
+      if (mounted && company == _companyId && id == _remoteDesignId) _notice('تعذر تحميل سجل الإصدارات: $e', error: true);
     }
   }
 
@@ -729,7 +742,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
       );
       if (!mounted || company != _companyId || id != _remoteDesignId) return;
       await _loadRemoteDesign(id);
-      if (!mounted) return;
+      if (!mounted || company != _companyId || id != _remoteDesignId) return;
       setState(() {
         _remoteRevision = nextRevision;
         _doc = _doc.copyWith(remoteRevision: nextRevision);
@@ -791,6 +804,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
         _notice('فشل الاختبار: ${errors.length} مشكلة.', error: true);
       }
     } catch (e) {
+      if (!mounted || company != _companyId || document.id != _doc.id) return;
       _testedRevision = null;
       _lastTestReport = 'فشل الاختبار: $e';
       _notice('فشل اختبار التصميم: $e', error: true);
@@ -823,7 +837,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
       await _loadRemoteDesigns();
       _notice('تم اعتماد الإصدار $_remoteRevision.');
     } catch (e) {
-      _notice('تعذر اعتماد التصميم: $e', error: true);
+      if (mounted && company == _companyId && id == _remoteDesignId) _notice('تعذر اعتماد التصميم: $e', error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -850,7 +864,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
       await _loadRemoteDesigns();
       _notice('تم نشر التصميم المركزي.');
     } catch (e) {
-      _notice('تعذر النشر: $e', error: true);
+      if (mounted && company == _companyId && id == _remoteDesignId) _notice('تعذر النشر: $e', error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -874,7 +888,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
       setState(() => _previewData = {..._previewData, source: rows});
       _notice('تم جلب ${rows.length} سجل من المصدر المحدد.');
     } catch (e) {
-      _notice('تعذر قراءة المصدر: $e', error: true);
+      if (mounted && company == _companyId && source == _selectedSource) _notice('تعذر قراءة المصدر: $e', error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1071,7 +1085,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
               decoration: const InputDecoration(labelText: 'اسم التصميم', isDense: true),
             )),
             if (_companyId == null || _canAddStudio) _command('تصميم جديد', Icons.add, () => _newDesign(_activeTab == 2 ? 'report' : _activeTab == 3 ? 'icon' : _activeTab == 4 ? 'table' : 'screen')),
-            _command(_preview ? 'المحرر' : 'المعاينة', Icons.preview, () => setState(() => _preview = !_preview)),
+            if (_companyId == null || _canPreviewStudio) _command(_preview ? 'المحرر' : 'المعاينة', Icons.preview, () => setState(() => _preview = !_preview)),
             if (_companyId == null || _canPreviewStudio) _command('اختبار', Icons.fact_check_outlined, _runTests),
             if (_canSaveCurrentStudio) _command('حفظ مركزي', Icons.cloud_upload_outlined, _busy ? () {} : _saveCloud),
             _command('نسخ العنصر', Icons.copy, _duplicateSelected),
@@ -1421,7 +1435,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> with WidgetsB
     const SizedBox(height: 8),
     Wrap(spacing: 8, runSpacing: 8, children: [
       FilledButton.icon(onPressed: _busy ? null : _runTests, icon: const Icon(Icons.fact_check), label: const Text('تشغيل جميع اختبارات التصميم والربط')),
-      OutlinedButton.icon(onPressed: () => setState(() => _preview = !_preview), icon: const Icon(Icons.preview), label: Text(_preview ? 'إغلاق المعاينة' : 'فتح المعاينة')),
+      if (_companyId == null || _canPreviewStudio) OutlinedButton.icon(onPressed: () => setState(() => _preview = !_preview), icon: const Icon(Icons.preview), label: Text(_preview ? 'إغلاق المعاينة' : 'فتح المعاينة')),
       OutlinedButton.icon(onPressed: _saveLocal, icon: const Icon(Icons.save), label: const Text('حفظ نسخة محلية')),
     ]),
     const SizedBox(height: 12),
