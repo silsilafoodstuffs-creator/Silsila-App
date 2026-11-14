@@ -34,7 +34,12 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
   String? _message;
 
   SupabaseClient get _db => Supabase.instance.client;
-  static const int _slotCount = 25;
+  int get _slotCount {
+    final lastAssigned = _slotOwners.keys.fold<int>(
+      0, (current, slot) => slot > current ? slot : current,
+    );
+    return _brands.length > lastAssigned ? _brands.length : lastAssigned;
+  }
 
   String _s(dynamic value) => (value ?? '').toString();
 
@@ -410,7 +415,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                                   visualDensity: VisualDensity.compact,
                                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   shape: const CircleBorder(),
-                                  value: selectedCount == 0 ? false : selectedCount == _slotCount ? true : null,
+                                  value: selectedCount == 0 ? false : (_slotCount > 0 && selectedCount == _slotCount) ? true : null,
                                   tristate: true,
                                   onChanged: _saving ? null : (value) => _toggleAll(id, value == true),
                                 ))),
