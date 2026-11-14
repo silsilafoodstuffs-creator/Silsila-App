@@ -22,14 +22,14 @@ class ErpStudioRepository {
         .eq('user_id', userId)
         .maybeSingle();
     if (member == null || member['is_active'] != true) {
-      return const {'canAccess': false, 'canSave': false, 'canEdit': false, 'canDelete': false};
+      return const {'canAccess': false, 'canAdd': false, 'canSave': false, 'canEdit': false, 'canDelete': false, 'canPreview': false};
     }
     final role = (member['member_role'] ?? '').toString().trim().toLowerCase();
     if (role == 'owner' || role == 'admin') {
-      return const {'canAccess': true, 'canSave': true, 'canEdit': true, 'canDelete': true};
+      return const {'canAccess': true, 'canAdd': true, 'canSave': true, 'canEdit': true, 'canDelete': true, 'canPreview': true};
     }
     final permission = await _client.from('erp_user_permission_matrix')
-        .select('can_access,can_save,can_edit,can_delete')
+        .select('can_access,can_add,can_save,can_edit,can_delete,can_preview')
         .eq('company_id', companyId)
         .eq('user_id', userId)
         .eq('menu_name', 'إعدادات عامة')
@@ -39,6 +39,8 @@ class ErpStudioRepository {
     final canAccess = permission?['can_access'] == true;
     return {
       'canAccess': canAccess,
+      'canAdd': canAccess && permission?['can_add'] == true,
+      'canPreview': canAccess && permission?['can_preview'] == true,
       'canSave': canAccess && permission?['can_save'] == true,
       'canEdit': canAccess && permission?['can_edit'] == true,
       'canDelete': canAccess && permission?['can_delete'] == true,
