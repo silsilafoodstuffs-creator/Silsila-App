@@ -47,8 +47,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   bool _dirty = false;
   bool _studioAccessChecked = false;
   bool _studioAccessAllowed = true;
+  bool _canAddStudio = false;
   bool _canSaveStudio = false;
   bool _canEditStudio = false;
+  bool _canPreviewStudio = false;
   bool _canDeleteStudio = false;
   String? _lastTestReport;
 
@@ -111,8 +113,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
         _previewData = {};
         _studioAccessChecked = _companyId == null;
         _studioAccessAllowed = _companyId == null;
+        _canAddStudio = false;
         _canSaveStudio = false;
         _canEditStudio = false;
+        _canPreviewStudio = false;
         _canDeleteStudio = false;
       });
       if (_companyId != null) {
@@ -152,6 +156,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   void _newDesign(String kind) {
+    if (_companyId != null && !_canAddStudio) {
+      _notice('لا تملك صلاحية إضافة تصميمات جديدة.', error: true);
+      return;
+    }
     final labels = <String, String>{
       'screen': 'شاشة جديدة',
       'report': 'تقرير جديد',
@@ -223,6 +231,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   void _add(String type, {Map<String, dynamic>? props}) {
+    if (_companyId != null && !_canEditStudio) {
+      _notice('لا تملك صلاحية تعديل مكونات التصميم.', error: true);
+      return;
+    }
     if (_doc.nodes.length >= 500) {
       _notice('وصل التصميم إلى الحد الأقصى وهو 500 مكون.', error: true);
       return;
@@ -238,6 +250,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   void _updateNode(StudioNode node, {Map<String, dynamic>? props, bool? hidden, bool? locked, String? groupId, bool clearGroup = false}) {
+    if (_companyId != null && !_canEditStudio) {
+      _notice('لا تملك صلاحية تعديل مكونات التصميم.', error: true);
+      return;
+    }
     if (node.locked && locked != false) {
       _notice('هذا المكون مقفل. أزل القفل أولاً لتعديله.');
       return;
@@ -253,12 +269,17 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   void _renameDesign(String value) {
+    if (_companyId != null && !_canEditStudio) {
+      _notice('لا تملك صلاحية تعديل اسم التصميم.', error: true);
+      return;
+    }
     final name = value.trim();
     if (name.isEmpty) return;
     _change(_doc.copyWith(name: name));
   }
 
   void _duplicateSelected() {
+    if (_companyId != null && !_canEditStudio) return;
     final selected = _doc.nodes.where((n) => _selectedIds.contains(n.id) && !n.locked).toList();
     if (selected.isEmpty) return;
     final copies = selected.map((node) => StudioNode(
@@ -277,6 +298,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   void _deleteSelected() {
+    if (_companyId != null && !_canDeleteStudio) {
+      _notice('لا تملك صلاحية حذف مكونات التصميم.', error: true);
+      return;
+    }
     final removable = _doc.nodes.where((n) => _selectedIds.contains(n.id) && !n.locked).toList();
     if (removable.isEmpty) {
       _notice('لا توجد مكونات محددة قابلة للحذف.');
@@ -288,6 +313,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   void _groupSelected() {
+    if (_companyId != null && !_canEditStudio) return;
     if (_selectedIds.length < 2) {
       _notice('حدد مكونين على الأقل لإنشاء مجموعة.');
       return;
@@ -299,6 +325,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   void _ungroupSelected() {
+    if (_companyId != null && !_canEditStudio) return;
     if (_selectedIds.isEmpty) return;
     _change(_doc.copyWith(nodes: _doc.nodes.map((node) =>
       _selectedIds.contains(node.id) && !node.locked ? node.copyWith(clearGroup: true) : node).toList()));
@@ -561,8 +588,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       if (!mounted || company != _companyId) return;
       setState(() {
         _studioAccessAllowed = permissions['canAccess'] == true;
+        _canAddStudio = permissions['canAdd'] == true;
         _canSaveStudio = permissions['canSave'] == true;
         _canEditStudio = permissions['canEdit'] == true;
+        _canPreviewStudio = permissions['canPreview'] == true;
         _canDeleteStudio = permissions['canDelete'] == true;
         _studioAccessChecked = true;
       });
@@ -570,8 +599,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       if (!mounted || company != _companyId) return;
       setState(() {
         _studioAccessAllowed = false;
+        _canAddStudio = false;
         _canSaveStudio = false;
         _canEditStudio = false;
+        _canPreviewStudio = false;
         _canDeleteStudio = false;
         _studioAccessChecked = true;
       });
@@ -671,6 +702,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _runTests() async {
+    if (_companyId != null && !_canPreviewStudio) {
+      _notice('لا تملك صلاحية معاينة واختبار التصميم.', error: true);
+      return;
+    }
     setState(() => _busy = true);
     final errors = <String>[];
     final notes = <String>[];
@@ -774,6 +809,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   Future<void> _previewSource() async {
     final company = _companyId;
     final source = _selectedSource;
+    if (company != null && !_canPreviewStudio) {
+      _notice('لا تملك صلاحية معاينة مصادر البيانات.', error: true);
+      return;
+    }
     if (company == null || source == null) {
       _notice('حدد شركة ومصدر بيانات أولاً.', error: true);
       return;
@@ -980,14 +1019,14 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
               onFieldSubmitted: _renameDesign,
               decoration: const InputDecoration(labelText: 'اسم التصميم', isDense: true),
             )),
-            _command('تصميم جديد', Icons.add, () => _newDesign(_activeTab == 2 ? 'report' : _activeTab == 3 ? 'icon' : _activeTab == 4 ? 'table' : 'screen')),
+            if (_companyId == null || _canAddStudio) _command('تصميم جديد', Icons.add, () => _newDesign(_activeTab == 2 ? 'report' : _activeTab == 3 ? 'icon' : _activeTab == 4 ? 'table' : 'screen')),
             _command(_preview ? 'المحرر' : 'المعاينة', Icons.preview, () => setState(() => _preview = !_preview)),
-            _command('اختبار', Icons.fact_check_outlined, _runTests),
+            if (_companyId == null || _canPreviewStudio) _command('اختبار', Icons.fact_check_outlined, _runTests),
             if (_canSaveStudio) _command('حفظ مركزي', Icons.cloud_upload_outlined, _busy ? () {} : _saveCloud),
             _command('نسخ العنصر', Icons.copy, _duplicateSelected),
             _command('تجميع', Icons.folder_copy_outlined, _groupSelected),
             _command('فك التجميع', Icons.folder_open, _ungroupSelected),
-            _command('حذف المحدد', Icons.delete_outline, _deleteSelected),
+            if (_companyId == null || _canDeleteStudio) _command('حذف المحدد', Icons.delete_outline, _deleteSelected),
           ]),
         ),
       ),
