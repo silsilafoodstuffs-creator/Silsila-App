@@ -18,7 +18,7 @@ void main() {
       'supabase/migrations/20261114140500_ticker_ads_unlimited_active_brands.sql',
     ).readAsStringSync();
     activityMigrationSource = File(
-      'supabase/migrations/20261114135000_remove_fixed_brand_ticker_limit.sql',
+      'supabase/migrations/20261114141600_brand_activity_scope_and_ticker_feed.sql',
     ).readAsStringSync();
   });
 
