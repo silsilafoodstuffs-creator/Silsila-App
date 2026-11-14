@@ -94,37 +94,16 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
     setState(() { _loading = true; _error = null; _message = null; });
     try {
       var brandRows = await _db.from('erp_brands')
-          .select('id,brand_code,brand_name,brand_name_en,logo_data,logo_mime_type,is_active')
+          .select('id,brand_code,brand_name,brand_name_en,logo_data,logo_mime_type,is_active,activity_code')
           .eq('company_id', widget.companyId!.trim())
           .eq('is_active', true)
           .order('display_order')
           .order('brand_code');
-      // A selected activity shows only brands used by items in its categories.
-      // The ALL scope intentionally remains the company-wide brand catalogue.
+      // Brand-to-activity ownership is explicit on the brand master.
+      // The global scope remains company-wide.
       if (_activityCode != 'ALL') {
-        final categoryRows = await _db.from('erp_item_categories')
-            .select('id')
-            .eq('company_id', widget.companyId!.trim())
-            .eq('activity_code', _activityCode)
-            .eq('is_active', true);
-        final categoryIds = (categoryRows as List)
-            .map((row) => _s(row['id']))
-            .where((id) => id.isNotEmpty)
-            .toList();
-        final activityBrandIds = <String>{};
-        if (categoryIds.isNotEmpty) {
-          final itemRows = await _db.from('erp_items')
-              .select('brand_id')
-              .eq('company_id', widget.companyId!.trim())
-              .eq('is_active', true)
-              .inFilter('category_id', categoryIds)
-              .not('brand_id', 'is', null);
-          activityBrandIds.addAll((itemRows as List)
-              .map((row) => _s(row['brand_id']))
-              .where((id) => id.isNotEmpty));
-        }
         brandRows = (brandRows as List)
-            .where((brand) => activityBrandIds.contains(_s(brand['id'])))
+            .where((brand) => _s(brand['activity_code']) == _activityCode)
             .toList();
       }
       var query = _db.from('erp_app_ticker_ads')
