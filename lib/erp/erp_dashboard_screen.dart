@@ -338,7 +338,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    unawaited(ErpScreenLayoutProfiles.load().catchError((Object _) {}));
     if (widget.initialPage == 'بيانات الشركة') {
       _module = 'إعدادات عامة';
       _group = 'بيانات أساسية';
