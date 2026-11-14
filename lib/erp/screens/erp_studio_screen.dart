@@ -45,6 +45,11 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   bool _preview = false;
   bool _busy = false;
   bool _dirty = false;
+  bool _studioAccessChecked = false;
+  bool _studioAccessAllowed = true;
+  bool _canSaveStudio = false;
+  bool _canEditStudio = false;
+  bool _canDeleteStudio = false;
   String? _lastTestReport;
 
   static const _studioTabs = <String>[
@@ -78,6 +83,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     _nameController.text = _doc.name;
     if (_companyId != null) {
       _loadRemoteDesigns();
+      _loadStudioPermissions();
+    } else {
+      _studioAccessChecked = true;
+      _studioAccessAllowed = true;
     }
   }
 
@@ -100,8 +109,16 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
         _dirty = false;
         _testedRevision = null;
         _previewData = {};
+        _studioAccessChecked = _companyId == null;
+        _studioAccessAllowed = _companyId == null;
+        _canSaveStudio = false;
+        _canEditStudio = false;
+        _canDeleteStudio = false;
       });
-      if (_companyId != null) _loadRemoteDesigns();
+      if (_companyId != null) {
+        _loadRemoteDesigns();
+        _loadStudioPermissions();
+      }
     }
   }
 
@@ -337,6 +354,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
 
   Future<void> _saveCloud() async {
     final company = _companyId;
+    if (!_canSaveStudio) {
+      _notice('لا تملك صلاحية حفظ تصميمات الاستوديو لهذه الشركة.', error: true);
+      return;
+    }
     if (company == null) {
       _notice('يجب اختيار شركة نشطة قبل الحفظ المركزي.', error: true);
       return;
@@ -373,6 +394,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
 
   Future<void> _syncPendingDrafts() async {
     final company = _companyId;
+    if (!_canSaveStudio) {
+      _notice('لا تملك صلاحية مزامنة تصميمات الاستوديو لهذه الشركة.', error: true);
+      return;
+    }
     if (company == null) {
       _notice('يجب اختيار شركة نشطة لمزامنة المسودات.', error: true);
       return;
@@ -527,6 +552,33 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     }
   }
 
+  Future<void> _loadStudioPermissions() async {
+    final company = _companyId;
+    if (company == null) return;
+    if (mounted) setState(() => _studioAccessChecked = false);
+    try {
+      final permissions = await _repository.loadStudioPermissions(company);
+      if (!mounted || company != _companyId) return;
+      setState(() {
+        _studioAccessAllowed = permissions['canAccess'] == true;
+        _canSaveStudio = permissions['canSave'] == true;
+        _canEditStudio = permissions['canEdit'] == true;
+        _canDeleteStudio = permissions['canDelete'] == true;
+        _studioAccessChecked = true;
+      });
+    } catch (error) {
+      if (!mounted || company != _companyId) return;
+      setState(() {
+        _studioAccessAllowed = false;
+        _canSaveStudio = false;
+        _canEditStudio = false;
+        _canDeleteStudio = false;
+        _studioAccessChecked = true;
+      });
+      _notice('تعذر التحقق من صلاحيات الاستوديو؛ تم إيقاف الوصول احتياطياً: $error', error: true);
+    }
+  }
+
   Future<void> _loadRemoteDesigns() async {
     final company = _companyId;
     if (company == null) return;
@@ -589,6 +641,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   Future<void> _restoreVersion(int revision) async {
     final company = _companyId;
     final id = _remoteDesignId;
+    if (!_canEditStudio) {
+      _notice('لا تملك صلاحية استعادة إصدارات الاستوديو.', error: true);
+      return;
+    }
     if (company == null || id == null) return;
     setState(() => _busy = true);
     try {
@@ -663,6 +719,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _approveDesign() async {
+    if (!_canEditStudio) {
+      _notice('لا تملك صلاحية اعتماد تصميمات الاستوديو.', error: true);
+      return;
+    }
     final company = _companyId;
     final id = _remoteDesignId;
     if (company == null || id == null) {
@@ -687,6 +747,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _publishDesign() async {
+    if (!_canEditStudio) {
+      _notice('لا تملك صلاحية نشر تصميمات الاستوديو.', error: true);
+      return;
+    }
     final company = _companyId;
     final id = _remoteDesignId;
     if (company == null || id == null) return;
@@ -782,10 +846,17 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
             IconButton(tooltip: 'استيراد JSON', onPressed: _importJson, icon: const Icon(Icons.file_open)),
             IconButton(tooltip: 'تصدير JSON', onPressed: _exportJson, icon: const Icon(Icons.code)),
             IconButton(tooltip: 'حفظ محلي', onPressed: _busy ? null : _saveLocal, icon: const Icon(Icons.save_outlined)),
-            IconButton(tooltip: 'حفظ مركزي ومزامنة', onPressed: _busy ? null : _syncPendingDrafts, icon: const Icon(Icons.cloud_sync_outlined)),
+            IconButton(tooltip: 'حفظ مركزي ومزامنة', onPressed: _busy || !_canSaveStudio ? null : _syncPendingDrafts, icon: const Icon(Icons.cloud_sync_outlined)),
           ],
         ),
-        body: Column(children: [
+        body: _companyId != null && !_studioAccessChecked
+            ? const Center(child: CircularProgressIndicator())
+            : _companyId != null && !_studioAccessAllowed
+                ? const Center(child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text('لا تملك صلاحية الدخول إلى سلسلة ستوديو لهذه الشركة. اطلب من مدير الشركة تفعيل صلاحية الشاشة والإجراءات المطلوبة.'),
+                  ))
+                : Column(children: [
           Container(
             color: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
@@ -912,7 +983,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
             _command('تصميم جديد', Icons.add, () => _newDesign(_activeTab == 2 ? 'report' : _activeTab == 3 ? 'icon' : _activeTab == 4 ? 'table' : 'screen')),
             _command(_preview ? 'المحرر' : 'المعاينة', Icons.preview, () => setState(() => _preview = !_preview)),
             _command('اختبار', Icons.fact_check_outlined, _runTests),
-            _command('حفظ مركزي', Icons.cloud_upload_outlined, _busy ? () {} : _saveCloud),
+            if (_canSaveStudio) _command('حفظ مركزي', Icons.cloud_upload_outlined, _busy ? () {} : _saveCloud),
             _command('نسخ العنصر', Icons.copy, _duplicateSelected),
             _command('تجميع', Icons.folder_copy_outlined, _groupSelected),
             _command('فك التجميع', Icons.folder_open, _ungroupSelected),
@@ -1308,7 +1379,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
         title: Text('الإصدار ${version['revision']}'),
         subtitle: Text('${version['change_note'] ?? 'بدون ملاحظة'} • ${version['created_at']}'),
         trailing: TextButton(
-          onPressed: _busy ? null : () => _restoreVersion((version['revision'] as num).toInt()),
+          onPressed: _busy || !_canEditStudio ? null : () => _restoreVersion((version['revision'] as num).toInt()),
           child: const Text('استعادة'),
         ),
       ))),
@@ -1329,15 +1400,15 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       child: Card(child: Padding(padding: const EdgeInsets.all(10), child: Text(_lastTestReport!))),
     ),
     Wrap(spacing: 8, runSpacing: 8, children: [
-      OutlinedButton.icon(onPressed: _busy ? null : _saveCloud, icon: const Icon(Icons.cloud_upload), label: const Text('حفظ مركزي')),
+      OutlinedButton.icon(onPressed: _busy || !_canSaveStudio ? null : _saveCloud, icon: const Icon(Icons.cloud_upload), label: const Text('حفظ مركزي')),
       OutlinedButton.icon(onPressed: _busy ? null : _runTests, icon: const Icon(Icons.fact_check), label: const Text('اختبار الإصدار الحالي')),
       FilledButton.icon(
-        onPressed: _busy || _remoteStatus == 'published' ? null : _approveDesign,
+        onPressed: _busy || !_canEditStudio || _remoteStatus == 'published' ? null : _approveDesign,
         icon: const Icon(Icons.verified),
         label: const Text('اعتماد التصميم'),
       ),
       FilledButton.icon(
-        onPressed: _busy || _remoteStatus != 'approved' ? null : _publishDesign,
+        onPressed: _busy || !_canEditStudio || _remoteStatus != 'approved' ? null : _publishDesign,
         icon: const Icon(Icons.publish),
         label: const Text('نشر التصميم'),
       ),
