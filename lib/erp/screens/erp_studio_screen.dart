@@ -99,6 +99,123 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     }
   }
 
+  Future<void> _openCloud() async {
+    final company = widget.companyId;
+    if (company == null || company.trim().isEmpty) {
+      _notice('يجب اختيار شركة نشطة لعرض التصميمات السحابية.');
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final designs = await _repository.listDesigns(company);
+      if (!mounted) return;
+      await showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+        title: const Text('التصميمات السحابية'),
+        content: SizedBox(width: 560, child: designs.isEmpty
+          ? const Text('لا توجد تصميمات سحابية لهذه الشركة.')
+          : ListView(shrinkWrap: true, children: designs.map((row) => ListTile(
+              title: Text((row['name'] ?? 'تصميم').toString()),
+              subtitle: Text('الإصدار ${row['revision']} • ${row['status']} • ${row['design_kind']}'),
+              onTap: () async {
+                Navigator.pop(dialogContext);
+                try {
+                  final remote = await _repository.getDesign(companyId: company, designId: row['id'].toString());
+                  final raw = remote['design_json'];
+                  if (raw is! Map) throw const FormatException('محتوى التصميم السحابي غير صالح.');
+                  final loaded = StudioDocument.fromJson(Map<String, dynamic>.from(raw));
+                  if (!mounted) return;
+                  setState(() {
+                    _doc = loaded.copyWith(remoteId: remote['id'].toString(), remoteRevision: remote['revision'] as int? ?? 0);
+                    _selectedId = null;
+                    _preview = false;
+                  });
+                } catch (e) {
+                  if (mounted) _notice('تعذر فتح التصميم السحابي: $e');
+                }
+              },
+              trailing: IconButton(
+                tooltip: 'سجل الإصدارات',
+                icon: const Icon(Icons.history),
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  _showVersions(row['id'].toString());
+                },
+              ),
+            )).toList())),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
+      ));
+    } catch (e) {
+      if (mounted) _notice('تعذر تحميل التصميمات السحابية: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _showVersions(String designId) async {
+    final company = widget.companyId;
+    if (company == null) return;
+    try {
+      final versions = await _repository.listVersions(companyId: company, designId: designId);
+      if (!mounted) return;
+      await showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+        title: const Text('سجل إصدارات التصميم'),
+        content: SizedBox(width: 560, child: versions.isEmpty
+          ? const Text('لا توجد إصدارات مسجلة.')
+          : ListView(shrinkWrap: true, children: versions.map((version) => ListTile(
+              title: Text('الإصدار ${version['revision']}'),
+              subtitle: Text((version['change_note'] ?? '').toString()),
+              trailing: IconButton(
+                tooltip: 'استعادة هذا الإصدار كمسودة جديدة',
+                icon: const Icon(Icons.restore),
+                onPressed: _busy ? null : () async {
+                  Navigator.pop(dialogContext);
+                  try {
+                    final current = await _repository.getDesign(companyId: company, designId: designId);
+                    final nextRevision = await _repository.restoreVersion(
+                      companyId: company,
+                      designId: designId,
+                      targetRevision: version['revision'] as int,
+                      expectedRevision: current['revision'] as int,
+                    );
+                    final restored = StudioDocument.fromJson(Map<String, dynamic>.from(version['design_json'] as Map));
+                    if (!mounted) return;
+                    setState(() {
+                      _doc = restored.copyWith(remoteId: designId, remoteRevision: nextRevision);
+                      _selectedId = null;
+                      _preview = false;
+                    });
+                    _notice('تمت الاستعادة كمسودة جديدة بالإصدار $nextRevision.');
+                  } catch (e) {
+                    if (mounted) _notice('تعذرت استعادة الإصدار: $e');
+                  }
+                },
+              ),
+            )).toList())),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
+      ));
+    } catch (e) {
+      if (mounted) _notice('تعذر تحميل سجل الإصدارات: $e');
+    }
+  }
+
+  Future<void> _approveCurrent() async {
+    final company = widget.companyId;
+    if (company == null || _doc.remoteId == null) { _notice('احفظ التصميم سحابياً أولاً.'); return; }
+    try {
+      await _repository.approve(companyId: company, designId: _doc.remoteId!, expectedRevision: _doc.remoteRevision);
+      _notice('تم اعتماد الإصدار الحالي.');
+    } catch (e) { _notice('تعذر اعتماد التصميم: $e'); }
+  }
+
+  Future<void> _publishCurrent() async {
+    final company = widget.companyId;
+    if (company == null || _doc.remoteId == null) { _notice('احفظ التصميم سحابياً أولاً.'); return; }
+    try {
+      await _repository.publish(companyId: company, designId: _doc.remoteId!, testedRevision: _doc.remoteRevision);
+      _notice('تم نشر الإصدار المعتمد.');
+    } catch (e) { _notice('تعذر نشر التصميم: $e'); }
+  }
+
   Future<void> _open() async {
     final drafts = await _store.list();
     if (!mounted) return;
@@ -191,8 +308,12 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
                   catch (e) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e'))); }
                 }),
                 _command('حفظ سحابياً', Icons.cloud_upload_outlined, _busy ? () {} : _saveCloud),
+                _command('التصميمات السحابية', Icons.cloud_done_outlined, _busy ? () {} : _openCloud),
+                _command('سجل الإصدارات', Icons.history, _doc.remoteId == null ? () => _notice('احفظ التصميم سحابياً أولاً.') : () => _showVersions(_doc.remoteId!)),
+                _command('اعتماد الإصدار', Icons.verified_outlined, _approveCurrent),
+                _command('نشر الإصدار', Icons.publish, _publishCurrent),
                 _command('ربط بقاعدة البيانات', Icons.link, () => _notice('تعريف مصادر البيانات ومراجعة الحقول واختبار العمليات لم يُفعّل بعد.')),
-                _command('نشر التصميم', Icons.publish, () => _notice('النشر معطل حتى اكتمال التخزين المركزي والإصدارات والاختبارات.')),
+                _command('اختبار ربط البيانات', Icons.link, () => _notice('تعريف مصادر البيانات ومراجعة الحقول واختبار العمليات ما زال قيد التنفيذ.')),
               ]),
             ),
           ),
