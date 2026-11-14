@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   late String homeSource;
   late String adminSource;
+  late String brandSource;
   late String migrationSource;
   late String activityMigrationSource;
 
@@ -12,6 +13,7 @@ void main() {
     homeSource = File('lib/main.dart').readAsStringSync();
     adminSource = File('lib/erp/screens/erp_app_ticker_ads_tab.dart')
         .readAsStringSync();
+    brandSource = File('lib/erp/screens/erp_brands_tab.dart').readAsStringSync();
     migrationSource = File(
       'supabase/migrations/20261114140500_ticker_ads_unlimited_active_brands.sql',
     ).readAsStringSync();
@@ -51,7 +53,11 @@ void main() {
   test('public ticker automatically includes all active brands for the selected activity', () {
     expect(activityMigrationSource, contains('activity_brand_catalog'));
     expect(activityMigrationSource, contains('public.erp_item_categories'));
-    expect(activityMigrationSource, contains('c.activity_code = NULLIF'));
+    expect(activityMigrationSource, contains('ADD COLUMN IF NOT EXISTS activity_code text'));
+    expect(activityMigrationSource, contains('b.activity_code = NULLIF'));
+    expect(activityMigrationSource, contains('REFERENCES public.activity_types(code)'));
+    expect(brandSource, contains("'activity_code': activityCode"));
+    expect(adminSource, contains("_s(brand['activity_code']) == _activityCode"));
     expect(activityMigrationSource, contains('public.erp_items i'));
     expect(activityMigrationSource, contains('WHERE NOT EXISTS'));
     expect(activityMigrationSource, contains('ORDER BY result.slot_no'));
