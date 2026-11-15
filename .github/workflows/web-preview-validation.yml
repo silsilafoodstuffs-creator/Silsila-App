@@ -48,6 +48,12 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-chromium-v1
 
+      - name: Cache npm packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-playwright-${{ runner.os }}-v1
+
       - name: Install browser smoke-test dependencies
         run: |
           npm install --no-save --no-package-lock playwright source-map
