@@ -7890,7 +7890,12 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   final Map<String,TextEditingController> _productQuantities = {};
   final Map<String,TextEditingController> _productPrices = {};
   final Map<String,String> _productUnits = {};
+  final Map<String,double> _productUnitFactors = {};
+  final Map<String,double> _productBasePrices = {};
   final Map<String,String> _productQuality = {};
+  final Set<String> _marketFavoriteIds = <String>{};
+  final Set<String> _favoriteUpdatingIds = <String>{};
+  Map<String,double> _marketOfferPrices = <String,double>{};
   final Map<String,bool> _productNegotiable = {};
   final Map<String,DateTime> _productExpiryDates = {};
   DateTime? _transportAt;
@@ -7992,7 +7997,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
       var offset = 0;
       while (true) {
         var itemQuery = client.from('erp_items')
-            .select('id,category_id,brand_id,brand_name,item_code,item_name,base_unit,purchase_price,sale_price,is_active,show_in_app,image_url,image_data,image_mime_type')
+            .select('id,category_id,brand_id,brand_name,item_code,item_name,base_unit,sale_price,is_active,show_in_app,image_url,image_data,image_mime_type,weight_kg,length_cm,width_cm,height_cm')
             .eq('is_active', true).eq('show_in_app', true);
         if (companyId != null && companyId.isNotEmpty) {
           itemQuery = itemQuery.eq('company_id', companyId);
@@ -8008,9 +8013,13 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             'brand': item['brand_name'],
             'item_code': item['item_code'],
             'unit': item['base_unit'] ?? 'وحدة',
-            'price': type == 'buy' ? item['purchase_price'] : item['sale_price'],
-            'purchase_price': item['purchase_price'],
+            'price': item['sale_price'],
+            'base_price': item['sale_price'],
             'sale_price': item['sale_price'],
+            'weight_kg': item['weight_kg'],
+            'length_cm': item['length_cm'],
+            'width_cm': item['width_cm'],
+            'height_cm': item['height_cm'],
             'image_url': item['image_url'],
             'image_data': item['image_data'],
             'image_mime_type': item['image_mime_type'],
@@ -8019,6 +8028,60 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         if (page.length < pageSize) break;
         offset += pageSize;
       }
+      final itemIds = products.map((product)=>(product['id']??'').toString())
+          .where((id)=>id.isNotEmpty).toList();
+      final unitRows = <Map<String,dynamic>>[];
+      for (var start=0; start<itemIds.length; start+=200) {
+        final end = start+200<itemIds.length ? start+200 : itemIds.length;
+        try {
+          var unitQuery = client.from('erp_item_units')
+              .select('item_id,unit_name,conversion_factor,inner_quantity,unit_level,is_base_unit,is_selectable,is_implicit')
+              .eq('is_active',true).eq('is_selectable',true);
+          if (companyId != null && companyId.isNotEmpty) {
+            unitQuery = unitQuery.eq('company_id',companyId);
+          }
+          final rows = await unitQuery.inFilter('item_id',itemIds.sublist(start,end));
+          unitRows.addAll(rows.whereType<Map>().map((row)=>Map<String,dynamic>.from(row)));
+        } catch (_) {}
+      }
+      final unitsByItem = <String,List<Map<String,dynamic>>>{};
+      for (final row in unitRows) {
+        (unitsByItem[(row['item_id']??'').toString()] ??= <Map<String,dynamic>>[]).add(row);
+      }
+      for (final product in products) {
+        final id=(product['id']??'').toString();
+        final options=(unitsByItem[id]??<Map<String,dynamic>>[])
+            .where((unit)=>(unit['unit_name']??'').toString().trim().isNotEmpty)
+            .toList()
+          ..sort((a,b)=>((b['conversion_factor'] as num?)?.toDouble()??1)
+              .compareTo((a['conversion_factor'] as num?)?.toDouble()??1));
+        final seenFactors=<String>{};
+        final uniqueOptions=<Map<String,dynamic>>[];
+        for(final unit in options) {
+          final factor=(unit['conversion_factor'] as num?)?.toDouble()??1;
+          if(factor<=0) continue;
+          final factorKey=factor.toStringAsFixed(6);
+          if(!seenFactors.add(factorKey)) continue;
+          uniqueOptions.add(unit);
+        }
+        if(uniqueOptions.isEmpty) {
+          uniqueOptions.add({
+            'unit_name':product['unit']??'وحدة',
+            'conversion_factor':1,
+            'inner_quantity':1,
+            'is_base_unit':true,
+            'is_selectable':true,
+          });
+        }
+        product['units']=uniqueOptions;
+      }
+      Map<String,double> offerPrices=<String,double>{};
+      Set<String> favoriteKeys=<String>{};
+      try { offerPrices=await OfferService().getActiveProductOfferPrices(); } catch (_) {}
+      try { favoriteKeys=await FavoriteService().getFavoriteKeys(); } catch (_) {}
+      final favoriteIds=favoriteKeys.where((key)=>key.startsWith('product:'))
+          .map((key)=>key.substring('product:'.length)).toSet();
+
       final categoryMaps = categoryRows.whereType<Map>().map((raw) {
         final row = Map<String,dynamic>.from(raw);
         row['name'] = row['category_name'];
@@ -8047,6 +8110,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
       setState(() {
         _marketCategories..clear()..addAll(visibleCategories);
         _marketProducts..clear()..addAll(visibleProducts);
+        _marketOfferPrices = offerPrices;
+        _marketFavoriteIds..clear()..addAll(favoriteIds);
         _marketCatalogError = visibleProducts.isEmpty && widget.availableProducts.isEmpty
           ? 'لا توجد أصناف نشطة ومفعّل لها «إظهار في التطبيق» في كتالوج الشركة الحالي.'
           : null;
