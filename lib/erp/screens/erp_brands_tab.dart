@@ -31,6 +31,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   bool _loading = false;
   bool _saving = false;
   bool _gridEditing = false;
+  String? _gridEditingOnlyId;
   String? _error;
   final Map<String, TextEditingController> _gridNameControllers = <String, TextEditingController>{};
   final Map<String, TextEditingController> _gridEnglishControllers = <String, TextEditingController>{};
@@ -104,39 +105,49 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
   Future<void> _saveGridNames({String? onlyId}) async {
     if (_saving) return;
-    final targets = _rows.where((r) {
-      final id = _s(r['id']);
-      if (r['is_system'] == true || (onlyId != null && id != onlyId)) return false;
-      return _gridNameControllers[id]!.text.trim() != _s(r['brand_name']).trim() ||
-          _gridEnglishControllers[id]!.text.trim() != _s(r['brand_name_en']).trim();
+    final targetId = onlyId ?? _gridEditingOnlyId;
+    final targets = _rows.where((row) {
+      final id = _s(row['id']);
+      if (row['is_system'] == true || (targetId != null && id != targetId)) return false;
+      return _gridNameControllers[id]!.text.trim() != _s(row['brand_name']).trim() ||
+          _gridEnglishControllers[id]!.text.trim() != _s(row['brand_name_en']).trim();
     }).toList();
-    if (targets.isEmpty) { ErpCenterToast.show(context, 'لا توجد أسماء تم تعديلها.'); return; }
-    final proposedArabic = <String>{};
-    for (final r in targets) {
-      final id = _s(r['id']), ar = _gridNameControllers[id]!.text.trim();
-      if (ar.isEmpty) { ErpCenterToast.show(context, 'اسم البراند بالعربية لا يمكن أن يكون فارغًا.', isError: true); return; }
-      // Validate against every existing row before issuing sequential updates.
-      // This prevents an intermediate unique-index collision while several rows are being saved.
-      if (!proposedArabic.add(ar.toLowerCase()) || _rows.any((o) =>
-          _s(o['id']) != id &&
-          _s(o['brand_name']).trim().toLowerCase() == ar.toLowerCase())) {
-        ErpCenterToast.show(context, 'اسم البراند العربي مستخدم بالفعل. استخدم اسمًا غير مستخدم لكل سجل.', isError: true); return;
+    if (targets.isEmpty) {
+      ErpCenterToast.show(context, 'لا توجد أسماء تم تعديلها.');
+      return;
+    }
+    for (final row in targets) {
+      if (_gridNameControllers[_s(row['id'])]!.text.trim().isEmpty) {
+        ErpCenterToast.show(context, 'اسم البراند بالعربية لا يمكن أن يكون فارغًا.', isError: true);
+        return;
       }
     }
     setState(() { _saving = true; _error = null; });
     try {
-      for (final r in targets) {
-        final id = _s(r['id']), ar = _gridNameControllers[id]!.text.trim(), en = _gridEnglishControllers[id]!.text.trim();
-        await _db.from('erp_brands').update({'brand_name': ar, 'brand_name_en': en.isEmpty ? null : en})
-          .eq('id', id).eq('company_id', widget.companyId.trim()).select('id').single();
-      }
-      setState(() => _gridEditing = false);
+      final payload = targets.map((row) {
+        final id = _s(row['id']);
+        return <String,dynamic>{
+          'id': id,
+          'brand_name': _gridNameControllers[id]!.text.trim(),
+          'brand_name_en': _gridEnglishControllers[id]!.text.trim(),
+        };
+      }).toList();
+      await _db.rpc('erp_update_brand_names_batch', params: {
+        'p_company_id': widget.companyId.trim(),
+        'p_rows': payload,
+      });
+      if (!mounted) return;
+      setState(() { _gridEditing = false; _gridEditingOnlyId = null; });
       await _load();
-      if (mounted) ErpCenterToast.show(context, 'تم حفظ الاسمين العربي والإنجليزي بنجاح.');
+      if (mounted) ErpCenterToast.show(context, targets.length == 1
+          ? 'تم حفظ اسم البراند بنجاح مع الاحتفاظ بكوده وربط أصنافه.'
+          : 'تم حفظ أسماء البراندات المحددة دفعة واحدة مع الاحتفاظ بالأكواد والارتباطات.');
     } catch (error) {
       if (mounted) ErpCenterToast.show(context, _friendlySaveError(error), isError: true);
       await _load();
-    } finally { if (mounted) setState(() => _saving = false); }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   List<Map<String,dynamic>> get _visibleRows {
@@ -153,7 +164,8 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   String _friendlySaveError(Object error) {
     if (error is PostgrestException) {
       final code = error.code ?? '';
-      if (code == '23505') return 'تعذر الحفظ: يوجد اسم براند مكرر. راجع الاسمين العربي والإنجليزي.';
+      if (code == '23505') return 'اسم البراند العربي مستخدم بالفعل. اختر اسمًا مختلفًا.';
+      if (code == '22023') return 'راجع أسماء البراندات؛ الاسم العربي مطلوب ولا يمكن تكراره داخل نفس الشركة.';
       if (code == '23503') return 'تعذر الحفظ: يوجد ارتباط ببيانات أخرى غير متوافقة. لم يتم تغيير كود البراند أو ارتباطات الأصناف.';
       if (code == '42501' || code == 'PGRST301') return 'تعذر الحفظ: صلاحية تعديل البراند غير متاحة لهذا الحساب.';
       if (code == '23514' || code == '23502') return 'البيانات غير مكتملة أو لا تطابق قواعد التحقق. راجع اسم البراند.';
@@ -656,16 +668,21 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 ErpQuickTaskButton(label:'عرض شجرة', icon:Icons.account_tree_outlined, onPressed:() => setState(() => _viewMode = 'tree')),
                 ErpQuickTaskButton(label:'عرض جدول', icon:Icons.table_rows_outlined, onPressed:() => setState(() => _viewMode = 'grid')),
                 ErpQuickTaskButton(label:'إضافة جديد', icon:Icons.add_circle_outline, onPressed:_saving ? null : () => _edit()),
-                ErpQuickTaskButton(label:'تعديل', icon:Icons.edit_outlined, onPressed:_saving ? null : () {
+                ErpQuickTaskButton(label:'تعديل المحدد', icon:Icons.edit_outlined, onPressed:_saving ? null : () {
                   if (_viewMode == 'grid') {
-                    setState(() => _gridEditing = true);
+                    if (selected == null || selected['is_system'] == true) { ErpCenterToast.show(context, 'حدد براندًا عاديًا من الجدول أولًا.', isError:true); return; }
+                    setState(() { _gridEditing = true; _gridEditingOnlyId = _s(selected['id']); });
                     _syncGridNameControllers();
                   } else if (selected != null && selected['is_system'] != true) { _edit(row:selected); }
                 }),
+                if (_viewMode == 'grid') ErpQuickTaskButton(label:'تعديل الكل', icon:Icons.edit_note_outlined, onPressed:_saving ? null : () {
+                  setState(() { _gridEditing = true; _gridEditingOnlyId = null; });
+                  _syncGridNameControllers();
+                }),
                 if (_viewMode == 'grid' && _gridEditing) ...[
-                  ErpQuickTaskButton(label:'حفظ التعديلات', icon:Icons.save_outlined, onPressed:_saving ? null : _saveGridNames),
+                  ErpQuickTaskButton(label:'حفظ التعديلات', icon:Icons.save_outlined, onPressed:_saving ? null : () => _saveGridNames(onlyId:_gridEditingOnlyId)),
                   ErpQuickTaskButton(label:'إلغاء التعديل', icon:Icons.close, onPressed:_saving ? null : () {
-                    setState(() => _gridEditing = false);
+                    setState(() { _gridEditing = false; _gridEditingOnlyId = null; });
                     _syncGridNameControllers();
                   }),
                 ],
@@ -759,7 +776,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                           cells: [
                             DataCell(Text('${index + 1}', style: const TextStyle(fontWeight: FontWeight.w800))),
                             DataCell(Text(_s(row['brand_code']), style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple)), onTap: () => setState(() => _selectedId = id)),
-                            DataCell(SizedBox(width: 210, child: _gridEditing && !system
+                            DataCell(SizedBox(width: 210, child: _gridEditing && (_gridEditingOnlyId == null || _gridEditingOnlyId == id) && !system
                               ? Focus(
                                   onKeyEvent: (_, event) {
                                     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) { FocusScope.of(context).nextFocus(); return KeyEventResult.handled; }
