@@ -7592,11 +7592,19 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     if (client == null) return;
     try {
       final categories = await client.from('categories').select('id,name,parent_id,is_active').eq('is_active', true).eq('activity_type', 'مواد غذائية').order('sort_order');
-      final products = await client.from('products').select('id,name,category_id,unit,price,brand,image_url,is_available').eq('is_available', true).eq('activity_type', 'مواد غذائية').order('name').limit(1000);
+      final allProducts = <Map<String,dynamic>>[];
+      var offset = 0;
+      while (true) {
+        final page = await client.from('products').select('id,name,category_id,unit,price,brand,image_url,is_available')
+          .eq('is_available', true).eq('activity_type', 'مواد غذائية').order('name').range(offset, offset + 499);
+        allProducts.addAll(page.whereType<Map>().map((e)=>Map<String,dynamic>.from(e)));
+        if (page.length < 500) break;
+        offset += page.length;
+      }
       if (!mounted) return;
       setState(() {
         _marketCategories..clear()..addAll(categories.whereType<Map>().map((e)=>Map<String,dynamic>.from(e)));
-        _marketProducts..clear()..addAll(products.whereType<Map>().map((e)=>Map<String,dynamic>.from(e)));
+        _marketProducts..clear()..addAll(allProducts);
       });
     } catch (_) {}
   }
