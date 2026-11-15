@@ -54,3 +54,18 @@ jobs:
       - name: Publish Web Preview
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verify published Web Preview responds
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://silsilafoodstuffs-creator.github.io/Silsila-App/"
+          for attempt in $(seq 1 30); do
+            if curl --silent --show-error --fail "$URL" >/dev/null; then
+              echo "Published Web Preview is responding."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Published Web Preview did not respond in time."
+          exit 1
