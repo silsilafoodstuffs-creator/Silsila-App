@@ -68,6 +68,13 @@ void main() {
     expect(theme.snackBarTheme.backgroundColor, const Color(0xFF3E007D));
     expect(theme.progressIndicatorTheme.color, const Color(0xFFFFA015));
     expect(theme.listTileTheme.selectedTileColor, isNotNull);
+    expect(theme.scaffoldBackgroundColor, const Color(0xFFF5EFFB));
+    expect(theme.cardTheme.elevation, greaterThanOrEqualTo(5));
+    expect(theme.cardTheme.shadowColor, const Color(0x42FF27C3));
+    expect(theme.appBarTheme.elevation, greaterThanOrEqualTo(5));
+    expect(theme.dataTableTheme.dataRowMinHeight, 40);
+    expect(theme.dataTableTheme.dataRowMaxHeight, 40);
+    expect(theme.dataTableTheme.columnSpacing, 5);
   });
 
   testWidgets('white surfaces render the white-background Silsila logo',
