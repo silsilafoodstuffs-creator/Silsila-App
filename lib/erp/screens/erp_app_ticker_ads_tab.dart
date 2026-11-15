@@ -137,7 +137,7 @@ class _TickerAdsPreviewState extends State<_TickerAdsPreview> {
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700))),
           ]),
           const Text(
-            'اسحب للتحريك في أي اتجاه، واستخدم إصبعين للتكبير والتصغير. السحب اليدوي يوقف التمرير التلقائي حتى تعيد تشغيله.',
+            'اسحب الشعار داخل دائرته لتحريكه، واستخدم إصبعين للتكبير أو التصغير دون تغيير حجم الدائرة. اسحب خارج الدوائر لتحريك الشريط.',
             style: TextStyle(fontSize: 10, color: Colors.black54),
           ),
           const SizedBox(height: 7),
@@ -147,49 +147,41 @@ class _TickerAdsPreviewState extends State<_TickerAdsPreview> {
               borderRadius: BorderRadius.circular(9),
               child: widget.brands.isEmpty
                   ? const Center(child: Text('لا توجد براندات نشطة للمعاينة.'))
-                  : InteractiveViewer(
-                      constrained: false,
-                      panEnabled: true,
-                      scaleEnabled: true,
-                      panAxis: PanAxis.free,
-                      minScale: 0.65,
-                      maxScale: 2.5,
-                      child: SizedBox(
-                        width: MediaQuery.sizeOf(context).width - 64,
-                        height: 94,
-                        child: NotificationListener<UserScrollNotification>(
-                          onNotification: (notification) {
-                            if (notification.direction != ScrollDirection.idle && _autoScroll) {
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (mounted) setState(() => _autoScroll = false);
-                              });
-                            }
-                            return false;
+                  : SizedBox(
+                      width: MediaQuery.sizeOf(context).width - 64,
+                      height: 94,
+                      child: NotificationListener<UserScrollNotification>(
+                        onNotification: (notification) {
+                          if (notification.direction != ScrollDirection.idle && _autoScroll) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) setState(() => _autoScroll = false);
+                            });
+                          }
+                          return false;
+                        },
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: widget.brands.length,
+                          itemBuilder: (context, index) {
+                            final brand = widget.brands[index];
+                            final bytes = _bytes(brand['logo_data']);
+                            final name = (brand['brand_name'] ?? '').toString();
+                            return SizedBox(
+                              width: 78,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  _TickerBrandCircle(bytes: bytes),
+                                  const SizedBox(height: 3),
+                                  SizedBox(width: 74, child: Text(name, maxLines: 1,
+                                    overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 9, color: _tickerPurple, fontWeight: FontWeight.w700))),
+                                ],
+                              ),
+                            );
                           },
-                          child: ListView.builder(
-                            controller: _scrollController,
-                            scrollDirection: Axis.horizontal,
-                            physics: const BouncingScrollPhysics(),
-                            itemCount: widget.brands.length,
-                            itemBuilder: (context, index) {
-                              final brand = widget.brands[index];
-                              final bytes = _bytes(brand['logo_data']);
-                              final name = (brand['brand_name'] ?? '').toString();
-                              return SizedBox(
-                                width: 78,
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    _TickerBrandCircle(bytes: bytes),
-                                    const SizedBox(height: 3),
-                                    SizedBox(width: 74, child: Text(name, maxLines: 1,
-                                      overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
-                                      style: const TextStyle(fontSize: 9, color: _tickerPurple, fontWeight: FontWeight.w700))),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
                         ),
                       ),
                     ),
@@ -228,7 +220,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
   String? _message;
 
   SupabaseClient get _db => Supabase.instance.client;
-  int get _slotCount => _brands.length;
+  int get _slotCount => _brands.length > 25 ? 25 : _brands.length;
 
   String _s(dynamic value) => (value ?? '').toString();
 
@@ -328,13 +320,9 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           (row['slot_no'] as num).toInt(): _s(row['brand_id']),
       };
       final nextOwners = <int, String>{};
-      for (var index = 0; index < brandRows.length; index++) {
+      for (var index = 0; index < brandRows.length && index < 25; index++) {
         final brand = brandRows[index];
-        var displayOrder = _brandOrderValue(brand) ?? (index + 1);
-        while (nextOwners.containsKey(displayOrder)) {
-          displayOrder = brandRows.length + index + 1;
-        }
-        nextOwners[displayOrder] = _s(brand['id']);
+        nextOwners[index + 1] = _s(brand['id']);
       }
       final sameAssignments = savedOwners.length == nextOwners.length &&
           nextOwners.entries.every((entry) => savedOwners[entry.key] == entry.value);
@@ -526,7 +514,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Text(
-              'حدد مواضع كل براند من 1 إلى $_slotCount. لا يمكن تخصيص الموضع نفسه لأكثر من براند في النطاق الواحد. المواضع غير المحددة في النشاط تستكمل من إعدادات كل الأنشطة.',
+              'ترتيب العرض تلقائيًا حسب الجزء الرقمي من كود البراند تصاعديًا. يتم حفظ أول 25 براندًا وفق هذا الترتيب.',
               style: TextStyle(color: Colors.grey.shade700, height: 1.4),
             ),
           ),
@@ -601,7 +589,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           Padding(
             padding: const EdgeInsets.all(12),
             child: Row(children: [
-              Text('عدد البراندات المرتبة حسب الكود: ${_slotOwners.length}/$_slotCount',
+              Text('البراندات الداخلة في شريط العرض: ${_slotOwners.length}/$_slotCount',
                 style: const TextStyle(color: _tickerPurple, fontWeight: FontWeight.w900)),
               const Spacer(),
               FilledButton.icon(
