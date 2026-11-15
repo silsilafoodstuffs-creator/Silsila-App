@@ -7,6 +7,7 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    ErpScreenLayoutProfiles.resetForTesting();
   });
 
   group('ErpScreenLayoutProfiles company isolation', () {
