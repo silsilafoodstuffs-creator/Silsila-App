@@ -62,12 +62,21 @@ class ErpStudioRepository {
 
   Future<List<Map<String, dynamic>>> listDesigns(String companyId) async {
     _requireCompany(companyId);
-    final rows = await _client.from('erp_studio_designs')
-        .select('id,design_key,name,design_kind,status,schema_version,revision,published_revision,updated_at')
-        .eq('company_id', companyId)
-        .order('updated_at', ascending: false)
-        .limit(200);
-    return (rows as List).map((e) => Map<String, dynamic>.from(e as Map)).toList(growable: false);
+    const pageSize = 200;
+    final result = <Map<String, dynamic>>[];
+    for (var offset = 0;; offset += pageSize) {
+      final rows = await _client.from('erp_studio_designs')
+          .select('id,design_key,name,design_kind,status,schema_version,revision,published_revision,updated_at')
+          .eq('company_id', companyId)
+          .order('updated_at', ascending: false)
+          .range(offset, offset + pageSize - 1);
+      final page = (rows as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList(growable: false);
+      result.addAll(page);
+      if (page.length < pageSize) break;
+    }
+    return result;
   }
 
   /// Lists every published design, filtering on the server before paging.
@@ -111,13 +120,22 @@ class ErpStudioRepository {
     required String designId,
   }) async {
     _requireCompany(companyId);
-    final rows = await _client.from('erp_studio_design_versions')
-        .select('id,revision,change_note,created_by,created_at')
-        .eq('company_id', companyId)
-        .eq('design_id', designId)
-        .order('revision', ascending: false)
-        .limit(100);
-    return (rows as List).map((e) => Map<String, dynamic>.from(e as Map)).toList(growable: false);
+    const pageSize = 100;
+    final result = <Map<String, dynamic>>[];
+    for (var offset = 0;; offset += pageSize) {
+      final rows = await _client.from('erp_studio_design_versions')
+          .select('id,revision,change_note,created_by,created_at')
+          .eq('company_id', companyId)
+          .eq('design_id', designId)
+          .order('revision', ascending: false)
+          .range(offset, offset + pageSize - 1);
+      final page = (rows as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList(growable: false);
+      result.addAll(page);
+      if (page.length < pageSize) break;
+    }
+    return result;
   }
 
   Future<Map<String, dynamic>> getVersion({
