@@ -730,7 +730,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                     )
                   : DataTable2(
                       fixedTopRows: 1,
-                      fixedLeftColumns: 2,
                       minWidth: 1040,
                       columnSpacing: 8,
                       horizontalMargin: 8,
