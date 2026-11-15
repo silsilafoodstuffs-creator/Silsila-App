@@ -1064,6 +1064,8 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
   static const double _circleSize = 58;
   final ScrollController _scrollController = ScrollController();
   Timer? _autoScrollTimer;
+  Timer? _manualResumeTimer;
+  bool _manualScrollPaused = false;
   List<Map<String, dynamic>> _ads = const [];
   int _requestVersion = 0;
 
@@ -1072,7 +1074,7 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
     super.initState();
     _load();
     _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 24), (_) {
-      if (!mounted || !_scrollController.hasClients || _ads.length < 2) return;
+      if (!mounted || _manualScrollPaused || !_scrollController.hasClients || _ads.length < 2) return;
       final cycleExtent = _ads.length * _itemWidth;
       final position = _scrollController.position;
       if (position.pixels >= cycleExtent) {
@@ -1125,6 +1127,7 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
   @override
   void dispose() {
     _autoScrollTimer?.cancel();
+    _manualResumeTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -1138,7 +1141,22 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
     final repeatedCount = _ads.length * copies;
     return SizedBox(
       height: 82,
-      child: ListView.builder(
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification is ScrollStartNotification &&
+              notification.dragDetails != null) {
+            _manualScrollPaused = true;
+            _manualResumeTimer?.cancel();
+          } else if (notification is ScrollEndNotification &&
+              _manualScrollPaused) {
+            _manualResumeTimer?.cancel();
+            _manualResumeTimer = Timer(const Duration(milliseconds: 1200), () {
+              _manualScrollPaused = false;
+            });
+          }
+          return false;
+        },
+        child: ListView.builder(
         controller: _scrollController,
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
@@ -1212,6 +1230,7 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
             ),
           );
         },
+        ),
       ),
     );
   }
