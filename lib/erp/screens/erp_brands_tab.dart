@@ -31,6 +31,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   bool _gridEditing = false;
   String? _error;
   final Map<String, TextEditingController> _gridNameControllers = <String, TextEditingController>{};
+  final Map<String, TextEditingController> _gridEnglishControllers = <String, TextEditingController>{};
   String _viewMode = 'tree';
   final Set<String> _expandedGroups = <String>{};
 
@@ -48,6 +49,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   void dispose() {
     _search.dispose();
     for (final controller in _gridNameControllers.values) { controller.dispose(); }
+    for (final controller in _gridEnglishControllers.values) { controller.dispose(); }
     super.dispose();
   }
 
@@ -87,37 +89,52 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   }
 
   void _syncGridNameControllers() {
-    final keep = _rows.map((row) => _s(row['id'])).toSet();
+    final keep = _rows.map((r) => _s(r['id'])).toSet();
     for (final id in _gridNameControllers.keys.where((id) => !keep.contains(id)).toList()) { _gridNameControllers.remove(id)?.dispose(); }
+    for (final id in _gridEnglishControllers.keys.where((id) => !keep.contains(id)).toList()) { _gridEnglishControllers.remove(id)?.dispose(); }
     for (final row in _rows) {
       final id = _s(row['id']);
-      final controller = _gridNameControllers.putIfAbsent(id, () => TextEditingController());
-      if (!_gridEditing) controller.text = _s(row['brand_name']);
+      final ar = _gridNameControllers.putIfAbsent(id, () => TextEditingController());
+      final en = _gridEnglishControllers.putIfAbsent(id, () => TextEditingController());
+      if (!_gridEditing) { ar.text = _s(row['brand_name']); en.text = _s(row['brand_name_en']); }
     }
   }
 
   Future<void> _saveGridNames({String? onlyId}) async {
     if (_saving) return;
-    final targets = _rows.where((row) => row['is_system'] != true && (onlyId == null || _s(row['id']) == onlyId) && _gridNameControllers.containsKey(_s(row['id'])) && _gridNameControllers[_s(row['id'])]!.text.trim() != _s(row['brand_name'])).toList();
-    if (targets.isEmpty) { if (mounted) ErpCenterToast.show(context, 'لا توجد أسماء تم تعديلها.'); return; }
-    final proposed = <String>{};
-    for (final row in targets) {
-      final name = _gridNameControllers[_s(row['id'])]!.text.trim();
-      if (name.isEmpty) { ErpCenterToast.show(context, 'اسم البراند لا يمكن أن يكون فارغًا.', isError: true); return; }
-      final normalized = name.toLowerCase();
-      if (!proposed.add(normalized) || _rows.any((other) => _s(other['id']) != _s(row['id']) && _s(other['brand_name']).trim().toLowerCase() == normalized && !targets.any((target) => _s(target['id']) == _s(other['id'])))) { ErpCenterToast.show(context, 'اسم البراند مكرر داخل الشركة. اختر اسمًا مختلفًا.', isError: true); return; }
+    final targets = _rows.where((r) {
+      final id = _s(r['id']);
+      if (r['is_system'] == true || (onlyId != null && id != onlyId)) return false;
+      return _gridNameControllers[id]!.text.trim() != _s(r['brand_name']).trim() ||
+          _gridEnglishControllers[id]!.text.trim() != _s(r['brand_name_en']).trim();
+    }).toList();
+    if (targets.isEmpty) { ErpCenterToast.show(context, 'لا توجد أسماء تم تعديلها.'); return; }
+    for (final r in targets) {
+      final id = _s(r['id']), ar = _gridNameControllers[id]!.text.trim(), en = _gridEnglishControllers[id]!.text.trim();
+      if (ar.isEmpty) { ErpCenterToast.show(context, 'اسم البراند بالعربية لا يمكن أن يكون فارغًا.', isError: true); return; }
+      if (_rows.any((o) => _s(o['id']) != id && _s(o['brand_name']).trim().toLowerCase() == ar.toLowerCase())) {
+        ErpCenterToast.show(context, 'اسم البراند العربي مستخدم بالفعل.', isError: true); return;
+      }
+      if (en.isNotEmpty && _rows.any((o) => _s(o['id']) != id && _s(o['brand_name_en']).trim().toLowerCase() == en.toLowerCase())) {
+        ErpCenterToast.show(context, 'اسم البراند الإنجليزي مستخدم بالفعل.', isError: true); return;
+      }
     }
     setState(() { _saving = true; _error = null; });
-    var saved = 0;
     try {
-      for (final row in targets) { final id = _s(row['id']); final name = _gridNameControllers[id]!.text.trim(); await _db.from('erp_brands').update({'brand_name': name}).eq('id', id).eq('company_id', widget.companyId.trim()).select('id').single(); saved++; }
+      for (final r in targets) {
+        final id = _s(r['id']), ar = _gridNameControllers[id]!.text.trim(), en = _gridEnglishControllers[id]!.text.trim();
+        await _db.from('erp_brands').update({'brand_name': ar, 'brand_name_en': en.isEmpty ? null : en})
+          .eq('id', id).eq('company_id', widget.companyId.trim()).select('id').single();
+      }
+      setState(() => _gridEditing = false);
       await _load();
-      if (mounted) { setState(() => _gridEditing = false); ErpCenterToast.show(context, 'تم حفظ ' + saved.toString() + ' اسم براند بنجاح.'); }
+      if (mounted) ErpCenterToast.show(context, 'تم حفظ الاسمين العربي والإنجليزي بنجاح.');
     } catch (error) {
-      if (mounted) { final raw = error.toString(); final friendly = raw.contains('erp_brands_company_name_ci_uq') || raw.contains('duplicate key') ? 'تعذر الحفظ: يوجد براند آخر بنفس الاسم. غيّر الاسم المكرر ثم أعد الحفظ.' : 'تعذر حفظ أسماء البراندات بعد حفظ ' + saved.toString() + ' من ' + targets.length.toString() + '. التفاصيل: ' + raw; ErpCenterToast.show(context, friendly, isError: true); }
+      if (mounted) ErpCenterToast.show(context, _friendlySaveError(error), isError: true);
       await _load();
     } finally { if (mounted) setState(() => _saving = false); }
   }
+
   List<Map<String,dynamic>> get _visibleRows {
     final term = _search.text.trim().toLowerCase();
     if (term.isEmpty) return _rows;
@@ -132,12 +149,12 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   String _friendlySaveError(Object error) {
     if (error is PostgrestException) {
       final code = error.code ?? '';
-      final message = error.message.toLowerCase();
-      if (code == '23505' || message.contains('duplicate key')) return 'تعذر الحفظ: اسم البراند مستخدم بالفعل داخل الشركة. اختر اسمًا مختلفًا.';
+      if (code == '23505') return 'تعذر الحفظ: يوجد اسم براند مكرر. راجع الاسمين العربي والإنجليزي.';
       if (code == '23503') return 'تعذر الحفظ: يوجد ارتباط ببيانات أخرى غير متوافقة. لم يتم تغيير كود البراند أو ارتباطات الأصناف.';
       if (code == '42501' || code == 'PGRST301') return 'تعذر الحفظ: صلاحية تعديل البراند غير متاحة لهذا الحساب.';
-      if (code == '23514') return 'تعذر الحفظ: البيانات لا تطابق إحدى قواعد التحقق. راجع اسم البراند ونوع النشاط.';
-      return 'تعذر حفظ البراند: ' + error.message;
+      if (code == '23514' || code == '23502') return 'البيانات غير مكتملة أو لا تطابق قواعد التحقق. راجع اسم البراند.';
+      if (code == 'PGRST116') return 'لم يتم العثور على سجل البراند المطلوب أو لا يمكن الوصول إليه.';
+      return 'تعذر حفظ البراند بسبب مشكلة في قاعدة البيانات. لم يتم عرض تفاصيل تقنية أو أكواد للمستخدم.';
     }
     return 'تعذر حفظ البراند. حاول مرة أخرى.';
   }
