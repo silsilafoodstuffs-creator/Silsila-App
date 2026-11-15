@@ -5969,6 +5969,15 @@ class _OffersScreenState extends State<OffersScreen> {
       }
     }
 
+    // Category/brand "select all" must be saveable even when item rows were
+    // never expanded, so seed every product's default price and minimum.
+    for (final product in offerableProducts) {
+      offerPrices.putIfAbsent(product.cartKey,
+          () => TextEditingController(text: product.price.toStringAsFixed(2)));
+      minimumQuantities.putIfAbsent(product.cartKey,
+          () => TextEditingController(text: product.minQuantity.toString()));
+    }
+
     List<Map<String,dynamic>> offerCategoryChildren(String parentId) =>
         offerItemCategories.where((row) => (row['parent_id'] ?? '').toString() == parentId).toList();
 
