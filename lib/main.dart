@@ -7603,7 +7603,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     try {
       final db = database; final id = db?.auth.currentUser?.id;
       if (db == null || id == null) return;
-      final row = await db.from('profiles').select('full_name,phone,address,governorate,district,area').eq('id', id).maybeSingle();
+      final row = await db.from('profiles').select('full_name,phone,whatsapp_phone,address,governorate,district,area,account_type,customer_type,supplier_type,avatar_url').eq('id', id).maybeSingle();
       if (mounted && row != null) setState(() => _publisherProfile = Map<String,dynamic>.from(row));
     } catch (_) {}
   }
@@ -7640,10 +7640,12 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     } catch (_) {}
   }
 
-  List<Map<String,dynamic>> _marketCategoryChildren(int? parentId) => _marketCategories.where((row)=>(row['parent_id'] as num?)?.toInt()==parentId).toList();
+  int? _marketCategoryParentId(Map<String,dynamic> row) => int.tryParse((row['parent_id'] ?? '').toString());
+  int _marketCategoryId(Map<String,dynamic> row) => int.tryParse((row['id'] ?? '').toString()) ?? -1;
+  List<Map<String,dynamic>> _marketCategoryChildren(int? parentId) => _marketCategories.where((row)=>_marketCategoryParentId(row)==parentId).toList();
 
   Widget _marketCategoryNode(Map<String,dynamic> category, int depth) {
-    final id=(category['id'] as num).toInt();
+    final id=_marketCategoryId(category);
     final expanded=_expandedCategoryIds.contains(id);
     final children=_marketCategoryChildren(id);
     final products=_marketProducts.where((p)=>(p['category_id'] as num?)?.toInt()==id).toList();
@@ -7653,7 +7655,60 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         Icon(expanded?Icons.expand_less:Icons.chevron_left,color:color,size:18),
         Expanded(child:Text((category['name']??'').toString(),textAlign:TextAlign.right,style:TextStyle(color:color,fontWeight:FontWeight.w800,fontSize:depth==0?15:depth==1?13:12))),
       ]))),
-      if(expanded)...products.map((product){
+      if(expanded)..._marketBrandGroups(products).entries.map((entry) => _marketBrandNode(entry.key, entry.value)),
+      if(expanded)...children.map((child)=>_marketCategoryNode(child,depth+1)),
+    ]);
+  }
+
+  Map<String,List<Map<String,dynamic>>> _marketBrandGroups(List<Map<String,dynamic>> products) {
+    final groups=<String,List<Map<String,dynamic>>>{};
+    for(final product in products) { final brand=(product['brand'] ?? product['brand_name'] ?? '').toString().trim(); final label=brand.isEmpty?'بدون ماركة':brand; (groups[label] ??= <Map<String,dynamic>>[]).add(product); }
+    final keys=groups.keys.toList()..sort((a,b)=>a=='بدون ماركة'?1:b=='بدون ماركة'?-1:a.compareTo(b));
+    return {for(final key in keys) key:groups[key]!};
+  }
+
+  void _selectMarketProducts(List<Map<String,dynamic>> products, bool selected) {
+    for(final product in products) {
+      final id=(product['id']??'').toString(); final name=(product['name']??'').toString(); final key=id.isEmpty?name:id;
+      if(selected) { selectedProducts.add(key); _productQuantities.putIfAbsent(key,()=>TextEditingController(text:'1')); _productPrices.putIfAbsent(key,()=>TextEditingController(text:(product['price']??'0').toString())); _productUnits[key]=(product['unit']??'كبري').toString(); _productQuality[key]='good'; _productNegotiable[key]=false; } else { selectedProducts.remove(key); }
+    }
+    selectAllProducts=_marketProducts.isNotEmpty&&selectedProducts.length==_marketProducts.length;
+  }
+
+  Widget _marketBrandNode(String brand, List<Map<String,dynamic>> products) {
+    final key='brand:'+brand+':'+products.map((p)=>(p['id']??'').toString()).join(',');
+    final expanded=_expandedCategoryIds.contains(key.hashCode);
+    return Padding(padding:const EdgeInsetsDirectional.only(start:16),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      InkWell(onTap:()=>setState(()=>expanded?_expandedCategoryIds.remove(key.hashCode):_expandedCategoryIds.add(key.hashCode)),child:Padding(padding:const EdgeInsets.symmetric(vertical:4),child:Row(children:[
+        Icon(expanded?Icons.expand_less:Icons.chevron_left,color:const Color(0xFFFF27C3),size:17),
+        Expanded(child:Text(brand,style:const TextStyle(color:Color(0xFFFF27C3),fontWeight:FontWeight.w700))),
+        Text(products.length.toString()+' صنف',style:const TextStyle(fontSize:10,color:Colors.black54)),
+        TextButton(onPressed:()=>setState(()=>_selectMarketProducts(products,true)),child:const Text('تحديد')),
+      ]))),
+      if(expanded)...products.map(_marketProductNode),
+    ]));
+  }
+
+  Widget _marketProductNode(Map<String,dynamic> product) {
+    final id=(product['id']??'').toString(); final name=(product['name']??'').toString(); final key=id.isEmpty?name:id; final selected=selectedProducts.contains(key);
+    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      CheckboxListTile(dense:true,contentPadding:const EdgeInsetsDirectional.only(start:12),value:selected,title:Text(name),subtitle:Text('سعر المورد: '+(product['price']??'—').toString()+' ج.م • الوحدة: '+(product['unit']??'كبري').toString()),onChanged:(v)=>setState(()=>_selectMarketProducts([product],v==true))),
+      if(selected)Padding(padding:const EdgeInsetsDirectional.only(start:12,bottom:8),child:Row(children:[
+        Expanded(child:TextField(controller:_productQuantities[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'الكمية',hintText:'0.000',isDense:true,border:OutlineInputBorder()))),
+        const SizedBox(width:6),
+        Expanded(child:DropdownButtonFormField<String>(value:_productUnits[key],isExpanded:true,decoration:const InputDecoration(labelText:'الوحدة',isDense:true,border:OutlineInputBorder()),items:{_productUnits[key]??'كبري','كرتونة','علبة','عبوة','كيلو','جرام','طن','قطعة','لتر'}.map((u)=>DropdownMenuItem(value:u,child:Text(u,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_productUnits[key]=v);})),
+        const SizedBox(width:6),
+        Expanded(child:TextField(controller:_productPrices[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'السعر',isDense:true,border:OutlineInputBorder()))),
+        const SizedBox(width:4),
+        SizedBox(width:116,child:CheckboxListTile(dense:true,contentPadding:const EdgeInsets.all(0),controlAffinity:ListTileControlAffinity.leading,title:const Text('قابل للتفاوض',style:TextStyle(fontSize:10)),value:_productNegotiable[key]==true,onChanged:(v)=>setState(()=>_productNegotiable[key]=v==true))),
+      ])),
+      if(selected)Padding(padding:const EdgeInsetsDirectional.only(start:12,bottom:6),child:Wrap(spacing:8,children:[
+        FilterChip(label:const Text('صلاحية جيدة'),selected:(_productQuality[key]??'good')=='good',onSelected:(v)=>setState(()=>_productQuality[key]=v?'good':'near_expiry')),
+        FilterChip(label:const Text('صلاحية قريبة'),selected:(_productQuality[key]??'good')=='near_expiry',onSelected:(v)=>setState(()=>_productQuality[key]=v?'near_expiry':'good')),
+      ])),
+      if(selected&&type=='sell'&&(_productQuality[key]??'good')=='near_expiry')ListTile(contentPadding:const EdgeInsetsDirectional.only(start:12),dense:true,title:const Text('تاريخ انتهاء الصلاحية'),subtitle:Text(_productExpiryDates[key]?.toIso8601String().split('T').first??'مطلوب عند اختيار صلاحية قريبة'),trailing:IconButton(icon:const Icon(Icons.calendar_month),onPressed:()async{final now=DateTime.now();final d=await showDatePicker(context:context,firstDate:DateTime(now.year,now.month,now.day),lastDate:DateTime(2100),initialDate:_productExpiryDates[key]??now.add(const Duration(days:30)));if(d!=null)setState(()=>_productExpiryDates[key]=d);})),
+    ]);
+  }
         final name=(product['name']??'').toString();
         return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           CheckboxListTile(dense:true,contentPadding:const EdgeInsets.all(0),value:selectedProducts.contains(name),title:Text(name),onChanged:(v)=>setState((){
@@ -7712,28 +7767,29 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     }
 
     final itemsData = <Map<String,dynamic>>[];
-    for (final name in selectedProducts) {
-      final qtyText = _productQuantities[name]?.text.trim() ?? '1';
+    for (final selectedKey in selectedProducts) {
+      final matches = _marketProducts.where((p)=>(p['id']??'').toString()==selectedKey || ((p['id']??'').toString().isEmpty && (p['name']??'').toString()==selectedKey)).toList();
+      final product = matches.isEmpty ? null : matches.first;
+      final name = (product?['name'] ?? selectedKey).toString();
+      final qtyText = _productQuantities[selectedKey]?.text.trim() ?? '1';
       final qty = double.tryParse(qtyText);
-      final price = double.tryParse(_productPrices[name]?.text.trim() ?? '0');
+      final price = double.tryParse(_productPrices[selectedKey]?.text.trim() ?? '0');
       if (qty == null || !qty.isFinite || qty <= 0 || qty > 9999.999 ||
           ((qty * 1000).roundToDouble() - qty * 1000).abs() > 0.000001 ||
           price == null || !price.isFinite || price < 0) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('راجع كمية وسعر كل صنف؛ الكمية حتى 4 أرقام و3 منازل عشرية.')));
         return;
       }
-      if (type == 'sell' && (_productQuality[name] ?? 'good') == 'near_expiry' && _productExpiryDates[name] == null) {
+      if (type == 'sell' && (_productQuality[selectedKey] ?? 'good') == 'near_expiry' && _productExpiryDates[selectedKey] == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('حدد تاريخ انتهاء الصلاحية للصنف: $name')),
         );
         return;
       }
-      final matchingProducts = _marketProducts.where((p)=>(p['name']??'').toString()==name).toList();
-      final product = matchingProducts.isEmpty ? null : matchingProducts.first;
       itemsData.add({
         'product_id':product?['id'],'product_name':name,'quantity':qty,
-        'unit':_productUnits[name] ?? product?['unit'] ?? 'كبري',
-        'price':price,'is_negotiable':_productNegotiable[name]??isNegotiable,'quality_preference':_productQuality[name]??'good','expiry_condition_date':_productExpiryDates[name]?.toIso8601String().split('T').first,
+        'unit':_productUnits[selectedKey] ?? product?['unit'] ?? 'كبري',
+        'price':price,'is_negotiable':_productNegotiable[selectedKey]??isNegotiable,'quality_preference':_productQuality[selectedKey]??'good','expiry_condition_date':_productExpiryDates[selectedKey]?.toIso8601String().split('T').first,
       });
     }
     if (itemsData.isEmpty && selectedProducts.isEmpty) {
@@ -7766,7 +7822,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         targetPrice: itemsData.length==1?itemsData.first['price'] as double:targetPrice,
         governorate: governorateController.text.trim().isEmpty ? null : governorateController.text.trim(),
         category: categoryController.text.trim().isEmpty ? null : categoryController.text.trim(),
-        contactPhone: contactPhoneController.text.trim().isEmpty ? null : normalizePhoneForAuth(contactPhoneController.text),
+        contactPhone: (_publisherProfile['phone'] ?? '').toString().trim().isEmpty ? null : normalizePhoneForAuth((_publisherProfile['phone'] ?? '').toString()),
         durationHours: 24,
         requestedAt: type == 'transfer' ? _transportAt : null,
         itemsData: itemsData,
@@ -7800,17 +7856,24 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   Widget build(BuildContext context) => ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 12),
-            decoration: BoxDecoration(color: type == 'buy' ? purple : type == 'transfer' ? const Color(0xFFFF27C3) : orange, borderRadius: BorderRadius.circular(14)),
-            child: Column(mainAxisSize:MainAxisSize.min,children:[
-              Text(type == 'buy' ? 'عايز أشتري' : type == 'transfer' ? 'عايز أنقل' : 'عايز أبيع',textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:19)),
-              Text((_publisherProfile['full_name'] ?? 'حساب المستخدم').toString(),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700)),
-              Text((_publisherProfile['phone'] ?? 'رقم الهاتف من بيانات الحساب').toString(),style:const TextStyle(color:Colors.white,fontSize:11)),
-              Text([_publisherProfile['governorate'],_publisherProfile['district'],_publisherProfile['area'],_publisherProfile['address']].where((v)=>v!=null&&v.toString().trim().isNotEmpty).join(' - '),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:10)),
+          Container(width:double.infinity,padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:type=='buy'?purple:type=='transfer'?const Color(0xFFFF27C3):orange,borderRadius:BorderRadius.circular(14)),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+            Text(type=='buy'?'عايز أشتري':type=='transfer'?'عايز أنقل':'عايز أبيع',textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:18)),
+            const SizedBox(height:9),
+            Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+              ClipRRect(borderRadius:BorderRadius.circular(12),child:Container(width:58,height:58,color:Colors.white,child:(_publisherProfile['avatar_url']??'').toString().trim().isEmpty?const Icon(Icons.person,color:purple,size:34):Image.network(_publisherProfile['avatar_url'].toString(),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.person,color:purple,size:34)))),
+              const SizedBox(width:9),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Text((_publisherProfile['full_name']??'حساب المستخدم').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
+                Text([_publisherProfile['governorate'],_publisherProfile['district'],_publisherProfile['area'],_publisherProfile['address']].where((v)=>v!=null&&v.toString().trim().isNotEmpty).join(' - '),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:10)),
+                Wrap(spacing:12,children:[Text('موبايل 1: '+(_publisherProfile['phone']??'—').toString(),style:const TextStyle(color:Colors.white,fontSize:10)),Text('موبايل 2: '+(_publisherProfile['whatsapp_phone']??'—').toString(),style:const TextStyle(color:Colors.white,fontSize:10))]),
+              ])),
+              const SizedBox(width:10),
+              Column(crossAxisAlignment:CrossAxisAlignment.end,children:[
+                Text((_publisherProfile['account_type']??'حساب').toString(),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
+                Text(((_publisherProfile['account_type']??'').toString()=='مورد'?(_publisherProfile['supplier_type']??''):(_publisherProfile['customer_type']??'')).toString().trim().isEmpty?'غير مصنف':((_publisherProfile['account_type']??'').toString()=='مورد'?_publisherProfile['supplier_type']:_publisherProfile['customer_type']).toString(),style:const TextStyle(color:Colors.white,fontSize:10)),
+              ]),
             ]),
-          ),
+          ])),
           const SizedBox(height: 12),
           TextField(controller: titleController, decoration: const InputDecoration(labelText: 'عنوان الطلب')),
           const SizedBox(height: 10),
@@ -7826,8 +7889,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
               TextButton(
                 onPressed: () => setState(() {
                   selectAllProducts = !selectAllProducts;
-                  selectedProducts..clear()..addAll(selectAllProducts ? (_marketProducts.isNotEmpty ? _marketProducts.map((p)=>(p['name']??'').toString()) : widget.availableProducts.map((p)=>p.name)) : const <String>[]);
-                  if(selectAllProducts){for(final p in _marketProducts){final name=(p['name']??'').toString();_productQuantities.putIfAbsent(name,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(name,()=>TextEditingController(text:(p['price']??'0').toString()));_productUnits[name]=(p['unit']??'كبري').toString();}}
+                  selectedProducts.clear();
+                  if(selectAllProducts) { if(_marketProducts.isNotEmpty) { _selectMarketProducts(_marketProducts,true); } else { selectedProducts.addAll(widget.availableProducts.map((p)=>p.name)); } }
                 }),
                 child: Text(selectAllProducts ? 'إلغاء تحديد الكل' : 'تحديد الكل'),
               ),
@@ -7865,11 +7928,6 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             decoration: const InputDecoration(labelText: 'المحافظة (اختياري)'),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: contactPhoneController,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(labelText: 'رقم للتواصل (اختياري)', prefixIcon: Icon(Icons.phone_outlined)),
-          ),
           const SizedBox(height: 8),
           SwitchListTile(contentPadding: EdgeInsets.zero, value: isNegotiable, onChanged: (value) => setState(() => isNegotiable = value), title: Text(silsilaText(silsilaText('السعر قابل للتفاوض البسيط'))), subtitle: Text(silsilaText(silsilaText('يمكن للطرف الآخر إرسال سعر مقترح للموافقة أو الرفض أو التعديل.')))),
           if (type == 'transfer') ...[
