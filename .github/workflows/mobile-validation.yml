@@ -98,7 +98,7 @@ jobs:
         run: flutter test --reporter expanded
 
       - name: Build Android debug APK
-        run: flutter build apk --debug
+        run: flutter build apk --debug --no-pub --target-platform android-arm,android-arm64
 
       - name: Verify Android package artifact
         run: |
