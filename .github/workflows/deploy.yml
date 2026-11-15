@@ -105,6 +105,12 @@ jobs:
           grep -q 'سلسلة' /tmp/silsila-page.html
           curl --fail --silent --show-error --location --retry 8 --retry-delay 5 --head "${DEPLOYED_URL%/}/flutter_bootstrap.js"
 
+      - name: Cache Playwright Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium-v1
+
       - name: Install Chromium browser test dependencies
         run: |
           npm install --no-save --no-package-lock playwright source-map
