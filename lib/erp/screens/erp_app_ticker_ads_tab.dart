@@ -220,7 +220,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
   String? _message;
 
   SupabaseClient get _db => Supabase.instance.client;
-  int get _slotCount => _brands.length > 25 ? 25 : _brands.length;
+  int get _slotCount => _brands.length;
 
   String _s(dynamic value) => (value ?? '').toString();
 
@@ -320,7 +320,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           (row['slot_no'] as num).toInt(): _s(row['brand_id']),
       };
       final nextOwners = <int, String>{};
-      for (var index = 0; index < brandRows.length && index < 25; index++) {
+      for (var index = 0; index < brandRows.length; index++) {
         final brand = brandRows[index];
         nextOwners[index + 1] = _s(brand['id']);
       }
@@ -514,11 +514,11 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Text(
-              'ترتيب العرض تلقائيًا حسب الجزء الرقمي من كود البراند تصاعديًا. يتم حفظ أول 25 براندًا وفق هذا الترتيب.',
+              'ترتيب العرض تلقائيًا حسب الجزء الرقمي الكامل من كود البراند تصاعديًا، مع إدراج جميع البراندات النشطة.',
               style: TextStyle(color: Colors.grey.shade700, height: 1.4),
             ),
           ),
-          _TickerAdsPreview(brands: _brands.take(25).toList()),
+          _TickerAdsPreview(brands: _brands),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.all(10),
