@@ -787,8 +787,14 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                                     decoration: const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'اسم البراند بالعربية'),
                                     onSubmitted: (_) => FocusScope.of(context).nextFocus()),
                                 )
-                              : Text(_s(row['brand_name'])))),
-                            DataCell(SizedBox(width: 180, child: _gridEditing && !system
+                              : Text(_s(row['brand_name'])))), onTap: !system && !_gridEditing
+                              ? () => setState(() {
+                                  _selectedId = id;
+                                  _gridEditing = true;
+                                  _gridEditingOnlyId = id;
+                                })
+                              : null),
+                            DataCell(SizedBox(width: 180, child: _gridEditing && (_gridEditingOnlyId == null || _gridEditingOnlyId == id) && !system
                               ? Focus(
                                   onKeyEvent: (_, event) {
                                     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) { FocusScope.of(context).nextFocus(); return KeyEventResult.handled; }
