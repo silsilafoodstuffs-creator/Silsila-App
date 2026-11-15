@@ -98,6 +98,17 @@ void main() {
     expect(adminSource, contains('هل ترغب في الحفظ؟'));
   });
 
+  test('ticker brand grid uses a bounded DataTable2 so rows remain visible inside the tab', () {
+    expect(adminSource, contains("import 'package:data_table_2/data_table_2.dart';"));
+    expect(adminSource, contains('DataTable2('));
+    expect(adminSource, contains('minWidth: 520'));
+    expect(adminSource, contains('fixedTopRows: 1'));
+    expect(adminSource, contains("rows: brands.asMap().entries.map((entry)"));
+    expect(adminSource, contains("Text('معاينة دائرية')"));
+    expect(adminSource, contains("Text('ترتيبه في العرض')"));
+    expect(adminSource, contains('لا توجد براندات نشطة لعرضها في هذا النطاق.'));
+  });
+
   test('public ticker automatically includes all active brands for the selected activity', () {
     expect(activityMigrationSource, contains('activity_brand_catalog'));
     expect(activityMigrationSource, contains('public.erp_item_categories'));
