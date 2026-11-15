@@ -7565,7 +7565,20 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
       final db = database; final id = db?.auth.currentUser?.id;
       if (db == null || id == null) return;
       final row = await db.from('profiles').select('full_name,phone,whatsapp_phone,address,governorate,district,area,avatar_url,account_type,customer_type,supplier_type').eq('id', id).maybeSingle();
-      if (mounted && row != null) setState(() => _publisherProfile = Map<String,dynamic>.from(row));
+      if (row == null) return;
+      final profile = Map<String,dynamic>.from(row);
+      if (type == 'sell') {
+        try {
+          final supplier = await db.from('supplier_details')
+              .select('classification,business_name')
+              .eq('user_id', id).maybeSingle();
+          if (supplier != null) {
+            profile['supplier_classification'] = supplier['classification'];
+            profile['supplier_business_name'] = supplier['business_name'];
+          }
+        } catch (_) {}
+      }
+      if (mounted) setState(() => _publisherProfile = profile);
     } catch (_) {}
   }
 
@@ -7813,7 +7826,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
                   Text((_publisherProfile['full_name'] ?? 'حساب المستخدم').toString(),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
                   Text('موبايل 1: ${(_publisherProfile['phone'] ?? '—').toString()}   •   موبايل 2: ${(_publisherProfile['whatsapp_phone'] ?? '—').toString()}',style:const TextStyle(color:Colors.white,fontSize:10),maxLines:2),
                   Text([_publisherProfile['governorate'],_publisherProfile['district'],_publisherProfile['area'],_publisherProfile['address']].where((v)=>v!=null&&v.toString().trim().isNotEmpty).join(' - '),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:10)),
-                  Align(alignment:Alignment.centerLeft,child:Text('${(_publisherProfile['account_type']??'حساب').toString()} • ${((type=='sell'?_publisherProfile['supplier_type']:_publisherProfile['customer_type'])??'').toString()}',style:const TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w700))),
+                  Align(alignment:Alignment.centerLeft,child:Text('${(_publisherProfile['account_type']??'حساب').toString()} • ${((type=='sell'?(_publisherProfile['supplier_classification']??_publisherProfile['supplier_type']):_publisherProfile['customer_type'])??'').toString()}',style:const TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w700))),
                 ])),
               ]),
             ]),
@@ -7834,13 +7847,70 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
                 onPressed: () => setState(() {
                   selectAllProducts = !selectAllProducts;
                   selectedProducts..clear()..addAll(selectAllProducts ? _marketProducts.map((p)=>(p['id']??'').toString()) : const <String>[]);
-                  if(selectAllProducts){for(final p in _marketProducts){final name=(p['name']??'').toString();_productQuantities.putIfAbsent(name,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(name,()=>TextEditingController(text:(p['price']??'0').toString()));_productUnits[name]=(p['unit']??'كبري').toString();}}
+                  if(selectAllProducts){for(final p in _marketProducts){final key=(p['id']??'').toString();_productQuantities.putIfAbsent(key,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(key,()=>TextEditingController(text:(p['price']??'0').toString()));_productUnits[key]=(p['unit']??'كبري').toString();_productQuality[key]='good';_productNegotiable[key]=false;}}
                 }),
                 child: Text(selectAllProducts ? 'إلغاء تحديد الكل' : 'تحديد الكل'),
               ),
             ]),
-            if (_marketCategories.isNotEmpty) ..._marketCategories.where((category) => category['parent_id'] == null).map((category) => _marketCategoryNode(category, 0))
-            else ...widget.availableProducts.map((product) => CheckboxListTile(dense:true,contentPadding:const EdgeInsets.all(0),value:selectedProducts.contains(product.name),title:Text(product.name),subtitle:Text(product.category),onChanged:(checked)=>setState((){if(checked==true){selectedProducts.add(product.name);}else{selectedProducts.remove(product.name);}selectAllProducts=selectedProducts.length==widget.availableProducts.length;}))),
+            if (_marketCategories.any((category) => category['parent_id'] == null))
+              ..._marketCategories.where((category) => category['parent_id'] == null).map((category) => _marketCategoryNode(category, 0))
+            else
+              ..._marketProducts.map((product) {
+                final key = (product['id'] ?? '').toString();
+                final selected = selectedProducts.contains(key);
+                final image = (product['image_url'] ?? '').toString();
+                return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  CheckboxListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    value: selected,
+                    secondary: image.isEmpty
+                        ? const Icon(Icons.inventory_2_outlined, color: purple)
+                        : ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.network(
+                            image, width: 40, height: 40, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined))),
+                    title: Text((product['name'] ?? '').toString()),
+                    subtitle: Text('السعر: ${(product['price'] ?? 0)} • الوحدة: ${(product['unit'] ?? '—')}'),
+                    onChanged: (checked) => setState(() {
+                      if (checked == true) {
+                        selectedProducts.add(key);
+                        _productQuantities.putIfAbsent(key, () => TextEditingController(text: '1'));
+                        _productPrices.putIfAbsent(key, () => TextEditingController(text: (product['price'] ?? '0').toString()));
+                        _productUnits[key] = (product['unit'] ?? 'كبري').toString();
+                        _productQuality[key] = 'good';
+                        _productNegotiable[key] = false;
+                      } else {
+                        selectedProducts.remove(key);
+                      }
+                      selectAllProducts = _marketProducts.isNotEmpty && selectedProducts.length == _marketProducts.length;
+                    }),
+                  ),
+                  if (selected) Padding(
+                    padding: const EdgeInsetsDirectional.only(start: 48, bottom: 8),
+                    child: Row(children: [
+                      Expanded(child: TextField(
+                        controller: _productQuantities[key],
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(labelText: 'الكمية', isDense: true, border: OutlineInputBorder()),
+                      )),
+                      const SizedBox(width: 6),
+                      Expanded(child: DropdownButtonFormField<String>(
+                        value: _productUnits[key], isExpanded: true,
+                        decoration: const InputDecoration(labelText: 'الوحدة', isDense: true, border: OutlineInputBorder()),
+                        items: {_productUnits[key] ?? 'كبري', 'كرتونة', 'علبة', 'عبوة', 'كيلو', 'جرام', 'طن', 'قطعة', 'لتر'}
+                            .map((u) => DropdownMenuItem(value: u, child: Text(u, overflow: TextOverflow.ellipsis))).toList(),
+                        onChanged: (v) { if (v != null) setState(() => _productUnits[key] = v); },
+                      )),
+                      const SizedBox(width: 6),
+                      Expanded(child: TextField(
+                        controller: _productPrices[key],
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(labelText: 'السعر', isDense: true, border: OutlineInputBorder()),
+                      )),
+                    ]),
+                  ),
+                ]);
+              }),
           ],
           const SizedBox(height: 12),
 
