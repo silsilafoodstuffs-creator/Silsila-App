@@ -1,6 +1,6 @@
 name: Silsila Full Validation - All Recent Changes
 
-# Run the broad audit on the Studio integration branch and manually at planned milestones.
+# Run this broad, slower audit manually. Routine checks are handled by the three independent lanes.
 on:
   push:
     branches: [feature/silsila-studio-unified-main-2026-11-15]
