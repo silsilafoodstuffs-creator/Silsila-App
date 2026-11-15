@@ -169,7 +169,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
       }
       if(!mounted)return;
       setState(() {
-        _editingCampaignId=id; _name.text=_s(campaign['title']); _campaignType=_s(campaign['campaign_type']);
+        _editingCampaignId=id; _name.text=_s(campaign['title']); _campaignType=_s(campaign['campaign_type']); _discountKind=rows.isEmpty?'special_price':_s(rows.first['discount_kind']);
         _from=DateTime.tryParse(_s(campaign['start_date']))??DateTime.now(); _to=DateTime.tryParse(_s(campaign['end_date']))??_from;
         _offerLines..clear()..addAll(next);
         _selectedCustomers..clear()..addAll((campaign['target_customer_ids'] as List? ?? const []).map((v)=>v.toString()));
