@@ -148,14 +148,14 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   String _friendlySaveError(Object error) {
     if (error is PostgrestException) {
       final code = error.code ?? '';
-      final message = error.message.toLowerCase();
-      if (code == '23505' || message.contains('duplicate key')) return 'تعذر الحفظ: اسم البراند مستخدم بالفعل داخل الشركة. اختر اسمًا مختلفًا.';
-      if (code == '23503') return 'تعذر الحفظ: يوجد ارتباط ببيانات أخرى غير متوافقة. لم يتم تغيير كود البراند أو ارتباطات الأصناف.';
-      if (code == '42501' || code == 'PGRST301') return 'تعذر الحفظ: صلاحية تعديل البراند غير متاحة لهذا الحساب.';
-      if (code == '23514') return 'تعذر الحفظ: البيانات لا تطابق إحدى قواعد التحقق. راجع اسم البراند ونوع النشاط.';
-      return 'تعذر حفظ البراند: ' + error.message;
+      if (code == '23505') return 'تعذر الحفظ: يوجد اسم براند مكرر. راجع الاسمين العربي والإنجليزي.';
+      if (code == '23503') return 'تعذر الحفظ بسبب ارتباط بيانات البراند بأصناف أو سجلات أخرى.';
+      if (code == '42501' || code == 'PGRST301') return 'ليس لديك صلاحية تعديل هذا البراند.';
+      if (code == '23514' || code == '23502') return 'البيانات غير مكتملة أو لا تطابق قواعد التحقق. راجع اسم البراند.';
+      if (code == 'PGRST116') return 'لم يتم العثور على سجل البراند المطلوب أو لا يمكن الوصول إليه.';
+      return 'تعذر حفظ البراند بسبب مشكلة في قاعدة البيانات. لم يتم عرض تفاصيل تقنية أو أكواد للمستخدم.';
     }
-    return 'تعذر حفظ البراند. حاول مرة أخرى.';
+    return 'تعذر حفظ البراند. تحقق من الاتصال ثم حاول مرة أخرى.';
   }
   Future<void> _edit({Map<String,dynamic>? row}) async {
     if (row?['is_system'] == true) {
