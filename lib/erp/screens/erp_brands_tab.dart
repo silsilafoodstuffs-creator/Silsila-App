@@ -129,6 +129,18 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     ).toList();
   }
 
+  String _friendlySaveError(Object error) {
+    if (error is PostgrestException) {
+      final code = error.code ?? '';
+      final message = error.message.toLowerCase();
+      if (code == '23505' || message.contains('duplicate key')) return 'تعذر الحفظ: اسم البراند مستخدم بالفعل داخل الشركة. اختر اسمًا مختلفًا.';
+      if (code == '23503') return 'تعذر الحفظ: يوجد ارتباط ببيانات أخرى غير متوافقة. لم يتم تغيير كود البراند أو ارتباطات الأصناف.';
+      if (code == '42501' || code == 'PGRST301') return 'تعذر الحفظ: صلاحية تعديل البراند غير متاحة لهذا الحساب.';
+      if (code == '23514') return 'تعذر الحفظ: البيانات لا تطابق إحدى قواعد التحقق. راجع اسم البراند ونوع النشاط.';
+      return 'تعذر حفظ البراند: ' + error.message;
+    }
+    return 'تعذر حفظ البراند. حاول مرة أخرى.';
+  }
   Future<void> _edit({Map<String,dynamic>? row}) async {
     if (row?['is_system'] == true) {
       ErpCenterToast.show(context, 'السجل الافتراضي «بدون علامة تجارية» محمي من التعديل.', isError: true);
@@ -221,7 +233,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       await _load();
       if (mounted) ErpCenterToast.show(context, row == null ? 'تمت إضافة البراند وتوليد كوده.' : 'تم تعديل بيانات البراند.');
     } catch (error) {
-      if (mounted) ErpCenterToast.show(context, 'تعذر حفظ البراند: $error', isError: true);
+      if (mounted) ErpCenterToast.show(context, _friendlySaveError(error), isError: true);
     } finally {
       name.dispose();
       english.dispose();
