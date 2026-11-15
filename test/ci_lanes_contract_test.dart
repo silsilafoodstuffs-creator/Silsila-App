@@ -16,7 +16,8 @@ void main() {
     expect(mobile, isNot(contains('flutter build apk')));
     expect(mobile, contains('Flutter analyze + tests'));
     expect(mobile, isNot(contains('Set up Java 17')));
-    expect(androidBuild, contains('github.run_id'));
+    expect(androidBuild, contains('github.event.workflow_run.head_sha'));
+    expect(androidBuild, contains('github.sha'));
     expect(androidBuild, contains('cancel-in-progress: false'));
     expect(androidBuild, contains('Silsila Mobile App Validation'));
     expect(androidBuild, contains('flutter build apk --debug --no-pub --target-platform android-arm,android-arm64'));
