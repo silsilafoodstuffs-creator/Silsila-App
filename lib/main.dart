@@ -8184,12 +8184,80 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     return {for(final key in keys) key:groups[key]!};
   }
 
+  double _marketNumber(dynamic value, [double fallback = 0]) {
+    if (value is num) return value.toDouble();
+    return double.tryParse((value ?? '').toString()) ?? fallback;
+  }
+
+  List<Map<String,dynamic>> _marketUnitOptions(Map<String,dynamic> product) {
+    final raw = product['units'];
+    if (raw is List) {
+      final rows = raw.whereType<Map>().map((row)=>Map<String,dynamic>.from(row)).toList();
+      if (rows.isNotEmpty) return rows;
+    }
+    return <Map<String,dynamic>>[{
+      'unit_name':product['unit']??'وحدة',
+      'conversion_factor':1,
+      'inner_quantity':1,
+      'is_base_unit':true,
+      'is_selectable':true,
+    }];
+  }
+
   void _selectMarketProducts(List<Map<String,dynamic>> products, bool selected) {
     for(final product in products) {
-      final id=(product['id']??'').toString(); final name=(product['name']??'').toString(); final key=id.isEmpty?name:id;
-      if(selected) { selectedProducts.add(key); _productQuantities.putIfAbsent(key,()=>TextEditingController(text:'1')); _productPrices.putIfAbsent(key,()=>TextEditingController(text:(product['price']??'0').toString())); _productUnits[key]=(product['unit']??'كبري').toString(); _productQuality[key]='good'; _productNegotiable[key]=false; } else { selectedProducts.remove(key); }
+      final id=(product['id']??'').toString();
+      final name=(product['name']??'').toString();
+      final key=id.isEmpty?name:id;
+      if(selected) {
+        selectedProducts.add(key);
+        final options=_marketUnitOptions(product);
+        final defaultUnit=options.first;
+        final factor=_marketNumber(defaultUnit['conversion_factor'],1);
+        final originalBasePrice=_marketNumber(product['base_price']??product['price']);
+        final activeOffer=_marketOfferPrices[id];
+        final effectiveBasePrice=activeOffer!=null&&activeOffer>0&&activeOffer<originalBasePrice?activeOffer:originalBasePrice;
+        _productQuantities.putIfAbsent(key,()=>TextEditingController(text:'1'));
+        _productBasePrices[key]=effectiveBasePrice;
+        _productUnitFactors[key]=factor;
+        _productPrices.putIfAbsent(key,()=>TextEditingController(text:(effectiveBasePrice*factor).toStringAsFixed(2)));
+        _productUnits[key]=(defaultUnit['unit_name']??product['unit']??'وحدة').toString();
+        _productQuality[key]='good';
+        _productNegotiable[key]=false;
+      } else {
+        selectedProducts.remove(key);
+      }
     }
     selectAllProducts=_marketProducts.isNotEmpty&&selectedProducts.length==_marketProducts.length;
+  }
+
+  Future<void> _toggleMarketFavorite(String productId) async {
+    if(productId.isEmpty||_favoriteUpdatingIds.contains(productId)) return;
+    final wasFavorite=_marketFavoriteIds.contains(productId);
+    setState(() {
+      _favoriteUpdatingIds.add(productId);
+      if(wasFavorite){_marketFavoriteIds.remove(productId);}else{_marketFavoriteIds.add(productId);}
+    });
+    try {
+      await FavoriteService().setProductFavorite(productId:productId,favorite:!wasFavorite);
+    } catch (_) {
+      if(mounted) setState(() {
+        if(wasFavorite){_marketFavoriteIds.add(productId);}else{_marketFavoriteIds.remove(productId);}
+      });
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content:Text('تعذر تحديث المفضلة. تأكد من تسجيل الدخول.')),
+      );
+    } finally {
+      if(mounted) setState(()=>_favoriteUpdatingIds.remove(productId));
+    }
+  }
+
+  void _adjustMarketQuantity(String key, double delta) {
+    final controller=_productQuantities[key];
+    if(controller==null) return;
+    final current=double.tryParse(controller.text.trim())??1;
+    final next=(current+delta).clamp(1,999999);
+    controller.text=next.toStringAsFixed(next==next.roundToDouble()?0:3);
   }
 
   Widget _marketBrandNode(String brand, List<Map<String,dynamic>> products) {
@@ -8207,24 +8275,92 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   }
 
   Widget _marketProductNode(Map<String,dynamic> product) {
-    final id=(product['id']??'').toString(); final name=(product['name']??'').toString(); final key=id.isEmpty?name:id; final selected=selectedProducts.contains(key);
+    final id=(product['id']??'').toString();
+    final name=(product['name']??'').toString();
+    final key=id.isEmpty?name:id;
+    final selected=selectedProducts.contains(key);
     final imageBytes=_marketImageBytes(product['image_data']);
+    final units=_marketUnitOptions(product);
+    final originalBasePrice=_marketNumber(product['base_price']??product['price']);
+    final offerBasePrice=_marketOfferPrices[id];
+    final hasOffer=offerBasePrice!=null&&offerBasePrice>0&&offerBasePrice<originalBasePrice;
+    final effectiveBasePrice=hasOffer?offerBasePrice!:originalBasePrice;
+    final selectedBasePrice=_productBasePrices[key]??effectiveBasePrice;
+    final selectedFactor=_productUnitFactors[key]??_marketNumber(units.first['conversion_factor'],1);
+    final selectedUnit=_productUnits[key]??(units.first['unit_name']??product['unit']??'وحدة').toString();
+    final displayPrice=selectedBasePrice*selectedFactor;
+    final weight=_marketNumber(product['weight_kg']);
+    final innerCount=_marketNumber(units.firstWhere(
+      (unit)=>(unit['unit_name']??'').toString()==selectedUnit,
+      orElse:()=>units.first,
+    )['inner_quantity']??selectedFactor,selectedFactor);
+    final dimensions=[
+      if(_marketNumber(product['length_cm'])>0)'طول ${_marketNumber(product['length_cm']).toStringAsFixed(1)} سم',
+      if(_marketNumber(product['width_cm'])>0)'عرض ${_marketNumber(product['width_cm']).toStringAsFixed(1)} سم',
+      if(_marketNumber(product['height_cm'])>0)'ارتفاع ${_marketNumber(product['height_cm']).toStringAsFixed(1)} سم',
+    ].join(' • ');
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      CheckboxListTile(dense:true,contentPadding:const EdgeInsetsDirectional.only(start:12),value:selected,secondary:ClipRRect(borderRadius:BorderRadius.circular(7),child:Container(width:46,height:46,color:Colors.white,child:imageBytes!=null?Image.memory(imageBytes,fit:BoxFit.cover):((product['image_url']??'').toString().trim().isEmpty?const Icon(Icons.inventory_2_outlined,color:purple):Image.network(product['image_url'].toString(),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.inventory_2_outlined,color:purple))))),title:Text(name),subtitle:Text('سعر المورد: '+(product['price']??'—').toString()+' ج.م • الوحدة: '+(product['unit']??'كبري').toString()),onChanged:(v)=>setState(()=>_selectMarketProducts([product],v==true))),
-      if(selected)Padding(padding:const EdgeInsetsDirectional.only(start:12,bottom:8),child:Row(children:[
-        Expanded(child:TextField(controller:_productQuantities[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'الكمية',hintText:'0.000',isDense:true,border:OutlineInputBorder()))),
-        const SizedBox(width:6),
-        Expanded(child:DropdownButtonFormField<String>(value:_productUnits[key],isExpanded:true,decoration:const InputDecoration(labelText:'الوحدة',isDense:true,border:OutlineInputBorder()),items:{_productUnits[key]??'كبري','كرتونة','علبة','عبوة','كيلو','جرام','طن','قطعة','لتر'}.map((u)=>DropdownMenuItem(value:u,child:Text(u,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_productUnits[key]=v);})),
-        const SizedBox(width:6),
-        Expanded(child:TextField(controller:_productPrices[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'السعر',isDense:true,border:OutlineInputBorder()))),
-        const SizedBox(width:4),
-        SizedBox(width:116,child:CheckboxListTile(dense:true,contentPadding:const EdgeInsets.all(0),controlAffinity:ListTileControlAffinity.leading,title:const Text('قابل للتفاوض',style:TextStyle(fontSize:10)),value:_productNegotiable[key]==true,onChanged:(v)=>setState(()=>_productNegotiable[key]=v==true))),
+      Row(children:[
+        Checkbox(dense:true,value:selected,onChanged:(value)=>setState(()=>_selectMarketProducts([product],value==true))),
+        ClipRRect(borderRadius:BorderRadius.circular(8),child:Container(width:48,height:48,color:Colors.white,child:imageBytes!=null?Image.memory(imageBytes,fit:BoxFit.cover):((product['image_url']??'').toString().trim().isEmpty?const Icon(Icons.inventory_2_outlined,color:purple):Image.network(product['image_url'].toString(),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.inventory_2_outlined,color:purple))))),
+        const SizedBox(width:7),
+        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Text(name,style:const TextStyle(fontWeight:FontWeight.w800)),
+          Text('كود: ${product['item_code']??'—'} • الوحدة الأساسية: ${product['unit']??'وحدة'}',style:const TextStyle(fontSize:10,color:Colors.black54)),
+          if(weight>0||dimensions.isNotEmpty) Text([if(weight>0)'الوزن ${weight.toStringAsFixed(2)} كجم',if(dimensions.isNotEmpty)dimensions].join(' • '),style:const TextStyle(fontSize:10,color:Colors.black54)),
+        ])),
+        IconButton(tooltip:_marketFavoriteIds.contains(id)?'إزالة من المفضلة':'إضافة للمفضلة',onPressed:_favoriteUpdatingIds.contains(id)?null:()=>_toggleMarketFavorite(id),icon:Icon(_marketFavoriteIds.contains(id)?Icons.favorite:Icons.favorite_border,color:_marketFavoriteIds.contains(id)?Colors.red:purple,size:20)),
+        IconButton(tooltip:selected?'إزالة من الطلب':'إضافة للطلب',onPressed:()=>setState(()=>_selectMarketProducts([product],!selected)),icon:Icon(selected?Icons.shopping_cart_checkout:Icons.add_shopping_cart,color:orange,size:21)),
+      ]),
+      Padding(padding:const EdgeInsetsDirectional.only(start:42,end:4,bottom:4),child:Wrap(spacing:8,runSpacing:3,crossAxisAlignment:WrapCrossAlignment.center,children:[
+        if(hasOffer)Container(padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),decoration:BoxDecoration(color:orange.withValues(alpha:.15),borderRadius:BorderRadius.circular(6)),child:const Text('عرض خاص',style:TextStyle(color:Color(0xFF9A5700),fontWeight:FontWeight.w800,fontSize:10))),
+        Text('السعر الأساسي: ',style:const TextStyle(fontSize:10,color:Colors.black54)),
+        if(hasOffer)Text('${(originalBasePrice*selectedFactor).toStringAsFixed(2)} ج.م',style:const TextStyle(fontSize:11,color:Colors.black54,decoration:TextDecoration.lineThrough)),
+        Text('${(effectiveBasePrice*selectedFactor).toStringAsFixed(2)} ج.م',style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:hasOffer?Colors.green.shade800:purple)),
+        Text('سعر الوحدة الصغرى: ${effectiveBasePrice.toStringAsFixed(2)} ج.م',style:const TextStyle(fontSize:10,color:Colors.black54)),
       ])),
-      if(selected)Padding(padding:const EdgeInsetsDirectional.only(start:12,bottom:6),child:Wrap(spacing:8,children:[
-        FilterChip(label:const Text('صلاحية جيدة'),selected:(_productQuality[key]??'good')=='good',onSelected:(v)=>setState(()=>_productQuality[key]=v?'good':'near_expiry')),
-        FilterChip(label:const Text('صلاحية قريبة'),selected:(_productQuality[key]??'good')=='near_expiry',onSelected:(v)=>setState(()=>_productQuality[key]=v?'near_expiry':'good')),
+      if(selected)Padding(padding:const EdgeInsetsDirectional.only(start:42,bottom:9,end:4),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        Wrap(spacing:8,runSpacing:7,crossAxisAlignment:WrapCrossAlignment.center,children:[
+          SizedBox(width:170,child:DropdownButtonFormField<String>(
+            value:units.any((unit)=>(unit['unit_name']??'').toString()==selectedUnit)?selectedUnit:(units.first['unit_name']??product['unit']??'وحدة').toString(),
+            isExpanded:true,
+            decoration:const InputDecoration(labelText:'الوحدة',isDense:true,border:OutlineInputBorder()),
+            items:units.map((unit){
+              final unitName=(unit['unit_name']??'وحدة').toString();
+              final factor=_marketNumber(unit['conversion_factor'],1);
+              final count=_marketNumber(unit['inner_quantity'],factor);
+              final label=factor>1?'$unitName (${count.toStringAsFixed(count==count.roundToDouble()?0:2)} × ${product['unit']??'وحدة'})':unitName;
+              return DropdownMenuItem<String>(value:unitName,child:Text(label,overflow:TextOverflow.ellipsis));
+            }).toList(),
+            onChanged:(value){
+              if(value==null)return;
+              final chosen=units.firstWhere((unit)=>(unit['unit_name']??'').toString()==value,orElse:()=>units.first);
+              final factor=_marketNumber(chosen['conversion_factor'],1);
+              setState((){
+                _productUnits[key]=value;
+                _productUnitFactors[key]=factor;
+                _productPrices[key]?.text=(selectedBasePrice*factor).toStringAsFixed(2);
+              });
+            },
+          )),
+          SizedBox(width:155,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            const Text('الكمية',style:TextStyle(fontSize:10,color:Colors.black54)),
+            Row(mainAxisSize:MainAxisSize.min,children:[
+              IconButton(visualDensity:VisualDensity.compact,constraints:const BoxConstraints(minWidth:30,minHeight:30),padding:EdgeInsets.zero,onPressed:()=>setState(()=>_adjustMarketQuantity(key,-1)),icon:const Icon(Icons.remove_circle_outline,size:19)),
+              SizedBox(width:66,child:TextField(controller:_productQuantities[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),textAlign:TextAlign.center,decoration:const InputDecoration(hintText:'1',isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:7)))),
+              IconButton(visualDensity:VisualDensity.compact,constraints:const BoxConstraints(minWidth:30,minHeight:30),padding:EdgeInsets.zero,onPressed:()=>setState(()=>_adjustMarketQuantity(key,1)),icon:const Icon(Icons.add_circle_outline,size:19)),
+            ]),
+          ])),
+          SizedBox(width:135,child:TextField(controller:_productPrices[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'سعر الوحدة المحددة',isDense:true,border:OutlineInputBorder()))),
+        ]),
+        Text('عدد الوحدات الداخلية: ${innerCount.toStringAsFixed(innerCount==innerCount.roundToDouble()?0:2)} • السعر المحسوب للوحدة الصغرى: ${(displayPrice/selectedFactor).toStringAsFixed(2)} ج.م',style:const TextStyle(fontSize:10,color:Colors.black54)),
+        Wrap(spacing:8,runSpacing:4,children:[
+          FilterChip(label:const Text('قابل للتفاوض'),selected:_productNegotiable[key]==true,onSelected:(value)=>setState(()=>_productNegotiable[key]=value)),
+          FilterChip(label:const Text('صلاحية جيدة'),selected:(_productQuality[key]??'good')=='good',onSelected:(value)=>setState(()=>_productQuality[key]=value?'good':'near_expiry')),
+          FilterChip(label:const Text('صلاحية قريبة'),selected:(_productQuality[key]??'good')=='near_expiry',onSelected:(value)=>setState(()=>_productQuality[key]=value?'near_expiry':'good')),
+        ]),
       ])),
-      if(selected&&type=='sell'&&(_productQuality[key]??'good')=='near_expiry')ListTile(contentPadding:const EdgeInsetsDirectional.only(start:12),dense:true,title:const Text('تاريخ انتهاء الصلاحية'),subtitle:Text(_productExpiryDates[key]?.toIso8601String().split('T').first??'مطلوب عند اختيار صلاحية قريبة'),trailing:IconButton(icon:const Icon(Icons.calendar_month),onPressed:()async{final now=DateTime.now();final d=await showDatePicker(context:context,firstDate:DateTime(now.year,now.month,now.day),lastDate:DateTime(2100),initialDate:_productExpiryDates[key]??now.add(const Duration(days:30)));if(d!=null)setState(()=>_productExpiryDates[key]=d);})),
+      if(selected&&type=='sell'&&(_productQuality[key]??'good')=='near_expiry')ListTile(contentPadding:const EdgeInsetsDirectional.only(start:42),dense:true,title:const Text('تاريخ انتهاء الصلاحية'),subtitle:Text(_productExpiryDates[key]?.toIso8601String().split('T').first??'مطلوب عند اختيار صلاحية قريبة'),trailing:IconButton(icon:const Icon(Icons.calendar_month),onPressed:()async{final now=DateTime.now();final d=await showDatePicker(context:context,firstDate:DateTime(now.year,now.month,now.day),lastDate:DateTime(2100),initialDate:_productExpiryDates[key]??now.add(const Duration(days:30)));if(d!=null)setState(()=>_productExpiryDates[key]=d);})),
     ]);
   }
   Future<void> savePost() async {
