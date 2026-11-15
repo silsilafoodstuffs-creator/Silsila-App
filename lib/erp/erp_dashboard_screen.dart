@@ -87,7 +87,7 @@ import '../services/app_language.dart';
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
 const _pink = Color(0xFFFF27C3);
-const _canvas = Color(0xFFF7F5FA);
+const _canvas = Color(0xFFF5EFFB);
 
 const Map<String, Map<String, List<String>>> _modules = {
   'إعدادات عامة': {
@@ -1378,7 +1378,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   final Set<String> _expandedGroups = <String>{};
 
   Widget _sidebar() => Container(
-    color: _purple,
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF26004F), Color(0xFF3E007D), Color(0xFF5A1594), Color(0xFF26004F)], stops: [0, .38, .72, 1]),
+      boxShadow: [BoxShadow(color: Color(0x443E007D), blurRadius: 20, offset: Offset(4, 0))],
+    ),
     child: SafeArea(
       child: Column(children: [
         Padding(
@@ -1884,7 +1887,11 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     },
   );
 
-  Widget _header(bool compact, {bool mobile = false}) => Container(height: compact ? 62 : 72, padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 12), decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Color(0xFFECE7F2)))), child: Row(children: [
+  Widget _header(bool compact, {bool mobile = false}) => Container(height: compact ? 62 : 72, padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 12), decoration: BoxDecoration(
+    gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Color(0xFFF8F1FF), Color(0xFFF2E7FB)]),
+    border: const Border(bottom: BorderSide(color: Color(0xFFE4D2F1), width: 1)),
+    boxShadow: [BoxShadow(color: _purple.withValues(alpha: .10), blurRadius: 14, offset: const Offset(0, 4)), BoxShadow(color: _pink.withValues(alpha: .08), blurRadius: 18, spreadRadius: -5)],
+  ), child: Row(children: [
     Padding(
       padding: const EdgeInsetsDirectional.only(end: 4),
       child: const SilsilaWhiteLogo(

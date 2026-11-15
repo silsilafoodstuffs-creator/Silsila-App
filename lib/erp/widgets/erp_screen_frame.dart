@@ -3,6 +3,7 @@ import '../services/erp_screen_layout_profiles.dart';
 
 const _erpFramePurple = Color(0xFF3E007D);
 const _erpFrameOrange = Color(0xFFFFA015);
+const _erpFramePink = Color(0xFFFF27C3);
 
 /// Shared ERP page frame. Saved Studio layout profiles are applied live here.
 class ErpScreenFrame extends StatelessWidget {
@@ -75,36 +76,29 @@ class ErpScreenFrame extends StatelessWidget {
                     margin: const EdgeInsets.fromLTRB(10, 8, 10, 5),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(radius),
-                      border: Border.all(color: const Color(0xFFEADCF5), width: 0.9),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Colors.white, Color(0xFFFFFCFF), Color(0xFFFAF6FF)],
-                      ),
-                      boxShadow: [
-                        BoxShadow(color: const Color(0xFF3E007D).withValues(alpha: .07), blurRadius: 12, offset: const Offset(0, 4)),
-                        BoxShadow(color: const Color(0xFFFF27C3).withValues(alpha: .07), blurRadius: 18, spreadRadius: -5),
-                      ],
+                      color: _erpFramePurple,
+                      borderRadius: BorderRadius.circular(radius + 3),
+                      border: Border.all(color: _erpFramePink.withValues(alpha: .72), width: 1),
+                      gradient: const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF26004F), Color(0xFF3E007D), Color(0xFF6120A0)]),
+                      boxShadow: [BoxShadow(color: _erpFramePurple.withValues(alpha: .24), blurRadius: 18, offset: const Offset(0, 6)), BoxShadow(color: _erpFramePink.withValues(alpha: .20), blurRadius: 22, spreadRadius: -4), BoxShadow(color: _erpFrameOrange.withValues(alpha: .10), blurRadius: 12, spreadRadius: -4)],
                     ),
                     child: LayoutBuilder(builder: (context, constraints) {
                       final heading = Row(children: [
                         if (showTitle) ...[
                           Container(
                             width: 42, height: 42,
-                            decoration: BoxDecoration(color: primary.withValues(alpha: .09), borderRadius: BorderRadius.circular(radius)),
-                            child: Icon(icon, color: primary, size: 23),
+                            decoration: BoxDecoration(gradient: const LinearGradient(colors: [_erpFrameOrange, _erpFramePink]), borderRadius: BorderRadius.circular(radius), boxShadow: [BoxShadow(color: _erpFramePink.withValues(alpha: .35), blurRadius: 12)]),
+                            child: Icon(icon, color: Colors.white, size: 23),
                           ),
                           const SizedBox(width: 10),
                           Expanded(child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: primary)),
+                                style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x66FF27C3), blurRadius: 10)])),
                               if (subtitle != null && subtitle!.isNotEmpty)
                                 Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                                  style: const TextStyle(fontSize: 11, color: Color(0xFFE9DDF5))),
                             ],
                           )),
                         ],
@@ -117,8 +111,8 @@ class ErpScreenFrame extends StatelessWidget {
                               Padding(
                                 padding: const EdgeInsetsDirectional.only(start: 5),
                                 child: Material(
-                                  color: selectedTab == i ? primary : const Color(0xFFFAF8FC),
-                                  elevation: selectedTab == i ? 3 : 1,
+                                  color: selectedTab == i ? _erpFramePurple : const Color(0xFFF9F3FF),
+                                  elevation: selectedTab == i ? 5 : 1,
                                   shadowColor: primary.withValues(alpha: .18),
                                   borderRadius: BorderRadius.circular(radius),
                                   child: InkWell(
@@ -128,7 +122,8 @@ class ErpScreenFrame extends StatelessWidget {
                                       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(radius),
-                                        border: Border.all(color: selectedTab == i ? accent : const Color(0xFFE9E1F0), width: selectedTab == i ? 1.4 : .8),
+                                        border: Border.all(color: selectedTab == i ? _erpFramePink : const Color(0xFFE9E1F0), width: selectedTab == i ? 1.4 : .8),
+                                        gradient: selectedTab == i ? const LinearGradient(colors: [Color(0xFF3E007D), Color(0xFF6A20A4)]) : null,
                                       ),
                                       child: Text(tabs[i], maxLines: 1,
                                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800,
@@ -161,16 +156,12 @@ class ErpScreenFrame extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(radius),
-                      border: Border.all(color: const Color(0xFFEADCF5), width: 0.8),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.white, Color(0xFFFCF8FF)],
-                      ),
+                      borderRadius: BorderRadius.circular(radius + 2),
+                      border: Border.all(color: const Color(0xFFFFC9F3), width: 1),
+                      gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.white, Color(0xFFFFF7FD), Color(0xFFF5EDFF)]),
                       boxShadow: [
-                        BoxShadow(color: const Color(0xFF3E007D).withValues(alpha: .06), blurRadius: 8, offset: const Offset(0, 2)),
-                        BoxShadow(color: const Color(0xFFFFA015).withValues(alpha: .05), blurRadius: 12, spreadRadius: -4),
+                        BoxShadow(color: const Color(0xFF3E007D).withValues(alpha: .10), blurRadius: 10, offset: const Offset(0, 3)),
+                        BoxShadow(color: const Color(0xFFFF27C3).withValues(alpha: .12), blurRadius: 14, spreadRadius: -4),
                       ],
                     ),
                     child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: actions)),

@@ -10,7 +10,7 @@ import '../../services/app_language.dart';
 const _silsilaPurple = Color(0xFF3E007D);
 const _silsilaOrange = Color(0xFFFFA015);
 const _silsilaPink = Color(0xFFFF27C3);
-const _pageBackground = Color(0xFFFAF8FC);
+const _pageBackground = Color(0xFFF5EFFB);
 const _palePurple = Color(0xFFF5EFFB);
 
 /// Professional Silsila-branded sign-in gate for the ERP web application.
@@ -442,7 +442,9 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: selected ? _silsilaPurple : const Color(0xFFE5DDED)),
+                border: Border.all(color: selected ? _silsilaPink : const Color(0xFFE5DDED), width: selected ? 1.4 : .8),
+                gradient: selected ? const LinearGradient(colors: [Color(0xFF3E007D), Color(0xFF6820A0)]) : const LinearGradient(colors: [Colors.white, Color(0xFFFFFAFF)]),
+                boxShadow: selected ? [BoxShadow(color: _silsilaPink.withValues(alpha: .25), blurRadius: 12, offset: const Offset(0, 3))] : const [BoxShadow(color: Color(0x103E007D), blurRadius: 7, offset: Offset(0, 2))],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -517,10 +519,9 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE7DDED)),
-        boxShadow: const [
-          BoxShadow(color: Color(0x120F0020), blurRadius: 24, offset: Offset(0, 10)),
-        ],
+        border: Border.all(color: const Color(0xFFFFC9F3), width: 1),
+        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.white, Color(0xFFFFFBFF), Color(0xFFF9F2FF)]),
+        boxShadow: [BoxShadow(color: _silsilaPurple.withValues(alpha: .12), blurRadius: 28, offset: const Offset(0, 12)), BoxShadow(color: _silsilaPink.withValues(alpha: .13), blurRadius: 30, spreadRadius: -8)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -572,7 +573,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
           const SizedBox(height: 17),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: _pageBackground, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE9E1F0))),
+            decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFF5EFFB), Color(0xFFFFF5FC)]), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE8D6F4)), boxShadow: [BoxShadow(color: _silsilaPink.withValues(alpha: .08), blurRadius: 12)]),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

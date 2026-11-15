@@ -4,7 +4,7 @@ const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
 const pink = Color(0xFFFF27C3);
 
-const silsilaCanvas = Color(0xFFFAF8FC);
+const silsilaCanvas = Color(0xFFF5EFFB);
 const silsilaInk = Color(0xFF282333);
 const silsilaMuted = Color(0xFF777180);
 const silsilaBorder = Color(0xFFE8E1EF);
@@ -47,8 +47,8 @@ class SilsilaTheme {
         backgroundColor: purple,
         foregroundColor: Colors.white,
         centerTitle: false,
-        elevation: 2,
-        shadowColor: Color(0x33FF27C3),
+        elevation: 5,
+        shadowColor: Color(0x66FF27C3),
         scrolledUnderElevation: 3,
         iconTheme: IconThemeData(
           color: Colors.white,
@@ -211,8 +211,8 @@ class SilsilaTheme {
       // Cards
       cardTheme: CardThemeData(
         color: Colors.white,
-        elevation: 3,
-        shadowColor: Color(0x2EFF27C3),
+        elevation: 6,
+        shadowColor: Color(0x44FF27C3),
         margin: const EdgeInsets.symmetric(
           horizontal: 0,
           vertical: 6,
@@ -233,8 +233,8 @@ class SilsilaTheme {
           foregroundColor: Colors.white,
           disabledBackgroundColor: const Color(0xFFE3DCEB),
           disabledForegroundColor: silsilaMuted,
-          elevation: 3,
-          shadowColor: Color(0x55FF27C3),
+          elevation: 5,
+          shadowColor: Color(0x66FF27C3),
           minimumSize: const Size(0, 48),
           padding: const EdgeInsets.symmetric(
             horizontal: 22,
@@ -341,8 +341,9 @@ class SilsilaTheme {
       // Navigation
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.white,
-        indicatorColor: purple.withValues(alpha: 0.12),
-        elevation: 2,
+        indicatorColor: pink.withValues(alpha: 0.18),
+        elevation: 5,
+        shadowColor: pink.withValues(alpha: .18),
         height: 68,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) {

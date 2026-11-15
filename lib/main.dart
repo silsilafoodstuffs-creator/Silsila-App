@@ -40,7 +40,7 @@ import 'widgets/silsila_white_logo.dart';
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
 const pink = Color(0xFFFF27C3);
-const canvas = Color(0xFFFAF8FC);
+const canvas = Color(0xFFF5EFFB);
 
 const supabaseUrl = 'https://teitsopmhruczplwlwgn.supabase.co';
 const supabaseKey =
@@ -352,12 +352,12 @@ class SilsilaApp extends StatelessWidget {
         // while adding restrained luminous depth to shared app, ERP and web surfaces.
         cardTheme: CardThemeData(
           color: Colors.white,
-          elevation: 3,
-          shadowColor: pink.withValues(alpha: 0.18),
+          elevation: 6,
+          shadowColor: pink.withValues(alpha: 0.26),
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: Color(0xFFEADCF5), width: 0.8),
+            borderRadius: BorderRadius.circular(18),
+            side: const BorderSide(color: Color(0xFFE5D5F1), width: 1),
           ),
           margin: const EdgeInsets.all(4),
         ),
@@ -498,7 +498,7 @@ class SilsilaApp extends StatelessWidget {
           backgroundColor: purple,
           foregroundColor: Colors.white,
           centerTitle: true,
-          elevation: 2,
+          elevation: 5,
           shadowColor: pink,
           surfaceTintColor: Colors.transparent,
         ),
@@ -509,7 +509,7 @@ class SilsilaApp extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 40, maxHeight: 40),
           contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
           disabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: Color(0xFFD8CDE3)),
           ),
           border: OutlineInputBorder(
@@ -521,8 +521,8 @@ class SilsilaApp extends StatelessWidget {
             borderSide: const BorderSide(color: Color(0xFFE5DDED)),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: orange, width: 1.8),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: pink, width: 1.8),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
@@ -535,12 +535,13 @@ class SilsilaApp extends StatelessWidget {
         ),
         // Approved global grid standard: compact but readable spacing across ERP tables; only documented dense grids override it.
         dataTableTheme: const DataTableThemeData(
-          headingRowHeight: 40,
+          headingRowHeight: 42,
           dataRowMinHeight: 40,
           dataRowMaxHeight: 40,
           horizontalMargin: 5,
           columnSpacing: 5,
           dividerThickness: 0.7,
+          headingRowColor: WidgetStatePropertyAll(Color(0xFFF3E9FB)),
           headingTextStyle: TextStyle(
             color: Color(0xFF3E007D),
             fontFamily: 'Tajawal',
@@ -558,8 +559,8 @@ class SilsilaApp extends StatelessWidget {
         // and accessible contrast across customer and ERP screens.
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: Colors.white,
-          indicatorColor: pink.withValues(alpha: 0.12),
-          elevation: 3,
+          indicatorColor: pink.withValues(alpha: 0.18),
+          elevation: 5,
           shadowColor: pink.withValues(alpha: 0.18),
           height: 64,
           labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
@@ -579,6 +580,12 @@ class SilsilaApp extends StatelessWidget {
           unselectedIconTheme: const IconThemeData(color: Color(0xFF51465D)),
           selectedLabelTextStyle: const TextStyle(color: purple, fontWeight: FontWeight.w800),
           unselectedLabelTextStyle: const TextStyle(color: Color(0xFF51465D)),
+        ),
+        drawerTheme: const DrawerThemeData(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          elevation: 10,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.horizontal(left: Radius.circular(20))),
         ),
         listTileTheme: ListTileThemeData(
           iconColor: purple,
