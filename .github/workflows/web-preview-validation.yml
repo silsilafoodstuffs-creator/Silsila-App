@@ -7,18 +7,6 @@ on:
     types:
       - completed
     branches: [main]
-  pull_request:
-    branches: [main]
-    paths:
-      - "lib/**"
-      - "test/**"
-      - "web/**"
-      - "pubspec.yaml"
-      - "pubspec.lock"
-      - "assets/**"
-      - "tools/web_view_test.mjs"
-      - ".github/workflows/**"
-
 permissions:
   contents: read
   actions: read
@@ -30,7 +18,7 @@ concurrency:
 
 jobs:
   preview:
-    if: ${{ github.event_name == 'pull_request' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -45,7 +33,7 @@ jobs:
           node-version: "22"
 
       - name: Set up Flutter for pull request preview
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name != 'workflow_run' }}
         uses: subosito/flutter-action@fd55f4c5af5b953cc57a2be44cb082c8f6635e8e
         with:
           flutter-version: "3.29.3"
@@ -109,3 +97,15 @@ jobs:
 
       - name: Run real desktop + mobile WebView smoke tests
         run: node tools/web_view_test.mjs http://127.0.0.1:8765/Silsila-App/
+  push:
+    branches: ['feature/**']
+    paths:
+      - "lib/**"
+      - "test/**"
+      - "web/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "assets/**"
+      - "tools/web_view_test.mjs"
+      - ".github/workflows/**"
+
