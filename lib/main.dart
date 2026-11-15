@@ -3682,6 +3682,113 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
     final offerPrice = TextEditingController();
     selectedProductImage = null;
     bool trackStock = false;
+    List<Map<String,dynamic>> offerCategoryChildren(String parentId) =>
+        offerItemCategories.where((row) => (row['parent_id'] ?? '').toString() == parentId).toList();
+
+    List<Product> offerProductsForCategory(String categoryId) =>
+        offerableProducts.where((product) => offerItemCategoryByCartKey[product.cartKey] == categoryId).toList();
+
+    List<Product> offerDescendantProducts(String categoryId, [Set<String>? visited]) {
+      final seen = visited ?? <String>{};
+      if (!seen.add(categoryId)) return <Product>[];
+      final result = <Product>[]..addAll(offerProductsForCategory(categoryId));
+      for (final child in offerCategoryChildren(categoryId)) {
+        result.addAll(offerDescendantProducts((child['id'] ?? '').toString(), seen));
+      }
+      return result;
+    }
+
+    Map<String,List<Product>> offerBrandGroups(List<Product> items) {
+      final groups = <String,List<Product>>{};
+      for (final product in items) {
+        final label = (product.brand ?? '').trim().isEmpty ? 'بدون ماركة' : product.brand!.trim();
+        (groups[label] ??= <Product>[]).add(product);
+      }
+      final keys = groups.keys.toList()
+        ..sort((a,b) => a == 'بدون ماركة' ? 1 : b == 'بدون ماركة' ? -1 : a.compareTo(b));
+      return {for (final key in keys) key: groups[key]!};
+    }
+
+    Widget offerProductNode(Product product, void Function(void Function()) refresh) {
+      final key = product.cartKey;
+      offerPrices.putIfAbsent(key, () => TextEditingController(text: product.price.toStringAsFixed(2)));
+      minimumQuantities.putIfAbsent(key, () => TextEditingController(text: product.minQuantity.toString()));
+      final price = double.tryParse(offerPrices[key]!.text) ?? product.price;
+      final difference = product.price - price;
+      final productPath = [(product.subcategory ?? '').trim(), (product.brand ?? '').trim()]
+          .where((value) => value.isNotEmpty).join(' • ');
+      return Container(
+        margin: const EdgeInsetsDirectional.only(start:18,bottom:7),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color:Colors.white,border:Border.all(color:purple.withValues(alpha:.12)),borderRadius:BorderRadius.circular(10)),
+        child: Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          Row(children:[
+            Checkbox(shape:const CircleBorder(),value:selectedProductIds.contains(key),onChanged:(value)=>refresh(() {
+              if(value==true){selectedProductIds.add(key);}else{selectedProductIds.remove(key);}
+            })),
+            SizedBox(width:38,height:38,child:product.imageBytes!=null
+              ? ClipRRect(borderRadius:BorderRadius.circular(7),child:Image.memory(product.imageBytes!,fit:BoxFit.cover))
+              : product.imageUrl!=null
+                ? ClipRRect(borderRadius:BorderRadius.circular(7),child:Image.network(product.imageUrl!,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Icon(product.icon,color:purple)))
+                : Icon(product.icon,color:purple)),
+            const SizedBox(width:7),
+            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Text(product.name,style:const TextStyle(fontWeight:FontWeight.w700,fontSize:12)),
+              if(productPath.isNotEmpty) Text(productPath,style:const TextStyle(fontSize:10,color:Colors.black54)),
+            ])),
+          ]),
+          Wrap(spacing:8,runSpacing:6,crossAxisAlignment:WrapCrossAlignment.center,children:[
+            SizedBox(width:132,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              const Text('السعر الحالي عند المورد',style:TextStyle(fontSize:10,color:Colors.black54)),
+              Text('${product.price.toStringAsFixed(2)} ج.م',style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700)),
+            ])),
+            SizedBox(width:142,child:TextField(controller:offerPrices[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>refresh((){}),decoration:const InputDecoration(isDense:true,labelText:'سعر العرض',suffixText:'ج.م'))),
+            SizedBox(width:132,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              const Text('معاينة الفرق',style:TextStyle(fontSize:10,color:Colors.black54)),
+              Text('${difference>=0?'توفير':'زيادة'} ${difference.abs().toStringAsFixed(2)} ج.م',style:TextStyle(fontSize:11,color:difference>=0?Colors.green.shade700:Colors.red.shade700,fontWeight:FontWeight.w800)),
+            ])),
+            SizedBox(width:132,child:TextField(controller:minimumQuantities[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,labelText:'أقل كمية'))),
+          ]),
+        ]),
+      );
+    }
+
+    Widget offerBrandNode(String categoryId, String brand, List<Product> items, void Function(void Function()) refresh) {
+      final selectedCount = items.where((product)=>selectedProductIds.contains(product.cartKey)).length;
+      return ExpansionTile(
+        key:PageStorageKey<String>('offer-brand-$categoryId-$brand'),
+        leading:Checkbox(shape:const CircleBorder(),tristate:true,value:selectedCount==0?false:selectedCount==items.length?true:null,onChanged:(value)=>refresh(() {
+          if(value==true){selectedProductIds.addAll(items.map((product)=>product.cartKey));}
+          else{selectedProductIds.removeAll(items.map((product)=>product.cartKey));}
+        })),
+        title:Text('$brand (${items.length})',style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFFFF27C3))),
+        children:items.map((product)=>offerProductNode(product,refresh)).toList(),
+      );
+    }
+
+    Widget offerCategoryNode(Map<String,dynamic> category, int depth, void Function(void Function()) refresh) {
+      final id=(category['id']??'').toString();
+      final products=offerDescendantProducts(id);
+      final selectedCount=products.where((product)=>selectedProductIds.contains(product.cartKey)).length;
+      final directGroups=offerBrandGroups(offerProductsForCategory(id));
+      final children=offerCategoryChildren(id);
+      return Padding(
+        padding:EdgeInsetsDirectional.only(start:depth*13.0),
+        child:ExpansionTile(
+          key:PageStorageKey<String>('offer-category-$id'),
+          leading:Checkbox(shape:const CircleBorder(),tristate:true,value:selectedCount==0?false:selectedCount==products.length?true:null,onChanged:(value)=>refresh(() {
+            if(value==true){selectedProductIds.addAll(products.map((product)=>product.cartKey));}
+            else{selectedProductIds.removeAll(products.map((product)=>product.cartKey));}
+          })),
+          title:Text('${(category['category_name']??'').toString()} (${products.length})',style:TextStyle(fontWeight:FontWeight.w900,color:depth==0?purple:orange)),
+          children:[
+            ...directGroups.entries.map((entry)=>offerBrandNode(id,entry.key,entry.value,refresh)),
+            ...children.map((child)=>offerCategoryNode(child,depth+1,refresh)),
+          ],
+        ),
+      );
+    }
+
     final accepted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -5679,13 +5786,102 @@ class _OffersScreenState extends State<OffersScreen> {
     bool scheduleLater = false;
     final db = database;
     final userId = db?.auth.currentUser?.id ?? '';
-    // Offers may only reference products actually listed by this supplier.
-    // ERP master-catalog rows have no products-table supplier_id and cannot
-    // satisfy offer_items.product_id's foreign key.
+    // Keep legacy supplier listings, then add the supplier's own ERP items.
+    // ERP item IDs are stored in offer_items.erp_item_id, never in the
+    // unrelated public.products foreign key.
     final offerableProducts = widget.availableProducts
         .where((product) => product.id != null && product.supplierId == userId)
-        .toList(growable: false);
+        .toList();
+    final erpItemIdByCartKey = <String,String>{};
+    final offerItemCategoryByCartKey = <String,String>{};
+    final offerItemCategories = <Map<String,dynamic>>[];
     var activityCode = widget.activityType.trim();
+    if (db != null && userId.isNotEmpty) {
+      try {
+        String? companyId;
+        try {
+          final member = await db.from('erp_company_members')
+              .select('company_id').eq('user_id', userId).eq('is_active', true)
+              .limit(1).maybeSingle();
+          companyId = member?['company_id']?.toString();
+        } catch (_) {}
+        if (companyId == null || companyId.isEmpty) {
+          try {
+            final erpUser = await db.from('erp_users')
+                .select('company_id').eq('auth_user_id', userId).eq('is_active', true)
+                .limit(1).maybeSingle();
+            companyId = erpUser?['company_id']?.toString();
+          } catch (_) {}
+        }
+        if (companyId != null && companyId.isNotEmpty) {
+          final categoryResult = await db.from('erp_item_categories')
+              .select('id,parent_id,category_name,category_code,activity_code')
+              .eq('company_id', companyId).eq('is_active', true).eq('show_in_app', true)
+              .order('category_code').limit(3000);
+          final categories = categoryResult.whereType<Map>()
+              .map((row) => Map<String,dynamic>.from(row))
+              .where((row) {
+                final code = (row['activity_code'] ?? '').toString().trim();
+                return code.isEmpty || activityCode.isEmpty || code == activityCode;
+              }).toList();
+          offerItemCategories.addAll(categories);
+          final categoriesById = <String,Map<String,dynamic>>{
+            for (final row in categories) (row['id'] ?? '').toString(): row,
+          };
+          const pageSize = 500;
+          var offset = 0;
+          while (true) {
+            final page = await db.from('erp_items')
+                .select('id,category_id,brand_name,item_code,item_name,base_unit,sale_price,image_url,image_data,image_mime_type')
+                .eq('company_id', companyId).eq('is_active', true).eq('show_in_app', true)
+                .order('item_code').range(offset, offset + pageSize - 1);
+            for (final raw in page.whereType<Map>()) {
+              final item = Map<String,dynamic>.from(raw);
+              final categoryId = (item['category_id'] ?? '').toString();
+              final category = categoriesById[categoryId];
+              if (category == null) continue;
+              final path = <Map<String,dynamic>>[];
+              Map<String,dynamic>? current = category;
+              final seen = <String>{};
+              while (current != null && path.length < 6) {
+                final currentId = (current['id'] ?? '').toString();
+                if (!seen.add(currentId)) break;
+                path.insert(0, current);
+                final parentId = (current['parent_id'] ?? '').toString();
+                current = parentId.isEmpty ? null : categoriesById[parentId];
+              }
+              final rootName = (path.isEmpty ? category['category_name'] : path.first['category_name']).toString();
+              final subcategoryName = path.length > 1 ? (path[1]['category_name'] ?? '').toString() : '';
+              final itemId = (item['id'] ?? '').toString();
+              if (itemId.isEmpty) continue;
+              final product = Product(
+                (item['item_name'] ?? '').toString(),
+                rootName,
+                (item['sale_price'] as num?)?.toDouble() ?? 0,
+                (item['base_unit'] ?? 'وحدة').toString(),
+                Icons.inventory_2_outlined,
+                id: 'erp:$itemId',
+                supplierId: userId,
+                minQuantity: 1,
+                imageUrl: (item['image_url'] ?? '').toString().trim().isEmpty ? null : item['image_url'].toString(),
+                imageBytes: _decodeDatabaseBytea(item['image_data']),
+                subcategory: subcategoryName.isEmpty ? null : subcategoryName,
+                brand: (item['brand_name'] ?? '').toString(),
+              );
+              offerableProducts.add(product);
+              erpItemIdByCartKey[product.cartKey] = itemId;
+              offerItemCategoryByCartKey[product.cartKey] = categoryId;
+            }
+            if (page.length < pageSize) break;
+            offset += pageSize;
+          }
+        }
+      } catch (_) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر تحميل أصناف ERP الخاصة بالمورد. راجع صلاحية الشركة وإتاحة الأصناف للتطبيق.')),
+        );
+      }
+    }
     List<Map<String,dynamic>> geoRows = [];
     List<Map<String,dynamic>> countRows = [];
     List<Map<String,dynamic>> categoryRows = [];
@@ -5862,10 +6058,14 @@ class _OffersScreenState extends State<OffersScreen> {
         builder: (dialogContext, setDialogState) => AlertDialog(
         title: const Text('إنشاء عرض جديد'),
         content: StatefulBuilder(builder: (context, refresh) {
-          final groups = <String,List<Product>>{};
-          for (final product in offerableProducts) {
-            groups.putIfAbsent(product.category, () => []).add(product);
+          final legacyGroups = <String,List<Product>>{};
+          for (final product in offerableProducts.where((product)=>!erpItemIdByCartKey.containsKey(product.cartKey))) {
+            legacyGroups.putIfAbsent(product.category, () => []).add(product);
           }
+          final rootOfferCategories = offerItemCategories
+              .where((row)=>(row['parent_id']??'').toString().isEmpty)
+              .where((row)=>offerDescendantProducts((row['id']??'').toString()).isNotEmpty)
+              .toList();
           final categoryGroups = <String,List<String>>{};
           for (final row in categoryRows) {
             final activityName = (row['activity_name'] ?? activityCode).toString();
@@ -5884,7 +6084,7 @@ class _OffersScreenState extends State<OffersScreen> {
                 label: Text(showProducts ? 'إخفاء الأصناف (${selectedProductIds.length})' : 'اختيار الأصناف (${selectedProductIds.length})'),
               )),
               if (showProducts && offerableProducts.isEmpty)
-                const Padding(padding: EdgeInsets.all(10), child: Text('لا توجد أصناف منشورة باسم هذا المورد في النشاط الحالي. أضف أصنافك أولًا ثم أنشئ العرض.')),
+                const Padding(padding: EdgeInsets.all(10), child: Text('لا توجد أصناف نشطة ومتاحة للتطبيق في كتالوج المورد الحالي. راجع فئات الأصناف وإعداد «إظهار في التطبيق».')),
               if (showProducts) ...[
                 Row(children: [
                   const Expanded(child: Text('فئات الأصناف والأصناف', style: TextStyle(fontWeight: FontWeight.w800))),
@@ -5892,84 +6092,26 @@ class _OffersScreenState extends State<OffersScreen> {
                     if (selectedProductIds.length == offerableProducts.length) {
                       selectedProductIds.clear();
                     } else {
-                      selectedProductIds.addAll(offerableProducts.map((p) => p.cartKey));
+                      selectedProductIds..clear()..addAll(offerableProducts.map((p) => p.cartKey));
                     }
                   }), child: const Text('تحديد / إلغاء الكل')),
                 ]),
                 Theme(data: Theme.of(context).copyWith(checkboxTheme: CheckboxThemeData(shape: const CircleBorder())),
-                  child: Column(children: groups.entries.map((group) {
-                    final groupSelectedCount = group.value.where((p) => selectedProductIds.contains(p.cartKey)).length;
-                    return ExpansionTile(
-                    initiallyExpanded: false,
-                    leading: Checkbox(
-                      tristate: true,
-                      shape: const CircleBorder(),
-                      value: groupSelectedCount == 0
-                          ? false
-                          : groupSelectedCount == group.value.length ? true : null,
-                      onChanged: (value) => refresh(() {
-                        if (value == true) {
-                          selectedProductIds.addAll(group.value.map((p) => p.cartKey));
-                        } else {
-                          selectedProductIds.removeAll(group.value.map((p) => p.cartKey));
-                        }
-                      }),
-                    ),
-                    title: Text('${group.key} (${group.value.length})', style: const TextStyle(fontWeight: FontWeight.w800)),
-                    children: group.value.map((p) {
-                      offerPrices.putIfAbsent(p.cartKey, () => TextEditingController(text: p.price.toStringAsFixed(2)));
-                      minimumQuantities.putIfAbsent(p.cartKey, () => TextEditingController(text: p.minQuantity.toString()));
-                      final value = double.tryParse(offerPrices[p.cartKey]!.text) ?? p.price;
-                      final diff = p.price - value;
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 7),
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(color: purple.withValues(alpha: .12)),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                          Row(children: [
-                            Checkbox(
-                              shape: const CircleBorder(),
-                              value: selectedProductIds.contains(p.cartKey),
-                              onChanged: (value) => refresh(() {
-                                if (value == true) { selectedProductIds.add(p.cartKey); } else { selectedProductIds.remove(p.cartKey); }
-                              }),
-                            ),
-                            SizedBox(width: 36, height: 36, child: p.imageUrl != null
-                              ? ClipRRect(borderRadius: BorderRadius.circular(7), child: Image.network(p.imageUrl!, fit: BoxFit.cover))
-                              : Icon(p.icon, color: purple)),
-                            const SizedBox(width: 7),
-                            Expanded(child: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                          ]),
-                          Wrap(spacing: 8, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                            SizedBox(width: 132, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              const Text('السعر الحالي عند المورد', style: TextStyle(fontSize: 10, color: Colors.black54)),
-                              Text('${p.price.toStringAsFixed(2)} ج.م', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                            ])),
-                            SizedBox(width: 142, child: TextField(
-                              controller: offerPrices[p.cartKey],
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              onChanged: (_) => refresh(() {}),
-                              decoration: const InputDecoration(isDense: true, labelText: 'سعر العرض', suffixText: 'ج.م'),
-                            )),
-                            SizedBox(width: 132, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              const Text('معاينة الفرق', style: TextStyle(fontSize: 10, color: Colors.black54)),
-                              Text('${diff >= 0 ? 'توفير' : 'زيادة'} ${diff.abs().toStringAsFixed(2)} ج.م',
-                                style: TextStyle(fontSize: 11, color: diff >= 0 ? Colors.green.shade700 : Colors.red.shade700, fontWeight: FontWeight.w800)),
-                            ])),
-                            SizedBox(width: 132, child: TextField(
-                              controller: minimumQuantities[p.cartKey],
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              decoration: const InputDecoration(isDense: true, labelText: 'أقل كمية'),
-                            )),
-                          ]),
-                        ]),
+                  child: Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+                    if(rootOfferCategories.isNotEmpty)
+                      ...rootOfferCategories.map((category)=>offerCategoryNode(category,0,refresh)),
+                    ...legacyGroups.entries.map((group) {
+                      final selectedCount=group.value.where((product)=>selectedProductIds.contains(product.cartKey)).length;
+                      return ExpansionTile(
+                        leading:Checkbox(shape:const CircleBorder(),tristate:true,value:selectedCount==0?false:selectedCount==group.value.length?true:null,onChanged:(value)=>refresh(() {
+                          if(value==true){selectedProductIds.addAll(group.value.map((product)=>product.cartKey));}
+                          else{selectedProductIds.removeAll(group.value.map((product)=>product.cartKey));}
+                        })),
+                        title:Text('${group.key} (${group.value.length})',style:const TextStyle(fontWeight:FontWeight.w800)),
+                        children:group.value.map((product)=>offerProductNode(product,refresh)).toList(),
                       );
-                    }).toList(),
-                  ); }).toList())),
+                    }),
+                  ])),
               ],
               Row(children: [
                 const Expanded(child: Text('صورة العرض', style: TextStyle(fontWeight: FontWeight.w700))),
@@ -6155,30 +6297,30 @@ class _OffersScreenState extends State<OffersScreen> {
             .map((r) => (r['name_ar'] ?? '').toString()).where((e) => e.isNotEmpty).toSet().toList();
         final geoIds = selectedGeoIds.toList();
         if (selectedProductIds.isEmpty) {
-          await supplierService.createOffer(
-            title: title.text.trim(), description: description.text, startsAt: startsAt, endsAt: endsAt,
-            imageUrl: imageUrl, activityType: widget.activityType, discountPercentage: discountValue,
-            magazineColor: magazineColor, targetGovernorates: namesFor('governorate'),
-            targetDistricts: namesFor('district'), targetAreas: namesFor('area'),
-            targetCustomerTypes: selectedCustomerTypes.toList(), targetGeoIds: geoIds,
-          );
-        } else {
-          final items = <Map<String,dynamic>>[];
-          for (final p in offerableProducts.where((p) => selectedProductIds.contains(p.cartKey))) {
-            final price = double.tryParse(offerPrices[p.cartKey]?.text.trim() ?? '');
-            if (price == null || !price.isFinite || price < 0) throw ArgumentError('سعر العرض غير صحيح للصنف ${p.name}');
-            final minimum = double.tryParse(minimumQuantities[p.cartKey]?.text.trim() ?? '');
-            if (minimum == null || !minimum.isFinite || minimum <= 0) throw ArgumentError('أقل كمية غير صحيحة للصنف ${p.name}');
-            items.add({'product_id': p.id, 'product_name': p.name, 'original_price': p.price, 'offer_price': price, 'min_quantity': minimum});
-          }
-          await supplierService.createOfferWithItems(
-            title: title.text.trim(), items: items, description: description.text, startsAt: startsAt, endsAt: endsAt,
-            imageUrl: imageUrl, activityType: widget.activityType, discountPercentage: discountValue,
-            magazineColor: magazineColor, targetGovernorates: namesFor('governorate'),
-            targetDistricts: namesFor('district'), targetAreas: namesFor('area'),
-            targetCustomerTypes: selectedCustomerTypes.toList(), targetGeoIds: geoIds,
-          );
+          throw ArgumentError('اختر صنفًا واحدًا على الأقل قبل نشر العرض.');
         }
+        final items = <Map<String,dynamic>>[];
+        for (final p in offerableProducts.where((product) => selectedProductIds.contains(product.cartKey))) {
+          final price = double.tryParse(offerPrices[p.cartKey]?.text.trim() ?? '');
+          if (price == null || !price.isFinite || price < 0) throw ArgumentError('سعر العرض غير صحيح للصنف ${p.name}');
+          final minimum = double.tryParse(minimumQuantities[p.cartKey]?.text.trim() ?? '');
+          if (minimum == null || !minimum.isFinite || minimum <= 0) throw ArgumentError('أقل كمية غير صحيحة للصنف ${p.name}');
+          final erpItemId = erpItemIdByCartKey[p.cartKey];
+          items.add({
+            if (erpItemId != null) 'erp_item_id': erpItemId else 'product_id': p.id,
+            'product_name': p.name,
+            'original_price': p.price,
+            'offer_price': price,
+            'min_quantity': minimum,
+          });
+        }
+        await supplierService.createOfferWithItems(
+          title: title.text.trim(), items: items, description: description.text, startsAt: startsAt, endsAt: endsAt,
+          imageUrl: imageUrl, activityType: widget.activityType, discountPercentage: discountValue,
+          magazineColor: magazineColor, targetGovernorates: namesFor('governorate'),
+          targetDistricts: namesFor('district'), targetAreas: namesFor('area'),
+          targetCustomerTypes: selectedCustomerTypes.toList(), targetGeoIds: geoIds,
+        );
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('تم حفظ العرض ${scheduleLater ? 'مجدولًا' : 'ونشره'} بنجاح. عدد الأصناف: ${selectedProductIds.length}')),
         );
