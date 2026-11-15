@@ -7559,6 +7559,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   late String type;
   bool busy = false;
   Map<String,dynamic> _publisherProfile = {};
+  bool _marketCatalogLoading = true;
+  String? _marketCatalogError;
 
   Future<void> _loadPublisherProfile() async {
     try {
@@ -7602,7 +7604,11 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
 
   Future<void> _loadMarketTree() async {
     final client = database;
-    if (client == null) return;
+    if (client == null) {
+      if (mounted) setState(() { _marketCatalogLoading = false; _marketCatalogError = 'اتصال قاعدة البيانات غير متاح.'; });
+      return;
+    }
+    if (mounted) setState(() { _marketCatalogLoading = true; _marketCatalogError = null; });
     try {
       final publicCategories = await client.from('categories')
           .select('id,name,parent_id,is_active')
@@ -7715,8 +7721,15 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
       setState(() {
         _marketCategories..clear()..addAll(categories);
         _marketProducts..clear()..addAll(products);
+        _marketCatalogLoading = false;
+        _marketCatalogError = null;
       });
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) setState(() {
+        _marketCatalogLoading = false;
+        _marketCatalogError = 'تعذر تحميل كتالوج سوق التجار: $e';
+      });
+    }
   }
 
   List<Map<String,dynamic>> _marketCategoryChildren(String? parentId) =>
@@ -7943,6 +7956,24 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             controller: detailsController,
             maxLines: 4,
             decoration: const InputDecoration(labelText: 'الملاحظات أو التفاصيل'),
+          ),
+          if (_marketCatalogLoading) const Padding(
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: LinearProgressIndicator(),
+          ),
+          if (_marketCatalogError != null) Card(
+            child: ListTile(
+              leading: const Icon(Icons.error_outline, color: Colors.red),
+              title: Text(_marketCatalogError!, maxLines: 3, overflow: TextOverflow.ellipsis),
+              trailing: IconButton(icon: const Icon(Icons.refresh), onPressed: _loadMarketTree),
+            ),
+          ),
+          if (!_marketCatalogLoading && _marketCatalogError == null && _marketProducts.isEmpty) Card(
+            child: ListTile(
+              leading: const Icon(Icons.inventory_2_outlined, color: purple),
+              title: const Text('لا توجد أصناف نشطة ومتاحة في كتالوج المواد الغذائية حتى الآن.'),
+              trailing: IconButton(icon: const Icon(Icons.refresh), onPressed: _loadMarketTree),
+            ),
           ),
           if (_marketProducts.isNotEmpty) ...[
             const SizedBox(height: 12),
