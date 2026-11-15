@@ -28,7 +28,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
   String? _categoryId;
   bool _loading = false, _saving = false;
   String? _error, _message;
-  List<Map<String,dynamic>> _items = [], _categories = [], _parties = [], _warehouses = [], _branches = [], _campaigns = [];
+  List<Map<String,dynamic>> _items = [], _categories = [], _brands = [], _parties = [], _warehouses = [], _branches = [], _campaigns = [];
   final Set<String> _selectedCustomers = {}, _selectedWarehouses = {}, _selectedBranches = {}, _governorates = {}, _districts = {}, _centers = {}, _areas = {}, _customerTypes = {};
   final List<Map<String,dynamic>> _offerLines = [];
   SupabaseClient? get _db { try { return Supabase.instance.client; } catch (_) { return null; } }
@@ -49,7 +49,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final values = await Future.wait([
-        _inventory.fetchItems(company), _inventory.fetchCategories(company), _inventory.fetchWarehouses(company), _inventory.fetchBranches(company),
+        _inventory.fetchItems(company), _inventory.fetchCategories(company), _inventory.fetchBrands(company), _inventory.fetchWarehouses(company), _inventory.fetchBranches(company),
         _partiesRepo.fetchParties(company, kind: 'customer'),
         _db!.from('erp_sales_campaigns').select('id,title,campaign_type,start_date,end_date,is_active').eq('company_id', company).order('created_at', ascending: false).limit(100),
       ]);
@@ -57,10 +57,11 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
       setState(() {
         _items = (values[0] as List).cast<Map<String,dynamic>>();
         _categories = (values[1] as List).cast<Map<String,dynamic>>();
-        _warehouses = (values[2] as List).cast<Map<String,dynamic>>();
-        _branches = (values[3] as List).cast<Map<String,dynamic>>();
-        _parties = (values[4] as List).cast<Map<String,dynamic>>();
-        _campaigns = (values[5] as List).map((r) => Map<String,dynamic>.from(r)).where((r) => !widget.lockCampaignType || _s(r['campaign_type']) == _campaignType).toList();
+        _brands = (values[2] as List).cast<Map<String,dynamic>>();
+        _warehouses = (values[3] as List).cast<Map<String,dynamic>>();
+        _branches = (values[4] as List).cast<Map<String,dynamic>>();
+        _parties = (values[5] as List).cast<Map<String,dynamic>>();
+        _campaigns = (values[6] as List).map((r) => Map<String,dynamic>.from(r)).where((r) => !widget.lockCampaignType || _s(r['campaign_type']) == _campaignType).toList();
         _loading = false;
       });
     } catch (e) { if (mounted) setState(() { _loading = false; _error = 'تعذر تحميل بيانات العروض: $e'; }); }
@@ -89,29 +90,67 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
   }
 
   Future<void> _pickProducts() async {
-    final chosen = <String>{};
+    final chosen = _offerLines.map((line) => _s(line['item_id'])).toSet();
     final search = TextEditingController();
-    String? category = _categoryId;
-    await showDialog<void>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, refresh) {
-      final q = search.text.trim().toLowerCase();
-      final list = _items.where((i) => (category == null || _s(i['category_id']) == category) && (q.isEmpty || _s(i['item_name']).toLowerCase().contains(q) || _s(i['item_code']).toLowerCase().contains(q) || _s(i['barcode']).toLowerCase().contains(q))).toList();
-      return AlertDialog(title: const Text('جلب الأصناف — اختيار متعدد'),
-        content: SizedBox(width: 760, height: 560, child: Column(children: [
-          Row(children: [Expanded(child: TextField(controller: search, onChanged: (_) => refresh(() {}), decoration: const InputDecoration(labelText: 'بحث بالاسم أو الكود أو الباركود'))), const SizedBox(width: 8), DropdownButton<String?>(itemHeight: 48, value: category, hint: const Text('كل الفئات'), items: [const DropdownMenuItem<String?>(value: null, child: Text('كل الفئات')), ..._categories.map((g) => DropdownMenuItem<String?>(value: _s(g['id']), child: Text(_s(g['category_name']))))], onChanged: (v) => refresh(() => category = v))]),
-          Align(alignment: Alignment.centerRight, child: Wrap(spacing: 8, children: [TextButton(onPressed: () => refresh(() => chosen.addAll(list.map((e) => _s(e['id'])))), child: const Text('تحديد الظاهر')), TextButton(onPressed: () => refresh(() => chosen.clear()), child: const Text('إلغاء التحديد'))])),
-          Expanded(child: ListView(children: list.map((item) => CheckboxListTile(value: chosen.contains(_s(item['id'])), title: Text('${_s(item['item_code'])} — ${_s(item['item_name'])}', textDirection: TextDirection.rtl), subtitle: Text('سعر البيع: ${_s(item['sale_price'])} | الوحدة: ${_s(item['base_unit'])}'), onChanged: (v) => refresh(() { v == true ? chosen.add(_s(item['id'])) : chosen.remove(_s(item['id'])); }))).toList())),
-        ])),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')), FilledButton(onPressed: () {
-          setState(() {
-            for (final id in chosen) {
-              if (_offerLines.any((l) => _s(l['item_id']) == id)) continue;
-              final item = _items.firstWhere((i) => _s(i['id']) == id);
-              _offerLines.add({'item_id':id,'item_code':_s(item['item_code']),'item_name':_s(item['item_name']),'unit':_s(item['base_unit']),'sale_price':_n(item['sale_price']),'offer_price':_n(item['sale_price']),'offer_qty':100.0,'remaining_qty':100.0,'discount':0.0});
-            }
-          }); Navigator.pop(ctx);
-        }, child: const Text('إضافة الأصناف المحددة'))],
-      );
-    }));
+    final expandedCategories = <String>{};
+    final expandedBrands = <String>{};
+    final brandNames = <String,String>{for(final brand in _brands) _s(brand['id']):_s(brand['brand_name'])};
+    String categoryId(Map<String,dynamic> row) => _s(row['id']);
+    String parentId(Map<String,dynamic> row) => _s(row['parent_id']);
+    List<Map<String,dynamic>> childrenOf(String id) => _categories.where((row)=>parentId(row)==id).toList();
+    List<Map<String,dynamic>> itemsOf(String id) => _items.where((item)=>_s(item['category_id'])==id && (search.text.trim().isEmpty || _s(item['item_name']).toLowerCase().contains(search.text.trim().toLowerCase()) || _s(item['item_code']).toLowerCase().contains(search.text.trim().toLowerCase()) || _s(item['barcode']).toLowerCase().contains(search.text.trim().toLowerCase()))).toList();
+    List<Map<String,dynamic>> descendantsItems(String id, [Set<String>? visited]) {
+      final seen=visited??<String>{}; if(!seen.add(id)) return <Map<String,dynamic>>[];
+      final result=<Map<String,dynamic>>[]..addAll(itemsOf(id));
+      for(final child in childrenOf(id)) result.addAll(descendantsItems(categoryId(child),seen));
+      return result;
+    }
+    Map<String,List<Map<String,dynamic>>> groupByBrand(List<Map<String,dynamic>> products) {
+      final groups=<String,List<Map<String,dynamic>>>{};
+      for(final item in products) { final id=_s(item['brand_id']); final label=brandNames[id] ?? _s(item['brand_name']); final key=label.trim().isEmpty?'بدون ماركة':label.trim(); (groups[key]??=<Map<String,dynamic>>[]).add(item); }
+      final keys=groups.keys.toList()..sort((a,b)=>a=='بدون ماركة'?1:b=='بدون ماركة'?-1:a.compareTo(b));
+      return {for(final key in keys)key:groups[key]!};
+    }
+    void addProducts(List<Map<String,dynamic>> products) {
+      for(final item in products) { final id=_s(item['id']); if(id.isEmpty) continue; chosen.add(id); }
+    }
+    Widget productNode(Map<String,dynamic> item, void Function(void Function()) refresh) {
+      final id=_s(item['id']); final selected=chosen.contains(id); final image=_s(item['image_url']);
+      return Padding(padding:const EdgeInsetsDirectional.only(start:18,bottom:4),child:Row(children:[
+        Checkbox(value:selected,onChanged:(value)=>refresh(()=>value==true?chosen.add(id):chosen.remove(id))),
+        if(image.startsWith('http'))ClipRRect(borderRadius:BorderRadius.circular(7),child:Image.network(image,width:38,height:38,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.inventory_2_outlined,size:30))) else const Icon(Icons.inventory_2_outlined,size:30,color:Color(0xFF3E007D)),
+        const SizedBox(width:7),
+        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(_s(item['item_name']),style:const TextStyle(fontWeight:FontWeight.w700)),Text('كود: '+_s(item['item_code'])+' • الوحدة: '+_s(item['base_unit'])+' • السعر الأصلي: '+_n(item['sale_price']).toStringAsFixed(2)+' ج.م',style:const TextStyle(fontSize:11,color:Colors.black54))])),
+      ]));
+    }
+    Widget brandNode(String categoryKey, String brand, List<Map<String,dynamic>> products, void Function(void Function()) refresh) {
+      final key=categoryKey+'|'+brand; final expanded=expandedBrands.contains(key);
+      return Padding(padding:const EdgeInsetsDirectional.only(start:16),child:Column(children:[
+        InkWell(onTap:()=>refresh(()=>expanded?expandedBrands.remove(key):expandedBrands.add(key)),child:Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Row(children:[Icon(expanded?Icons.expand_more:Icons.chevron_left,color:const Color(0xFFFF27C3)),Expanded(child:Text(brand,style:const TextStyle(color:Color(0xFFFF27C3),fontWeight:FontWeight.w800))),Text(products.length.toString()+' صنف',style:const TextStyle(fontSize:11)),TextButton(onPressed:()=>refresh(()=>addProducts(products)),child:const Text('تحديد الكل'))]))),
+        if(expanded)...products.map((item)=>productNode(item,refresh)),
+      ]));
+    }
+    late Widget Function(Map<String,dynamic>,int,void Function(void Function())) categoryNode;
+    categoryNode=(category,depth,refresh) {
+      final id=categoryId(category); final expanded=expandedCategories.contains(id); final products=itemsOf(id); final childRows=childrenOf(id);
+      final groups=groupByBrand(products);
+      final all=descendantsItems(id);
+      return Padding(padding:EdgeInsetsDirectional.only(start:depth*14.0,bottom:5),child:Container(decoration:BoxDecoration(color:depth==0?const Color(0xFFF5EFFB):Colors.white,borderRadius:BorderRadius.circular(9),border:Border.all(color:const Color(0xFFE2D5EF))),child:Column(children:[
+        Row(children:[IconButton(visualDensity:VisualDensity.compact,onPressed:()=>refresh(()=>expanded?expandedCategories.remove(id):expandedCategories.add(id)),icon:Icon(expanded?Icons.expand_more:Icons.chevron_left,color:const Color(0xFF3E007D))),Expanded(child:InkWell(onTap:()=>refresh(()=>expanded?expandedCategories.remove(id):expandedCategories.add(id)),child:Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Text(_s(category['category_name'])+' ('+all.length.toString()+')',style:TextStyle(fontWeight:FontWeight.w900,color:depth==0?const Color(0xFF3E007D):const Color(0xFF5A3A75)))))),TextButton(onPressed:()=>refresh(()=>addProducts(all)),child:const Text('تحديد الفئة'))]),
+        if(expanded)...groups.entries.map((entry)=>brandNode(id,entry.key,entry.value,refresh)),
+        if(expanded)...childRows.map((child)=>categoryNode(child,depth+1,refresh)),
+      ])));
+    };
+    await showDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh){
+      final roots=_categories.where((row)=>parentId(row).isEmpty || parentId(row)=='null').toList();
+      final allVisible=_items.where((item)=>search.text.trim().isEmpty || _s(item['item_name']).toLowerCase().contains(search.text.trim().toLowerCase()) || _s(item['item_code']).toLowerCase().contains(search.text.trim().toLowerCase()) || _s(item['barcode']).toLowerCase().contains(search.text.trim().toLowerCase())).toList();
+      return AlertDialog(title:const Text('اختيار أصناف العرض'),content:SizedBox(width:780,height:590,child:Column(children:[
+        TextField(controller:search,onChanged:(_)=>refresh((){}),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),labelText:'ابحث باسم الصنف أو الكود أو الباركود',isDense:true,border:OutlineInputBorder())),
+        const SizedBox(height:7),
+        Row(children:[Text('المحدد: '+chosen.length.toString()+' صنف',style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF3E007D))),const Spacer(),TextButton(onPressed:()=>refresh(()=>addProducts(allVisible)),child:const Text('تحديد نتائج البحث')),TextButton(onPressed:()=>refresh(()=>chosen.clear()),child:const Text('إلغاء الكل'))]),
+        Expanded(child:_categories.isEmpty?ListView(children:allVisible.map((item)=>productNode(item,refresh)).toList()):ListView(children:roots.map((category)=>categoryNode(category,0,refresh)).toList())),
+      ]))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){setState(()=>_offerLines.removeWhere((line)=>!chosen.contains(_s(line['item_id']))));for(final id in chosen){if(_offerLines.any((line)=>_s(line['item_id'])==id))continue;final item=_items.firstWhere((row)=>_s(row['id'])==id);final sale=_n(item['sale_price']);_offerLines.add({'item_id':id,'item_code':_s(item['item_code']),'item_name':_s(item['item_name']),'unit':_s(item['base_unit']),'sale_price':sale,'offer_price':sale,'offer_qty':100.0,'remaining_qty':100.0,'discount':0.0});}Navigator.pop(ctx);},child:const Text('اعتماد الأصناف المحددة'))]);
+    })));
     search.dispose();
   }
 
