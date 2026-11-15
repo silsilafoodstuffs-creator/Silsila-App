@@ -361,6 +361,80 @@ class SilsilaApp extends StatelessWidget {
           ),
           margin: const EdgeInsets.all(4),
         ),
+        popupMenuTheme: PopupMenuThemeData(
+          color: Colors.white,
+          elevation: 8,
+          shadowColor: pink.withValues(alpha: 0.20),
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: Color(0xFFEADCF5)),
+          ),
+        ),
+        dropdownMenuTheme: DropdownMenuThemeData(
+          menuStyle: MenuStyle(
+            backgroundColor: const WidgetStatePropertyAll(Colors.white),
+            elevation: const WidgetStatePropertyAll(8),
+            shadowColor: WidgetStatePropertyAll(pink.withValues(alpha: 0.18)),
+            surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+            shape: WidgetStatePropertyAll(RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(13),
+              side: const BorderSide(color: Color(0xFFEADCF5)),
+            )),
+          ),
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          elevation: 8,
+          shadowColor: pink.withValues(alpha: 0.18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: const BorderSide(color: Color(0xFFEADCF5), width: 0.8),
+          ),
+          titleTextStyle: const TextStyle(
+            fontFamily: 'Kufam',
+            color: Color(0xFF241735),
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+          ),
+          contentTextStyle: const TextStyle(
+            fontFamily: 'Tajawal',
+            color: Color(0xFF241735),
+            fontSize: 13,
+          ),
+        ),
+        bottomSheetTheme: BottomSheetThemeData(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          modalBackgroundColor: Colors.white,
+          elevation: 8,
+          shadowColor: pink.withValues(alpha: 0.16),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+          ),
+        ),
+        chipTheme: ChipThemeData(
+          backgroundColor: Colors.white,
+          selectedColor: pink.withValues(alpha: 0.12),
+          secondarySelectedColor: orange.withValues(alpha: 0.18),
+          disabledColor: const Color(0xFFF0EDF3),
+          elevation: 1,
+          shadowColor: pink.withValues(alpha: 0.12),
+          side: const BorderSide(color: Color(0xFFEADCF5)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          labelStyle: const TextStyle(
+            fontFamily: 'Tajawal',
+            color: Color(0xFF241735),
+            fontSize: 12,
+          ),
+          secondaryLabelStyle: const TextStyle(
+            fontFamily: 'Tajawal',
+            color: purple,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         // Circular, modern checkbox styling shared by the customer app and ERP.
         checkboxTheme: CheckboxThemeData(
           shape: const CircleBorder(),
