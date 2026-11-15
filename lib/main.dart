@@ -1095,6 +1095,8 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
 
   Future<void> _load() async {
     final requestVersion = ++_requestVersion;
+    _manualResumeTimer?.cancel();
+    _manualScrollPaused = false;
     if (mounted) setState(() => _ads = const []);
     final activityCode = widget.activityCode?.trim();
     // Never briefly show the global catalogue while the selected activity
