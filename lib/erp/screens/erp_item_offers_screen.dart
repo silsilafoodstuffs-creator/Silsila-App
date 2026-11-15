@@ -150,8 +150,8 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
         const SizedBox(height:7),
         Row(children:[Text('المحدد: '+chosen.length.toString()+' صنف',style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF3E007D))),const Spacer(),TextButton(onPressed:()=>refresh(()=>addProducts(allVisible)),child:const Text('تحديد نتائج البحث')),TextButton(onPressed:()=>refresh(()=>chosen.clear()),child:const Text('إلغاء الكل'))]),
         Expanded(child:_categories.isEmpty?ListView(children:allVisible.map((item)=>productNode(item,refresh)).toList()):ListView(children:roots.map((category)=>categoryNode(category,0,refresh)).toList())),
-      ]))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){setState(()=>_offerLines.removeWhere((line)=>!chosen.contains(_s(line['item_id']))));for(final id in chosen){if(_offerLines.any((line)=>_s(line['item_id'])==id))continue;final item=_items.firstWhere((row)=>_s(row['id'])==id);final sale=_n(item['sale_price']);_offerLines.add({'item_id':id,'item_code':_s(item['item_code']),'item_name':_s(item['item_name']),'unit':_s(item['base_unit']),'sale_price':sale,'offer_price':sale,'offer_qty':100.0,'remaining_qty':100.0,'discount':0.0});}Navigator.pop(ctx);},child:const Text('اعتماد الأصناف المحددة'))]);
-    })));
+      ])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){setState(()=>_offerLines.removeWhere((line)=>!chosen.contains(_s(line['item_id']))));for(final id in chosen){if(_offerLines.any((line)=>_s(line['item_id'])==id))continue;final item=_items.firstWhere((row)=>_s(row['id'])==id);final sale=_n(item['sale_price']);_offerLines.add({'item_id':id,'item_code':_s(item['item_code']),'item_name':_s(item['item_name']),'unit':_s(item['base_unit']),'sale_price':sale,'offer_price':sale,'offer_qty':100.0,'remaining_qty':100.0,'discount':0.0});}Navigator.pop(ctx);},child:const Text('اعتماد الأصناف المحددة'))]);
+    }));
     search.dispose();
   }
 
