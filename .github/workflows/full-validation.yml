@@ -2,6 +2,28 @@ name: Silsila Full Validation - All Recent Changes
 
 # Run this broad, slower audit manually. Routine checks are handled by the three independent lanes.
 on:
+  push:
+    branches: [feature/silsila-studio-final-main-2026-11-15]
+    paths:
+      - "lib/**"
+      - "test/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "android/**"
+      - "tools/web_view_test.mjs"
+      - "supabase/**"
+      - ".github/workflows/full-validation.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/**"
+      - "test/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "android/**"
+      - "tools/web_view_test.mjs"
+      - "supabase/**"
+      - ".github/workflows/full-validation.yml"
   workflow_dispatch:
 
 permissions:
@@ -9,7 +31,7 @@ permissions:
 
 concurrency:
   # Isolate each branch so an unrelated feature-branch run cannot cancel main validation.
-  group: silsila-full-validation-manual-${{ github.run_id }}
+  group: silsila-full-validation-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
