@@ -432,7 +432,7 @@ class SilsilaApp extends StatelessWidget {
           filled: true,
           fillColor: Colors.white,
           isDense: true,
-          constraints: const BoxConstraints(minHeight: 40, maxHeight: 44),
+          constraints: const BoxConstraints(minHeight: 40, maxHeight: 40),
           contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
           disabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(6),
