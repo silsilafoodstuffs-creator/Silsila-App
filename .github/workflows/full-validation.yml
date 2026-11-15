@@ -3,21 +3,6 @@ name: Silsila Full Validation - All Recent Changes
 # Run the complete validation manually at planned milestones and whenever
 # application code affecting the shipped app changes on main.
 on:
-  push:
-    branches:
-      - main
-      - feature/ticker-ads-15-slots
-      - feature/unlimited-brand-circular-ads-final
-    paths:
-      - "lib/**"
-      - "test/**"
-      - "pubspec.yaml"
-      - "pubspec.lock"
-      - "android/**"
-      - "tools/web_view_test.mjs"
-      - "supabase/**"
-      - ".github/workflows/full-validation.yml"
-      - ".github/workflows/build.yml"
   workflow_dispatch:
 
 permissions:
@@ -25,8 +10,8 @@ permissions:
 
 concurrency:
   # Isolate each branch so an unrelated feature-branch run cannot cancel main validation.
-  group: silsila-full-validation-${{ github.ref }}
-  cancel-in-progress: true
+  group: silsila-full-validation-manual-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   validate-all:
