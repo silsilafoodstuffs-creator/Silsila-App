@@ -48,6 +48,9 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   bool _busy = false;
   bool _dirty = false;
   String? _lastTestReport;
+  Map<String, bool> _permissions = const <String, bool>{};
+  bool _permissionsLoaded = false;
+  String? _permissionsError;
 
   static const _studioTabs = <String>[
     'لوحة الاستوديو',
@@ -78,15 +81,40 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   void initState() {
     super.initState();
     _nameController.text = _doc.name;
-    if (_companyId != null) {
-      _loadRemoteDesigns();
-    }
+    _loadStudioPermissions();
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
+  }
+
+  bool _allowed(String key) => _companyId == null || _permissions[key] == true;
+
+  Future<void> _loadStudioPermissions() async {
+    final company = _companyId;
+    if (company == null) {
+      _permissionsLoaded = true;
+      return;
+    }
+    try {
+      final permissions = await _repository.loadStudioPermissions(company);
+      if (!mounted) return;
+      setState(() {
+        _permissions = permissions;
+        _permissionsLoaded = true;
+        _permissionsError = null;
+      });
+      if (permissions['canAccess'] == true) await _loadRemoteDesigns();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _permissions = const <String, bool>{};
+        _permissionsLoaded = true;
+        _permissionsError = error.toString();
+      });
+    }
   }
 
   void _notice(String message, {bool error = false}) {
@@ -98,6 +126,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   void _change(StudioDocument next) {
+    if (!_allowed('canEdit')) {
+      _notice('ليست لديك صلاحية تعديل تصميمات الاستوديو.', error: true);
+      return;
+    }
     _undo.add(_doc);
     if (_undo.length > 60) _undo.removeAt(0);
     _redo.clear();
@@ -113,6 +145,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   void _newDesign(String kind) {
+    if (!_allowed('canAdd')) {
+      _notice('ليست لديك صلاحية إنشاء تصميم جديد.', error: true);
+      return;
+    }
     final labels = <String, String>{
       'screen': 'شاشة جديدة',
       'report': 'تقرير جديد',
@@ -319,7 +355,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   void _toggleHidden(StudioNode node) => _updateNode(node, hidden: !node.hidden);
 
   void _undoChange() {
-    if (_undo.isEmpty) return;
+    if (!_allowed('canEdit') || _undo.isEmpty) return;
     _redo.add(_doc);
     setState(() {
       _doc = _undo.removeLast();
@@ -330,7 +366,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   void _redoChange() {
-    if (_redo.isEmpty) return;
+    if (!_allowed('canEdit') || _redo.isEmpty) return;
     _undo.add(_doc);
     setState(() {
       _doc = _redo.removeLast();
@@ -341,6 +377,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _saveLocal() async {
+    if (!_allowed('canSave')) {
+      _notice('ليست لديك صلاحية حفظ مسودات الاستوديو.', error: true);
+      return;
+    }
     setState(() => _busy = true);
     try {
       await _store.save(_doc);
@@ -353,6 +393,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _saveCloud() async {
+    if (!_allowed('canSave')) {
+      _notice('ليست لديك صلاحية الحفظ المركزي.', error: true);
+      return;
+    }
     final company = _companyId;
     if (company == null) {
       _notice('يجب اختيار شركة نشطة قبل الحفظ المركزي.', error: true);
@@ -389,6 +433,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _syncPendingDrafts() async {
+    if (!_allowed('canSave')) {
+      _notice('ليست لديك صلاحية مزامنة المسودات.', error: true);
+      return;
+    }
     final company = _companyId;
     if (company == null) {
       _notice('يجب اختيار شركة نشطة لمزامنة المسودات.', error: true);
@@ -495,6 +543,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _importJson() async {
+    if (!_allowed('canEdit')) {
+      _notice('ليست لديك صلاحية استيراد تصميمات للتعديل.', error: true);
+      return;
+    }
     final controller = TextEditingController();
     final accepted = await showDialog<bool>(
       context: context,
@@ -604,6 +656,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _restoreVersion(int revision) async {
+    if (!_allowed('canEdit')) {
+      _notice('ليست لديك صلاحية استعادة إصدارات التصميم.', error: true);
+      return;
+    }
     final company = _companyId;
     final id = _remoteDesignId;
     if (company == null || id == null) return;
@@ -632,6 +688,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _runTests() async {
+    if (!_allowed('canPreview')) {
+      _notice('ليست لديك صلاحية معاينة واختبار التصميم.', error: true);
+      return;
+    }
     setState(() => _busy = true);
     final errors = <String>[];
     final notes = <String>[];
@@ -680,6 +740,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _approveDesign() async {
+    if (!_allowed('canEdit')) {
+      _notice('ليست لديك صلاحية اعتماد التصميم.', error: true);
+      return;
+    }
     final company = _companyId;
     final id = _remoteDesignId;
     if (company == null || id == null) {
@@ -704,6 +768,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _publishDesign() async {
+    if (!_allowed('canEdit')) {
+      _notice('ليست لديك صلاحية نشر التصميم.', error: true);
+      return;
+    }
     final company = _companyId;
     final id = _remoteDesignId;
     if (company == null || id == null) return;
@@ -725,6 +793,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _previewSource() async {
+    if (!_allowed('canPreview')) {
+      _notice('ليست لديك صلاحية معاينة مصادر البيانات.', error: true);
+      return;
+    }
     final company = _companyId;
     final source = _selectedSource;
     if (company == null || source == null) {
@@ -783,6 +855,50 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_companyId != null && !_permissionsLoaded) {
+      return const Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+    if (_companyId != null && !_allowed('canAccess')) {
+      return Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('سلسلة ستوديو'),
+            backgroundColor: _studioPurple,
+            foregroundColor: Colors.white,
+          ),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.lock_outline, size: 44, color: _studioPurple),
+                  const SizedBox(height: 12),
+                  Text(
+                    _permissionsError == null
+                        ? 'ليس لديك تصريح للدخول إلى سلسلة ستوديو.'
+                        : 'تعذر التحقق من صلاحيات سلسلة ستوديو: $_permissionsError',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _permissionsLoaded ? _loadStudioPermissions : null,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('إعادة التحقق'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     final wide = MediaQuery.sizeOf(context).width >= 1050;
     return Directionality(
       textDirection: TextDirection.rtl,
