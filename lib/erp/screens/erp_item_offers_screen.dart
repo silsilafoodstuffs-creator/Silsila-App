@@ -277,21 +277,19 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
       ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
   Future<void> _previewOffer() async {
-    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('معاينة عرض الأصناف'),
-      content: SizedBox(width: 620, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text('اسم العرض: ${_name.text.trim().isEmpty ? '—' : _name.text.trim()}'),
-        const SizedBox(height: 6),
-        Text('نوع العرض: $_campaignType'),
-        const SizedBox(height: 6),
-        Text('من ${_from.toIso8601String().substring(0, 10)} إلى ${_to.toIso8601String().substring(0, 10)}'),
-        const SizedBox(height: 6),
-        Text('الأصناف المحددة: ${_offerLines.length}'),
-      ])),
-      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
-    ));
+    final now=DateTime.now();
+    final status=_to.isBefore(DateTime(now.year,now.month,now.day))?'منتهي':_from.isAfter(DateTime(now.year,now.month,now.day))?'مجدول':'ساري خلال الفترة المحددة';
+    await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(title:const Text('معاينة مجلة العرض'),content:SizedBox(width:680,height:520,child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      Text('اسم العرض: '+(_name.text.trim().isEmpty?'—':_name.text.trim()),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:16)),
+      const SizedBox(height:6),Text('النوع: '+_campaignTitle(_campaignType)+' • الحالة: '+status),
+      Text('الفترة: '+_date(_from)+' إلى '+_date(_to)),
+      Text('العملاء: '+(_selectedCustomers.isEmpty?'كل العملاء':_selectedCustomers.length.toString()+' محدد')+' • المخازن: '+(_selectedWarehouses.isEmpty?'كل المخازن':_selectedWarehouses.length.toString()+' محدد')),
+      Text('الفروع: '+_selectedBranches.length.toString()+' • المناطق: '+(_governorates.length+_districts.length+_centers.length+_areas.length).toString()+' • تصنيفات العملاء: '+_customerTypes.length.toString()),
+      const Divider(),
+      Text('الأصناف ('+_offerLines.length.toString()+')',style:const TextStyle(fontWeight:FontWeight.w900,color:Color(0xFF3E007D))),
+      ..._offerLines.map((line)=>Card(margin:const EdgeInsets.symmetric(vertical:4),child:ListTile(title:Text(_s(line['item_name']),style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('الوحدة: '+_s(line['unit'])+' • أقل كمية: '+_n(line['min_quantity']).toString()+' • الكمية: '+_n(line['offer_qty']).toString()+' • المتبقي: '+_n(line['remaining_qty']).toString()),trailing:Column(mainAxisAlignment:MainAxisAlignment.center,crossAxisAlignment:CrossAxisAlignment.end,children:[Text(_n(line['sale_price']).toStringAsFixed(2)+' ج.م',style:const TextStyle(decoration:TextDecoration.lineThrough,color:Colors.black45,fontSize:11)),Text(_n(line['offer_price']).toStringAsFixed(2)+' ج.م',style:const TextStyle(color:Color(0xFFFFA015),fontWeight:FontWeight.w900))])))),
+    ]))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق'))]));
   }
-
   Future<void> _confirmRemoveOfferLine(Map<String, dynamic> line) async {
     final yes = await showDialog<bool>(
       context: context,
@@ -346,7 +344,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
                             _name.clear(); _search.clear(); _offerLines.clear(); _editingCampaignId=null;
                             setState(() { _message = 'نموذج عرض جديد جاهز.'; _error = null; });
                           }),
-                          _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _save),
+                          _quickTask(_editingCampaignId == null ? 'حفظ / نشر / جدولة' : 'حفظ التعديلات', Icons.save_outlined, const Color(0xFF168447), _save),
                           _quickTask('اختيار الأصناف', Icons.inventory_2_outlined, const Color(0xFF137C8B), _pickProducts),
                           _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewOffer),
                         ])),
