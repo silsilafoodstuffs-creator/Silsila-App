@@ -7725,7 +7725,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         'expiry_condition_date':_productExpiryDates[productId]?.toIso8601String().split('T').first,
       });
     }
-    if (itemsData.isEmpty && selectedProducts.isEmpty) {
+    if (itemsData.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('اختر صنفًا واحدًا على الأقل.')));
       return;
     }
@@ -7818,7 +7818,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             maxLines: 4,
             decoration: const InputDecoration(labelText: 'الملاحظات أو التفاصيل'),
           ),
-          if (_marketProducts.isNotEmpty || widget.availableProducts.isNotEmpty) ...[
+          if (_marketProducts.isNotEmpty) ...[
             const SizedBox(height: 12),
             Row(children: [
               Expanded(child: Text(silsilaText(silsilaText('اختيار الأصناف')), style: TextStyle(fontWeight: FontWeight.bold))),
