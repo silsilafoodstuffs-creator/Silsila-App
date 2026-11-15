@@ -122,8 +122,8 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
       return AlertDialog(title:const Text('استهداف العملاء حسب الموقع الجغرافي'),content:SizedBox(width:640,height:560,child:Column(children:[
         Row(children:[Text('المحدد: '+(_governorates.length+_centers.length+_districts.length+_areas.length).toString(),style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF3E007D))),const Spacer(),TextButton(onPressed:()=>refresh(() { for(final p in _parties.where((p)=>p['is_active']!=false)) { _governorates.add(geoValue(p,'governorate')); _centers.add(geoValue(p,'center')); _districts.add(geoValue(p,'district')); _areas.add(geoValue(p,'area')); } }),child:const Text('تحديد الكل')),TextButton(onPressed:()=>refresh(() { _governorates.clear(); _centers.clear(); _districts.clear(); _areas.clear(); }),child:const Text('إلغاء الكل'))]),
         Expanded(child:tree.isEmpty?const Center(child:Text('لا توجد بيانات جغرافية مسجلة للعملاء.')):ListView(children:tree.entries.map((entry){final gov=entry.key;final centers=entry.value;final count=countWhere((p)=>geoValue(p,'governorate')==gov);return ExpansionTile(leading:Checkbox(value:_governorates.contains(gov),onChanged:(v)=>refresh(()=>toggleGovernorate(gov,centers,v==true))),title:Text(gov,style:const TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('$count عميل'),children:centers.entries.map((e)=>centerNode(gov,e.key,e.value)).toList());}).toList())),
-      ]))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق')),FilledButton(onPressed:()=>Navigator.pop(ctx),child:const Text('اعتماد الاستهداف'))]);
-    })));
+      ])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق')),FilledButton(onPressed:()=>Navigator.pop(ctx),child:const Text('اعتماد الاستهداف'))]);
+    }));
   }
   List<Map<String,dynamic>> _distinctOptions(String field) {
     final values = _parties.map((p)=>_s(p[field])).where((v)=>v.isNotEmpty).toSet().toList()..sort();
