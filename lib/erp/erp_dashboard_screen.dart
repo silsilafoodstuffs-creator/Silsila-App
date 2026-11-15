@@ -353,7 +353,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   void initState() {
     super.initState();
     ErpScreenLayoutProfiles.profiles.addListener(_handleLayoutProfilesChanged);
-    unawaited(ErpScreenLayoutProfiles.load().catchError((Object _) {}));
     if (widget.initialPage == 'بيانات الشركة') {
       _module = 'إعدادات عامة';
       _group = 'بيانات أساسية';
@@ -377,6 +376,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     try {
       final companyIds = await _appManagementService.listCurrentUserCompanyIds();
       if (companyIds.isEmpty) {
+        await ErpScreenLayoutProfiles.load();
         if (!mounted) return;
         setState(() {
           _appManagementCompanyId = null;
@@ -387,6 +387,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         return;
       }
       final companyId = companyIds.first;
+      await ErpScreenLayoutProfiles.load(companyId: companyId);
       // These requests are independent; run them together to reduce dashboard startup latency.
       final initialResults = await Future.wait<dynamic>([
         _appManagementService.listApps(companyId: companyId),
