@@ -7561,6 +7561,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   Map<String,dynamic> _publisherProfile = {};
   bool _marketCatalogLoading = true;
   String? _marketCatalogError;
+  final Map<String, Future<Uint8List?>> _marketImageFutures = {};
 
   Future<void> _loadPublisherProfile() async {
     try {
@@ -7602,13 +7603,55 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   }
 
 
+  Future<Uint8List?> _loadMarketItemImage(Map<String,dynamic> product) async {
+    final client = database;
+    if (client == null) return null;
+    final source = (product['catalog_source'] ?? '').toString();
+    final table = source == 'erp' ? 'erp_items' : 'products';
+    try {
+      final row = await client.from(table).select('image_data')
+          .eq('id', product['id']).maybeSingle();
+      return _decodeDatabaseBytea(row?['image_data']);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Widget _marketProductImage(Map<String,dynamic> product) {
+    final imageUrl = (product['image_url'] ?? '').toString().trim();
+    if (imageUrl.isNotEmpty) {
+      return ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.network(
+        imageUrl, width: 40, height: 40, fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined)));
+    }
+    final id = (product['id'] ?? '').toString();
+    if (id.isEmpty) return const Icon(Icons.inventory_2_outlined);
+    final cacheKey = '${product['catalog_source']}:$id';
+    final future = _marketImageFutures.putIfAbsent(cacheKey, () => _loadMarketItemImage(product));
+    return FutureBuilder<Uint8List?>(
+      future: future,
+      builder: (context, snapshot) {
+        final bytes = snapshot.data;
+        if (bytes != null && bytes.isNotEmpty) {
+          return ClipRRect(borderRadius: BorderRadius.circular(6),
+              child: Image.memory(bytes, width: 40, height: 40, fit: BoxFit.cover));
+        }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(width: 24, height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2));
+        }
+        return const Icon(Icons.inventory_2_outlined);
+      },
+    );
+  }
+
   Future<void> _loadMarketTree() async {
     final client = database;
     if (client == null) {
       if (mounted) setState(() { _marketCatalogLoading = false; _marketCatalogError = 'اتصال قاعدة البيانات غير متاح.'; });
       return;
     }
-    if (mounted) setState(() { _marketCatalogLoading = true; _marketCatalogError = null; });
+    if (mounted) setState(() { _marketCatalogLoading = true; _marketCatalogError = null; _marketImageFutures.clear(); });
     try {
       final publicCategories = await client.from('categories')
           .select('id,name,parent_id,is_active')
@@ -7617,7 +7660,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
       var publicOffset = 0;
       while (true) {
         final page = await client.from('products')
-            .select('id,name,category_id,unit,price,brand,image_url,image_data,image_mime_type,is_available')
+            .select('id,name,category_id,unit,price,brand,image_url,is_available')
             .eq('is_available', true).eq('activity_type', 'مواد غذائية')
             .order('name').range(publicOffset, publicOffset + 499);
         publicProducts.addAll(page.whereType<Map>().map((e) => Map<String, dynamic>.from(e)));
@@ -7659,7 +7702,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         var itemOffset = 0;
         while (true) {
           final page = await client.from('erp_items')
-              .select('id,item_code,barcode,item_name,category_id,brand_id,brand_name,base_unit,sale_price,is_active,show_in_app,image_url,image_data,image_mime_type')
+              .select('id,item_code,barcode,item_name,category_id,brand_id,brand_name,base_unit,sale_price,is_active,show_in_app,image_url')
               .eq('is_active', true).eq('show_in_app', true)
               .order('item_name').range(itemOffset, itemOffset + 499);
           for (final raw in page.whereType<Map>()) {
@@ -7677,8 +7720,6 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
               'brand': erpBrands[(item['brand_id'] ?? '').toString()] ??
                   (item['brand_name'] ?? '').toString(),
               'image_url': item['image_url'],
-              'image_data': item['image_data'],
-              'image_mime_type': item['image_mime_type'],
               'catalog_source': 'erp',
             });
           }
@@ -7787,14 +7828,10 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           title:Text((entry.key.isEmpty?'بدون ماركة':entry.key)+' ('+entry.value.length.toString()+')',style:const TextStyle(fontWeight:FontWeight.w700)),
           children:entry.value.map((product){
             final key=(product['id']??'').toString(),name=(product['name']??'').toString();
-            final selected=selectedProducts.contains(key),image=(product['image_url']??'').toString();
-            final imageBytes = _decodeDatabaseBytea(product['image_data']);
+            final selected=selectedProducts.contains(key);
             return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
               CheckboxListTile(dense:true,contentPadding:const EdgeInsets.all(0),value:selected,
-                secondary: imageBytes != null && imageBytes.isNotEmpty
-                  ? ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.memory(imageBytes, width: 40, height: 40, fit: BoxFit.cover))
-                  : image.isEmpty ? const Icon(Icons.inventory_2_outlined, color: purple)
-                  : ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.network(image, width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined))),
+                secondary: _marketProductImage(product),
                 title:Text(name),subtitle: Text([product['item_code'], 'السعر: ${product['price'] ?? 0} • الوحدة: ${product['unit'] ?? '—'}'].where((v) => v != null && v.toString().trim().isNotEmpty).join(' • ')),onChanged:(v)=>setState((){
                   if(v==true){selectedProducts.add(key);_productQuantities.putIfAbsent(key,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(key,()=>TextEditingController(text:(product['price']??'0').toString()));_productUnits[key]=(product['unit']??'كبري').toString();_productQuality[key]='good';_productNegotiable[key]=false;}
                   else{selectedProducts.remove(key);}
@@ -8001,20 +8038,12 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
               ..._marketProducts.map((product) {
                 final key = (product['id'] ?? '').toString();
                 final selected = selectedProducts.contains(key);
-                final image = (product['image_url'] ?? '').toString();
-                final imageBytes = _decodeDatabaseBytea(product['image_data']);
                 return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   CheckboxListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                     value: selected,
-                    secondary: imageBytes != null && imageBytes.isNotEmpty
-                        ? ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.memory(imageBytes, width: 40, height: 40, fit: BoxFit.cover))
-                        : image.isEmpty
-                            ? const Icon(Icons.inventory_2_outlined, color: purple)
-                            : ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.network(
-                                image, width: 40, height: 40, fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined))),
+                    secondary: _marketProductImage(product),
                     title: Text((product['name'] ?? '').toString()),
                     subtitle: Text('السعر: ${(product['price'] ?? 0)} • الوحدة: ${(product['unit'] ?? '—')}'),
                     onChanged: (checked) => setState(() {
