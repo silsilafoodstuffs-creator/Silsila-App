@@ -7964,16 +7964,19 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
                 final key = (product['id'] ?? '').toString();
                 final selected = selectedProducts.contains(key);
                 final image = (product['image_url'] ?? '').toString();
+                final imageBytes = _decodeDatabaseBytea(product['image_data']);
                 return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   CheckboxListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                     value: selected,
-                    secondary: image.isEmpty
-                        ? const Icon(Icons.inventory_2_outlined, color: purple)
-                        : ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.network(
-                            image, width: 40, height: 40, fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined))),
+                    secondary: imageBytes != null && imageBytes.isNotEmpty
+                        ? ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.memory(imageBytes, width: 40, height: 40, fit: BoxFit.cover))
+                        : image.isEmpty
+                            ? const Icon(Icons.inventory_2_outlined, color: purple)
+                            : ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.network(
+                                image, width: 40, height: 40, fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined))),
                     title: Text((product['name'] ?? '').toString()),
                     subtitle: Text('السعر: ${(product['price'] ?? 0)} • الوحدة: ${(product['unit'] ?? '—')}'),
                     onChanged: (checked) => setState(() {
