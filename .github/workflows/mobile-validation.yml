@@ -58,3 +58,4 @@ jobs:
 
       - name: Run complete Flutter test suite
         run: flutter test --reporter expanded
+
