@@ -28,6 +28,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
   String? _categoryId;
   bool _loading = false, _saving = false;
   String? _error, _message;
+  String? _editingCampaignId;
   List<Map<String,dynamic>> _items = [], _categories = [], _brands = [], _parties = [], _warehouses = [], _branches = [], _campaigns = [];
   final Set<String> _selectedCustomers = {}, _selectedWarehouses = {}, _selectedBranches = {}, _governorates = {}, _districts = {}, _centers = {}, _areas = {}, _customerTypes = {};
   final List<Map<String,dynamic>> _offerLines = [];
@@ -51,7 +52,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
       final values = await Future.wait([
         _inventory.fetchItems(company), _inventory.fetchCategories(company), _inventory.fetchBrands(company), _inventory.fetchWarehouses(company), _inventory.fetchBranches(company),
         _partiesRepo.fetchParties(company, kind: 'customer'),
-        _db!.from('erp_sales_campaigns').select('id,title,campaign_type,start_date,end_date,is_active').eq('company_id', company).order('created_at', ascending: false).limit(100),
+        _db!.from('erp_sales_campaigns').select('id,title,campaign_type,start_date,end_date,is_active,target_customer_ids,target_warehouse_ids,target_branch_ids,target_governorates,target_districts,target_areas,target_centers,target_customer_types').eq('company_id', company).order('created_at', ascending: false).limit(100),
       ]);
       if (!mounted) return;
       setState(() {
@@ -154,6 +155,36 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
     search.dispose();
   }
 
+  Future<void> _editCampaign(Map<String,dynamic> campaign) async {
+    final id=_s(campaign['id']); if(id.isEmpty) return;
+    setState(()=>_loading=true);
+    try {
+      final rows=await _db!.from('erp_sales_campaign_items').select('item_id,offer_price,min_quantity,offer_quantity,remaining_quantity,discount_value,discount_kind,is_active').eq('company_id',widget.companyId!.trim()).eq('campaign_id',id);
+      final next=<Map<String,dynamic>>[];
+      for(final raw in rows) {
+        final row=Map<String,dynamic>.from(raw); if(row['is_active']==false) continue;
+        final item=_items.where((v)=>_s(v['id'])==_s(row['item_id'])).firstOrNull;
+        if(item==null) continue;
+        next.add({'item_id':_s(item['id']),'item_code':_s(item['item_code']),'item_name':_s(item['item_name']),'unit':_s(item['base_unit']),'sale_price':_n(item['sale_price']),'offer_price':_n(row['offer_price']),'offer_qty':_n(row['offer_quantity']),'remaining_qty':_n(row['remaining_quantity']),'discount':_n(row['discount_value']),'min_quantity':_n(row['min_quantity'])});
+      }
+      if(!mounted)return;
+      setState(() {
+        _editingCampaignId=id; _name.text=_s(campaign['title']); _campaignType=_s(campaign['campaign_type']);
+        _from=DateTime.tryParse(_s(campaign['start_date']))??DateTime.now(); _to=DateTime.tryParse(_s(campaign['end_date']))??_from;
+        _offerLines..clear()..addAll(next);
+        _selectedCustomers..clear()..addAll((campaign['target_customer_ids'] as List? ?? const []).map((v)=>v.toString()));
+        _selectedWarehouses..clear()..addAll((campaign['target_warehouse_ids'] as List? ?? const []).map((v)=>v.toString()));
+        _selectedBranches..clear()..addAll((campaign['target_branch_ids'] as List? ?? const []).map((v)=>v.toString()));
+        _governorates..clear()..addAll((campaign['target_governorates'] as List? ?? const []).map((v)=>v.toString()));
+        _districts..clear()..addAll((campaign['target_districts'] as List? ?? const []).map((v)=>v.toString()));
+        _areas..clear()..addAll((campaign['target_areas'] as List? ?? const []).map((v)=>v.toString()));
+        _centers..clear()..addAll((campaign['target_centers'] as List? ?? const []).map((v)=>v.toString()));
+        _customerTypes..clear()..addAll((campaign['target_customer_types'] as List? ?? const []).map((v)=>v.toString()));
+        _customerScope=_selectedCustomers.isEmpty?'كل العملاء':'عملاء محددون'; _warehouseScope=_selectedWarehouses.isEmpty?'كل المخازن':'مخازن محددة';
+        _loading=false; _message='تم تحميل العرض للتعديل. احفظ التغييرات بعد المراجعة.'; _error=null;
+      });
+    } catch(error) { if(mounted)setState(()=>_loading=false); if(mounted)ErpCenterToast.show(context,'تعذر تحميل تفاصيل العرض للتعديل: $error',isError:true); }
+  }
   Future<void> _deleteCampaign(Map<String, dynamic> campaign) async {
     final campaignId = _s(campaign['id']);
     if (campaignId.isEmpty) return;
@@ -181,7 +212,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
     setState(() { _saving = true; _error = null; _message = null; });
     try {
       await _db!.from('erp_sales_campaigns')
-          .delete().eq('id', campaignId).eq('company_id', company);
+          .update({'is_active':false}).eq('id', campaignId).eq('company_id', company);
       if (!mounted) return;
       setState(() { _saving = false; _message = 'تم حذف العرض وبنوده التابعة له.'; });
       await _load();
@@ -206,7 +237,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
     setState(() { _saving = true; _error = null; _message = null; });
     try {
       final singleCustomer = _selectedCustomers.length == 1 ? _selectedCustomers.first : null;
-      final header = await db.from('erp_sales_campaigns').insert({
+      final campaignData = {
         'company_id':company, 'campaign_type':_campaignType, 'title':_name.text.trim(),
         'start_date':_date(_from), 'end_date':_date(_to), 'owner_party_id':singleCustomer,
         'owner_label':_selectedCustomers.isEmpty ? 'كل العملاء' : 'عملاء محددون',
@@ -216,23 +247,24 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
         'target_branch_ids':_selectedBranches.toList(),
         'target_governorates':_governorates.toList(), 'target_districts':_districts.toList(),
         'target_areas':_areas.toList(), 'target_centers':_centers.toList(), 'target_customer_types':_customerTypes.toList(),
-      }).select('id').single();
-      final campaignId = _s(header['id']);
+      };
+      final campaignId = _editingCampaignId ?? _s((await db.from('erp_sales_campaigns').insert(campaignData).select('id').single())['id']);
+      if(_editingCampaignId != null) { await db.from('erp_sales_campaigns').update(campaignData).eq('id',campaignId).eq('company_id',company); await db.from('erp_sales_campaign_items').update({'is_active':false}).eq('campaign_id',campaignId).eq('company_id',company); }
       final rows = _offerLines.map((line) {
         final offerPrice = _n(line['offer_price']);
         final discountValue = _n(line['discount']);
         return <String,dynamic>{
           'company_id':company, 'campaign_id':campaignId, 'item_id':_s(line['item_id']),
-          'offer_price':offerPrice, 'min_quantity':1, 'max_quantity':_n(line['offer_qty']),
+          'offer_price':offerPrice, 'min_quantity':_n(line['min_quantity'])>0?_n(line['min_quantity']):1,
           'offer_quantity':_n(line['offer_qty']), 'remaining_quantity':_n(line['remaining_qty']),
           'discount_value':discountValue, 'discount_kind':_discountKind,
           'representative_incentive':_campaignType == 'slow_moving' ? 2 : 0,
           'customer_incentive':_campaignType == 'promotion' ? 2 : 0, 'is_active':true,
         };
       }).toList();
-      await db.from('erp_sales_campaign_items').insert(rows);
+      await db.from('erp_sales_campaign_items').upsert(rows, onConflict:'campaign_id,item_id');
       if (!mounted) return;
-      setState(() { _saving = false; _message = 'تم حفظ العرض وبنوده في قاعدة بيانات العروض، وأصبح متاحًا في جلب العروض داخل فاتورة المبيعات.'; _name.clear(); _offerLines.clear(); });
+      setState(() { _saving = false; _message = 'تم حفظ العرض وبنوده في قاعدة بيانات العروض.'; _name.clear(); _offerLines.clear(); _editingCampaignId=null; });
       await _load();
     } catch (e) { if (mounted) setState(() { _saving = false; _error = 'تعذر حفظ العرض: $e'; }); }
   }
@@ -311,7 +343,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
                         SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
                           _quickTask('تحديث', Icons.refresh, Colors.blue, _load),
                           _quickTask('إضافة / مسح النموذج', Icons.add_circle_outline, const Color(0xFF168447), () {
-                            _name.clear(); _search.clear();
+                            _name.clear(); _search.clear(); _offerLines.clear(); _editingCampaignId=null;
                             setState(() { _message = 'نموذج عرض جديد جاهز.'; _error = null; });
                           }),
                           _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _save),
@@ -615,8 +647,8 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
                         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                           Icon(_s(campaign['is_active']) == 'true' ? Icons.check_circle : Icons.pause_circle_outline,
                             color: _s(campaign['is_active']) == 'true' ? Colors.green : Colors.grey),
-                          IconButton(tooltip: 'حذف العرض', onPressed: _saving ? null : () => _deleteCampaign(campaign),
-                            icon: const Icon(Icons.delete_outline, color: Colors.red)),
+                          IconButton(tooltip:'تعديل العرض',onPressed:_saving?null:()=>_editCampaign(campaign),icon:const Icon(Icons.edit_outlined,color:Color(0xFF3E007D))),
+                          IconButton(tooltip:'إيقاف العرض',onPressed:_saving?null:()=>_deleteCampaign(campaign),icon:const Icon(Icons.pause_circle_outline,color:Colors.red)),
                         ]),
                       ),
                     )),
