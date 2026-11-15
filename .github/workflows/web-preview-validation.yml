@@ -3,35 +3,44 @@ name: Silsila Web Preview Validation
 on:
   workflow_run:
     workflows:
-      - Silsila Web Preview Deployment
+      - Silsila Web App Validation
     types:
       - completed
     branches: [main]
-  workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
-# Every deployed preview gets its own browser test run; never cancel it on a new push.
+# Each validated build gets its own preview smoke run; pushes never cancel it.
 concurrency:
   group: silsila-web-preview-validation-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
   preview:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - name: Checkout the exact deployed source
+      - name: Checkout the exact validated source
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+
+      - name: Download the exact production Web build
+        uses: actions/download-artifact@v4
+        with:
+          name: silsila-web-build-${{ github.event.workflow_run.run_number }}
+          path: build/web
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
 
       - name: Cache Playwright Chromium
         uses: actions/cache@v4
@@ -44,20 +53,25 @@ jobs:
           npm install --no-save --no-package-lock playwright source-map
           npx playwright install --with-deps chromium
 
-      - name: Wait for the deployed Web Preview to respond
+      - name: Serve the exact Web build as a local preview
         shell: bash
         run: |
           set -euo pipefail
-          URL="https://silsilafoodstuffs-creator.github.io/Silsila-App/"
+          test -s build/web/index.html
+          mkdir -p /tmp/silsila-web/Silsila-App
+          cp -a build/web/. /tmp/silsila-web/Silsila-App/
+          python3 -m http.server 8765 --directory /tmp/silsila-web >/tmp/silsila-web-server.log 2>&1 &
+          SERVER_PID=$!
+          echo "$SERVER_PID" > /tmp/silsila-web-server.pid
           for attempt in $(seq 1 30); do
-            if curl --silent --show-error --fail "$URL" >/dev/null; then
-              echo "Web Preview is responding."
+            if curl --silent --fail http://127.0.0.1:8765/Silsila-App/ >/dev/null; then
+              echo "Local Web Preview is responding."
               exit 0
             fi
-            sleep 10
+            sleep 1
           done
-          echo "Web Preview did not become available in time."
+          cat /tmp/silsila-web-server.log
           exit 1
 
       - name: Run real desktop + mobile WebView smoke tests
-        run: node tools/web_view_test.mjs https://silsilafoodstuffs-creator.github.io/Silsila-App/
+        run: node tools/web_view_test.mjs http://127.0.0.1:8765/Silsila-App/
