@@ -49,11 +49,12 @@ class ErpInventoryMasterRepository {
     return rows.map((r) => Map<String,dynamic>.from(r)).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchItems(String companyId, {int offset = 0, int pageSize = 500, String search = ''}) async {
+  Future<List<Map<String, dynamic>>> fetchItems(String companyId, {int offset = 0, int pageSize = 500, String search = '', bool includeImageData = false}) async {
     if (offset < 0 || pageSize < 1 || pageSize > 1000) throw ArgumentError('نطاق صفحة الأصناف غير صالح.');
-    var query = _db.from('erp_items')
-      .select('id, item_code, barcode, item_name, item_name_en, category_id, brand_id, brand_name, base_unit, purchase_price, sale_price, tax_rate, reorder_level, expiry_tracking, is_active, image_url, image_mime_type, image_data')
-      .eq('company_id', companyId.trim());
+    final columns = includeImageData
+      ? 'id, item_code, barcode, item_name, item_name_en, category_id, brand_id, brand_name, base_unit, purchase_price, sale_price, tax_rate, reorder_level, expiry_tracking, is_active, image_url, image_mime_type, image_data'
+      : 'id, item_code, barcode, item_name, item_name_en, category_id, brand_id, brand_name, base_unit, purchase_price, sale_price, tax_rate, reorder_level, expiry_tracking, is_active, image_url, image_mime_type';
+    var query = _db.from('erp_items').select(columns).eq('company_id', companyId.trim());
     final term = search.trim();
     if (term.isNotEmpty) query = query.or('item_name.ilike.%$term%,item_code.ilike.%$term%,barcode.ilike.%$term%');
     final rows = await query.order('item_code').range(offset, offset + pageSize - 1);
