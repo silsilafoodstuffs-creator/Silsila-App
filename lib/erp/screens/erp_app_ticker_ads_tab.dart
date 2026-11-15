@@ -289,8 +289,8 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           .order('brand_code');
       final brandRows = List<Map<String, dynamic>>.from(brandRowsResult)
         ..sort((a, b) {
-          final aValue = int.tryParse(_s(a['brand_code']).replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-          final bValue = int.tryParse(_s(b['brand_code']).replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+          final aValue = _brandOrderValue(a) ?? 0;
+          final bValue = _brandOrderValue(b) ?? 0;
           final numeric = aValue.compareTo(bValue);
           return numeric != 0 ? numeric : _s(a['brand_code']).compareTo(_s(b['brand_code']));
         });
@@ -518,7 +518,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
               style: TextStyle(color: Colors.grey.shade700, height: 1.4),
             ),
           ),
-          _TickerAdsPreview(brands: _brands),
+          _TickerAdsPreview(brands: _brands.take(25).toList()),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.all(10),
@@ -542,8 +542,8 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                             columnSpacing: 2.5,
                             horizontalMargin: 2.5,
                             headingRowHeight: 40,
-                            dataRowMinHeight: 40,
-                            dataRowMaxHeight: 44,
+                            dataRowMinHeight: 66,
+                            dataRowMaxHeight: 70,
                             columns: const [
                               DataColumn(label: Text('م')),
                               DataColumn(label: Text('كود البراند')),
