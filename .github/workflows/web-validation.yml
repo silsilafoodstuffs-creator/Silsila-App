@@ -11,7 +11,6 @@ on:
       - "pubspec.lock"
       - "assets/**"
       - "tools/web_view_test.mjs"
-      - ".github/workflows/web-validation.yml"
   workflow_dispatch:
 
 permissions:
