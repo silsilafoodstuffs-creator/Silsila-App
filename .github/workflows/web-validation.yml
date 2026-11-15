@@ -54,6 +54,12 @@ jobs:
           grep -q 'flutter_bootstrap.js' build/web/index.html
           grep -q 'سلسلة' build/web/index.html
 
+      - name: Cache Playwright Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium-v1
+
       - name: Install Chromium browser test dependencies
         run: |
           npm install --no-save --no-package-lock playwright source-map
