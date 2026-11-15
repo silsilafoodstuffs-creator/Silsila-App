@@ -14,6 +14,10 @@ void main() {
     expect(mobile, contains('name: Silsila Mobile App Validation'));
     expect(mobile, contains('flutter test --reporter expanded'));
     expect(mobile, isNot(contains('flutter build apk')));
+    expect(mobile, contains('Flutter analyze + tests'));
+    expect(mobile, isNot(contains('Set up Java 17')));
+    expect(androidBuild, contains('github.run_id'));
+    expect(androidBuild, contains('cancel-in-progress: false'));
     expect(androidBuild, contains('Silsila Mobile App Validation'));
     expect(androidBuild, contains('flutter build apk --debug --no-pub --target-platform android-arm,android-arm64'));
     expect(androidBuild, contains('Cache Android NDK and CMake'));
