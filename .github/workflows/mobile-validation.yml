@@ -2,7 +2,7 @@ name: Silsila Mobile App Validation
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'feature/**']
     paths:
       - "lib/**"
       - "test/**"
