@@ -7598,6 +7598,9 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   late String type;
   bool busy = false;
   Map<String,dynamic> _publisherProfile = {};
+  bool get _publisherIsSupplier { final type=(_publisherProfile['account_type']??'').toString().trim().toLowerCase(); return type=='مورد'||type=='supplier'||type=='vendor'; }
+  String get _publisherAccountLabel { final type=(_publisherProfile['account_type']??'').toString().trim().toLowerCase(); if(type=='مورد'||type=='supplier'||type=='vendor')return 'مورد'; if(type=='عميل'||type=='customer'||type=='client')return 'عميل'; return type.isEmpty?'حساب':(_publisherProfile['account_type']??'').toString(); }
+  String get _publisherClassification { final value=(_publisherIsSupplier?_publisherProfile['supplier_type']:_publisherProfile['customer_type'])?.toString().trim()??''; return value.isEmpty?'غير مصنف':value; }
 
   Future<void> _loadPublisherProfile() async {
     try {
@@ -7849,8 +7852,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
               ])),
               const SizedBox(width:10),
               Column(crossAxisAlignment:CrossAxisAlignment.end,children:[
-                Text((_publisherProfile['account_type']??'حساب').toString(),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
-                Text(((_publisherProfile['account_type']??'').toString()=='مورد'?(_publisherProfile['supplier_type']??''):(_publisherProfile['customer_type']??'')).toString().trim().isEmpty?'غير مصنف':((_publisherProfile['account_type']??'').toString()=='مورد'?_publisherProfile['supplier_type']:_publisherProfile['customer_type']).toString(),style:const TextStyle(color:Colors.white,fontSize:10)),
+                Text(_publisherAccountLabel,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
+                Text(_publisherClassification,style:const TextStyle(color:Colors.white,fontSize:10)),
               ]),
             ]),
           ])),
