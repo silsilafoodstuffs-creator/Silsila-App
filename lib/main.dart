@@ -7656,7 +7656,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     if (client == null) return;
     try {
       final categories = await client.from('categories').select('id,name,parent_id,is_active').eq('is_active', true).order('sort_order');
-      final products = await client.from('products').select('id,name,category_id,brand,unit,price,is_available').eq('is_available', true).order('name').limit(1000);
+      final products = await client.from('products').select('id,name,category_id,brand,unit,price,image_url,is_available').eq('is_available', true).order('name').limit(1000);
       if (!mounted) return;
       setState(() {
         _marketCategories..clear()..addAll(categories.whereType<Map>().map((e)=>Map<String,dynamic>.from(e)));
@@ -7724,7 +7724,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   Widget _marketProductNode(Map<String,dynamic> product) {
     final id=(product['id']??'').toString(); final name=(product['name']??'').toString(); final key=id.isEmpty?name:id; final selected=selectedProducts.contains(key);
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      CheckboxListTile(dense:true,contentPadding:const EdgeInsetsDirectional.only(start:12),value:selected,title:Text(name),subtitle:Text('سعر المورد: '+(product['price']??'—').toString()+' ج.م • الوحدة: '+(product['unit']??'كبري').toString()),onChanged:(v)=>setState(()=>_selectMarketProducts([product],v==true))),
+      CheckboxListTile(dense:true,contentPadding:const EdgeInsetsDirectional.only(start:12),value:selected,secondary:ClipRRect(borderRadius:BorderRadius.circular(7),child:Container(width:46,height:46,color:Colors.white,child:(product['image_url']??'').toString().trim().isEmpty?const Icon(Icons.inventory_2_outlined,color:purple):Image.network(product['image_url'].toString(),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.inventory_2_outlined,color:purple)))),title:Text(name),subtitle:Text('سعر المورد: '+(product['price']??'—').toString()+' ج.م • الوحدة: '+(product['unit']??'كبري').toString()),onChanged:(v)=>setState(()=>_selectMarketProducts([product],v==true))),
       if(selected)Padding(padding:const EdgeInsetsDirectional.only(start:12,bottom:8),child:Row(children:[
         Expanded(child:TextField(controller:_productQuantities[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'الكمية',hintText:'0.000',isDense:true,border:OutlineInputBorder()))),
         const SizedBox(width:6),
