@@ -5718,15 +5718,15 @@ class _OffersScreenState extends State<OffersScreen> {
               .eq('company_id', companyId).eq('is_active', true).eq('show_in_app', true)
               .order('category_code').limit(3000);
           final categories = categoryResult.whereType<Map>()
-              .map((row) => Map<String,dynamic>.from(row))
-              .where((row) {
-                final code = (row['activity_code'] ?? '').toString().trim();
-                return code.isEmpty || activityCode.isEmpty || code == activityCode;
-              }).toList();
+              .map((row) => Map<String,dynamic>.from(row)).toList();
           offerItemCategories.addAll(categories);
           final categoriesById = <String,Map<String,dynamic>>{
             for (final row in categories) (row['id'] ?? '').toString(): row,
           };
+          final allowedItemCategoryIds = categories.where((row) {
+            final code = (row['activity_code'] ?? '').toString().trim();
+            return code.isEmpty || activityCode.isEmpty || code == activityCode;
+          }).map((row)=>(row['id']??'').toString()).toSet();
           const pageSize = 500;
           var offset = 0;
           while (true) {
@@ -5738,7 +5738,7 @@ class _OffersScreenState extends State<OffersScreen> {
               final item = Map<String,dynamic>.from(raw);
               final categoryId = (item['category_id'] ?? '').toString();
               final category = categoriesById[categoryId];
-              if (category == null) continue;
+              if (category == null || !allowedItemCategoryIds.contains(categoryId)) continue;
               final path = <Map<String,dynamic>>[];
               Map<String,dynamic>? current = category;
               final seen = <String>{};
@@ -5774,6 +5774,20 @@ class _OffersScreenState extends State<OffersScreen> {
             if (page.length < pageSize) break;
             offset += pageSize;
           }
+          final retainedCategoryIds = <String>{};
+          for (final categoryId in offerItemCategoryByCartKey.values) {
+            Map<String,dynamic>? current = categoriesById[categoryId];
+            final visited = <String>{};
+            while (current != null) {
+              final currentId = (current['id'] ?? '').toString();
+              if (!visited.add(currentId)) break;
+              retainedCategoryIds.add(currentId);
+              final parentId = (current['parent_id'] ?? '').toString();
+              current = parentId.isEmpty || parentId == 'null' ? null : categoriesById[parentId];
+            }
+          }
+          offerItemCategories.removeWhere((row)=>
+            !retainedCategoryIds.contains((row['id']??'').toString()));
         }
       } catch (_) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(
