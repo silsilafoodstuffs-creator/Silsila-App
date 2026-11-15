@@ -515,11 +515,17 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     return names;
   }
 
-  int _brandCodeNumber(Map<String,dynamic> row) => int.tryParse(RegExp(r'([0-9]+)$').firstMatch(_s(row['brand_code']))?.group(1) ?? '') ?? 0;
+  int _brandCodeNumber(Map<String,dynamic> row) =>
+      int.tryParse(_s(row['brand_code']).replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+
+  int _compareBrandCodes(Map<String,dynamic> a, Map<String,dynamic> b) {
+    final numeric = _brandCodeNumber(a).compareTo(_brandCodeNumber(b));
+    return numeric != 0 ? numeric : _s(a['brand_code']).compareTo(_s(b['brand_code']));
+  }
 
   List<Map<String,dynamic>> _rowsInGroup(String group) {
     return _visibleRows.where((row) => _groupKey(row) == group).toList()
-      ..sort((a,b) => _brandCodeNumber(a).compareTo(_brandCodeNumber(b)));
+      ..sort(_compareBrandCodes);
   }
 
   Widget _logoPreview(Map<String,dynamic> row, {double size = 48}) {
@@ -654,7 +660,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final rows = _visibleRows.toList()..sort((a,b) => _brandCodeNumber(a).compareTo(_brandCodeNumber(b)));
+    final rows = _visibleRows.toList()..sort(_compareBrandCodes);
     final selected = _selectedRow();
     final visibleGroups = rows.map(_groupKey).toSet().toList()
       ..sort((a,b) {
