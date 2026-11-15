@@ -1,6 +1,19 @@
 name: Silsila Web App Validation
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/**"
+      - "test/**"
+      - "integration_test/**"
+      - "android/**"
+      - "web/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "assets/**"
+      - "supabase/**"
+      - ".github/workflows/**"
   push:
     branches: [main]
     paths:
