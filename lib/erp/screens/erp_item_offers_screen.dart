@@ -222,7 +222,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
             TextButton(onPressed: () => refresh(() => chosen.clear()), child: const Text('إلغاء التحديد')),
             Text('المحدد: ${chosen.length}'),
           ]),
-          Expanded(child: _categories.isEmpty || roots.isEmpty
+          Expanded(child: _categories.isEmpty || roots.isEmpty || q.isNotEmpty
             ? ListView(children: allVisible.map(productTile).toList())
             : ListView(children: [
                 ...roots.map((c) => categoryNode(c, 0)),
