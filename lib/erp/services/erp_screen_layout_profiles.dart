@@ -38,6 +38,14 @@ class ErpScreenLayoutProfiles {
   static Set<String> get pendingKeys =>
       Set<String>.unmodifiable(_pendingKeys);
 
+  @visibleForTesting
+  static void resetForTesting() {
+    _loaded = false;
+    _activeScope = null;
+    _pendingKeys.clear();
+    profiles.value = <String, dynamic>{};
+  }
+
   static Future<void> load({String? companyId}) async {
     final scope = scopeForCompany(companyId);
     if (_loaded && _activeScope == scope) return;
