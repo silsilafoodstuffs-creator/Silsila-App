@@ -9,6 +9,33 @@ import '../../services/activity_service.dart';
 
 const _tickerPurple = Color(0xFF3E007D);
 
+/// Circular brand mark: drag to reposition and pinch to zoom inside a fixed circle.
+class _TickerBrandCircle extends StatelessWidget {
+  const _TickerBrandCircle({required this.bytes, this.size = 60});
+  final Uint8List? bytes;
+  final double size;
+  @override
+  Widget build(BuildContext context) => Container(
+    width: size, height: size, padding: const EdgeInsets.all(3),
+    decoration: const BoxDecoration(shape: BoxShape.circle, gradient: SweepGradient(colors: [
+      Color(0xFFFFA015), Color(0xFFFF27C3), _tickerPurple, Color(0xFFFFA015),
+    ])),
+    child: Container(
+      padding: const EdgeInsets.all(2),
+      decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+      clipBehavior: Clip.antiAlias,
+      child: ClipOval(child: bytes == null
+        ? const Icon(Icons.storefront_outlined, color: _tickerPurple, size: 27)
+        : InteractiveViewer(
+            constrained: true, panEnabled: true, scaleEnabled: true,
+            panAxis: PanAxis.free, minScale: 1, maxScale: 4,
+            boundaryMargin: EdgeInsets.zero,
+            child: SizedBox.expand(child: Image.memory(bytes!, fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Icon(Icons.storefront_outlined, color: _tickerPurple))),
+          )),
+    ),
+  );
+}
 
 class _TickerAdsPreview extends StatefulWidget {
   const _TickerAdsPreview({required this.brands});
@@ -153,27 +180,7 @@ class _TickerAdsPreviewState extends State<_TickerAdsPreview> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   children: [
-                                    Container(
-                                      width: 60,
-                                      height: 60,
-                                      padding: const EdgeInsets.all(3),
-                                      decoration: const BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        gradient: SweepGradient(colors: [
-                                          Color(0xFFFFA015), Color(0xFFFF27C3),
-                                          _tickerPurple, Color(0xFFFFA015),
-                                        ]),
-                                      ),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
-                                        clipBehavior: Clip.antiAlias,
-                                        child: bytes == null
-                                            ? const Icon(Icons.storefront_outlined, color: _tickerPurple, size: 27)
-                                            : Image.memory(bytes, fit: BoxFit.contain,
-                                                errorBuilder: (_, __, ___) => const Icon(Icons.storefront_outlined, color: _tickerPurple)),
-                                      ),
-                                    ),
+                                    _TickerBrandCircle(bytes: bytes),
                                     const SizedBox(height: 3),
                                     SizedBox(width: 74, child: Text(name, maxLines: 1,
                                       overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
@@ -221,14 +228,15 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
   String? _message;
 
   SupabaseClient get _db => Supabase.instance.client;
-  int get _slotCount {
-    final lastAssigned = _slotOwners.keys.fold<int>(
-      0, (current, slot) => slot > current ? slot : current,
-    );
-    return _brands.length > lastAssigned ? _brands.length : lastAssigned;
-  }
+  int get _slotCount => _brands.length;
 
   String _s(dynamic value) => (value ?? '').toString();
+
+  String _brandOrderDigits(Map<String, dynamic> brand) =>
+      _s(brand['brand_code']).replaceAll(RegExp(r'[^0-9]'), '');
+
+  int? _brandOrderValue(Map<String, dynamic> brand) =>
+      int.tryParse(_brandOrderDigits(brand));
 
   bool get _ready =>
       (widget.companyId ?? '').trim().isNotEmpty &&
@@ -287,7 +295,13 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           .eq('is_system', false)
           .order('display_order')
           .order('brand_code');
-      final brandRows = List<Map<String, dynamic>>.from(brandRowsResult);
+      final brandRows = List<Map<String, dynamic>>.from(brandRowsResult)
+        ..sort((a, b) {
+          final aValue = int.tryParse(_s(a['brand_code']).replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+          final bValue = int.tryParse(_s(b['brand_code']).replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+          final numeric = aValue.compareTo(bValue);
+          return numeric != 0 ? numeric : _s(a['brand_code']).compareTo(_s(b['brand_code']));
+        });
       // Brand-to-activity ownership is explicit on the brand master.
       // The global scope remains company-wide.
       if (_activityCode != 'ALL') {
@@ -309,28 +323,27 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
       final validAssignments = (assignedRows as List)
           .where((row) => activeBrandIds.contains(_s(row['brand_id'])))
           .toList();
-      final nextOwners = <int, String>{
+      final savedOwners = <int, String>{
         for (final row in validAssignments)
           (row['slot_no'] as num).toInt(): _s(row['brand_id']),
       };
-      final assignedBrandIds = nextOwners.values.toSet();
-      var nextSlot = nextOwners.keys.isEmpty
-          ? 1
-          : nextOwners.keys.reduce((a, b) => a > b ? a : b) + 1;
-      // Append all remaining active brands in the selected activity scope
-      // without changing the user's existing manually assigned positions.
-      for (final brand in List<Map<String, dynamic>>.from(brandRows)) {
-        final brandId = _s(brand['id']);
-        if (assignedBrandIds.add(brandId)) {
-          nextOwners[nextSlot++] = brandId;
+      final nextOwners = <int, String>{};
+      for (var index = 0; index < brandRows.length; index++) {
+        final brand = brandRows[index];
+        var displayOrder = _brandOrderValue(brand) ?? (index + 1);
+        while (nextOwners.containsKey(displayOrder)) {
+          displayOrder = brandRows.length + index + 1;
         }
+        nextOwners[displayOrder] = _s(brand['id']);
       }
+      final sameAssignments = savedOwners.length == nextOwners.length &&
+          nextOwners.entries.every((entry) => savedOwners[entry.key] == entry.value);
       setState(() {
         _brands = List<Map<String, dynamic>>.from(brandRows);
         _slotOwners
           ..clear()
           ..addAll(nextOwners);
-        _hasUnsavedChanges = nextOwners.length != validAssignments.length;
+        _hasUnsavedChanges = !sameAssignments;
         _loading = false;
       });
     } catch (error) {
@@ -365,55 +378,6 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
     } catch (_) {
       return null;
     }
-  }
-
-  void _showConflict(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-      backgroundColor: Colors.deepOrange,
-    ));
-  }
-
-  void _toggleSlot(String brandId, int slot, bool checked) {
-    final owner = _slotOwners[slot];
-    if (checked && owner != null && owner != brandId) {
-      final other = _brands.where((b) => _s(b['id']) == owner);
-      final otherName = other.isEmpty ? 'براند آخر' : _s(other.first['brand_name']);
-      _showConflict('الخانة رقم $slot مخصصة بالفعل لـ $otherName. ألغِ تحديدها أولًا.');
-      return;
-    }
-    setState(() {
-      if (checked) {
-        _slotOwners[slot] = brandId;
-      } else if (owner == brandId) {
-        _slotOwners.remove(slot);
-      }
-      _message = null;
-      _hasUnsavedChanges = true;
-    });
-  }
-
-  void _toggleAll(String brandId, bool checked) {
-    final conflicts = <int>[];
-    for (var slot = 1; slot <= _slotCount; slot++) {
-      final owner = _slotOwners[slot];
-      if (checked && owner != null && owner != brandId) conflicts.add(slot);
-    }
-    if (conflicts.isNotEmpty) {
-      _showConflict('الخانات ${conflicts.join('، ')} مستخدمة لبراندات أخرى. ألغِ تحديدها أولًا.');
-      return;
-    }
-    setState(() {
-      for (var slot = 1; slot <= _slotCount; slot++) {
-        if (checked) {
-          _slotOwners[slot] = brandId;
-        } else if (_slotOwners[slot] == brandId) {
-          _slotOwners.remove(slot);
-        }
-      }
-      _message = null;
-      _hasUnsavedChanges = true;
-    });
   }
 
   Future<bool> _confirmPendingChanges() async {
@@ -592,25 +556,26 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                             headingRowHeight: 40,
                             dataRowMinHeight: 40,
                             dataRowMaxHeight: 44,
-                            columns: [
-                              const DataColumn(label: Text('م')),
-                              const DataColumn(label: Text('كود البراند')),
-                              const DataColumn(label: Text('الصورة')),
-                              const DataColumn(label: Text('اسم البراند')),
-                              const DataColumn(label: Text('الكل')),
-                              ...List.generate(_slotCount, (index) => DataColumn(
-                                label: Text('${index + 1}'),
-                              )),
+                            columns: const [
+                              DataColumn(label: Text('م')),
+                              DataColumn(label: Text('كود البراند')),
+                              DataColumn(label: Text('الصورة')),
+                              DataColumn(label: Text('معاينة دائرية')),
+                              DataColumn(label: Text('اسم البراند')),
+                              DataColumn(label: Text('ترتيبه في العرض')),
                             ],
                             rows: brands.asMap().entries.map((entry) {
                               final rowIndex = entry.key + 1;
                               final brand = entry.value;
-                              final id = _s(brand['id']);
-                              final selectedCount = _slotOwners.values.where((owner) => owner == id).length;
+                              final orderDigits = _brandOrderDigits(brand);
+                              final bytes = _logoBytes(brand['logo_data']);
                               return DataRow(cells: [
                                 DataCell(SizedBox(width: 24, child: Text('$rowIndex', textAlign: TextAlign.center))),
                                 DataCell(SizedBox(width: 66, child: Text(_s(brand['brand_code']), maxLines: 1, overflow: TextOverflow.ellipsis))),
                                 DataCell(SizedBox(width: 40, height: 40, child: _brandLogo(brand))),
+                                DataCell(SizedBox(width: 64, height: 64, child: Center(
+                                  child: _TickerBrandCircle(bytes: bytes, size: 58),
+                                ))),
                                 DataCell(SizedBox(width: 150, child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,25 +587,11 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                                         style: const TextStyle(fontSize: 10, color: Colors.black54)),
                                   ],
                                 ))),
-                                DataCell(SizedBox(width: 28, child: Checkbox(
-                                  visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  shape: const CircleBorder(),
-                                  value: selectedCount == 0 ? false : (_slotCount > 0 && selectedCount == _slotCount) ? true : null,
-                                  tristate: true,
-                                  onChanged: _saving ? null : (value) => _toggleAll(id, value == true),
+                                DataCell(SizedBox(width: 70, child: Text(
+                                  orderDigits.isEmpty ? '$rowIndex' : orderDigits,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontWeight: FontWeight.w900, color: _tickerPurple),
                                 ))),
-                                ...List.generate(_slotCount, (index) {
-                                  final slot = index + 1;
-                                  return DataCell(SizedBox(width: 28, child: Checkbox(
-                                    visualDensity: VisualDensity.compact,
-                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                    shape: const CircleBorder(),
-                                    value: _slotOwners[slot] == id,
-                                    onChanged: _saving ? null : (value) =>
-                                      _toggleSlot(id, slot, value == true),
-                                  )));
-                                }),
                               ]);
                             }).toList(),
                           ),
@@ -650,7 +601,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           Padding(
             padding: const EdgeInsets.all(12),
             child: Row(children: [
-              Text('المواضع المحددة: ${_slotOwners.length}/$_slotCount',
+              Text('عدد البراندات المرتبة حسب الكود: ${_slotOwners.length}/$_slotCount',
                 style: const TextStyle(color: _tickerPurple, fontWeight: FontWeight.w900)),
               const Spacer(),
               FilledButton.icon(
