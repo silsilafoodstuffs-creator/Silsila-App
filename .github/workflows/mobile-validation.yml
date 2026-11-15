@@ -11,8 +11,6 @@ on:
       - "pubspec.yaml"
       - "pubspec.lock"
       - "assets/**"
-      - ".github/workflows/mobile-validation.yml"
-      - ".github/workflows/build.yml"
   workflow_dispatch:
 
 permissions:
