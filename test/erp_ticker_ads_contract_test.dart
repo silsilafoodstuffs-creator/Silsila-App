@@ -47,6 +47,7 @@ void main() {
     expect(ticker, contains('scrollDirection: Axis.horizontal'));
     expect(ticker, contains('shape: BoxShape.circle'));
     expect(ticker, contains('Image.memory'));
+    expect(ticker, contains('fit: BoxFit.cover'));
     expect(ticker, contains("ad['brand_name']"));
     expect(ticker, contains('widget.onBrandTap'));
     expect(ticker, contains('_manualScrollPaused'));
