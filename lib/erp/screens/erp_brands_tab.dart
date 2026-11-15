@@ -491,9 +491,11 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     return names;
   }
 
+  int _brandCodeNumber(Map<String,dynamic> row) => int.tryParse(RegExp(r'([0-9]+)$').firstMatch(_s(row['brand_code']))?.group(1) ?? '') ?? 0;
+
   List<Map<String,dynamic>> _rowsInGroup(String group) {
     return _visibleRows.where((row) => _groupKey(row) == group).toList()
-      ..sort((a,b) => _s(a['brand_code']).compareTo(_s(b['brand_code'])));
+      ..sort((a,b) => _brandCodeNumber(a).compareTo(_brandCodeNumber(b)));
   }
 
   Widget _logoPreview(Map<String,dynamic> row, {double size = 48}) {
@@ -628,7 +630,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final rows = _visibleRows;
+    final rows = _visibleRows.toList()..sort((a,b) => _brandCodeNumber(a).compareTo(_brandCodeNumber(b)));
     final selected = _selectedRow();
     final visibleGroups = rows.map(_groupKey).toSet().toList()
       ..sort((a,b) {
@@ -653,12 +655,17 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 ErpQuickTaskButton(label:'إضافة جديد', icon:Icons.add_circle_outline, onPressed:_saving ? null : () => _edit()),
                 ErpQuickTaskButton(label:'تعديل', icon:Icons.edit_outlined, onPressed:_saving ? null : () {
                   if (_viewMode == 'grid') {
-                    setState(() => _gridEditing = !_gridEditing);
-                    if (_gridEditing) _syncGridNameControllers();
+                    setState(() => _gridEditing = true);
+                    _syncGridNameControllers();
                   } else if (selected != null && selected['is_system'] != true) { _edit(row:selected); }
                 }),
-                if (_viewMode == 'grid' && _gridEditing)
-                  ErpQuickTaskButton(label:'حفظ التعديلات', icon:Icons.save_outlined, onPressed:_saving ? null : () => _saveGridNames()),
+                if (_viewMode == 'grid' && _gridEditing) ...[
+                  ErpQuickTaskButton(label:'حفظ التعديلات', icon:Icons.save_outlined, onPressed:_saving ? null : _saveGridNames),
+                  ErpQuickTaskButton(label:'إلغاء التعديل', icon:Icons.close, onPressed:_saving ? null : () {
+                    setState(() => _gridEditing = false);
+                    _syncGridNameControllers();
+                  }),
+                ],
                 ErpQuickTaskButton(label:'شعار البراند', icon:Icons.image_outlined, onPressed:_saving || selected == null ? null : () => _uploadLogo(selected)),
                 ErpQuickTaskButton(label:'استيراد شعارات متعددة', icon:Icons.collections_outlined, onPressed:_saving ? null : _bulkImportLogos),
                 ErpQuickTaskButton(label:'حذف', icon:Icons.delete_outline, onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
