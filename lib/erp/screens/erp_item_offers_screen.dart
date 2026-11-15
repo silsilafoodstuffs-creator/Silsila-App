@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
@@ -31,6 +32,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
   List<Map<String,dynamic>> _items = [], _categories = [], _brands = [], _parties = [], _warehouses = [], _branches = [], _campaigns = [];
   final Set<String> _selectedCustomers = {}, _selectedWarehouses = {}, _selectedBranches = {}, _governorates = {}, _districts = {}, _centers = {}, _areas = {}, _customerTypes = {};
   final List<Map<String,dynamic>> _offerLines = [];
+  final Map<String, Future<Uint8List?>> _itemImageFutures = {};
   SupabaseClient? get _db { try { return Supabase.instance.client; } catch (_) { return null; } }
   String _s(dynamic v) => (v ?? '').toString();
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
@@ -121,11 +123,27 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
       Widget productTile(Map<String,dynamic> item) {
         final id = _s(item['id']);
         final image = _s(item['image_url']);
+        final company = widget.companyId?.trim() ?? '';
+        final imageFuture = image.isEmpty && company.isNotEmpty
+            ? _itemImageFutures.putIfAbsent(id, () => _inventory.fetchItemImage(company, id))
+            : null;
+        final imageWidget = image.isNotEmpty
+            ? ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.network(
+                image, width: 40, height: 40, fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined)))
+            : imageFuture == null
+                ? const Icon(Icons.inventory_2_outlined)
+                : FutureBuilder<Uint8List?>(
+                    future: imageFuture,
+                    builder: (context, snapshot) {
+                      final bytes = snapshot.data;
+                      if (bytes == null || bytes.isEmpty) return const Icon(Icons.inventory_2_outlined);
+                      return ClipRRect(borderRadius: BorderRadius.circular(6),
+                          child: Image.memory(bytes, width: 40, height: 40, fit: BoxFit.cover));
+                    });
         return CheckboxListTile(
           dense: true, value: chosen.contains(id),
-          secondary: image.isEmpty ? const Icon(Icons.inventory_2_outlined) :
-            ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.network(image, width: 40, height: 40, fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined))),
+          secondary: imageWidget,
           title: Text('${_s(item['item_code'])} — ${_s(item['item_name'])}'),
           subtitle: Text('سعر البيع: ${_s(item['sale_price'])} ج.م • الوحدة: ${_s(item['base_unit'])}'),
           onChanged: (v) => refresh(() { if (v == true) { chosen.add(id); } else { chosen.remove(id); } }),
