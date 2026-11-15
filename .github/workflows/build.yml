@@ -9,7 +9,7 @@ concurrency:
 'on':
   workflow_run:
     workflows:
-      - Silsila Full Validation - All Recent Changes
+      - Silsila Mobile App Validation
     types:
       - completed
     branches: [main]
