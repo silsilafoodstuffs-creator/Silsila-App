@@ -909,13 +909,13 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
           backgroundColor: _studioPurple,
           foregroundColor: Colors.white,
           actions: [
-            IconButton(tooltip: 'تراجع', onPressed: _undo.isEmpty ? null : _undoChange, icon: const Icon(Icons.undo)),
-            IconButton(tooltip: 'إعادة', onPressed: _redo.isEmpty ? null : _redoChange, icon: const Icon(Icons.redo)),
+            IconButton(tooltip: 'تراجع', onPressed: !_allowed('canEdit') || _undo.isEmpty ? null : _undoChange, icon: const Icon(Icons.undo)),
+            IconButton(tooltip: 'إعادة', onPressed: !_allowed('canEdit') || _redo.isEmpty ? null : _redoChange, icon: const Icon(Icons.redo)),
             IconButton(tooltip: 'فتح المسودات المحلية', onPressed: _openLocalDrafts, icon: const Icon(Icons.folder_open)),
-            IconButton(tooltip: 'استيراد JSON', onPressed: _importJson, icon: const Icon(Icons.file_open)),
+            IconButton(tooltip: 'استيراد JSON', onPressed: _allowed('canEdit') ? _importJson : null, icon: const Icon(Icons.file_open)),
             IconButton(tooltip: 'تصدير JSON', onPressed: _exportJson, icon: const Icon(Icons.code)),
-            IconButton(tooltip: 'حفظ محلي', onPressed: _busy ? null : _saveLocal, icon: const Icon(Icons.save_outlined)),
-            IconButton(tooltip: 'حفظ مركزي ومزامنة', onPressed: _busy ? null : _syncPendingDrafts, icon: const Icon(Icons.cloud_sync_outlined)),
+            IconButton(tooltip: 'حفظ محلي', onPressed: _busy || !_allowed('canSave') ? null : _saveLocal, icon: const Icon(Icons.save_outlined)),
+            IconButton(tooltip: 'حفظ مركزي ومزامنة', onPressed: _busy || !_allowed('canSave') ? null : _syncPendingDrafts, icon: const Icon(Icons.cloud_sync_outlined)),
           ],
         ),
         body: Column(children: [
@@ -1383,9 +1383,9 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
               ..addIfNotNull(value);
           }),
         )),
-        FilledButton.icon(onPressed: _busy ? null : _previewSource, icon: const Icon(Icons.preview), label: const Text('معاينة المصدر')),
-        FilledButton.icon(onPressed: _applyBinding, icon: const Icon(Icons.link), label: const Text('ربط بالمكون')),
-        OutlinedButton.icon(onPressed: _clearBinding, icon: const Icon(Icons.link_off), label: const Text('إلغاء الربط')),
+        FilledButton.icon(onPressed: _busy || !_allowed('canPreview') ? null : _previewSource, icon: const Icon(Icons.preview), label: const Text('معاينة المصدر')),
+        FilledButton.icon(onPressed: _allowed('canEdit') ? _applyBinding : null, icon: const Icon(Icons.link), label: const Text('ربط بالمكون')),
+        OutlinedButton.icon(onPressed: _allowed('canEdit') ? _clearBinding : null, icon: const Icon(Icons.link_off), label: const Text('إلغاء الربط')),
       ]),
       const SizedBox(height: 14),
       if (_selectedSource != null) ...[
@@ -1480,7 +1480,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
         title: Text('الإصدار ${version['revision']}'),
         subtitle: Text('${version['change_note'] ?? 'بدون ملاحظة'} • ${version['created_at']}'),
         trailing: TextButton(
-          onPressed: _busy ? null : () => _restoreVersion((version['revision'] as num).toInt()),
+          onPressed: _busy || !_allowed('canEdit') ? null : () => _restoreVersion((version['revision'] as num).toInt()),
           child: const Text('استعادة'),
         ),
       ))),
@@ -1504,12 +1504,12 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       OutlinedButton.icon(onPressed: _busy ? null : _saveCloud, icon: const Icon(Icons.cloud_upload), label: const Text('حفظ مركزي')),
       OutlinedButton.icon(onPressed: _busy ? null : _runTests, icon: const Icon(Icons.fact_check), label: const Text('اختبار الإصدار الحالي')),
       FilledButton.icon(
-        onPressed: _busy || _remoteStatus == 'published' ? null : _approveDesign,
+        onPressed: _busy || !_allowed('canEdit') || _remoteStatus == 'published' ? null : _approveDesign,
         icon: const Icon(Icons.verified),
         label: const Text('اعتماد التصميم'),
       ),
       FilledButton.icon(
-        onPressed: _busy || _remoteStatus != 'approved' ? null : _publishDesign,
+        onPressed: _busy || !_allowed('canEdit') || _remoteStatus != 'approved' ? null : _publishDesign,
         icon: const Icon(Icons.publish),
         label: const Text('نشر التصميم'),
       ),
@@ -1534,8 +1534,15 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     ]),
   );
 
+  bool _commandAllowed(String label) {
+    if (label == 'تصميم جديد') return _allowed('canAdd');
+    if (label == 'المعاينة' || label == 'المحرر' || label == 'اختبار') return _allowed('canPreview');
+    if (label == 'حفظ مركزي') return _allowed('canSave');
+    return _allowed('canEdit');
+  }
+
   Widget _command(String label, IconData icon, VoidCallback action) => OutlinedButton.icon(
-    onPressed: _busy ? null : action,
+    onPressed: _busy || !_commandAllowed(label) ? null : action,
     icon: Icon(icon, size: 16),
     label: Text(label),
     style: OutlinedButton.styleFrom(
