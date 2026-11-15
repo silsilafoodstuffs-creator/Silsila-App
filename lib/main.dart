@@ -5664,6 +5664,10 @@ class _OffersScreenState extends State<OffersScreen> {
 
   Future<void> createOffer() async {
     selectedProductIds.clear();
+    for (final controller in offerPrices.values) { controller.dispose(); }
+    offerPrices.clear();
+    for (final controller in minimumQuantities.values) { controller.dispose(); }
+    minimumQuantities.clear();
     final title = TextEditingController();
     final description = TextEditingController();
     final discount = TextEditingController();
