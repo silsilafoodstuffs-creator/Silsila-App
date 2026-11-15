@@ -439,13 +439,20 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
                   )
                 : FutureBuilder<String>(
                     future: _signedUrl(effectiveAsset.storagePath),
-                    builder: (context, snap) => snap.hasData
-                        ? Image.network(
-                            snap.data!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined)),
-                          )
-                        : const Center(child: CircularProgressIndicator()),
+                    builder: (context, snap) {
+                      if (snap.hasError) {
+                        return const Center(child: Icon(Icons.broken_image_outlined));
+                      }
+                      if (!snap.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      return Image.network(
+                        snap.data!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            const Center(child: Icon(Icons.broken_image_outlined)),
+                      );
+                    },
                   ),
       ),
     );
