@@ -25,6 +25,16 @@ void main() {
         .readAsStringSync();
   });
 
+
+  test('public app displays activity-scoped popup ads after the startup intro', () {
+    expect(homeSource, contains("get_silsila_public_intro_ad"));
+    expect(homeSource, contains("get_silsila_public_popup_ads"));
+    expect(homeSource, contains('_showPopupAdvertisement'));
+    expect(homeSource, contains('_closePopupAdvertisement'));
+    expect(homeSource, contains('_handleAdDestination'));
+    expect(homeSource, contains('Timer(Duration(seconds: duration)'));
+  });
+
   test('home ticker renders circular brand logos with their names below and horizontal scrolling', () {
     final start = homeSource.indexOf('class _HomeTickerAdsStrip extends StatefulWidget');
     final end = homeSource.indexOf('class MainShell extends StatefulWidget', start);
