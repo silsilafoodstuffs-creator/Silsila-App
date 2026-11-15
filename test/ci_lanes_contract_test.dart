@@ -9,11 +9,15 @@ void main() {
     final deploy = File('.github/workflows/deploy.yml').readAsStringSync();
     final preview = File('.github/workflows/web-preview-validation.yml').readAsStringSync();
     final release = File('.github/workflows/build.yml').readAsStringSync();
+    final androidBuild = File('.github/workflows/android-debug-apk.yml').readAsStringSync();
 
     expect(mobile, contains('name: Silsila Mobile App Validation'));
     expect(mobile, contains('flutter test --reporter expanded'));
-    expect(mobile, contains('flutter build apk --debug --no-pub --target-platform android-arm,android-arm64'));
-    expect(mobile, contains('Cache Android NDK and CMake'));
+    expect(mobile, isNot(contains('flutter build apk')));
+    expect(androidBuild, contains('Silsila Mobile App Validation'));
+    expect(androidBuild, contains('flutter build apk --debug --no-pub --target-platform android-arm,android-arm64'));
+    expect(androidBuild, contains('Cache Android NDK and CMake'));
+    expect(androidBuild, contains('workflow_dispatch:'));
 
     expect(web, contains('name: Silsila Web App Validation'));
     expect(web, contains('flutter build web --release'));
