@@ -238,7 +238,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       final payload = <String,dynamic>{
         'brand_name': name.text.trim(),
         'brand_name_en': english.text.trim().isEmpty ? null : english.text.trim(),
-        'activity_code': activityCode,
+        if (row == null || activityCode != _s(row['activity_code'])) 'activity_code': activityCode,
       };
       if (row == null) {
         final inserted = await _db.from('erp_brands')
