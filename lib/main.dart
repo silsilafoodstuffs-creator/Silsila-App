@@ -7997,7 +7997,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
       var offset = 0;
       while (true) {
         var itemQuery = client.from('erp_items')
-            .select('id,category_id,brand_id,brand_name,item_code,item_name,base_unit,sale_price,is_active,show_in_app,image_url,image_data,image_mime_type,weight_kg,length_cm,width_cm,height_cm')
+            .select('id,category_id,brand_id,brand_name,item_code,item_name,base_unit,sale_price,reorder_level,is_active,show_in_app,image_url,image_data,image_mime_type,weight_kg,length_cm,width_cm,height_cm')
             .eq('is_active', true).eq('show_in_app', true);
         if (companyId != null && companyId.isNotEmpty) {
           itemQuery = itemQuery.eq('company_id', companyId);
@@ -8016,6 +8016,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             'price': item['sale_price'],
             'base_price': item['sale_price'],
             'sale_price': item['sale_price'],
+            'reorder_level': item['reorder_level'],
             'weight_kg': item['weight_kg'],
             'length_cm': item['length_cm'],
             'width_cm': item['width_cm'],
@@ -8072,6 +8073,9 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             'is_base_unit':true,
             'is_selectable':true,
           });
+        }
+        for(var unitIndex=0;unitIndex<uniqueOptions.length;unitIndex++) {
+          uniqueOptions[unitIndex]['display_level']=unitIndex==0?'كبرى':unitIndex==uniqueOptions.length-1?'صغرى':'وسطى';
         }
         product['units']=uniqueOptions;
       }
@@ -8290,6 +8294,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     final selectedUnit=_productUnits[key]??(units.first['unit_name']??product['unit']??'وحدة').toString();
     final displayPrice=selectedBasePrice*selectedFactor;
     final weight=_marketNumber(product['weight_kg']);
+    final reorderLevel=_marketNumber(product['reorder_level']);
     final innerCount=_marketNumber(units.firstWhere(
       (unit)=>(unit['unit_name']??'').toString()==selectedUnit,
       orElse:()=>units.first,
@@ -8307,7 +8312,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           Text(name,style:const TextStyle(fontWeight:FontWeight.w800)),
           Text('كود: ${product['item_code']??'—'} • الوحدة الأساسية: ${product['unit']??'وحدة'}',style:const TextStyle(fontSize:10,color:Colors.black54)),
-          if(weight>0||dimensions.isNotEmpty) Text([if(weight>0)'الوزن ${weight.toStringAsFixed(2)} كجم',if(dimensions.isNotEmpty)dimensions].join(' • '),style:const TextStyle(fontSize:10,color:Colors.black54)),
+          if(weight>0||dimensions.isNotEmpty||reorderLevel>0) Text([if(weight>0)'الوزن ${weight.toStringAsFixed(2)} كجم',if(dimensions.isNotEmpty)dimensions,if(reorderLevel>0)'حد إعادة الطلب ${reorderLevel.toStringAsFixed(2)}'].join(' • '),style:const TextStyle(fontSize:10,color:Colors.black54)),
         ])),
         IconButton(tooltip:_marketFavoriteIds.contains(id)?'إزالة من المفضلة':'إضافة للمفضلة',onPressed:_favoriteUpdatingIds.contains(id)?null:()=>_toggleMarketFavorite(id),icon:Icon(_marketFavoriteIds.contains(id)?Icons.favorite:Icons.favorite_border,color:_marketFavoriteIds.contains(id)?Colors.red:purple,size:20)),
         IconButton(tooltip:selected?'إزالة من الطلب':'إضافة للطلب',onPressed:()=>setState(()=>_selectMarketProducts([product],!selected)),icon:Icon(selected?Icons.shopping_cart_checkout:Icons.add_shopping_cart,color:orange,size:21)),
@@ -8329,7 +8334,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
               final unitName=(unit['unit_name']??'وحدة').toString();
               final factor=_marketNumber(unit['conversion_factor'],1);
               final count=_marketNumber(unit['inner_quantity'],factor);
-              final label=factor>1?'$unitName (${count.toStringAsFixed(count==count.roundToDouble()?0:2)} × ${product['unit']??'وحدة'})':unitName;
+              final level=(unit['display_level']??'').toString();
+              final label='$unitName ${level.isEmpty?'':'• $level'}${factor>1?' (${count.toStringAsFixed(count==count.roundToDouble()?0:2)} × ${product['unit']??'وحدة'})':''}';
               return DropdownMenuItem<String>(value:unitName,child:Text(label,overflow:TextOverflow.ellipsis));
             }).toList(),
             onChanged:(value){
