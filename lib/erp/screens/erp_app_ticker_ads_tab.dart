@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:data_table_2/data_table_2.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../services/activity_service.dart';
@@ -534,57 +535,123 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : brands.isEmpty
-                    ? const Center(child: Text('لا توجد براندات مطابقة للبحث.'))
-                    : SingleChildScrollView(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: DataTable(
-                            headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
-                            columnSpacing: 2.5,
-                            horizontalMargin: 2.5,
-                            headingRowHeight: 40,
-                            dataRowMinHeight: 66,
-                            dataRowMaxHeight: 70,
-                            columns: const [
-                              DataColumn(label: Text('م')),
-                              DataColumn(label: Text('كود البراند')),
-                              DataColumn(label: Text('الصورة')),
-                              DataColumn(label: Text('معاينة دائرية')),
-                              DataColumn(label: Text('اسم البراند')),
-                              DataColumn(label: Text('ترتيبه في العرض')),
-                            ],
-                            rows: brands.asMap().entries.map((entry) {
-                              final rowIndex = entry.key + 1;
-                              final brand = entry.value;
-                              final orderDigits = _brandOrderDigits(brand);
-                              final bytes = _logoBytes(brand['logo_data']);
-                              return DataRow(cells: [
-                                DataCell(SizedBox(width: 24, child: Text('$rowIndex', textAlign: TextAlign.center))),
-                                DataCell(SizedBox(width: 66, child: Text(_s(brand['brand_code']), maxLines: 1, overflow: TextOverflow.ellipsis))),
-                                DataCell(SizedBox(width: 40, height: 40, child: _brandLogo(brand))),
-                                DataCell(SizedBox(width: 64, height: 64, child: Center(
-                                  child: _TickerBrandCircle(bytes: bytes, size: 58),
-                                ))),
-                                DataCell(SizedBox(width: 150, child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(_s(brand['brand_name']), maxLines: 1, overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontWeight: FontWeight.w800)),
-                                    if (_s(brand['brand_name_en']).trim().isNotEmpty)
-                                      Text(_s(brand['brand_name_en']), maxLines: 1, overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(fontSize: 10, color: Colors.black54)),
-                                  ],
-                                ))),
-                                DataCell(SizedBox(width: 70, child: Text(
+                    ? Center(
+                        child: Text(
+                          _search.text.trim().isEmpty
+                              ? 'لا توجد براندات نشطة لعرضها في هذا النطاق.'
+                              : 'لا توجد براندات مطابقة للبحث.',
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                    : DataTable2(
+                        minWidth: 520,
+                        fixedTopRows: 1,
+                        columnSpacing: 6,
+                        horizontalMargin: 6,
+                        headingRowHeight: 42,
+                        dataRowHeight: 70,
+                        showCheckboxColumn: false,
+                        headingRowColor: WidgetStateProperty.all(
+                          const Color(0xFFF5EFFB),
+                        ),
+                        columns: const [
+                          DataColumn2(
+                            label: Text('م'),
+                            size: ColumnSize.S,
+                            fixedWidth: 42,
+                          ),
+                          DataColumn2(
+                            label: Text('كود البراند'),
+                            size: ColumnSize.M,
+                            fixedWidth: 90,
+                          ),
+                          DataColumn2(
+                            label: Text('الصورة'),
+                            size: ColumnSize.S,
+                            fixedWidth: 58,
+                          ),
+                          DataColumn2(
+                            label: Text('معاينة دائرية'),
+                            size: ColumnSize.S,
+                            fixedWidth: 76,
+                          ),
+                          DataColumn2(
+                            label: Text('اسم البراند'),
+                            size: ColumnSize.L,
+                          ),
+                          DataColumn2(
+                            label: Text('ترتيبه في العرض'),
+                            size: ColumnSize.S,
+                            fixedWidth: 88,
+                          ),
+                        ],
+                        rows: brands.asMap().entries.map((entry) {
+                          final rowIndex = entry.key + 1;
+                          final brand = entry.value;
+                          final orderDigits = _brandOrderDigits(brand);
+                          final bytes = _logoBytes(brand['logo_data']);
+                          return DataRow(cells: [
+                            DataCell(
+                              Center(child: Text('$rowIndex')),
+                            ),
+                            DataCell(
+                              Text(
+                                _s(brand['brand_code']),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            DataCell(
+                              Center(child: _brandLogo(brand)),
+                            ),
+                            DataCell(
+                              Center(
+                                child: _TickerBrandCircle(
+                                  bytes: bytes,
+                                  size: 58,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _s(brand['brand_name']),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  if (_s(brand['brand_name_en']).trim().isNotEmpty)
+                                    Text(
+                                      _s(brand['brand_name_en']),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            DataCell(
+                              Center(
+                                child: Text(
                                   orderDigits.isEmpty ? '$rowIndex' : orderDigits,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(fontWeight: FontWeight.w900, color: _tickerPurple),
-                                ))),
-                              ]);
-                            }).toList(),
-                          ),
-                        ),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    color: _tickerPurple,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ]);
+                        }).toList(),
                       ),
           ),
           Padding(
