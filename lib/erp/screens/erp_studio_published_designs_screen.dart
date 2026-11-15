@@ -40,8 +40,7 @@ class _ErpStudioPublishedDesignsScreenState extends State<ErpStudioPublishedDesi
       _error = null;
     });
     try {
-      final rows = await _repository.listDesigns(company);
-      final published = rows.where((row) => ((row['published_revision'] as num?)?.toInt() ?? 0) > 0).toList();
+      final published = await _repository.listPublishedDesigns(company);
       if (mounted) setState(() => _designs = published);
     } catch (error) {
       if (mounted) setState(() => _error = 'تعذر تحميل التصميمات المنشورة: $error');
