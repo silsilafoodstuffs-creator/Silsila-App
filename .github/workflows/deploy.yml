@@ -4,6 +4,15 @@ name: Silsila Web Preview - Deploy + Smoke Tests
   push:
     branches:
       - main
+    paths:
+      - "lib/**"
+      - "test/**"
+      - "web/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "assets/**"
+      - "supabase/**"
+      - "tools/web_view_test.mjs"
   workflow_dispatch:
 
 concurrency:
