@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,191 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/activity_service.dart';
 
 const _tickerPurple = Color(0xFF3E007D);
+
+
+class _TickerAdsPreview extends StatefulWidget {
+  const _TickerAdsPreview({required this.brands});
+
+  final List<Map<String, dynamic>> brands;
+
+  @override
+  State<_TickerAdsPreview> createState() => _TickerAdsPreviewState();
+}
+
+class _TickerAdsPreviewState extends State<_TickerAdsPreview> {
+  final ScrollController _scrollController = ScrollController();
+  Timer? _timer;
+  bool _autoScroll = true;
+  double _speed = 0.55;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 24), (_) {
+      if (!_autoScroll || !mounted || !_scrollController.hasClients ||
+          widget.brands.length < 2) return;
+      final position = _scrollController.position;
+      if (position.maxScrollExtent <= 0) return;
+      final next = position.pixels + _speed;
+      _scrollController.jumpTo(next >= position.maxScrollExtent ? 0 : next);
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _TickerAdsPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.brands.length != widget.brands.length &&
+        _scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Uint8List? _bytes(dynamic value) {
+    if (value == null) return null;
+    final raw = value.toString();
+    final hex = raw.startsWith(r'\x') ? raw.substring(2) : raw;
+    if (hex.isEmpty || hex.length.isOdd) return null;
+    try {
+      return Uint8List.fromList(List<int>.generate(
+        hex.length ~/ 2,
+        (index) => int.parse(hex.substring(index * 2, index * 2 + 2), radix: 16),
+      ));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      padding: const EdgeInsets.all(9),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAF8FC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE4D9EF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(children: [
+            const Expanded(
+              child: Text('معاينة تفاعلية لشريط البراندات',
+                style: TextStyle(color: _tickerPurple, fontWeight: FontWeight.w900)),
+            ),
+            const Text('تمرير تلقائي', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+            Switch.adaptive(
+              value: _autoScroll,
+              activeColor: _tickerPurple,
+              onChanged: (value) => setState(() => _autoScroll = value),
+            ),
+          ]),
+          Row(children: [
+            const Text('السرعة', style: TextStyle(fontSize: 11, color: _tickerPurple, fontWeight: FontWeight.w700)),
+            Expanded(
+              child: Slider(
+                value: _speed,
+                min: 0.2,
+                max: 2.0,
+                divisions: 18,
+                activeColor: _tickerPurple,
+                onChanged: (value) => setState(() => _speed = value),
+              ),
+            ),
+            SizedBox(width: 34, child: Text(_speed.toStringAsFixed(1), textAlign: TextAlign.end,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700))),
+          ]),
+          const Text(
+            'اسحب للتحريك في أي اتجاه، واستخدم إصبعين للتكبير والتصغير. السحب اليدوي يوقف التمرير التلقائي حتى تعيد تشغيله.',
+            style: TextStyle(fontSize: 10, color: Colors.black54),
+          ),
+          const SizedBox(height: 7),
+          SizedBox(
+            height: 100,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(9),
+              child: widget.brands.isEmpty
+                  ? const Center(child: Text('لا توجد براندات نشطة للمعاينة.'))
+                  : InteractiveViewer(
+                      constrained: false,
+                      panEnabled: true,
+                      scaleEnabled: true,
+                      panAxis: PanAxis.free,
+                      minScale: 0.65,
+                      maxScale: 2.5,
+                      child: SizedBox(
+                        width: MediaQuery.sizeOf(context).width - 64,
+                        height: 94,
+                        child: NotificationListener<UserScrollNotification>(
+                          onNotification: (notification) {
+                            if (notification.direction != ScrollDirection.idle && _autoScroll) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted) setState(() => _autoScroll = false);
+                              });
+                            }
+                            return false;
+                          },
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: widget.brands.length,
+                            itemBuilder: (context, index) {
+                              final brand = widget.brands[index];
+                              final bytes = _bytes(brand['logo_data']);
+                              final name = (brand['brand_name'] ?? '').toString();
+                              return SizedBox(
+                                width: 78,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      width: 60,
+                                      height: 60,
+                                      padding: const EdgeInsets.all(3),
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: SweepGradient(colors: [
+                                          Color(0xFFFFA015), Color(0xFFFF27C3),
+                                          _tickerPurple, Color(0xFFFFA015),
+                                        ]),
+                                      ),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                                        clipBehavior: Clip.antiAlias,
+                                        child: bytes == null
+                                            ? const Icon(Icons.storefront_outlined, color: _tickerPurple, size: 27)
+                                            : Image.memory(bytes, fit: BoxFit.contain,
+                                                errorBuilder: (_, __, ___) => const Icon(Icons.storefront_outlined, color: _tickerPurple)),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    SizedBox(width: 74, child: Text(name, maxLines: 1,
+                                      overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
+                                      style: const TextStyle(fontSize: 9, color: _tickerPurple, fontWeight: FontWeight.w700))),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class ErpAppTickerAdsTab extends StatefulWidget {
   const ErpAppTickerAdsTab({
@@ -379,6 +565,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
               style: TextStyle(color: Colors.grey.shade700, height: 1.4),
             ),
           ),
+          _TickerAdsPreview(brands: _brands),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.all(10),
