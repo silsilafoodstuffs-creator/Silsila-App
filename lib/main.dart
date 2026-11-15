@@ -7644,6 +7644,12 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   int _marketCategoryId(Map<String,dynamic> row) => int.tryParse((row['id'] ?? '').toString()) ?? -1;
   List<Map<String,dynamic>> _marketCategoryChildren(int? parentId) => _marketCategories.where((row)=>_marketCategoryParentId(row)==parentId).toList();
 
+  List<Map<String,dynamic>> _marketDescendantProducts(int categoryId, [Set<int>? visited]) {
+    final seen=visited??<int>{}; if(!seen.add(categoryId)) return <Map<String,dynamic>>[];
+    final rows=<Map<String,dynamic>>[]..addAll(_marketProducts.where((p)=>int.tryParse((p['category_id']??'').toString())==categoryId));
+    for(final child in _marketCategoryChildren(categoryId)) rows.addAll(_marketDescendantProducts(_marketCategoryId(child),seen));
+    return rows;
+  }
   Widget _marketCategoryNode(Map<String,dynamic> category, int depth) {
     final id=_marketCategoryId(category);
     final expanded=_expandedCategoryIds.contains(id);
@@ -7654,6 +7660,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
       InkWell(onTap:()=>setState(()=>expanded?_expandedCategoryIds.remove(id):_expandedCategoryIds.add(id)),child:Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Row(children:[
         Icon(expanded?Icons.expand_less:Icons.chevron_left,color:color,size:18),
         Expanded(child:Text((category['name']??'').toString(),textAlign:TextAlign.right,style:TextStyle(color:color,fontWeight:FontWeight.w800,fontSize:depth==0?15:depth==1?13:12))),
+        TextButton(onPressed:()=>setState(()=>_selectMarketProducts(_marketDescendantProducts(id),true)),child:const Text('تحديد الفئة')),
       ]))),
       if(expanded)..._marketBrandGroups(products).entries.map((entry) => _marketBrandNode(entry.key, entry.value)),
       if(expanded)...children.map((child)=>_marketCategoryNode(child,depth+1)),
