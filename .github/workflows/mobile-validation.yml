@@ -11,6 +11,8 @@ on:
       - "pubspec.yaml"
       - "pubspec.lock"
       - "assets/**"
+      - "supabase/**"
+      - "tools/catalog_import/**"
   workflow_dispatch:
 
 permissions:
