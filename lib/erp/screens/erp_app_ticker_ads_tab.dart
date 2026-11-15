@@ -28,7 +28,7 @@ class _TickerBrandCircle extends StatelessWidget {
         ? const Icon(Icons.storefront_outlined, color: _tickerPurple, size: 27)
         : InteractiveViewer(
             constrained: true, panEnabled: true, scaleEnabled: true,
-            panAxis: PanAxis.free, minScale: 1, maxScale: 4,
+            panAxis: PanAxis.free, minScale: 0.5, maxScale: 4,
             boundaryMargin: EdgeInsets.zero,
             child: SizedBox.expand(child: Image.memory(bytes!, fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => const Icon(Icons.storefront_outlined, color: _tickerPurple))),
