@@ -6,7 +6,8 @@ void main() {
   test('independent mobile, web app, and web preview workflows stay active', () {
     final mobile = File('.github/workflows/mobile-validation.yml').readAsStringSync();
     final web = File('.github/workflows/web-validation.yml').readAsStringSync();
-    final preview = File('.github/workflows/deploy.yml').readAsStringSync();
+    final deploy = File('.github/workflows/deploy.yml').readAsStringSync();
+    final preview = File('.github/workflows/web-preview-validation.yml').readAsStringSync();
     final release = File('.github/workflows/build.yml').readAsStringSync();
 
     expect(mobile, contains('name: Silsila Mobile App Validation'));
@@ -17,8 +18,13 @@ void main() {
     expect(web, contains('flutter build web --release'));
     expect(web, contains('tools/web_view_test.mjs'));
 
-    expect(preview, contains('name: Silsila Web Preview - Deploy + Smoke Tests'));
-    expect(preview, contains('Run deployed WebView tests (desktop + mobile)'));
+    expect(deploy, contains('name: Silsila Web Preview Deployment'));
+    expect(deploy, contains('Silsila Web App Validation'));
+    expect(deploy, contains('actions/deploy-pages@v4'));
+    expect(deploy, contains('concurrency:'));
+    expect(preview, contains('name: Silsila Web Preview Validation'));
+    expect(preview, contains('tools/web_view_test.mjs'));
+    expect(preview, contains('Run real desktop + mobile WebView smoke tests'));
     expect(preview, contains('group: silsila-pages'));
     expect(release, contains('Silsila Mobile App Validation'));
     expect(release, contains("github.event.workflow_run.conclusion == 'success'"));
