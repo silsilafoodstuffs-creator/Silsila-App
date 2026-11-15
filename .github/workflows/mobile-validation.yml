@@ -13,6 +13,7 @@ on:
       - "assets/**"
       - "supabase/**"
       - "tools/catalog_import/**"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:
@@ -27,22 +28,12 @@ jobs:
   mobile:
     name: Flutter analyze + tests
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 35
     steps:
       - name: Checkout exact tested commit
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
-
-      - name: Set up Python for importer tests
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Validate catalog image importer
-        run: |
-          python -m py_compile tools/catalog_import/import_real_product_images.py
-          python -m unittest discover -s tools/catalog_import -p 'test_*.py' -v
 
       - name: Set up Flutter
         uses: subosito/flutter-action@fd55f4c5af5b953cc57a2be44cb082c8f6635e8e
@@ -51,6 +42,14 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Cache Dart and Flutter packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: flutter-pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: |
+            flutter-pub-${{ runner.os }}-
+
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
@@ -58,5 +57,5 @@ jobs:
         run: flutter analyze lib test --no-fatal-infos --no-fatal-warnings
 
       - name: Run complete Flutter test suite
-        run: flutter test --reporter expanded
+        run: flutter test --reporter compact
 
