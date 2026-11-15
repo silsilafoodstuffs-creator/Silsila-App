@@ -43,7 +43,7 @@ jobs:
         run: flutter pub get
 
       - name: Build production-path Web app
-        run: flutter build web --release --source-maps --base-href "/Silsila-App/"
+        run: flutter build web --release --base-href "/Silsila-App/"
 
       - name: Verify Web build output
         run: |
