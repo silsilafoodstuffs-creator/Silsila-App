@@ -6,7 +6,18 @@ on:
       - Silsila Web App Validation
     types:
       - completed
-    branches: [main, 'feature/**']
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/**"
+      - "test/**"
+      - "web/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "assets/**"
+      - "tools/web_view_test.mjs"
+      - ".github/workflows/**"
 
 permissions:
   contents: read
@@ -19,21 +30,38 @@ concurrency:
 
 jobs:
   preview:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'pull_request' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - name: Checkout the exact validated source
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
+      - name: Set up Flutter for pull request preview
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: subosito/flutter-action@fd55f4c5af5b953cc57a2be44cb082c8f6635e8e
+        with:
+          flutter-version: "3.29.3"
+          channel: stable
+          cache: true
+
+      - name: Resolve Flutter dependencies for pull request preview
+        if: ${{ github.event_name == 'pull_request' }}
+        run: flutter pub get
+
+      - name: Build exact pull request Web preview
+        if: ${{ github.event_name == 'pull_request' }}
+        run: flutter build web --release --base-href "/Silsila-App/"
+
       - name: Download the exact production Web build
+        if: ${{ github.event_name == 'workflow_run' }}
         uses: actions/download-artifact@v4
         with:
           name: silsila-web-build-${{ github.event.workflow_run.run_number }}
