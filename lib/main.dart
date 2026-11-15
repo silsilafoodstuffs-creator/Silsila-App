@@ -8301,7 +8301,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     ].join(' • ');
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       Row(children:[
-        Checkbox(dense:true,value:selected,onChanged:(value)=>setState(()=>_selectMarketProducts([product],value==true))),
+        Checkbox(visualDensity:VisualDensity.compact,value:selected,onChanged:(value)=>setState(()=>_selectMarketProducts([product],value==true))),
         ClipRRect(borderRadius:BorderRadius.circular(8),child:Container(width:48,height:48,color:Colors.white,child:imageBytes!=null?Image.memory(imageBytes,fit:BoxFit.cover):((product['image_url']??'').toString().trim().isEmpty?const Icon(Icons.inventory_2_outlined,color:purple):Image.network(product['image_url'].toString(),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.inventory_2_outlined,color:purple))))),
         const SizedBox(width:7),
         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -8413,10 +8413,29 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         );
         return;
       }
+      final unitFactor=(_productUnitFactors[selectedKey]??1).clamp(0.000001,1000000).toDouble();
+      final smallUnitPrice=double.parse((price/unitFactor).toStringAsFixed(2));
+      final selectedUnitName=_productUnits[selectedKey] ?? product?['unit'] ?? 'وحدة';
+      final unitRows=(product?['units'] as List?)?.whereType<Map>().toList()??const <Map>[];
+      final selectedUnitRow=unitRows.where((row)=>(row['unit_name']??'').toString()==selectedUnitName).toList();
+      final innerQuantity=selectedUnitRow.isEmpty?unitFactor:_marketNumber(selectedUnitRow.first['inner_quantity'],unitFactor);
+      final activeOffer=_marketOfferPrices[selectedKey];
       itemsData.add({
         'product_id':product?['id'],'product_name':name,'quantity':qty,
-        'unit':_productUnits[selectedKey] ?? product?['unit'] ?? 'كبري',
-        'price':price,'is_negotiable':_productNegotiable[selectedKey]??isNegotiable,'quality_preference':_productQuality[selectedKey]??'good','expiry_condition_date':_productExpiryDates[selectedKey]?.toIso8601String().split('T').first,
+        'unit':selectedUnitName,
+        'unit_factor':unitFactor,
+        'inner_quantity':innerQuantity,
+        'base_unit':product?['unit'],
+        'base_unit_price':smallUnitPrice,
+        'small_unit_price':smallUnitPrice,
+        'original_price':product==null?price:_marketNumber(product['base_price']??product['price'])*unitFactor,
+        'offer_price':activeOffer==null?null:activeOffer*unitFactor,
+        'is_offer':activeOffer!=null&&product!=null&&activeOffer<_marketNumber(product['base_price']??product['price']),
+        'weight_kg':product?['weight_kg'],
+        'price':price,
+        'is_negotiable':_productNegotiable[selectedKey]??isNegotiable,
+        'quality_preference':_productQuality[selectedKey]??'good',
+        'expiry_condition_date':_productExpiryDates[selectedKey]?.toIso8601String().split('T').first,
       });
     }
     if (itemsData.isEmpty && selectedProducts.isEmpty) {
