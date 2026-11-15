@@ -40,6 +40,17 @@ class _ErpStudioPublishedDesignsScreenState extends State<ErpStudioPublishedDesi
       _error = null;
     });
     try {
+      final canView = await _repository.canViewPublishedDesigns(company);
+      if (!canView) {
+        if (mounted) {
+          setState(() {
+            _designs = [];
+            _loading = false;
+            _error = 'ليس لديك تصريح لعرض تصميمات الاستوديو المنشورة.';
+          });
+        }
+        return;
+      }
       final published = await _repository.listPublishedDesigns(company);
       if (mounted) setState(() => _designs = published);
     } catch (error) {
