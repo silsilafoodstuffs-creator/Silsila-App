@@ -1,18 +1,12 @@
 name: Build Silsila Android App
 
-# Build the signed release APK only after independent mobile validation passes.
-# Manual dispatch remains available for an intentional standalone release build.
+# Keep the signed production APK as an intentional manual release task.
+# Routine mobile validation already builds and verifies a debug APK on every relevant change.
 concurrency:
   group: silsila-android-release-${{ github.run_id }}
   cancel-in-progress: false
 
 'on':
-  workflow_run:
-    workflows:
-      - Silsila Mobile App Validation
-    types:
-      - completed
-    branches: [main]
   workflow_dispatch:
     inputs:
       test_login:
@@ -26,14 +20,13 @@ permissions:
 
 jobs:
   build-android:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Download validated project
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.sha }}
 
       - name: Locate Flutter project
         run: |
