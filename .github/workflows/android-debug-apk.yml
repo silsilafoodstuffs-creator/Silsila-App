@@ -14,7 +14,7 @@ permissions:
 
 # APK packaging is independent from the fast mobile test result and never cancels it.
 concurrency:
-  group: silsila-android-debug-apk-${{ github.run_id }}
+  group: silsila-android-debug-apk-${{ github.event.workflow_run.head_sha || github.sha }}
   cancel-in-progress: false
 
 jobs:
