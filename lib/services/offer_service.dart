@@ -163,14 +163,10 @@ class OfferService {
 
   /// خريطة أسعار العروض النشطة حسب معرّف المنتج.
   Future<Map<String, double>> getActiveProductOfferPrices() async {
-    final now = DateTime.now().toUtc().toIso8601String();
-    final activeOffers = await _requireClient
-        .from('offers')
-        .select('id')
-        .eq('is_active', true)
-        .or('start_at.is.null,start_at.lte.$now')
-        .or('ends_at.is.null,ends_at.gte.$now')
-        .limit(100);
+    final activeOffers = await _requireClient.rpc(
+      'get_targeted_active_offers',
+      params: {'p_activity_type': null, 'p_limit': 200},
+    );
     final offerIds = activeOffers
         .whereType<Map>()
         .map((offer) => offer['id'])
