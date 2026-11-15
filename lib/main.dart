@@ -7717,6 +7717,13 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         }),
         ...erpProducts,
       ];
+      final knownCategoryIds = categories.map((row) => (row['id'] ?? '').toString()).toSet();
+      for (final category in categories) {
+        final parent = (category['parent_id'] ?? '').toString();
+        if (parent.isNotEmpty && !knownCategoryIds.contains(parent)) {
+          category['parent_id'] = null;
+        }
+      }
       if (!mounted) return;
       setState(() {
         _marketCategories..clear()..addAll(categories);
