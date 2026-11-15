@@ -8309,7 +8309,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
                 child: Text(selectAllProducts ? 'إلغاء تحديد الكل' : 'تحديد الكل'),
               ),
             ]),
-            if (_marketCategories.isNotEmpty) ..._marketCategories.where((category) => _marketCategoryParentId(category) == null).map((category) => _marketCategoryNode(category, 0))
+            if (_marketCategories.isNotEmpty) ..._marketCategories.where((category) { final parentId=_marketCategoryParentId(category); return parentId==null || !_marketCategories.any((candidate)=>_marketCategoryId(candidate)==parentId); }).map((category) => _marketCategoryNode(category, 0))
             else if (_marketProducts.isNotEmpty) ..._marketProducts.map(_marketProductNode)
             else ...widget.availableProducts.map((product) => CheckboxListTile(dense:true,contentPadding:const EdgeInsets.all(0),value:selectedProducts.contains(product.name),title:Text(product.name),subtitle:Text(product.category),onChanged:(checked)=>setState((){if(checked==true){selectedProducts.add(product.name);}else{selectedProducts.remove(product.name);}selectAllProducts=selectedProducts.length==widget.availableProducts.length;}))),
           ],
