@@ -13,6 +13,7 @@ void main() {
     expect(mobile, contains('name: Silsila Mobile App Validation'));
     expect(mobile, contains('flutter test --reporter expanded'));
     expect(mobile, contains('flutter build apk --debug'));
+    expect(mobile, contains('Cache Android NDK and CMake'));
 
     expect(web, contains('name: Silsila Web App Validation'));
     expect(web, contains('flutter build web --release'));
