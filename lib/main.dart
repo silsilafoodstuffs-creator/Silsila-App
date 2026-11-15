@@ -40,7 +40,7 @@ import 'widgets/silsila_white_logo.dart';
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
 const pink = Color(0xFFFF27C3);
-const canvas = Color(0xFFFAF8FC);
+const canvas = Color(0xFFF5EFFB);
 
 const supabaseUrl = 'https://teitsopmhruczplwlwgn.supabase.co';
 const supabaseKey =
@@ -348,6 +348,93 @@ class SilsilaApp extends StatelessWidget {
           secondaryContainer: const Color(0xFFFFE2B4),
           surfaceTint: Colors.transparent,
         ),
+        // Glossy Neon Luxury foundation: preserve Silsila's exact brand colors
+        // while adding restrained luminous depth to shared app, ERP and web surfaces.
+        cardTheme: CardThemeData(
+          color: Colors.white,
+          elevation: 6,
+          shadowColor: pink.withValues(alpha: 0.26),
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: const BorderSide(color: Color(0xFFE5D5F1), width: 1),
+          ),
+          margin: const EdgeInsets.all(4),
+        ),
+        popupMenuTheme: PopupMenuThemeData(
+          color: Colors.white,
+          elevation: 8,
+          shadowColor: pink.withValues(alpha: 0.20),
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: Color(0xFFEADCF5)),
+          ),
+        ),
+        dropdownMenuTheme: DropdownMenuThemeData(
+          menuStyle: MenuStyle(
+            backgroundColor: const WidgetStatePropertyAll(Colors.white),
+            elevation: const WidgetStatePropertyAll(8),
+            shadowColor: WidgetStatePropertyAll(pink.withValues(alpha: 0.18)),
+            surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+            shape: WidgetStatePropertyAll(RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(13),
+              side: const BorderSide(color: Color(0xFFEADCF5)),
+            )),
+          ),
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          elevation: 8,
+          shadowColor: pink.withValues(alpha: 0.18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: const BorderSide(color: Color(0xFFEADCF5), width: 0.8),
+          ),
+          titleTextStyle: const TextStyle(
+            fontFamily: 'Kufam',
+            color: Color(0xFF241735),
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+          ),
+          contentTextStyle: const TextStyle(
+            fontFamily: 'Tajawal',
+            color: Color(0xFF241735),
+            fontSize: 13,
+          ),
+        ),
+        bottomSheetTheme: BottomSheetThemeData(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          modalBackgroundColor: Colors.white,
+          elevation: 8,
+          shadowColor: pink.withValues(alpha: 0.16),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+          ),
+        ),
+        chipTheme: ChipThemeData(
+          backgroundColor: Colors.white,
+          selectedColor: pink.withValues(alpha: 0.12),
+          secondarySelectedColor: orange.withValues(alpha: 0.18),
+          disabledColor: const Color(0xFFF0EDF3),
+          elevation: 1,
+          shadowColor: pink.withValues(alpha: 0.12),
+          side: const BorderSide(color: Color(0xFFEADCF5)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          labelStyle: const TextStyle(
+            fontFamily: 'Tajawal',
+            color: Color(0xFF241735),
+            fontSize: 12,
+          ),
+          secondaryLabelStyle: const TextStyle(
+            fontFamily: 'Tajawal',
+            color: purple,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         // Circular, modern checkbox styling shared by the customer app and ERP.
         checkboxTheme: CheckboxThemeData(
           shape: const CircleBorder(),
@@ -367,8 +454,8 @@ class SilsilaApp extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: purple,
             foregroundColor: Colors.white,
-            elevation: 2,
-            shadowColor: orange.withValues(alpha: 0.30),
+            elevation: 3,
+            shadowColor: pink.withValues(alpha: 0.30),
             animationDuration: const Duration(milliseconds: 180),
             overlayColor: orange.withValues(alpha: 0.18),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -381,8 +468,8 @@ class SilsilaApp extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: purple,
             foregroundColor: Colors.white,
-            elevation: 1,
-            shadowColor: orange.withValues(alpha: 0.24),
+            elevation: 2,
+            shadowColor: pink.withValues(alpha: 0.24),
             animationDuration: const Duration(milliseconds: 180),
             overlayColor: orange.withValues(alpha: 0.18),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -411,17 +498,18 @@ class SilsilaApp extends StatelessWidget {
           backgroundColor: purple,
           foregroundColor: Colors.white,
           centerTitle: true,
-          elevation: 1,
+          elevation: 5,
+          shadowColor: pink,
           surfaceTintColor: Colors.transparent,
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white,
           isDense: true,
-          constraints: const BoxConstraints(minHeight: 40, maxHeight: 44),
+          constraints: const BoxConstraints(minHeight: 40, maxHeight: 40),
           contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
           disabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: Color(0xFFD8CDE3)),
           ),
           border: OutlineInputBorder(
@@ -433,8 +521,8 @@ class SilsilaApp extends StatelessWidget {
             borderSide: const BorderSide(color: Color(0xFFE5DDED)),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: orange, width: 1.8),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: pink, width: 1.8),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
@@ -447,12 +535,13 @@ class SilsilaApp extends StatelessWidget {
         ),
         // Approved global grid standard: compact but readable spacing across ERP tables; only documented dense grids override it.
         dataTableTheme: const DataTableThemeData(
-          headingRowHeight: 48,
-          dataRowMinHeight: 48,
-          dataRowMaxHeight: 64,
-          horizontalMargin: 12,
-          columnSpacing: 14,
+          headingRowHeight: 42,
+          dataRowMinHeight: 40,
+          dataRowMaxHeight: 40,
+          horizontalMargin: 5,
+          columnSpacing: 5,
           dividerThickness: 0.7,
+          headingRowColor: WidgetStatePropertyAll(Color(0xFFF3E9FB)),
           headingTextStyle: TextStyle(
             color: Color(0xFF3E007D),
             fontFamily: 'Tajawal',
@@ -468,6 +557,36 @@ class SilsilaApp extends StatelessWidget {
         ),
         // Shared Silsila visual language: crisp surfaces, warm interactive states,
         // and accessible contrast across customer and ERP screens.
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: Colors.white,
+          indicatorColor: pink.withValues(alpha: 0.18),
+          elevation: 5,
+          shadowColor: pink.withValues(alpha: 0.18),
+          height: 64,
+          labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+            fontFamily: 'Tajawal',
+            fontSize: 11,
+            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w500,
+            color: states.contains(WidgetState.selected) ? purple : const Color(0xFF51465D),
+          )),
+          iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+            color: states.contains(WidgetState.selected) ? purple : const Color(0xFF51465D),
+          )),
+        ),
+        navigationRailTheme: NavigationRailThemeData(
+          backgroundColor: Colors.white,
+          indicatorColor: pink.withValues(alpha: 0.12),
+          selectedIconTheme: const IconThemeData(color: purple),
+          unselectedIconTheme: const IconThemeData(color: Color(0xFF51465D)),
+          selectedLabelTextStyle: const TextStyle(color: purple, fontWeight: FontWeight.w800),
+          unselectedLabelTextStyle: const TextStyle(color: Color(0xFF51465D)),
+        ),
+        drawerTheme: const DrawerThemeData(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          elevation: 10,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.horizontal(left: Radius.circular(20))),
+        ),
         listTileTheme: ListTileThemeData(
           iconColor: purple,
           selectedColor: purple,
