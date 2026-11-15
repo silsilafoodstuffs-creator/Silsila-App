@@ -7,7 +7,7 @@ name: Silsila Web Preview - Deploy + Smoke Tests
   workflow_dispatch:
 
 concurrency:
-  group: silsila-pages
+  group: silsila-pages-${{ github.run_id }}
   cancel-in-progress: false
 
 permissions:
