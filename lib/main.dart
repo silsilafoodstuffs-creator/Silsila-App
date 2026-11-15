@@ -8447,6 +8447,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         'product_id':product?['id'],'product_name':name,'quantity':qty,
         'unit':selectedUnitName,
         'unit_factor':unitFactor,
+        'base_unit_quantity':qty*unitFactor,
         'inner_quantity':innerQuantity,
         'base_unit':product?['unit'],
         'base_unit_price':smallUnitPrice,
