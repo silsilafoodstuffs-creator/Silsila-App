@@ -8053,16 +8053,33 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         final options=(unitsByItem[id]??<Map<String,dynamic>>[])
             .where((unit)=>(unit['unit_name']??'').toString().trim().isNotEmpty)
             .toList()
-          ..sort((a,b)=>((b['conversion_factor'] as num?)?.toDouble()??1)
-              .compareTo((a['conversion_factor'] as num?)?.toDouble()??1));
-        final seenFactors=<String>{};
+          ..sort((a,b) {
+            final factorCompare=((b['conversion_factor'] as num?)?.toDouble()??1)
+                .compareTo((a['conversion_factor'] as num?)?.toDouble()??1);
+            if(factorCompare!=0)return factorCompare;
+            final aBase=a['is_base_unit']==true||(a['unit_name']??'').toString()==(product['unit']??'').toString();
+            final bBase=b['is_base_unit']==true||(b['unit_name']??'').toString()==(product['unit']??'').toString();
+            return aBase==bBase?0:(aBase?-1:1);
+          });
+        var keptBaseFactor=false;
         final uniqueOptions=<Map<String,dynamic>>[];
         for(final unit in options) {
           final factor=(unit['conversion_factor'] as num?)?.toDouble()??1;
           if(factor<=0) continue;
-          final factorKey=factor.toStringAsFixed(6);
-          if(!seenFactors.add(factorKey)) continue;
+          if(factor==1) {
+            if(keptBaseFactor)continue;
+            keptBaseFactor=true;
+          }
           uniqueOptions.add(unit);
+        }
+        if(!keptBaseFactor) {
+          uniqueOptions.add({
+            'unit_name':product['unit']??'وحدة',
+            'conversion_factor':1,
+            'inner_quantity':1,
+            'is_base_unit':true,
+            'is_selectable':true,
+          });
         }
         if(uniqueOptions.isEmpty) {
           uniqueOptions.add({
