@@ -735,8 +735,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       columnSpacing: 8,
                       horizontalMargin: 8,
                       headingRowHeight: 42,
-                      dataRowMinHeight: 56,
-                      dataRowMaxHeight: 64,
+                      dataRowHeight: 60,
                       showCheckboxColumn: false,
                       headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                       columns: const [
