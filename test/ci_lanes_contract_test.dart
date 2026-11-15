@@ -31,8 +31,8 @@ void main() {
     expect(preview, contains('tools/web_view_test.mjs'));
     expect(preview, contains('Run real desktop + mobile WebView smoke tests'));
     expect(preview, contains('group: silsila-web-preview-validation-'));
-    expect(release, contains('Silsila Mobile App Validation'));
-    expect(release, contains("github.event.workflow_run.conclusion == 'success'"));
+    expect(release, contains('workflow_dispatch:'));
+    expect(release, isNot(contains('workflow_run:')));
 
     for (final workflow in [mobile, web, preview]) {
       expect(workflow, contains('cancel-in-progress: false'));
