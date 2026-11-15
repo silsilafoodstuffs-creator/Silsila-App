@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
@@ -32,6 +33,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   String? _error;
   final Map<String, TextEditingController> _gridNameControllers = <String, TextEditingController>{};
   final Map<String, TextEditingController> _gridEnglishControllers = <String, TextEditingController>{};
+  final Map<String, FocusNode> _gridFocusNodes = <String, FocusNode>{};
   String _viewMode = 'tree';
   final Set<String> _expandedGroups = <String>{};
 
@@ -50,6 +52,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     _search.dispose();
     for (final controller in _gridNameControllers.values) { controller.dispose(); }
     for (final controller in _gridEnglishControllers.values) { controller.dispose(); }
+    for (final node in _gridFocusNodes.values) { node.dispose(); }
     super.dispose();
   }
 
@@ -90,14 +93,103 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
   void _syncGridNameControllers() {
     final keep = _rows.map((row) => _s(row['id'])).toSet();
-    for (final id in _gridNameControllers.keys.where((id) => !keep.contains(id)).toList()) { _gridNameControllers.remove(id)?.dispose(); }
-    for (final id in _gridEnglishControllers.keys.where((id) => !keep.contains(id)).toList()) { _gridEnglishControllers.remove(id)?.dispose(); }
+    for (final id in _gridNameControllers.keys.where((id) => !keep.contains(id)).toList()) {
+      _gridNameControllers.remove(id)?.dispose();
+    }
+    for (final id in _gridEnglishControllers.keys.where((id) => !keep.contains(id)).toList()) {
+      _gridEnglishControllers.remove(id)?.dispose();
+    }
+    for (final key in _gridFocusNodes.keys.where((key) => !keep.any((id) => key.startsWith('$id:'))).toList()) {
+      _gridFocusNodes.remove(key)?.dispose();
+    }
     for (final row in _rows) {
       final id = _s(row['id']);
       final ar = _gridNameControllers.putIfAbsent(id, () => TextEditingController());
       final en = _gridEnglishControllers.putIfAbsent(id, () => TextEditingController());
-      if (!_gridEditing) { ar.text = _s(row['brand_name']); en.text = _s(row['brand_name_en']); }
+      _gridFocusNodes.putIfAbsent('$id:ar', () => FocusNode(debugLabel: 'brand-$id-ar'));
+      _gridFocusNodes.putIfAbsent('$id:en', () => FocusNode(debugLabel: 'brand-$id-en'));
+      if (!_gridEditing) {
+        ar.text = _s(row['brand_name']);
+        en.text = _s(row['brand_name_en']);
+      }
     }
+  }
+
+  FocusNode _brandFocusNode(String id, bool english) =>
+      _gridFocusNodes.putIfAbsent('$id:${english ? 'en' : 'ar'}', () => FocusNode());
+
+  Widget _brandGridNameField({
+    required String id,
+    required bool english,
+    required int rowIndex,
+    required List<Map<String,dynamic>> orderedRows,
+  }) {
+    final controller = english ? _gridEnglishControllers[id]! : _gridNameControllers[id]!;
+    final focusNode = _brandFocusNode(id, english);
+    void focusAt(int index, bool toEnglish) {
+      if (index < 0 || index >= orderedRows.length) return;
+      final targetId = _s(orderedRows[index]['id']);
+      _brandFocusNode(targetId, toEnglish).requestFocus();
+    }
+    return Focus(
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent || !_gridEditing || _saving) return KeyEventResult.ignored;
+        final selection = controller.selection;
+        final collapsed = selection.isValid && selection.isCollapsed;
+        final atStart = collapsed && selection.extentOffset <= 0;
+        final atEnd = collapsed && selection.extentOffset >= controller.text.length;
+        switch (event.logicalKey) {
+          case LogicalKeyboardKey.arrowUp:
+            focusAt(rowIndex - 1, english);
+            return rowIndex > 0 ? KeyEventResult.handled : KeyEventResult.ignored;
+          case LogicalKeyboardKey.arrowDown:
+            focusAt(rowIndex + 1, english);
+            return rowIndex + 1 < orderedRows.length ? KeyEventResult.handled : KeyEventResult.ignored;
+          case LogicalKeyboardKey.arrowLeft:
+            if (english && atEnd) {
+              focusAt(rowIndex + 1, false);
+              return KeyEventResult.handled;
+            }
+            if (!english && atEnd) {
+              focusAt(rowIndex, true);
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          case LogicalKeyboardKey.arrowRight:
+            if (!english && atStart) {
+              focusAt(rowIndex - 1, true);
+              return KeyEventResult.handled;
+            }
+            if (english && atStart) {
+              focusAt(rowIndex, false);
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          default:
+            return KeyEventResult.ignored;
+        }
+      },
+      child: TextField(
+        controller: controller,
+        focusNode: focusNode,
+        enabled: !_saving,
+        textDirection: english ? TextDirection.ltr : TextDirection.rtl,
+        textInputAction: TextInputAction.next,
+        decoration: InputDecoration(
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          border: const OutlineInputBorder(),
+          hintText: english ? 'Brand name' : 'اسم البراند بالعربية',
+        ),
+        onSubmitted: (_) {
+          if (english) {
+            focusAt(rowIndex + 1, false);
+          } else {
+            focusAt(rowIndex, true);
+          }
+        },
+      ),
+    );
   }
 
   Future<void> _saveGridNames({String? onlyId}) async {
@@ -134,6 +226,11 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       await _load();
     } finally { if (mounted) setState(() => _saving = false); }
   }
+  int _brandCodeNumber(Map<String,dynamic> row) {
+    final match = RegExp(r'([0-9]+)$').firstMatch(_s(row['brand_code']));
+    return int.tryParse(match?.group(1) ?? '') ?? 0;
+  }
+
   List<Map<String,dynamic>> get _visibleRows {
     final term = _search.text.trim().toLowerCase();
     if (term.isEmpty) return _rows;
@@ -626,7 +723,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final rows = _visibleRows.toList()..sort((a,b) => (int.tryParse(RegExp(r'([0-9]+)
+    final rows = _visibleRows.toList()..sort((a, b) => _brandCodeNumber(a).compareTo(_brandCodeNumber(b)));
     final selected = _selectedRow();
     final visibleGroups = rows.map(_groupKey).toSet().toList()
       ..sort((a,b) {
@@ -651,12 +748,17 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 ErpQuickTaskButton(label:'إضافة جديد', icon:Icons.add_circle_outline, onPressed:_saving ? null : () => _edit()),
                 ErpQuickTaskButton(label:'تعديل', icon:Icons.edit_outlined, onPressed:_saving ? null : () {
                   if (_viewMode == 'grid') {
-                    setState(() => _gridEditing = !_gridEditing);
-                    if (_gridEditing) _syncGridNameControllers();
+                    setState(() => _gridEditing = true);
+                    _syncGridNameControllers();
                   } else if (selected != null && selected['is_system'] != true) { _edit(row:selected); }
                 }),
-                if (_viewMode == 'grid' && _gridEditing)
+                if (_viewMode == 'grid' && _gridEditing) ...[
                   ErpQuickTaskButton(label:'حفظ التعديلات', icon:Icons.save_outlined, onPressed:_saving ? null : () => _saveGridNames()),
+                  ErpQuickTaskButton(label:'إلغاء التعديل', icon:Icons.close, onPressed:_saving ? null : () {
+                    setState(() => _gridEditing = false);
+                    _syncGridNameControllers();
+                  }),
+                ],
                 ErpQuickTaskButton(label:'شعار البراند', icon:Icons.image_outlined, onPressed:_saving || selected == null ? null : () => _uploadLogo(selected)),
                 ErpQuickTaskButton(label:'استيراد شعارات متعددة', icon:Icons.collections_outlined, onPressed:_saving ? null : _bulkImportLogos),
                 ErpQuickTaskButton(label:'حذف', icon:Icons.delete_outline, onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
@@ -718,62 +820,89 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
                       children:visibleGroups.map(_treeGroup).toList(),
                     )
-                  : SingleChildScrollView(
-                      scrollDirection:Axis.horizontal,
-                      child:SingleChildScrollView(
-                        child:DataTable(
-                          headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
-                          dataRowMinHeight:56,
-                          dataRowMaxHeight:64,
-                          columns:const [
-                            DataColumn(label:Text('م')),
-                            DataColumn(label:Text('كود البراند')),
-                            DataColumn(label:Text('اسم البراند عربي')),
-                            DataColumn(label:Text('الاسم الإنجليزي')),
-                            DataColumn(label:Text('الصورة')),
-                            DataColumn(label:Text('المجموعة')),
-                            DataColumn(label:Text('نشط')),
-                          ],
-                          rows:List<DataRow>.generate(rows.length, (index) {
-                            final row = rows[index];
-                            final id = _s(row['id']);
-                            final system = row['is_system'] == true;
-                            final arController = _gridNameControllers.putIfAbsent(id, () => TextEditingController(text:_s(row['brand_name'])));
-                            final enController = _gridEnglishControllers.putIfAbsent(id, () => TextEditingController(text:_s(row['brand_name_en'])));
-                            return DataRow(
-                              color:WidgetStateProperty.all(system ? const Color(0xFFEDE1F8) : Colors.white),
-                              cells:[
-                                DataCell(Text((index + 1).toString(),style:const TextStyle(fontWeight:FontWeight.w800))),
-                                DataCell(Text(_s(row['brand_code']),style:const TextStyle(fontWeight:FontWeight.w900,color:_brandPurple))),
-                                DataCell(SizedBox(width:210,child:_gridEditing && !system
-                                  ? TextField(controller:arController, enabled:!_saving, textInputAction:TextInputAction.next,
-                                      decoration:const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'اسم البراند بالعربية'),
-                                      onSubmitted:(_) => FocusScope.of(context).nextFocus())
-                                  : Text(_s(row['brand_name'])))),
-                                DataCell(SizedBox(width:170,child:_gridEditing && !system
-                                  ? TextField(controller:enController, enabled:!_saving, textDirection:TextDirection.ltr, textInputAction:TextInputAction.next,
-                                      decoration:const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'Brand name'),
-                                      onSubmitted:(_) => FocusScope.of(context).nextFocus())
-                                  : Text(_s(row['brand_name_en'])))),
-                                DataCell(Row(mainAxisSize:MainAxisSize.min,children:[
-                                  _logoPreview(row,size:46),
-                                  const SizedBox(width:4),
-                                  Column(mainAxisSize:MainAxisSize.min,children:[
-                                    IconButton(tooltip:'تعديل صورة البراند',visualDensity:VisualDensity.compact,padding:EdgeInsets.zero,
-                                      constraints:const BoxConstraints.tightFor(width:30,height:25),onPressed:_saving ? null : () => _uploadLogo(row),
-                                      icon:const Icon(Icons.edit_outlined,color:_brandPurple,size:18)),
-                                    IconButton(tooltip:'حذف صورة البراند',visualDensity:VisualDensity.compact,padding:EdgeInsets.zero,
-                                      constraints:const BoxConstraints.tightFor(width:30,height:25),onPressed:_saving || system || _logoBytes(row['logo_data']) == null ? null : () => _removeLogo(row),
-                                      icon:const Icon(Icons.delete_outline,color:Colors.redAccent,size:18)),
-                                  ]),
-                                ])),
-                                DataCell(SizedBox(width:170, child: DropdownButton<String?>(isExpanded:true, value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : null, hint: const Text('بدون مجموعة'), items: [const DropdownMenuItem<String?>(value:null, child:Text('بدون مجموعة')), ..._groups.map((g) => DropdownMenuItem<String?>(value:_s(g['id']), child:Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow:TextOverflow.ellipsis)))], onChanged: system ? null : (v) => _assignGroup(row,v)))),
-                                DataCell(Checkbox(shape:const CircleBorder(), value:row['is_active'] == true, activeColor:_brandPurple, onChanged:system ? null : (_) => _toggle(row))),
+                  : DataTable2(
+                      fixedTopRows: 1,
+                      fixedLeftColumns: 2,
+                      minWidth: 1040,
+                      columnSpacing: 8,
+                      horizontalMargin: 8,
+                      headingRowHeight: 42,
+                      dataRowMinHeight: 56,
+                      dataRowMaxHeight: 64,
+                      showCheckboxColumn: false,
+                      headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                      columns: const [
+                        DataColumn2(label: Text('م'), size: ColumnSize.S, fixedWidth: 52),
+                        DataColumn2(label: Text('كود البراند'), size: ColumnSize.S, fixedWidth: 110),
+                        DataColumn2(label: Text('اسم البراند عربي'), size: ColumnSize.L, fixedWidth: 220),
+                        DataColumn2(label: Text('الاسم الإنجليزي'), size: ColumnSize.L, fixedWidth: 190),
+                        DataColumn2(label: Text('الصورة'), size: ColumnSize.S, fixedWidth: 115),
+                        DataColumn2(label: Text('المجموعة'), size: ColumnSize.M, fixedWidth: 190),
+                        DataColumn2(label: Text('نشط'), size: ColumnSize.S, fixedWidth: 70),
+                      ],
+                      rows: List<DataRow>.generate(rows.length, (index) {
+                        final row = rows[index];
+                        final id = _s(row['id']);
+                        final system = row['is_system'] == true;
+                        _gridNameControllers.putIfAbsent(id, () => TextEditingController(text: _s(row['brand_name'])));
+                        _gridEnglishControllers.putIfAbsent(id, () => TextEditingController(text: _s(row['brand_name_en'])));
+                        _brandFocusNode(id, false);
+                        _brandFocusNode(id, true);
+                        return DataRow(
+                          color: WidgetStateProperty.all(system ? const Color(0xFFEDE1F8) : Colors.white),
+                          cells: [
+                            DataCell(Text((index + 1).toString(), style: const TextStyle(fontWeight: FontWeight.w800))),
+                            DataCell(Text(_s(row['brand_code']), style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
+                            DataCell(SizedBox(width: 210, child: _gridEditing && !system
+                              ? _brandGridNameField(id: id, english: false, rowIndex: index, orderedRows: rows)
+                              : Text(_s(row['brand_name'])))),
+                            DataCell(SizedBox(width: 180, child: _gridEditing && !system
+                              ? _brandGridNameField(id: id, english: true, rowIndex: index, orderedRows: rows)
+                              : Text(_s(row['brand_name_en'])))),
+                            DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
+                              _logoPreview(row, size: 46),
+                              const SizedBox(width: 4),
+                              Column(mainAxisSize: MainAxisSize.min, children: [
+                                IconButton(
+                                  tooltip: 'تعديل صورة البراند',
+                                  visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(width: 30, height: 25),
+                                  onPressed: _saving ? null : () => _uploadLogo(row),
+                                  icon: const Icon(Icons.edit_outlined, color: _brandPurple, size: 18),
+                                ),
+                                IconButton(
+                                  tooltip: 'حذف صورة البراند',
+                                  visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(width: 30, height: 25),
+                                  onPressed: _saving || system || _logoBytes(row['logo_data']) == null ? null : () => _removeLogo(row),
+                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
+                                ),
+                              ]),
+                            ])),
+                            DataCell(SizedBox(width: 180, child: DropdownButton<String?>(
+                              isExpanded: true,
+                              value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : null,
+                              hint: const Text('بدون مجموعة'),
+                              items: [
+                                const DropdownMenuItem<String?>(value: null, child: Text('بدون مجموعة')),
+                                ..._groups.map((g) => DropdownMenuItem<String?>(
+                                  value: _s(g['id']),
+                                  child: Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow: TextOverflow.ellipsis),
+                                )),
                               ],
-                            );
-                          }),
-                        ),
-                      ),
+                              onChanged: system ? null : (v) => _assignGroup(row, v),
+                            ))),
+                            DataCell(Checkbox(
+                              shape: const CircleBorder(),
+                              value: row['is_active'] == true,
+                              activeColor: _brandPurple,
+                              onChanged: system ? null : (_) => _toggle(row),
+                            )),
+                          ],
+                        );
+                      }),
                     ),
           ),
           ],
