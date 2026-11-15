@@ -107,12 +107,12 @@ void main() {
     expect(activityMigrationSource, contains('ORDER BY result.slot_no'));
   });
 
-  test('database migration removes the fixed ticker slot ceiling', () {
-    expect(migrationSource, contains('CHECK (slot_no >= 1)'));
-    expect(migrationSource, contains('slot_no') );
-    expect(migrationSource, contains('SECURITY INVOKER'));
-    expect(migrationSource, contains('NOT EXISTS'));
-    expect(migrationSource, contains('a.activity_code IS NULL'));
-    expect(migrationSource, contains('GRANT EXECUTE ON FUNCTION public.get_silsila_public_ticker_ads(text) TO anon, authenticated'));
+  test('database migration removes the fixed ticker slot ceiling without downgrading the public feed', () {
+    expect(migrationSource, contains('CHECK (slot_no > 0)'));
+    expect(migrationSource, contains('slot_no'));
+    expect(activityMigrationSource, contains('SECURITY INVOKER'));
+    expect(activityMigrationSource, contains('NOT EXISTS'));
+    expect(activityMigrationSource, contains('a.activity_code IS NULL'));
+    expect(activityMigrationSource, contains('GRANT EXECUTE ON FUNCTION public.get_silsila_public_ticker_ads(text) TO anon, authenticated'));
   });
 }
