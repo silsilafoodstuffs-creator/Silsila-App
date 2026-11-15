@@ -6083,7 +6083,7 @@ class _OffersScreenState extends State<OffersScreen> {
             legacyGroups.putIfAbsent(product.category, () => []).add(product);
           }
           final rootOfferCategories = offerItemCategories
-              .where((row)=>(row['parent_id']??'').toString().isEmpty)
+              .where((row) { final parentId=(row['parent_id']??'').toString(); return parentId.isEmpty || !offerItemCategories.any((candidate)=>(candidate['id']??'').toString()==parentId); })
               .where((row)=>offerDescendantProducts((row['id']??'').toString()).isNotEmpty)
               .toList();
           final categoryGroups = <String,List<String>>{};
