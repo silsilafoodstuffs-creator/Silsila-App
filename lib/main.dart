@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/foundation.dart';
@@ -8288,7 +8287,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     final originalBasePrice=_marketNumber(product['base_price']??product['price']);
     final offerBasePrice=_marketOfferPrices[id];
     final hasOffer=offerBasePrice!=null&&offerBasePrice>0&&offerBasePrice<originalBasePrice;
-    final effectiveBasePrice=hasOffer?offerBasePrice!:originalBasePrice;
+    final effectiveBasePrice=hasOffer?offerBasePrice:originalBasePrice;
     final selectedBasePrice=_productBasePrices[key]??effectiveBasePrice;
     final selectedFactor=_productUnitFactors[key]??_marketNumber(units.first['conversion_factor'],1);
     final selectedUnit=_productUnits[key]??(units.first['unit_name']??product['unit']??'وحدة').toString();
