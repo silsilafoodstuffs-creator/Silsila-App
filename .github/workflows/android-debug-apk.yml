@@ -7,8 +7,8 @@ on:
     types:
       - completed
     branches: [main]
-  push:
-    branches: ['feature/**']
+  pull_request:
+    branches: [main]
     paths:
       - "lib/**"
       - "android/**"
@@ -29,7 +29,7 @@ concurrency:
 
 jobs:
   apk:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
