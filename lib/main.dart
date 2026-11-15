@@ -7768,6 +7768,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           children:entry.value.map((product){
             final key=(product['id']??'').toString(),name=(product['name']??'').toString();
             final selected=selectedProducts.contains(key),image=(product['image_url']??'').toString();
+            final imageBytes = _decodeDatabaseBytea(product['image_data']);
             return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
               CheckboxListTile(dense:true,contentPadding:const EdgeInsets.all(0),value:selected,
                 secondary: imageBytes != null && imageBytes.isNotEmpty
