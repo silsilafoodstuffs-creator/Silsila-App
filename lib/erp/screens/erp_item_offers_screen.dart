@@ -150,7 +150,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
         const SizedBox(height:7),
         Row(children:[Text('المحدد: '+chosen.length.toString()+' صنف',style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF3E007D))),const Spacer(),TextButton(onPressed:()=>refresh(()=>addProducts(allVisible)),child:const Text('تحديد نتائج البحث')),TextButton(onPressed:()=>refresh(()=>chosen.clear()),child:const Text('إلغاء الكل'))]),
         Expanded(child:_categories.isEmpty?ListView(children:allVisible.map((item)=>productNode(item,refresh)).toList()):ListView(children:roots.map((category)=>categoryNode(category,0,refresh)).toList())),
-      ])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){setState(()=>_offerLines.removeWhere((line)=>!chosen.contains(_s(line['item_id']))));for(final id in chosen){if(_offerLines.any((line)=>_s(line['item_id'])==id))continue;final item=_items.firstWhere((row)=>_s(row['id'])==id);final sale=_n(item['sale_price']);_offerLines.add({'item_id':id,'item_code':_s(item['item_code']),'item_name':_s(item['item_name']),'unit':_s(item['base_unit']),'sale_price':sale,'offer_price':sale,'offer_qty':100.0,'remaining_qty':100.0,'discount':0.0});}Navigator.pop(ctx);},child:const Text('اعتماد الأصناف المحددة'))]);
+      ])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){setState(()=>_offerLines.removeWhere((line)=>!chosen.contains(_s(line['item_id']))));for(final id in chosen){if(_offerLines.any((line)=>_s(line['item_id'])==id))continue;final item=_items.firstWhere((row)=>_s(row['id'])==id);final sale=_n(item['sale_price']);_offerLines.add({'item_id':id,'item_code':_s(item['item_code']),'item_name':_s(item['item_name']),'unit':_s(item['base_unit']),'sale_price':sale,'offer_price':sale,'offer_qty':100.0,'remaining_qty':100.0,'min_quantity':1.0,'discount':0.0});}Navigator.pop(ctx);},child:const Text('اعتماد الأصناف المحددة'))]);
     }));
     search.dispose();
   }
@@ -230,7 +230,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
     if (_warehouseScope == 'مخازن محددة' && _selectedWarehouses.isEmpty) { setState(() => _error = 'اختر مخزنًا واحدًا على الأقل أو غيّر النطاق إلى كل المخازن.'); return; }
     if (_to.isBefore(_from)) { setState(() => _error = 'تاريخ نهاية العرض يجب ألا يسبق بدايته.'); return; }
     for (final line in _offerLines) {
-      if (_n(line['offer_qty']) <= 0 || _n(line['remaining_qty']) < 0 || _n(line['remaining_qty']) > _n(line['offer_qty']) || _n(line['offer_price']) < 0) {
+      if (_n(line['offer_qty']) <= 0 || _n(line['min_quantity']) <= 0 || _n(line['min_quantity']) > _n(line['offer_qty']) || _n(line['remaining_qty']) < 0 || _n(line['remaining_qty']) > _n(line['offer_qty']) || _n(line['offer_price']) < 0) {
         setState(() => _error = 'راجع أسعار وكميات العرض؛ المتبقي لا يتجاوز الكمية الأصلية.'); return;
       }
     }
@@ -546,8 +546,9 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
                             DataColumn(label: Text('كود')),
                             DataColumn(label: Text('الصنف')),
                             DataColumn(label: Text('الوحدة')),
-                            DataColumn(label: Text('سعر البيع')),
+                            DataColumn(label: Text('السعر الأصلي')),
                             DataColumn(label: Text('سعر العرض')),
+                            DataColumn(label: Text('أقل كمية')),
                             DataColumn(label: Text('كمية العرض')),
                             DataColumn(label: Text('المتبقي')),
                             DataColumn(label: Text('خصم')),
@@ -557,7 +558,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
                             DataCell(Text(_s(line['item_code']))),
                             DataCell(SizedBox(width: 180, child: Text(_s(line['item_name'])))),
                             DataCell(Text(_s(line['unit']))),
-                            DataCell(Text(_n(line['sale_price']).toStringAsFixed(2))),
+                            DataCell(Text.rich(TextSpan(children:[TextSpan(text:_n(line['sale_price']).toStringAsFixed(2),style:TextStyle(decoration:_n(line['offer_price'])<_n(line['sale_price'])?TextDecoration.lineThrough:TextDecoration.none,color:_n(line['offer_price'])<_n(line['sale_price'])?Colors.black45:null)),TextSpan(text:' ج.م')]))),
                             DataCell(SizedBox(
                               width: 90,
                               child: TextFormField(
@@ -567,6 +568,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
                                 onChanged: (v) => setState(() => line['offer_price'] = _n(v)),
                               ),
                             )),
+                            DataCell(SizedBox(width:85,child:TextFormField(initialValue:_s(line['min_quantity'] ?? 1),keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:_dec('أقل كمية'),onChanged:(v)=>setState(()=>line['min_quantity']=_n(v))))),
                             DataCell(SizedBox(
                               width: 85,
                               child: TextFormField(
