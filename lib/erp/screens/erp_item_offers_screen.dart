@@ -85,6 +85,40 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
     )));
   }
 
+  Future<void> _pickGeographicTargets() async {
+    final tree=<String,Map<String,Map<String,Set<String>>>>{};
+    for(final party in _parties.where((p)=>p['is_active']!=false)) {
+      final gov=_s(party['governorate']).trim().isEmpty?'غير محدد':_s(party['governorate']).trim();
+      final center=_s(party['center']).trim().isEmpty?'غير محدد':_s(party['center']).trim();
+      final district=_s(party['district']).trim().isEmpty?'غير محدد':_s(party['district']).trim();
+      final area=_s(party['area']).trim().isEmpty?'غير محدد':_s(party['area']).trim();
+      (tree[gov]??=<String,Map<String,Set<String>>>{}).putIfAbsent(center,()=> <String,Set<String>>{});
+      (tree[gov]![center]??=<String,Set<String>>{}).putIfAbsent(district,()=> <String>{}).add(area);
+    }
+    int countWhere(bool Function(Map<String,dynamic>) test)=>_parties.where((p)=>p['is_active']!=false&&test(p)).length;
+    void toggleArea(String area,bool selected){if(selected)_areas.add(area);else _areas.remove(area);}
+    void toggleDistrict(String district,Set<String> areas,bool selected){if(selected)_districts.add(district);else _districts.remove(district);for(final area in areas)toggleArea(area,selected);}
+    void toggleCenter(String center,Map<String,Set<String>> districts,bool selected){if(selected)_centers.add(center);else _centers.remove(center);for(final entry in districts.entries)toggleDistrict(entry.key,entry.value,selected);}
+    void toggleGovernorate(String gov,Map<String,Map<String,Set<String>>> centers,bool selected){if(selected)_governorates.add(gov);else _governorates.remove(gov);for(final entry in centers.entries)toggleCenter(entry.key,entry.value,selected);}
+    await showDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh){
+      Widget areaNode(String gov,String center,String district,String area){
+        final count=countWhere((p)=>_s(p['governorate'])==gov&&_s(p['center'])==center&&_s(p['district'])==district&&(_s(p['area']).trim().isEmpty?'غير محدد':_s(p['area']))==area);
+        return CheckboxListTile(dense:true,contentPadding:const EdgeInsetsDirectional.only(start:44),value:_areas.contains(area),title:Text(area),subtitle:Text('$count عميل'),onChanged:(v)=>refresh(()=>toggleArea(area,v==true)));
+      }
+      Widget districtNode(String gov,String center,String district,Set<String> areas){
+        final count=countWhere((p)=>_s(p['governorate'])==gov&&_s(p['center'])==center&&_s(p['district'])==district);
+        return ExpansionTile(leading:Checkbox(value:_districts.contains(district),onChanged:(v)=>refresh(()=>toggleDistrict(district,areas,v==true))),title:Text(district),subtitle:Text('$count عميل'),children:areas.map((area)=>areaNode(gov,center,district,area)).toList());
+      }
+      Widget centerNode(String gov,String center,Map<String,Set<String>> districts){
+        final count=countWhere((p)=>_s(p['governorate'])==gov&&_s(p['center'])==center);
+        return ExpansionTile(leading:Checkbox(value:_centers.contains(center),onChanged:(v)=>refresh(()=>toggleCenter(center,districts,v==true))),title:Text(center),subtitle:Text('$count عميل'),children:districts.entries.map((e)=>districtNode(gov,center,e.key,e.value)).toList());
+      }
+      return AlertDialog(title:const Text('استهداف العملاء حسب الموقع الجغرافي'),content:SizedBox(width:640,height:560,child:Column(children:[
+        Row(children:[Text('المحدد: '+(_governorates.length+_centers.length+_districts.length+_areas.length).toString(),style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF3E007D))),const Spacer(),TextButton(onPressed:()=>refresh(()=>_parties.where((p)=>p['is_active']!=false).forEach((p){final gov=_s(p['governorate']).trim();final center=_s(p['center']).trim();final district=_s(p['district']).trim();final area=_s(p['area']).trim();if(gov.isNotEmpty)_governorates.add(gov);if(center.isNotEmpty)_centers.add(center);if(district.isNotEmpty)_districts.add(district);if(area.isNotEmpty)_areas.add(area); })),child:const Text('تحديد الكل')),TextButton(onPressed:()=>refresh(()=>{_governorates.clear(),_centers.clear(),_districts.clear(),_areas.clear()}),child:const Text('إلغاء الكل'))]),
+        Expanded(child:tree.isEmpty?const Center(child:Text('لا توجد بيانات جغرافية مسجلة للعملاء.')):ListView(children:tree.entries.map((entry){final gov=entry.key;final centers=entry.value;final count=countWhere((p)=>_s(p['governorate'])==gov);return ExpansionTile(leading:Checkbox(value:_governorates.contains(gov),onChanged:(v)=>refresh(()=>toggleGovernorate(gov,centers,v==true))),title:Text(gov,style:const TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('$count عميل'),children:centers.entries.map((e)=>centerNode(gov,e.key,e.value)).toList());}).toList())),
+      ]))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق')),FilledButton(onPressed:()=>Navigator.pop(ctx),child:const Text('اعتماد الاستهداف'))]);
+    })));
+  }
   List<Map<String,dynamic>> _distinctOptions(String field) {
     final values = _parties.map((p)=>_s(p[field])).where((v)=>v.isNotEmpty).toSet().toList()..sort();
     return values.map((v)=>{'id':v,'name':v}).toList();
@@ -473,26 +507,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
                                   icon: const Icon(Icons.store),
                                   label: Text('الفروع (${_selectedBranches.length})'),
                                 ),
-                                OutlinedButton.icon(
-                                  onPressed: () => _pickMulti(title: 'المحافظات', options: _distinctOptions('governorate'), idKey: 'id', labelKey: 'name', selected: _governorates),
-                                  icon: const Icon(Icons.map),
-                                  label: Text('المحافظات (${_governorates.length})'),
-                                ),
-                                OutlinedButton.icon(
-                                  onPressed: () => _pickMulti(title: 'المراكز', options: _distinctOptions('center'), idKey: 'id', labelKey: 'name', selected: _centers),
-                                  icon: const Icon(Icons.location_city),
-                                  label: Text('المراكز (${_centers.length})'),
-                                ),
-                                OutlinedButton.icon(
-                                  onPressed: () => _pickMulti(title: 'المراكز/الأحياء', options: _distinctOptions('district'), idKey: 'id', labelKey: 'name', selected: _districts),
-                                  icon: const Icon(Icons.location_city),
-                                  label: Text('المراكز/الأحياء (${_districts.length})'),
-                                ),
-                                OutlinedButton.icon(
-                                  onPressed: () => _pickMulti(title: 'المناطق', options: _distinctOptions('area'), idKey: 'id', labelKey: 'name', selected: _areas),
-                                  icon: const Icon(Icons.place),
-                                  label: Text('المناطق (${_areas.length})'),
-                                ),
+                                OutlinedButton.icon(onPressed:_pickGeographicTargets,icon:const Icon(Icons.account_tree_outlined),label:Text('الاستهداف الجغرافي (${_governorates.length+_centers.length+_districts.length+_areas.length})')),
                                 OutlinedButton.icon(
                                   onPressed: () => _pickMulti(title: 'تصنيفات العملاء', options: _distinctOptions('customer_type'), idKey: 'id', labelKey: 'name', selected: _customerTypes),
                                   icon: const Icon(Icons.category),
