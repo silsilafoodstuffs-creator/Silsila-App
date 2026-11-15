@@ -56,12 +56,14 @@ void main() {
   });
 
 
-  test('circular ticker preview supports pan, zoom, manual pause and speed control', () {
+  test('ticker preview supports per-logo circular pan and zoom plus manual scroll controls', () {
     expect(adminSource, contains('class _TickerAdsPreview extends StatefulWidget'));
+    expect(adminSource, contains('class _TickerBrandCircle extends StatelessWidget'));
     expect(adminSource, contains('InteractiveViewer('));
     expect(adminSource, contains('panAxis: PanAxis.free'));
-    expect(adminSource, contains('minScale: 0.65'));
-    expect(adminSource, contains('maxScale: 2.5'));
+    expect(adminSource, contains('minScale: 1'));
+    expect(adminSource, contains('maxScale: 4'));
+    expect(adminSource, contains('BoxFit.cover'));
     expect(adminSource, contains('Switch.adaptive('));
     expect(adminSource, contains('Slider('));
     expect(adminSource, contains('notification.direction != ScrollDirection.idle'));
@@ -81,17 +83,18 @@ void main() {
     expect(adsScreenSource, contains('إعلانات بوسترات التمرير'));
   });
 
-  test('admin ticker supports every active brand without a fixed 15 or 25 cap', () {
-    expect(adminSource, contains('int get _slotCount'));
+  test('admin ticker orders all active brands by numeric brand code in one order column', () {
+    expect(adminSource, contains('int get _slotCount => _brands.length'));
     expect(adminSource, contains('final brandRows = List<Map<String, dynamic>>.from(brandRowsResult)'));
-    expect(adminSource, contains('return _brands.length > lastAssigned'));
-    expect(adminSource, contains("brand_name_en']).toLowerCase().contains(term"));
-    expect(adminSource, contains('columnSpacing: 2.5'));
+    expect(adminSource, contains('_brandOrderDigits'));
+    expect(adminSource, contains('_brandOrderValue'));
+    expect(adminSource, contains('return numeric != 0 ? numeric'));
     expect(adminSource, contains("Text('كود البراند')"));
-    expect(adminSource, contains("Text('اسم البراند')"));
+    expect(adminSource, contains("Text('ترتيبه في العرض')"));
+    expect(adminSource, contains('معاينة دائرية'));
+    expect(adminSource, isNot(contains('Checkbox(')));
+    expect(adminSource, isNot(contains('take(25)')));
     expect(adminSource, contains('هل ترغب في الحفظ؟'));
-    expect(adminSource, isNot(contains('slot <= 15')));
-    expect(adminSource, isNot(contains('slot <= 25')));
   });
 
   test('public ticker automatically includes all active brands for the selected activity', () {
