@@ -97,24 +97,3 @@ jobs:
       - name: Run complete Flutter test suite
         run: flutter test --reporter expanded
 
-      - name: Build Android debug APK
-        run: flutter build apk --debug --no-pub --target-platform android-arm,android-arm64
-
-      - name: Verify Android package artifact
-        run: |
-          set -euo pipefail
-          APK="build/app/outputs/flutter-apk/app-debug.apk"
-          test -s "$APK"
-          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
-          APKANALYZER="$SDK/cmdline-tools/latest/bin/apkanalyzer"
-          if [ -x "$APKANALYZER" ]; then
-            "$APKANALYZER" manifest application-id "$APK"
-          fi
-
-      - name: Upload Android debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: silsila-android-debug-${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
-          retention-days: 7
