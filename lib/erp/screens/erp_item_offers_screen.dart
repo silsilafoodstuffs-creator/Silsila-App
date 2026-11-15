@@ -107,10 +107,10 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
     final chosen = <String>{..._offerLines.map((e) => _s(e['item_id']))};
     final search = TextEditingController();
     final brandById = <String,Map<String,dynamic>>{for (final b in _brands) _s(b['id']): b};
-    List<Map<String,dynamic>> children(String id) => _categories.where((c) => _s(c['parent_id']) == id).toList();
+    List<Map<String,dynamic>> children(String id) => _categories.where((c) => c['is_active'] != false && _s(c['parent_id']) == id).toList();
     List<Map<String,dynamic>> products(String id) {
       final q = search.text.trim().toLowerCase();
-      return _items.where((p) => _s(p['category_id']) == id &&
+      return _items.where((p) => p['is_active'] != false && _s(p['category_id']) == id &&
         (q.isEmpty || _s(p['item_name']).toLowerCase().contains(q) ||
          _s(p['item_code']).toLowerCase().contains(q) || _s(p['barcode']).toLowerCase().contains(q))).toList();
     }
@@ -187,9 +187,19 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
         );
       }
       final q = search.text.trim().toLowerCase();
-      final allVisible = _items.where((p) => q.isEmpty || _s(p['item_name']).toLowerCase().contains(q) ||
+      final activeItems = _items.where((p) => p['is_active'] != false).toList();
+      final allVisible = activeItems.where((p) => q.isEmpty || _s(p['item_name']).toLowerCase().contains(q) ||
         _s(p['item_code']).toLowerCase().contains(q) || _s(p['barcode']).toLowerCase().contains(q)).toList();
-      final roots = _categories.where((c) => _s(c['parent_id']).isEmpty).toList();
+      final roots = _categories.where((c) => c['is_active'] != false && _s(c['parent_id']).isEmpty).toList();
+      final reachableCategoryIds = <String>{};
+      void collectReachable(Map<String,dynamic> category) {
+        final id = _s(category['id']);
+        if (!reachableCategoryIds.add(id)) return;
+        for (final child in children(id)) { collectReachable(child); }
+      }
+      for (final root in roots) { collectReachable(root); }
+      final uncategorized = activeItems.where((p) => !reachableCategoryIds.contains(_s(p['category_id']))).toList();
+      final uncategorizedIds = uncategorized.map((p) => _s(p['id'])).where((id) => id.isNotEmpty).toSet();
       return AlertDialog(
         title: const Text('اختيار أصناف العرض'),
         content: SizedBox(width: 760, height: 560, child: Column(children: [
@@ -200,9 +210,24 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
             TextButton(onPressed: () => refresh(() => chosen.clear()), child: const Text('إلغاء التحديد')),
             Text('المحدد: ${chosen.length}'),
           ]),
-          Expanded(child: _categories.isEmpty
+          Expanded(child: _categories.isEmpty || roots.isEmpty
             ? ListView(children: allVisible.map(productTile).toList())
-            : ListView(children: roots.map((c) => categoryNode(c, 0)).toList())),
+            : ListView(children: [
+                ...roots.map((c) => categoryNode(c, 0)),
+                if (uncategorized.isNotEmpty) ExpansionTile(
+                  key: const PageStorageKey<String>('offer-uncategorized'),
+                  leading: Checkbox(tristate: true,
+                    value: uncategorizedIds.isEmpty ? false :
+                      uncategorizedIds.every(chosen.contains) ? true :
+                      uncategorizedIds.any(chosen.contains) ? null : false,
+                    onChanged: (v) => refresh(() {
+                      if (v == true) { chosen.addAll(uncategorizedIds); }
+                      else { chosen.removeAll(uncategorizedIds); }
+                    })),
+                  title: Text('أصناف غير مصنفة (${uncategorized.length})'),
+                  children: uncategorized.map(productTile).toList(),
+                ),
+              ])),
         ])),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
@@ -210,7 +235,9 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
             setState(() {
               for (final id in chosen) {
                 if (_offerLines.any((e) => _s(e['item_id']) == id)) continue;
-                final item = _items.firstWhere((p) => _s(p['id']) == id);
+                final matches = _items.where((p) => _s(p['id']) == id).toList();
+                if (matches.isEmpty) continue;
+                final item = matches.first;
                 final price = _n(item['sale_price']);
                 _offerLines.add({'item_id':id,'item_code':_s(item['item_code']),'item_name':_s(item['item_name']),
                   'image_url':_s(item['image_url']),'unit':_s(item['base_unit']),'sale_price':price,
