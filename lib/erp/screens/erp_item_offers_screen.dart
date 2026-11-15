@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
@@ -130,6 +131,19 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
     return values.map((v)=>{'id':v,'name':v}).toList();
   }
 
+  Uint8List? _itemImageBytes(dynamic value) {
+    if (value == null) return null;
+    final raw = value.toString();
+    final prefix = raw.startsWith(r'\\x') ? 3 : raw.startsWith(r'\x') ? 2 : 0;
+    if (prefix == 0 || raw.length <= prefix || (raw.length - prefix).isOdd) return null;
+    try {
+      return Uint8List.fromList(List<int>.generate(
+        (raw.length - prefix) ~/ 2,
+        (index) => int.parse(raw.substring(prefix + index * 2, prefix + index * 2 + 2), radix: 16),
+      ));
+    } catch (_) { return null; }
+  }
+
   Future<void> _pickProducts() async {
     final chosen = _offerLines.map((line) => _s(line['item_id'])).toSet();
     final search = TextEditingController();
@@ -156,10 +170,10 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
       for(final item in products) { final id=_s(item['id']); if(id.isEmpty) continue; chosen.add(id); }
     }
     Widget productNode(Map<String,dynamic> item, void Function(void Function()) refresh) {
-      final id=_s(item['id']); final selected=chosen.contains(id); final image=_s(item['image_url']);
+      final id=_s(item['id']); final selected=chosen.contains(id); final image=_s(item['image_url']); final imageBytes=_itemImageBytes(item['image_data']);
       return Padding(padding:const EdgeInsetsDirectional.only(start:18,bottom:4),child:Row(children:[
         Checkbox(value:selected,onChanged:(value)=>refresh(()=>value==true?chosen.add(id):chosen.remove(id))),
-        if(image.startsWith('http'))ClipRRect(borderRadius:BorderRadius.circular(7),child:Image.network(image,width:38,height:38,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.inventory_2_outlined,size:30))) else const Icon(Icons.inventory_2_outlined,size:30,color:Color(0xFF3E007D)),
+        if(imageBytes!=null)ClipRRect(borderRadius:BorderRadius.circular(7),child:Image.memory(imageBytes,width:38,height:38,fit:BoxFit.cover)) else if(image.startsWith('http'))ClipRRect(borderRadius:BorderRadius.circular(7),child:Image.network(image,width:38,height:38,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.inventory_2_outlined,size:30))) else const Icon(Icons.inventory_2_outlined,size:30,color:Color(0xFF3E007D)),
         const SizedBox(width:7),
         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(_s(item['item_name']),style:const TextStyle(fontWeight:FontWeight.w700)),Text('كود: '+_s(item['item_code'])+' • الوحدة: '+_s(item['base_unit'])+' • السعر الأصلي: '+_n(item['sale_price']).toStringAsFixed(2)+' ج.م',style:const TextStyle(fontSize:11,color:Colors.black54))])),
       ]));
