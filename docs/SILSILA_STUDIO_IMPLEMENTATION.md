@@ -34,20 +34,20 @@ Silsila Studio is the single integrated design workspace in ERP navigation under
 
 ## Consolidated Studio integration — 2026-11-15
 
-- The consolidated candidate is maintained on `feature/silsila-studio-unified`, based directly on the current `main` snapshot `dda3e808c7d899c2dc7cf66f5b84f2d9d2a73782`.
-- It consolidates the Studio workspace foundation with the specialized ERP screen adapters, nested layer groups, bounded embedded images, layout-profile retry behavior, and regression tests from the earlier Studio workstreams.
-- It also carries the latest metadata-validation and action-permission migration sources, the published-design viewer's server-side filtered pagination, and stable ordering for paged design/revision lists.
-- The full-validation workflow includes this consolidated branch so the exact candidate can be analyzed, tested, built for Web and Android, and exercised through desktop/mobile browser smoke checks.
-- Earlier PRs #25 and #28 remain open drafts and have not been merged. This branch is the consolidated review candidate; no existing PR was merged or closed by this work.
-- The consolidation is source-code-only. No Supabase migration was applied to the live project, no production deployment was made, and no PR was merged.
+- The current review candidate is branch `feature/silsila-studio-final-main-20261115b`, tracked by PR #36.
+- The candidate consolidates the Studio foundation and specialized ERP adapters, including dashboard integration, the shared frame, the schema-driven renderer, published-design viewer, company-scoped layout editor, repository pagination, and focused regression tests.
+- Layout-profile persistence uses a separate local storage namespace per company. Async loads discard stale results after a tenant switch, and writes capture their tenant-specific storage keys and snapshots before awaiting storage.
+- Studio access and action controls are checked in the UI. The database-side action-permission and metadata-validation migrations are included in the PR for review; they have not been applied to the live Supabase project.
+- Validation is split into independent mobile (Dart analysis + complete Flutter tests), Web build, Web Preview (desktop/mobile WebView smoke), and Android debug APK lanes. Runs use `cancel-in-progress: false`; feature-branch validation does not deploy GitHub Pages. The production Web Preview deployment remains restricted to successful main-branch validation.
+- PR #36 is open and was reported mergeable by GitHub at the last refresh. It has not been merged. Older PRs #25 and #28 remain open; no production PR was merged by this work.
+- The latest candidate commit at the time of this document update is being revalidated by the four independent lanes. Earlier passing results are tied to their exact older commits and are not substituted for the latest-head results.
+- No Supabase migration was applied, no production deployment was made, and no live ERP business data was modified.
 
 ## Current verification state
 
-- The consolidated branch was created from current `main` and is not behind that base snapshot.
-- The first consolidation commit contains the Studio adapters, migration sources, tests, and workflow trigger. Follow-up commits stabilize pagination ordering and update this status document.
-- A passing CI run on the consolidated HEAD is still required. Earlier successful runs belong to older commits and must not be treated as validation of this branch.
-- A real authenticated owner/admin and permission-limited member end-to-end test is still required for save, restore, approve, publish, and access isolation after the migration is applied to an approved non-production or production target.
-- The live database permission behavior remains unchanged until the migration is separately reviewed and explicitly approved for application.
+- A prior candidate commit passed Dart analysis, the complete Flutter test suite, and the production-path Web build. The subsequent tenant-switch race guard and final workflow updates are being checked on the newer head.
+- Production certification still requires authenticated owner/admin and permission-limited member tests for save, restore, approve, publish, and company access isolation after the reviewed migrations are applied to an explicitly approved target.
+- The live database permission behavior remains unchanged until those migrations are separately reviewed and authorized for application.
 
 ## Known functional boundaries — do not treat these as complete
 
