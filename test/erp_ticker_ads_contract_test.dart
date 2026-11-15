@@ -8,6 +8,7 @@ void main() {
   late String brandSource;
   late String migrationSource;
   late String activityMigrationSource;
+  late String adsScreenSource;
 
   setUpAll(() {
     homeSource = File('lib/main.dart').readAsStringSync();
@@ -20,6 +21,8 @@ void main() {
     activityMigrationSource = File(
       'supabase/migrations/20261114141137_brand_activity_scope_and_ticker_feed.sql',
     ).readAsStringSync();
+    adsScreenSource = File('lib/erp/screens/erp_app_advertisements_screen.dart')
+        .readAsStringSync();
   });
 
   test('home ticker renders circular brand logos with their names below and horizontal scrolling', () {
@@ -38,6 +41,31 @@ void main() {
     expect(ticker, contains('widget.onBrandTap'));
     expect(homeSource, contains("(p.brand ?? '').toLowerCase().contains(q)"));
     expect(ticker, isNot(contains("ad['brand_code']")));
+  });
+
+
+  test('circular ticker preview supports pan, zoom, manual pause and speed control', () {
+    expect(adminSource, contains('class _TickerAdsPreview extends StatefulWidget'));
+    expect(adminSource, contains('InteractiveViewer('));
+    expect(adminSource, contains('panAxis: PanAxis.free'));
+    expect(adminSource, contains('minScale: 0.65'));
+    expect(adminSource, contains('maxScale: 2.5'));
+    expect(adminSource, contains('Switch.adaptive('));
+    expect(adminSource, contains('Slider('));
+    expect(adminSource, contains('notification.direction != ScrollDirection.idle'));
+    expect(adminSource, contains('_autoScroll = false'));
+    expect(adminSource, contains('_speed'));
+  });
+
+  test('poster ads use compact responsive rows and branded WhatsApp placeholder', () {
+    expect(adsScreenSource, contains('Widget _buildAdCard(String slot)'));
+    expect(adsScreenSource, contains('constraints.maxWidth < 560'));
+    expect(adsScreenSource, contains('assets/images/silsila_logo.png'));
+    expect(adsScreenSource, contains('ضع إعلانك هنا'));
+    expect(adsScreenSource, contains('01019617100'));
+    expect(adsScreenSource, contains('https://wa.me/201019617100'));
+    expect(adsScreenSource, contains('_adSlots.map(_buildAdCard)'));
+    expect(adsScreenSource, contains('إعلانات بوسترات التمرير'));
   });
 
   test('admin ticker supports every active brand without a fixed 15 or 25 cap', () {
