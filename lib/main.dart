@@ -7591,8 +7591,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     final client = database;
     if (client == null) return;
     try {
-      final categories = await client.from('categories').select('id,name,parent_id,is_active').eq('is_active', true).order('sort_order');
-      final products = await client.from('products').select('id,name,category_id,unit,price,is_available').eq('is_available', true).order('name').limit(1000);
+      final categories = await client.from('categories').select('id,name,parent_id,is_active').eq('is_active', true).eq('activity_type', 'مواد غذائية').order('sort_order');
+      final products = await client.from('products').select('id,name,category_id,unit,price,brand,image_url,is_available').eq('is_available', true).eq('activity_type', 'مواد غذائية').order('name').limit(1000);
       if (!mounted) return;
       setState(() {
         _marketCategories..clear()..addAll(categories.whereType<Map>().map((e)=>Map<String,dynamic>.from(e)));
@@ -7603,60 +7603,67 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
 
   List<Map<String,dynamic>> _marketCategoryChildren(int? parentId) => _marketCategories.where((row)=>(row['parent_id'] as num?)?.toInt()==parentId).toList();
 
+  Set<String> _marketCategoryProductIds(int categoryId) {
+    final ids=_marketProducts.where((p)=>(p['category_id'] as num?)?.toInt()==categoryId).map((p)=>(p['id']??'').toString()).where((v)=>v.isNotEmpty).toSet();
+    for(final child in _marketCategoryChildren(categoryId)){ids.addAll(_marketCategoryProductIds((child['id'] as num).toInt()));}
+    return ids;
+  }
+
   Widget _marketCategoryNode(Map<String,dynamic> category, int depth) {
     final id=(category['id'] as num).toInt();
     final expanded=_expandedCategoryIds.contains(id);
     final children=_marketCategoryChildren(id);
     final products=_marketProducts.where((p)=>(p['category_id'] as num?)?.toInt()==id).toList();
     final color=depth==0?purple:depth==1?orange:const Color(0xFFFF27C3);
-    final productIds=products.map((p)=>(p['id']??'').toString()).where((v)=>v.isNotEmpty).toSet();
+    final productIds=_marketCategoryProductIds(id);
     final selectedCount=productIds.where(selectedProducts.contains).length;
+    final byBrand=<String,List<Map<String,dynamic>>>{};
+    for(final p in products){final brand=(p['brand']??'').toString().trim();byBrand.putIfAbsent(brand,()=>[]).add(p);}
+    final brandEntries=byBrand.entries.toList()..sort((a,b)=>a.key.compareTo(b.key));
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       InkWell(onTap:()=>setState(()=>expanded?_expandedCategoryIds.remove(id):_expandedCategoryIds.add(id)),child:Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Row(children:[
         Icon(expanded?Icons.expand_less:Icons.chevron_left,color:color,size:18),
         Expanded(child:Text((category['name']??'').toString(),textAlign:TextAlign.right,style:TextStyle(color:color,fontWeight:FontWeight.w800,fontSize:depth==0?15:depth==1?13:12))),
         Checkbox(tristate:true,shape:const CircleBorder(),value:selectedCount==0?false:selectedCount==productIds.length?true:null,
           onChanged:(v)=>setState((){
-            if(v==true){
-              for(final p in products){
-                final key=(p['id']??'').toString(), name=(p['name']??'').toString();
-                if(key.isEmpty)continue;
-                selectedProducts.add(key);
-                _productQuantities.putIfAbsent(key,()=>TextEditingController(text:'1'));
-                _productPrices.putIfAbsent(key,()=>TextEditingController(text:(p['price']??'0').toString()));
-                _productUnits[key]=(p['unit']??'كبري').toString();
-                _productQuality[key]='good'; _productNegotiable[key]=false;
-              }
-            } else { selectedProducts.removeAll(productIds); }
+            if(v==true){for(final key in productIds){final p=_marketProducts.firstWhere((row)=>(row['id']??'').toString()==key);selectedProducts.add(key);_productQuantities.putIfAbsent(key,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(key,()=>TextEditingController(text:(p['price']??'0').toString()));_productUnits[key]=(p['unit']??'كبري').toString();_productQuality[key]='good';_productNegotiable[key]=false;}}
+            else{selectedProducts.removeAll(productIds);}
             selectAllProducts=_marketProducts.isNotEmpty&&selectedProducts.length==_marketProducts.length;
           })),
       ]))),
-      if(expanded)...products.map((product){
-        final idKey=(product['id']??'').toString();
-        final name=(product['name']??'').toString();
-        final selected=selectedProducts.contains(idKey);
-        return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-          CheckboxListTile(dense:true,contentPadding:const EdgeInsetsDirectional.only(start:depth*12),value:selected,
-            title:Text(name),onChanged:(v)=>setState((){
-              if(v==true){selectedProducts.add(idKey);_productQuantities.putIfAbsent(idKey,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(idKey,()=>TextEditingController(text:(product['price']??'0').toString()));_productUnits[idKey]=(product['unit']??'كبري').toString();_productQuality[idKey]='good';_productNegotiable[idKey]=false;}
-              else selectedProducts.remove(idKey);
+      if(expanded)...brandEntries.map((entry){
+        final brandIds=entry.value.map((p)=>(p['id']??'').toString()).toSet();
+        final count=brandIds.where(selectedProducts.contains).length;
+        return Padding(padding:EdgeInsetsDirectional.only(start:(depth+1)*12),child:ExpansionTile(
+          tilePadding:EdgeInsets.zero,
+          leading:Checkbox(tristate:true,shape:const CircleBorder(),value:count==0?false:count==brandIds.length?true:null,
+            onChanged:(v)=>setState((){
+              if(v==true){for(final p in entry.value){final key=(p['id']??'').toString();selectedProducts.add(key);_productQuantities.putIfAbsent(key,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(key,()=>TextEditingController(text:(p['price']??'0').toString()));_productUnits[key]=(p['unit']??'كبري').toString();_productQuality[key]='good';_productNegotiable[key]=false;}}
+              else{selectedProducts.removeAll(brandIds);}
               selectAllProducts=_marketProducts.isNotEmpty&&selectedProducts.length==_marketProducts.length;
             })),
-          if(selected)Padding(padding:const EdgeInsets.only(bottom:8),child:Row(children:[
-            Expanded(child:TextField(controller:_productQuantities[idKey],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'الكمية',hintText:'0.000',isDense:true,border:OutlineInputBorder()))),
-            const SizedBox(width:6),
-            Expanded(child:DropdownButtonFormField<String>(value:_productUnits[idKey],isExpanded:true,decoration:const InputDecoration(labelText:'الوحدة',isDense:true,border:OutlineInputBorder()),items:{_productUnits[idKey]??'كبري','كرتونة','علبة','عبوة','كيلو','جرام','طن','قطعة','لتر'}.map((u)=>DropdownMenuItem(value:u,child:Text(u,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_productUnits[idKey]=v);})),
-            const SizedBox(width:6),
-            Expanded(child:TextField(controller:_productPrices[idKey],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'السعر',isDense:true,border:OutlineInputBorder()))),
-            const SizedBox(width:4),
-            SizedBox(width:116,child:CheckboxListTile(dense:true,contentPadding:const EdgeInsets.all(0),controlAffinity:ListTileControlAffinity.leading,title:const Text('قابل للتفاوض',style:TextStyle(fontSize:10)),value:_productNegotiable[idKey]==true,onChanged:(v)=>setState(()=>_productNegotiable[idKey]=v==true))),
-          ])),
-          if(selected) Padding(padding:const EdgeInsets.only(bottom:6),child:Wrap(spacing:8,runSpacing:2,children:[
-            FilterChip(label:const Text('صلاحية جيدة'),selected:(_productQuality[idKey]??'good')=='good',onSelected:(v)=>setState(()=>_productQuality[idKey]=v?'good':'near_expiry')),
-            FilterChip(label:const Text('صلاحية قريبة'),selected:(_productQuality[idKey]??'good')=='near_expiry',onSelected:(v)=>setState(()=>_productQuality[idKey]=v?'near_expiry':'good')),
-          ])),
-          if(type=='sell'&&selected&&(_productQuality[idKey]??'good')=='near_expiry') ListTile(contentPadding:EdgeInsets.zero,dense:true,title:const Text('تاريخ انتهاء الصلاحية'),subtitle:Text(_productExpiryDates[idKey]?.toIso8601String().split('T').first??'مطلوب عند اختيار صلاحية قريبة'),trailing:IconButton(icon:const Icon(Icons.calendar_month),onPressed:()async{final now=DateTime.now();final d=await showDatePicker(context:context,firstDate:DateTime(now.year,now.month,now.day),lastDate:DateTime(2100),initialDate:_productExpiryDates[idKey]??now.add(const Duration(days:30)));if(d!=null)setState(()=>_productExpiryDates[idKey]=d);})),
-        ]);
+          title:Text((entry.key.isEmpty?'بدون ماركة':entry.key)+' ('+entry.value.length.toString()+')',style:const TextStyle(fontWeight:FontWeight.w700)),
+          children:entry.value.map((product){
+            final key=(product['id']??'').toString(),name=(product['name']??'').toString();
+            final selected=selectedProducts.contains(key),image=(product['image_url']??'').toString();
+            return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+              CheckboxListTile(dense:true,contentPadding:const EdgeInsets.all(0),value:selected,
+                secondary:image.isEmpty?const Icon(Icons.inventory_2_outlined,color:purple):ClipRRect(borderRadius:BorderRadius.circular(6),child:Image.network(image,width:40,height:40,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.inventory_2_outlined))),
+                title:Text(name),onChanged:(v)=>setState((){
+                  if(v==true){selectedProducts.add(key);_productQuantities.putIfAbsent(key,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(key,()=>TextEditingController(text:(product['price']??'0').toString()));_productUnits[key]=(product['unit']??'كبري').toString();_productQuality[key]='good';_productNegotiable[key]=false;}
+                  else{selectedProducts.remove(key);}
+                  selectAllProducts=_marketProducts.isNotEmpty&&selectedProducts.length==_marketProducts.length;
+                })),
+              if(selected)Padding(padding:const EdgeInsets.only(bottom:8),child:Row(children:[
+                Expanded(child:TextField(controller:_productQuantities[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'الكمية',hintText:'0.000',isDense:true,border:OutlineInputBorder()))),
+                const SizedBox(width:6),
+                Expanded(child:DropdownButtonFormField<String>(value:_productUnits[key],isExpanded:true,decoration:const InputDecoration(labelText:'الوحدة',isDense:true,border:OutlineInputBorder()),items:{_productUnits[key]??'كبري','كرتونة','علبة','عبوة','كيلو','جرام','طن','قطعة','لتر'}.map((u)=>DropdownMenuItem(value:u,child:Text(u,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_productUnits[key]=v);})),
+                const SizedBox(width:6),
+                Expanded(child:TextField(controller:_productPrices[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'السعر',isDense:true,border:OutlineInputBorder()))),
+              ])),
+            ]);
+          }).toList(),
+        ));
       }),
       if(expanded)...children.map((child)=>_marketCategoryNode(child,depth+1)),
     ]);
