@@ -7803,9 +7803,9 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
                 const SizedBox(width:10),
                 Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
                   Text((_publisherProfile['full_name'] ?? 'حساب المستخدم').toString(),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
-                  Text('موبايل 1: \${(_publisherProfile['phone'] ?? '—').toString()}   •   موبايل 2: \${(_publisherProfile['whatsapp_phone'] ?? '—').toString()}',style:const TextStyle(color:Colors.white,fontSize:10),maxLines:2),
+                  Text('موبايل 1: ${(_publisherProfile['phone'] ?? '—').toString()}   •   موبايل 2: ${(_publisherProfile['whatsapp_phone'] ?? '—').toString()}',style:const TextStyle(color:Colors.white,fontSize:10),maxLines:2),
                   Text([_publisherProfile['governorate'],_publisherProfile['district'],_publisherProfile['area'],_publisherProfile['address']].where((v)=>v!=null&&v.toString().trim().isNotEmpty).join(' - '),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:10)),
-                  Align(alignment:Alignment.centerLeft,child:Text('\${(_publisherProfile['account_type']??'حساب').toString()} • \${(type=='sell'?_publisherProfile['supplier_type']:_publisherProfile['customer_type']??'').toString()}',style:const TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w700))),
+                  Align(alignment:Alignment.centerLeft,child:Text('${(_publisherProfile['account_type']??'حساب').toString()} • ${((type=='sell'?_publisherProfile['supplier_type']:_publisherProfile['customer_type'])??'').toString()}',style:const TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w700))),
                 ])),
               ]),
             ]),
