@@ -55,11 +55,11 @@ class ErpScreenFrame extends StatelessWidget {
           colorScheme: baseTheme.colorScheme.copyWith(primary: primary, secondary: accent),
           dataTableTheme: baseTheme.dataTableTheme.copyWith(
             dataRowMinHeight: rowHeight,
-            dataRowMaxHeight: rowHeight + 8,
-            columnSpacing: spacing <= 2 ? 6 : spacing * 2.8,
+            dataRowMaxHeight: rowHeight,
+            columnSpacing: spacing,
           ),
           inputDecorationTheme: baseTheme.inputDecorationTheme.copyWith(
-            constraints: BoxConstraints(minHeight: rowHeight, maxHeight: rowHeight + 4),
+            constraints: BoxConstraints(minHeight: rowHeight, maxHeight: rowHeight),
           ),
         );
 
