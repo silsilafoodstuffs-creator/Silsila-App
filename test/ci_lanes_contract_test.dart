@@ -19,6 +19,7 @@ void main() {
 
     expect(preview, contains('name: Silsila Web Preview - Deploy + Smoke Tests'));
     expect(preview, contains('Run deployed WebView tests (desktop + mobile)'));
+    expect(preview, contains('group: silsila-pages'));
     expect(release, contains('Silsila Mobile App Validation'));
     expect(release, contains("github.event.workflow_run.conclusion == 'success'"));
 
