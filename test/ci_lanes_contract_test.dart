@@ -25,6 +25,8 @@ void main() {
     expect(deploy, contains('group: silsila-pages-main'));
     expect(deploy, contains('cancel-in-progress: false'));
     expect(preview, contains('name: Silsila Web Preview Validation'));
+    expect(preview, contains('Silsila Web App Validation'));
+    expect(preview, contains('actions/download-artifact@v4'));
     expect(preview, contains('tools/web_view_test.mjs'));
     expect(preview, contains('Run real desktop + mobile WebView smoke tests'));
     expect(preview, contains('group: silsila-pages'));
@@ -34,7 +36,8 @@ void main() {
     for (final workflow in [mobile, web, preview]) {
       expect(workflow, contains('cancel-in-progress: false'));
       expect(workflow, contains('github.run_id'));
-      expect(workflow, contains('workflow_dispatch:'));
     }
+    expect(mobile, contains('workflow_dispatch:'));
+    expect(web, contains('workflow_dispatch:'));
   });
 }
