@@ -77,8 +77,16 @@ class ErpScreenFrame extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(radius),
-                      border: Border.all(color: const Color(0xFFECE7F2)),
-                      boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 10, offset: Offset(0, 3))],
+                      border: Border.all(color: const Color(0xFFEADCF5), width: 0.9),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Colors.white, Color(0xFFFFFCFF), Color(0xFFFAF6FF)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(color: const Color(0xFF3E007D).withValues(alpha: .07), blurRadius: 12, offset: const Offset(0, 4)),
+                        BoxShadow(color: const Color(0xFFFF27C3).withValues(alpha: .07), blurRadius: 18, spreadRadius: -5),
+                      ],
                     ),
                     child: LayoutBuilder(builder: (context, constraints) {
                       final heading = Row(children: [
@@ -154,8 +162,16 @@ class ErpScreenFrame extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(radius),
-                      border: Border.all(color: const Color(0xFFECE7F2)),
-                      boxShadow: const [BoxShadow(color: Color(0x0D000000), blurRadius: 6, offset: Offset(0, 2))],
+                      border: Border.all(color: const Color(0xFFEADCF5), width: 0.8),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.white, Color(0xFFFCF8FF)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(color: const Color(0xFF3E007D).withValues(alpha: .06), blurRadius: 8, offset: const Offset(0, 2)),
+                        BoxShadow(color: const Color(0xFFFFA015).withValues(alpha: .05), blurRadius: 12, spreadRadius: -4),
+                      ],
                     ),
                     child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: actions)),
                   ),
@@ -174,7 +190,10 @@ class ErpScreenFrame extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(radius),
-                      border: Border.all(color: const Color(0xFFECE7F2)),
+                      border: Border.all(color: const Color(0xFFEADCF5), width: 0.8),
+                      boxShadow: [
+                        BoxShadow(color: const Color(0xFF3E007D).withValues(alpha: .05), blurRadius: 8, offset: const Offset(0, 2)),
+                      ],
                     ),
                     child: DefaultTextStyle(
                       style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w700),
