@@ -18,7 +18,6 @@ class ErpScreenLayoutProfiles {
   static final Set<String> _pendingKeys = <String>{};
   static bool _loaded = false;
   static String? _activeScope;
-  static String? _activeCompanyId;
 
   static String scopeForCompany(String? companyId) {
     final normalized = companyId?.trim() ?? '';
@@ -45,7 +44,6 @@ class ErpScreenLayoutProfiles {
 
     // Never expose one company's in-memory values while switching scope.
     _activeScope = scope;
-    _activeCompanyId = companyId?.trim().isEmpty == true ? null : companyId?.trim();
     _loaded = false;
     profiles.value = <String, dynamic>{};
     _pendingKeys.clear();
