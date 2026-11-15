@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/erp_app_asset_storage.dart';
 import '../../services/activity_service.dart';
@@ -366,6 +367,223 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
     );
   }
 
+
+  Future<void> _openAdsWhatsApp() async {
+    final uri = Uri.parse('https://wa.me/201019617100');
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened && mounted) {
+        setState(() => _error = 'تعذر فتح واتساب. تواصل معنا على 01019617100.');
+      }
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر فتح واتساب: $error');
+    }
+  }
+
+  Widget _buildAdCard(String slot) {
+    final asset = _forSlot(slot);
+    final effectiveAsset = asset ?? _effectiveSlot(slot);
+    final inherited = asset == null && effectiveAsset != null;
+    final key = _keyFor(slot, _scopeCode);
+    final busy = _busySlot == slot;
+    final targetType = _targetTypes[key] ?? asset?.targetType ?? 'none';
+
+    final Widget preview = AspectRatio(
+      aspectRatio: 16 / 9,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: effectiveAsset == null
+            ? Container(
+                color: const Color(0xFFF5EFFB),
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset('assets/images/silsila_logo.png', height: 34, fit: BoxFit.contain),
+                    const SizedBox(height: 5),
+                    const Text('ضع إعلانك هنا', style: TextStyle(color: _adsPurple, fontWeight: FontWeight.w900, fontSize: 13)),
+                    const SizedBox(height: 2),
+                    const Text('سلسلة .. بنربط السوق ببعضه', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54, fontSize: 10)),
+                    const SizedBox(height: 4),
+                    InkWell(
+                      onTap: _openAdsWhatsApp,
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.chat, color: Color(0xFF25D366), size: 14),
+                          SizedBox(width: 3),
+                          Text('01019617100', style: TextStyle(color: _adsPurple, fontWeight: FontWeight.w800, fontSize: 10)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : effectiveAsset.mimeType == 'video/mp4'
+                ? Container(
+                    color: const Color(0xFFF4EFF9),
+                    child: const Center(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.play_circle_outline, color: _adsPurple, size: 36),
+                        Text('فيديو MP4 محفوظ', style: TextStyle(color: _adsPurple, fontSize: 11)),
+                      ]),
+                    ),
+                  )
+                : FutureBuilder<String>(
+                    future: _signedUrl(effectiveAsset.storagePath),
+                    builder: (context, snap) => snap.hasData
+                        ? Image.network(
+                            snap.data!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined)),
+                          )
+                        : const Center(child: CircularProgressIndicator()),
+                  ),
+      ),
+    );
+
+    final editor = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(children: [
+          Expanded(child: Text(slot, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: _adsPurple))),
+          Text(
+            asset != null ? 'محفوظ لهذا النشاط' : inherited ? 'موروث من كل الأنشطة' : 'غير محدد',
+            style: TextStyle(
+              color: asset != null ? Colors.green : inherited ? _adsOrange : Colors.black54,
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+            ),
+          ),
+        ]),
+        const SizedBox(height: 7),
+        DropdownButtonFormField<String>(
+          itemHeight: 44,
+          value: targetType,
+          decoration: const InputDecoration(
+            labelText: 'التوجه عند الضغط على الصورة',
+            border: OutlineInputBorder(),
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+          ),
+          items: const [
+            DropdownMenuItem(value: 'none', child: Text('بدون توجيه')),
+            DropdownMenuItem(value: 'category', child: Text('فتح فئة أصناف')),
+            DropdownMenuItem(value: 'supplier', child: Text('فتح مورد')),
+          ],
+          onChanged: _busySlot != null ? null : (value) => setState(() => _targetTypes[key] = value ?? 'none'),
+        ),
+        const SizedBox(height: 7),
+        TextFormField(
+          key: ValueKey('target-code-$key'),
+          initialValue: _targetCodes[key] ?? asset?.targetCode ?? '',
+          decoration: InputDecoration(
+            labelText: targetType == 'category' ? 'كود الفئة' : targetType == 'supplier' ? 'كود المورد / معرّف حساب المورد' : 'كود الوجهة (اختياري)',
+            hintText: 'اختياري عند اختيار بدون توجيه',
+            border: const OutlineInputBorder(),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
+          ),
+          onChanged: (value) => _targetCodes[key] = value,
+        ),
+        if (slot == _popupSlot || slot == _introSlot) ...[
+          const SizedBox(height: 7),
+          TextFormField(
+            key: ValueKey('duration-$key'),
+            initialValue: (_durations[key] ?? asset?.durationSeconds ?? (slot == _introSlot ? 4 : 5)).toString(),
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: slot == _introSlot ? 'مدة فيديو / صورة البداية بالثواني' : 'مدة ظهور الإعلان المنبثق بالثواني',
+              border: const OutlineInputBorder(),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
+            ),
+            onChanged: (value) => _durations[key] = int.tryParse(value) ?? 5,
+          ),
+        ],
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            FilledButton.icon(
+              onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: false),
+              icon: const Icon(Icons.folder_open_outlined, size: 17),
+              label: Text(slot == _introSlot ? 'صورة من الجهاز' : 'استيراد صورة'),
+              style: FilledButton.styleFrom(backgroundColor: _adsPurple, visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8)),
+            ),
+            OutlinedButton.icon(
+              onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: true),
+              icon: const Icon(Icons.photo_camera_outlined, size: 17),
+              label: const Text('الكاميرا'),
+              style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8)),
+            ),
+            if (slot == _introSlot) ...[
+              FilledButton.icon(
+                onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: false, video: true),
+                icon: const Icon(Icons.video_library_outlined, size: 17),
+                label: const Text('فيديو MP4'),
+                style: FilledButton.styleFrom(backgroundColor: _adsOrange, foregroundColor: _adsPurple, visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8)),
+              ),
+              OutlinedButton.icon(
+                onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: true, video: true),
+                icon: const Icon(Icons.videocam_outlined, size: 17),
+                label: const Text('تصوير فيديو'),
+                style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8)),
+              ),
+            ],
+            if (asset != null)
+              OutlinedButton.icon(
+                onPressed: _busySlot != null ? null : () => _saveMetadata(slot, asset),
+                icon: const Icon(Icons.save_outlined, size: 17),
+                label: const Text('حفظ الإعدادات'),
+                style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8)),
+              ),
+            if (asset != null)
+              TextButton.icon(
+                onPressed: _busySlot != null ? null : () => _deleteSlot(slot),
+                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 17),
+                label: const Text('حذف', style: TextStyle(color: Colors.red)),
+                style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8)),
+              ),
+            if (busy) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+          ],
+        ),
+      ],
+    );
+
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 9),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(13),
+        side: BorderSide(color: Colors.grey.shade300),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(9),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth < 560) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [preview, const SizedBox(height: 8), editor],
+              );
+            }
+            // RTL row: first child is the image on the right; controls remain on the left.
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(width: 184, child: preview),
+                const SizedBox(width: 12),
+                Expanded(child: editor),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildPosterTab() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -413,114 +631,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
         if (_error != null) _notice(_error!, Colors.red),
         const SizedBox(height: 12),
         if (_loading) const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
-        else ..._adSlots.map((slot) {
-          final asset = _forSlot(slot);
-          final effectiveAsset = asset ?? _effectiveSlot(slot);
-          final inherited = asset == null && effectiveAsset != null;
-          final key = _keyFor(slot, _scopeCode);
-          final busy = _busySlot == slot;
-          final targetType = _targetTypes[key] ?? asset?.targetType ?? 'none';
-          return Card(
-            elevation: 0,
-            margin: const EdgeInsets.only(bottom: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: Colors.grey.shade300)),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Row(children: [
-                  Expanded(child: Text(slot, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: _adsPurple))),
-                  Text(asset != null ? 'محفوظ لهذا النشاط' : inherited ? 'موروث من كل الأنشطة' : 'غير محدد', style: TextStyle(color: asset != null ? Colors.green : inherited ? _adsOrange : Colors.black54, fontWeight: FontWeight.w700)),
-                ]),
-                const SizedBox(height: 10),
-                AspectRatio(
-                  aspectRatio: 16 / 6,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: effectiveAsset == null
-                        ? Container(color: const Color(0xFFF4EFF9), child: Center(child: Icon(slot == _introSlot ? Icons.movie_creation_outlined : Icons.add_photo_alternate_outlined, color: _adsPurple, size: 42)))
-                        : effectiveAsset.mimeType == 'video/mp4'
-                            ? Container(color: const Color(0xFFF4EFF9), child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.play_circle_outline, color: _adsPurple, size: 42), Text('فيديو MP4 محفوظ', style: TextStyle(color: _adsPurple))])))
-                            : FutureBuilder<String>(
-                                future: _signedUrl(effectiveAsset.storagePath),
-                                builder: (context, snap) => snap.hasData
-                                    ? Image.network(snap.data!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined)))
-                                    : const Center(child: CircularProgressIndicator()),
-                              ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(itemHeight: 48, 
-                  value: targetType,
-                  decoration: const InputDecoration(labelText: 'التوجه عند الضغط على الصورة', border: OutlineInputBorder(), isDense: true),
-                  items: const [
-                    DropdownMenuItem(value: 'none', child: Text('بدون توجيه')),
-                    DropdownMenuItem(value: 'category', child: Text('فتح فئة أصناف')),
-                    DropdownMenuItem(value: 'supplier', child: Text('فتح مورد')),
-                  ],
-                  onChanged: _busySlot != null ? null : (value) => setState(() => _targetTypes[key] = value ?? 'none'),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  key: ValueKey('target-code-$key'),
-                  initialValue: _targetCodes[key] ?? asset?.targetCode ?? '',
-                  decoration: InputDecoration(labelText: targetType == 'category' ? 'كود الفئة' : targetType == 'supplier' ? 'كود المورد / معرّف حساب المورد' : 'كود الوجهة (اختياري)', hintText: 'اختياري عند اختيار بدون توجيه', border: const OutlineInputBorder(), isDense: true),
-                  onChanged: (value) => _targetCodes[key] = value,
-                ),
-                if (slot == _popupSlot || slot == _introSlot) ...[
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    key: ValueKey('duration-$key'),
-                    initialValue: (_durations[key] ?? asset?.durationSeconds ?? (slot == _introSlot ? 4 : 5)).toString(),
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(labelText: slot == _introSlot ? 'مدة فيديو / صورة البداية بالثواني' : 'مدة ظهور الإعلان المنبثق بالثواني', border: const OutlineInputBorder(), isDense: true),
-                    onChanged: (value) => _durations[key] = int.tryParse(value) ?? 5,
-                  ),
-                ],
-                const SizedBox(height: 10),
-                Wrap(spacing: 8, runSpacing: 8, children: [
-                  FilledButton.icon(
-                    onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: false),
-                    icon: const Icon(Icons.folder_open_outlined),
-                    label: Text(slot == _introSlot ? 'صورة من الجهاز' : 'استيراد صورة من الجهاز'),
-                    style: FilledButton.styleFrom(backgroundColor: _adsPurple),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: true),
-                    icon: const Icon(Icons.photo_camera_outlined),
-                    label: Text(slot == _introSlot ? 'تصوير صورة بالكاميرا' : 'تصوير بالكاميرا'),
-                  ),
-                  if (slot == _introSlot) ...[
-                    FilledButton.icon(
-                      onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: false, video: true),
-                      icon: const Icon(Icons.video_library_outlined),
-                      label: const Text('فيديو من الجهاز (MP4)'),
-                      style: FilledButton.styleFrom(backgroundColor: _adsOrange, foregroundColor: _adsPurple),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: true, video: true),
-                      icon: const Icon(Icons.videocam_outlined),
-                      label: const Text('تصوير فيديو بالكاميرا'),
-                    ),
-                  ],
-
-                  if (asset != null)
-                    OutlinedButton.icon(
-                      onPressed: _busySlot != null ? null : () => _saveMetadata(slot, asset),
-                      icon: const Icon(Icons.save_outlined),
-                      label: const Text('حفظ إعدادات الإعلان'),
-                    ),
-                  if (asset != null)
-                    TextButton.icon(
-                      onPressed: _busySlot != null ? null : () => _deleteSlot(slot),
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      label: const Text('حذف الإعلان', style: TextStyle(color: Colors.red)),
-                    ),
-                  if (busy) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                ]),
-              ]),
-            ),
-          );
-        }),
+        else ..._adSlots.map(_buildAdCard),
       ],
     );
   }
