@@ -16,7 +16,8 @@ void main() {
 
     expect(web, contains('name: Silsila Web App Validation'));
     expect(web, contains('flutter build web --release'));
-    expect(web, contains('tools/web_view_test.mjs'));
+    expect(web, contains('actions/upload-artifact@v4'));
+    expect(web, contains('silsila-web-build-'));
 
     expect(deploy, contains('name: Silsila Web Preview Deployment'));
     expect(deploy, contains('Silsila Web App Validation'));
@@ -29,7 +30,7 @@ void main() {
     expect(preview, contains('actions/download-artifact@v4'));
     expect(preview, contains('tools/web_view_test.mjs'));
     expect(preview, contains('Run real desktop + mobile WebView smoke tests'));
-    expect(preview, contains('group: silsila-pages'));
+    expect(preview, contains('group: silsila-web-preview-validation-'));
     expect(release, contains('Silsila Mobile App Validation'));
     expect(release, contains("github.event.workflow_run.conclusion == 'success'"));
 
