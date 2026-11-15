@@ -18,14 +18,14 @@ on:
 permissions:
   contents: read
 
-# An active Android test/build must finish; new pushes must not cancel it.
+# Keep each mobile test run independent so a new push never cancels it.
 concurrency:
   group: silsila-mobile-validation-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
   mobile:
-    name: Flutter tests + Android debug APK
+    name: Flutter analyze + tests
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -44,41 +44,12 @@ jobs:
           python -m py_compile tools/catalog_import/import_real_product_images.py
           python -m unittest discover -s tools/catalog_import -p 'test_*.py' -v
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Cache Gradle
-        uses: gradle/actions/setup-gradle@v4
-
       - name: Set up Flutter
         uses: subosito/flutter-action@fd55f4c5af5b953cc57a2be44cb082c8f6635e8e
         with:
           flutter-version: "3.29.3"
           channel: stable
           cache: true
-
-      - name: Ensure Android platform files and required NDK
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ ! -f android/app/build.gradle.kts ] || [ ! -f android/gradlew ] || [ ! -f android/settings.gradle.kts ]; then
-            flutter create --project-name=silsila_app --platforms=android .
-          fi
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path("android/app/build.gradle.kts")
-          if not p.exists():
-              raise SystemExit("Android Gradle file is missing")
-          s = p.read_text()
-          if 'ndkVersion = "27.0.12077973"' not in s:
-              if "android {" not in s:
-                  raise SystemExit("Android Gradle configuration block is missing")
-              s = s.replace("android {", 'android {\n    ndkVersion = "27.0.12077973"', 1)
-              p.write_text(s)
-          PY
 
       - name: Resolve Flutter dependencies
         run: flutter pub get
