@@ -6,17 +6,7 @@ on:
       - Silsila Mobile App Validation
     types:
       - completed
-    branches: [main, 'feature/**']
-  pull_request:
     branches: [main]
-    paths:
-      - "lib/**"
-      - "android/**"
-      - "pubspec.yaml"
-      - "pubspec.lock"
-      - "assets/**"
-      - "supabase/**"
-      - ".github/workflows/**"
   push:
     branches: ['feature/**']
     paths:
