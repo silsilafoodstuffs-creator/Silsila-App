@@ -231,8 +231,6 @@ class SilsilaTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: purple,
           foregroundColor: Colors.white,
-          shadowColor: Color(0x44FF27C3),
-          elevation: 2,
           disabledBackgroundColor: const Color(0xFFE3DCEB),
           disabledForegroundColor: silsilaMuted,
           elevation: 3,
