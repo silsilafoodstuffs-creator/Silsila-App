@@ -16,6 +16,7 @@ class SilsilaTheme {
       brightness: Brightness.light,
       primary: purple,
       secondary: orange,
+      tertiary: pink,
       surface: Colors.white,
       error: const Color(0xFFB3261E),
     );
@@ -46,8 +47,9 @@ class SilsilaTheme {
         backgroundColor: purple,
         foregroundColor: Colors.white,
         centerTitle: false,
-        elevation: 0,
-        scrolledUnderElevation: 1,
+        elevation: 2,
+        shadowColor: Color(0x33FF27C3),
+        scrolledUnderElevation: 3,
         iconTheme: IconThemeData(
           color: Colors.white,
           size: 24,
@@ -209,7 +211,8 @@ class SilsilaTheme {
       // Cards
       cardTheme: CardThemeData(
         color: Colors.white,
-        elevation: 1,
+        elevation: 3,
+        shadowColor: Color(0x2EFF27C3),
         margin: const EdgeInsets.symmetric(
           horizontal: 0,
           vertical: 6,
@@ -228,9 +231,12 @@ class SilsilaTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: purple,
           foregroundColor: Colors.white,
+          shadowColor: Color(0x44FF27C3),
+          elevation: 2,
           disabledBackgroundColor: const Color(0xFFE3DCEB),
           disabledForegroundColor: silsilaMuted,
-          elevation: 0,
+          elevation: 3,
+          shadowColor: Color(0x55FF27C3),
           minimumSize: const Size(0, 48),
           padding: const EdgeInsets.symmetric(
             horizontal: 22,
