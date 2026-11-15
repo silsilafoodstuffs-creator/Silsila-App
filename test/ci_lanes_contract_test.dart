@@ -22,6 +22,8 @@ void main() {
     expect(deploy, contains('Silsila Web App Validation'));
     expect(deploy, contains('actions/deploy-pages@v4'));
     expect(deploy, contains('concurrency:'));
+    expect(deploy, contains('group: silsila-pages-main'));
+    expect(deploy, contains('cancel-in-progress: false'));
     expect(preview, contains('name: Silsila Web Preview Validation'));
     expect(preview, contains('tools/web_view_test.mjs'));
     expect(preview, contains('Run real desktop + mobile WebView smoke tests'));
