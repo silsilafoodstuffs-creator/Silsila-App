@@ -508,7 +508,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
                                   icon: const Icon(Icons.store),
                                   label: Text('الفروع (${_selectedBranches.length})'),
                                 ),
-                                OutlinedButton.icon(onPressed:_pickGeographicTargets,icon:const Icon(Icons.account_tree_outlined),label:Text('الاستهداف الجغرافي (${_governorates.length+_centers.length+_districts.length+_areas.length})')),
+                                OutlinedButton.icon(onPressed:_pickGeographicTargets,icon:const Icon(Icons.account_tree_outlined),label:Text('المحافظات والمراكز والأحياء والمناطق/القرى (${_governorates.length+_centers.length+_districts.length+_areas.length})')),
                                 OutlinedButton.icon(
                                   onPressed: () => _pickMulti(title: 'تصنيفات العملاء', options: _distinctOptions('customer_type'), idKey: 'id', labelKey: 'name', selected: _customerTypes),
                                   icon: const Icon(Icons.category),
