@@ -7992,17 +7992,37 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         if (page.length < pageSize) break;
         offset += pageSize;
       }
+      final categoryMaps = categoryRows.whereType<Map>().map((raw) {
+        final row = Map<String,dynamic>.from(raw);
+        row['name'] = row['category_name'];
+        return row;
+      }).toList();
+      final categoriesById = <String,Map<String,dynamic>>{
+        for (final row in categoryMaps) (row['id'] ?? '').toString(): row,
+      };
+      final visibleProducts = products.where((product) =>
+        categoriesById.containsKey((product['category_id'] ?? '').toString())).toList();
+      final retainedCategoryIds = <String>{};
+      for (final product in visibleProducts) {
+        Map<String,dynamic>? current = categoriesById[(product['category_id'] ?? '').toString()];
+        final visited = <String>{};
+        while (current != null) {
+          final currentId = (current['id'] ?? '').toString();
+          if (!visited.add(currentId)) break;
+          retainedCategoryIds.add(currentId);
+          final parentId = (current['parent_id'] ?? '').toString();
+          current = parentId.isEmpty || parentId == 'null' ? null : categoriesById[parentId];
+        }
+      }
+      final visibleCategories = categoryMaps.where((row) =>
+        retainedCategoryIds.contains((row['id'] ?? '').toString())).toList();
       if (!mounted) return;
       setState(() {
-        _marketCategories
-          ..clear()
-          ..addAll(categoryRows.whereType<Map>().map((raw) {
-            final row = Map<String,dynamic>.from(raw);
-            row['name'] = row['category_name'];
-            return row;
-          }));
-        _marketProducts..clear()..addAll(products);
-        _marketCatalogError = null;
+        _marketCategories..clear()..addAll(visibleCategories);
+        _marketProducts..clear()..addAll(visibleProducts);
+        _marketCatalogError = visibleProducts.isEmpty && widget.availableProducts.isEmpty
+          ? 'لا توجد أصناف نشطة ومفعّل لها «إظهار في التطبيق» في كتالوج الشركة الحالي.'
+          : null;
       });
     } catch (_) {
       if (!mounted) return;
