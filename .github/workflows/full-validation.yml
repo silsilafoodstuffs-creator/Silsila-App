@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   # Isolate each branch so an unrelated feature-branch run cannot cancel main validation.
-  group: silsila-full-validation-manual-${{ github.ref }}
+  group: silsila-full-validation-manual-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
