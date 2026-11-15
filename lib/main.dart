@@ -7789,7 +7789,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         try {
           final member = await client.from('erp_company_members')
               .select('company_id').eq('user_id', userId).eq('is_active', true)
-              .order('created_at').limit(1).maybeSingle();
+              .limit(1).maybeSingle();
           companyId = member?['company_id']?.toString();
         } catch (_) {}
         if (companyId == null || companyId.isEmpty) {
