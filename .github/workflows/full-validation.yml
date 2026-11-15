@@ -8,6 +8,7 @@ on:
       - main
       - feature/ticker-ads-15-slots
       - feature/unlimited-brand-circular-ads-final
+      - fix/trader-market-and-offers-selection
     paths:
       - "lib/**"
       - "test/**"
