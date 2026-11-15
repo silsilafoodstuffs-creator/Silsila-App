@@ -14,6 +14,12 @@ void main() {
   test('Trader Market uses the ERP UUID catalog and the complete owner header', () {
     expect(mainSource, contains("from('erp_item_categories')"));
     expect(mainSource, contains("from('erp_items')"));
+    expect(mainSource, contains("from('erp_item_units')"));
+    expect(mainSource, contains('_marketUnitOptions'));
+    expect(mainSource, contains("'small_unit_price':smallUnitPrice"));
+    expect(mainSource, contains('FavoriteService().setProductFavorite'));
+    expect(mainSource, contains('OfferService().getActiveProductOfferPrices'));
+    expect(mainSource, contains('عرض خاص'));
     expect(mainSource, contains('final Set<String> _expandedCategoryIds'));
     expect(mainSource, contains('_marketCategoryParentId'));
     expect(mainSource, contains('_marketDescendantProducts'));
