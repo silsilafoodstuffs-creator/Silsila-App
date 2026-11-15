@@ -88,7 +88,7 @@ jobs:
           npm install --no-save --no-package-lock playwright source-map
           npx playwright install chromium
 
-      - name: Serve the exact Web build as a local preview
+      - name: Run real desktop + mobile WebView smoke tests
         shell: bash
         run: |
           set -euo pipefail
@@ -97,16 +97,14 @@ jobs:
           cp -a build/web/. /tmp/silsila-web/Silsila-App/
           python3 -m http.server 8765 --directory /tmp/silsila-web >/tmp/silsila-web-server.log 2>&1 &
           SERVER_PID=$!
-          echo "$SERVER_PID" > /tmp/silsila-web-server.pid
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 30); do
             if curl --silent --fail http://127.0.0.1:8765/Silsila-App/ >/dev/null; then
               echo "Local Web Preview is responding."
+              node tools/web_view_test.mjs http://127.0.0.1:8765/Silsila-App/
               exit 0
             fi
             sleep 1
           done
           cat /tmp/silsila-web-server.log
           exit 1
-
-      - name: Run real desktop + mobile WebView smoke tests
-        run: node tools/web_view_test.mjs http://127.0.0.1:8765/Silsila-App/
