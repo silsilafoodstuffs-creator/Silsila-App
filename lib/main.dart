@@ -8293,6 +8293,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     final selectedFactor=_productUnitFactors[key]??_marketNumber(units.first['conversion_factor'],1);
     final selectedUnit=_productUnits[key]??(units.first['unit_name']??product['unit']??'وحدة').toString();
     final displayPrice=selectedBasePrice*selectedFactor;
+    final enteredUnitPrice=double.tryParse(_productPrices[key]?.text.trim()??'')??displayPrice;
     final weight=_marketNumber(product['weight_kg']);
     final reorderLevel=_marketNumber(product['reorder_level']);
     final innerCount=_marketNumber(units.firstWhere(
@@ -8357,9 +8358,9 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
               IconButton(visualDensity:VisualDensity.compact,constraints:const BoxConstraints(minWidth:30,minHeight:30),padding:EdgeInsets.zero,onPressed:()=>setState(()=>_adjustMarketQuantity(key,1)),icon:const Icon(Icons.add_circle_outline,size:19)),
             ]),
           ])),
-          SizedBox(width:135,child:TextField(controller:_productPrices[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'سعر الوحدة المحددة',isDense:true,border:OutlineInputBorder()))),
+          SizedBox(width:135,child:TextField(controller:_productPrices[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>setState((){}),decoration:const InputDecoration(labelText:'سعر الوحدة المحددة',isDense:true,border:OutlineInputBorder()))),
         ]),
-        Text('عدد الوحدات الداخلية: ${innerCount.toStringAsFixed(innerCount==innerCount.roundToDouble()?0:2)} • السعر المحسوب للوحدة الصغرى: ${(displayPrice/selectedFactor).toStringAsFixed(2)} ج.م',style:const TextStyle(fontSize:10,color:Colors.black54)),
+        Text('عدد الوحدات الداخلية: ${innerCount.toStringAsFixed(innerCount==innerCount.roundToDouble()?0:2)} • السعر المحسوب للوحدة الصغرى: ${(enteredUnitPrice/selectedFactor).toStringAsFixed(2)} ج.م',style:const TextStyle(fontSize:10,color:Colors.black54)),
         Wrap(spacing:8,runSpacing:4,children:[
           FilterChip(label:const Text('قابل للتفاوض'),selected:_productNegotiable[key]==true,onSelected:(value)=>setState(()=>_productNegotiable[key]=value)),
           FilterChip(label:const Text('صلاحية جيدة'),selected:(_productQuality[key]??'good')=='good',onSelected:(value)=>setState(()=>_productQuality[key]=value?'good':'near_expiry')),
