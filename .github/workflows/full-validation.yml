@@ -1,7 +1,6 @@
 name: Silsila Full Validation - All Recent Changes
 
-# Run the complete validation manually at planned milestones and whenever
-# application code affecting the shipped app changes on main.
+# Run this broad, slower audit manually. Routine checks are handled by the three independent lanes.
 on:
   workflow_dispatch:
 
