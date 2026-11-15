@@ -70,6 +70,29 @@ class ErpStudioRepository {
     return (rows as List).map((e) => Map<String, dynamic>.from(e as Map)).toList(growable: false);
   }
 
+  /// Lists every published design, filtering on the server before paging.
+  /// Filtering after [listDesigns]' 200-row limit could hide older published
+  /// designs whenever a company has more than 200 recent drafts.
+  Future<List<Map<String, dynamic>>> listPublishedDesigns(String companyId) async {
+    _requireCompany(companyId);
+    const pageSize = 200;
+    final result = <Map<String, dynamic>>[];
+    for (var offset = 0;; offset += pageSize) {
+      final rows = await _client.from('erp_studio_designs')
+          .select('id,design_key,name,design_kind,status,schema_version,revision,published_revision,updated_at')
+          .eq('company_id', companyId)
+          .gt('published_revision', 0)
+          .order('updated_at', ascending: false)
+          .range(offset, offset + pageSize - 1);
+      final page = (rows as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList(growable: false);
+      result.addAll(page);
+      if (page.length < pageSize) break;
+    }
+    return result;
+  }
+
   Future<Map<String, dynamic>> getDesign({
     required String companyId,
     required String designId,
