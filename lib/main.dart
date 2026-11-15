@@ -7660,8 +7660,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
       var publicOffset = 0;
       while (true) {
         final page = await client.from('products')
-            .select('id,name,category_id,unit,price,brand,image_url,is_available')
-            .eq('is_available', true).eq('activity_type', 'مواد غذائية')
+            .select('id,name,category_id,unit,price,brand,image_url,is_active,is_available')
+            .eq('is_active', true).eq('is_available', true).eq('activity_type', 'مواد غذائية')
             .order('name').range(publicOffset, publicOffset + 499);
         publicProducts.addAll(page.whereType<Map>().map((e) => Map<String, dynamic>.from(e)));
         if (page.length < 500) break;
