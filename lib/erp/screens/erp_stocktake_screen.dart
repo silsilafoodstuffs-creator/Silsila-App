@@ -7,11 +7,13 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_screen_frame.dart';
 
 class ErpStocktakeScreen extends StatefulWidget {
-  const ErpStocktakeScreen({super.key, required this.companyId, this.title = 'الجرد الفعلي للمخازن'});
+  const ErpStocktakeScreen({super.key, required this.companyId, this.title = 'الجرد الفعلي للمخازن', this.layoutScreenKey});
   final String companyId;
   final String title;
+  final String? layoutScreenKey;
   @override
   State<ErpStocktakeScreen> createState() => _ErpStocktakeScreenState();
 }
@@ -288,11 +290,15 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
   @override Widget build(BuildContext context){
     final doc=docs.where((d)=>s(d['id'])==docId);final current=doc.isEmpty?null:doc.first;
     final targets=targetType=='employee'?employees:expenses;
-    return Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      Card(color:const Color(0xFF3E007D),child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-        Text(widget.title,style:const TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),
-        const Text('لقطة أرصدة، إدخال الكميات الفعلية، مراجعة الفروقات ثم الترحيل.',style:TextStyle(color:Colors.white70)),
-        const SizedBox(height:8),SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: ErpScreenFrame(
+        title: widget.title,
+        profileKey: widget.layoutScreenKey,
+        applyContentWidth: false,
+        subtitle: 'لقطة أرصدة، إدخال الكميات الفعلية، مراجعة الفروقات ثم الترحيل.',
+        icon: Icons.fact_check_outlined,
+        actions: [
           ErpQuickTaskButton(label:'تحديث',icon:Icons.refresh,onPressed:loading?null:load),
           ErpQuickTaskButton(label:'إضافة',icon:Icons.add,onPressed:saving||(_manualSettlementScreen&&(sourceMode!='manual'||docId!=null))?null:createDoc),
           ErpQuickTaskButton(label:'حفظ',icon:Icons.save,onPressed:saving||!isDraft?null:saveDraft),
@@ -302,8 +308,9 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
           ErpQuickTaskButton(label:'طباعة',icon:Icons.print,onPressed:()=>exportPdf(share:false)),
           ErpQuickTaskButton(label:'Excel',icon:Icons.file_download,onPressed:exportExcel),
           ErpQuickTaskButton(label:'PDF',icon:Icons.picture_as_pdf,onPressed:()=>exportPdf(share:true)),
-        ])),
-      ]))),
+        ],
+        padding: const EdgeInsets.all(8),
+        child: Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       if(loading||saving)const LinearProgressIndicator(),
       if(error!=null)notice(error!,Colors.red),if(message!=null)notice(message!,Colors.green),
       Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -377,7 +384,9 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
           ]);
         }))))),
       ]else const Expanded(child:Center(child:Text('اختر محضراً أو أنشئ محضراً جديداً لعرض التفاصيل.'))),
-    ]));
+        ]),
+      ),
+    );
   }
 
   Widget notice(String t,Color c)=>Container(margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(9),decoration:BoxDecoration(color:c.withValues(alpha:.09),borderRadius:BorderRadius.circular(9)),child:Text(t,style:TextStyle(color:c)));
