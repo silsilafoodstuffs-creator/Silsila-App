@@ -25,20 +25,29 @@ Silsila Studio is the single integrated design workspace in ERP navigation under
 - Safe read-only data binding for explicitly allow-listed company-scoped sources: items, brands, item categories, warehouses, sales documents, purchase documents, and stock balances. The app filters demo documents where the source exposes an `is_demo_data` flag and applies the active company ID plus Supabase RLS.
 - Repository workflows: list/open designs, read revision history, save drafts, restore prior revisions, approve, publish, and read bound data for preview.
 - Company-scoped Supabase persistence for design documents, immutable revisions, audit events, and layout profiles. RLS is enabled on all four tables.
-- Studio mutation RPCs use `SECURITY INVOKER`; Supabase Security Advisor reports no Studio-specific security findings.
+- Existing Studio mutation RPCs and policies retain their currently deployed behavior. The new action-level authorization migration is committed as source but is not active on the live database until separately reviewed and applied; no fresh Security Advisor result is claimed for the consolidated candidate.
 - Postgres validation triggers enforce supported schema versions, node limits, unique IDs, allow-listed component types, and allowed data-source fields for designs and revisions.
 - Offline draft cache tracks pending changes and provides batch, optimistic-revision synchronization to Supabase.
 - Layout profiles are cached locally, queued while offline, and synchronized per company. Global color/density tokens, main navigation visibility, and configurable scrollbar side/visibility are applied through the dashboard runtime. The shared outer `ErpScreenFrame` applies configurable group-tab placement across all ERP routes without duplicating dedicated screen titles. Workspace pages also pass individual task buttons into the frame, so task placement controls affect the real buttons there. The frame exposes optional date/image/sidebar slots and content-width control. The layout editor receives its target list from the complete ERP navigation tree rather than a short hard-coded list. Generic workspace data renders as table, tree, grid cards, or split list/details.
 
 
 
-## Current layout integration work — PR 28
+## Consolidated Studio integration — 2026-11-15
 
-- Branch: `feature/silsila-studio-layout-controls`.
-- Pull request: https://github.com/silsilafoodstuffs-creator/Silsila-App/pull/28 (open draft; do not merge before validation).
-- Current work adds the full ERP menu catalog to the screen selector, live tab/task positioning (including vertical RTL side rails), actual workspace table/tree/grid/split modes, global group-tab placement, main sidebar visibility, and configurable dashboard scrollbar orientation/visibility.
-- Widget tests cover frame positioning, RTL side placement, optional date/image/sidebar slots, Studio preview controls, and selecting a screen from the supplied ERP route catalog.
-- GitHub Actions results for the current head have not yet been confirmed; no CI pass is claimed.
+- The consolidated candidate is maintained on `feature/silsila-studio-unified`, based directly on the current `main` snapshot `dda3e808c7d899c2dc7cf66f5b84f2d9d2a73782`.
+- It consolidates the Studio workspace foundation with the specialized ERP screen adapters, nested layer groups, bounded embedded images, layout-profile retry behavior, and regression tests from the earlier Studio workstreams.
+- It also carries the latest metadata-validation and action-permission migration sources, the published-design viewer's server-side filtered pagination, and stable ordering for paged design/revision lists.
+- The full-validation workflow includes this consolidated branch so the exact candidate can be analyzed, tested, built for Web and Android, and exercised through desktop/mobile browser smoke checks.
+- Earlier PRs #25 and #28 remain open drafts and have not been merged. This branch is the consolidated review candidate; no existing PR was merged or closed by this work.
+- The consolidation is source-code-only. No Supabase migration was applied to the live project, no production deployment was made, and no PR was merged.
+
+## Current verification state
+
+- The consolidated branch was created from current `main` and is not behind that base snapshot.
+- The first consolidation commit contains the Studio adapters, migration sources, tests, and workflow trigger. Follow-up commits stabilize pagination ordering and update this status document.
+- A passing CI run on the consolidated HEAD is still required. Earlier successful runs belong to older commits and must not be treated as validation of this branch.
+- A real authenticated owner/admin and permission-limited member end-to-end test is still required for save, restore, approve, publish, and access isolation after the migration is applied to an approved non-production or production target.
+- The live database permission behavior remains unchanged until the migration is separately reviewed and explicitly approved for application.
 
 ## Known functional boundaries — do not treat these as complete
 
@@ -57,7 +66,7 @@ Silsila Studio is the single integrated design workspace in ERP navigation under
 - Imported JSON is presentation data only. No imported Dart, JavaScript, SQL, arbitrary callback, or executable expression is accepted.
 - Database-side validation independently enforces the supported node types and the source/field allow-list.
 - Data-source table names and column names come from a fixed registry; callers cannot supply arbitrary identifiers.
-- Company isolation and write permissions are enforced by RLS and owner/admin role policies. Anonymous access is revoked.
+- Company isolation is intended to be enforced by RLS and company-scoped RPC checks. The new fine-grained action-permission policies are present in migration source but are not active in production until the separately authorized migration is applied. Anonymous access remains revoked by the existing baseline migration.
 - Published custom designs render read-only in the published-design viewer. Business mutations must continue through the ERP's existing validated business workflows.
 
 
