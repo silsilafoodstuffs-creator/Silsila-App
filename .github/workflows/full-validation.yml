@@ -8,6 +8,7 @@ on:
       - main
       - feature/ticker-ads-15-slots
       - feature/unlimited-brand-circular-ads-final
+      - feature/silsila-studio-unified
     paths:
       - "lib/**"
       - "test/**"

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../services/erp_studio_draft_store.dart';
 import '../services/erp_studio_repository.dart';
@@ -15,8 +16,9 @@ const _studioOrange = Color(0xFFFFA015);
 const _studioCanvas = Color(0xFFFAF8FC);
 
 class SilsilaStudioScreen extends StatefulWidget {
-  const SilsilaStudioScreen({super.key, this.companyId});
+  const SilsilaStudioScreen({super.key, this.companyId, this.availableScreens = const <String>[]});
   final String? companyId;
+  final List<String> availableScreens;
 
   @override
   State<SilsilaStudioScreen> createState() => _SilsilaStudioScreenState();
@@ -218,49 +220,88 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   void _duplicateSelected() {
-    final selected = _doc.nodes.where((n) => _selectedIds.contains(n.id) && !n.locked).toList();
-    if (selected.isEmpty) return;
-    final copies = selected.map((node) => StudioNode(
-      id: '${node.type}_${DateTime.now().microsecondsSinceEpoch}_${selected.indexOf(node)}',
+    final ids = _doc.nodes.where((node) => _selectedIds.contains(node.id) && !node.locked).map((node) => node.id).toSet();
+    if (ids.isEmpty) return;
+    var expanded = true;
+    while (expanded) {
+      expanded = false;
+      for (final node in _doc.nodes) {
+        if (node.parentId != null && ids.contains(node.parentId) && ids.add(node.id)) expanded = true;
+      }
+    }
+    final originals = _doc.nodes.where((node) => ids.contains(node.id)).toList();
+    final stamp = DateTime.now().microsecondsSinceEpoch;
+    final idMap = <String, String>{for (var i = 0; i < originals.length; i++) originals[i].id: '${originals[i].type}_${stamp}_$i'};
+    final groupMap = <String, String>{};
+    for (final node in originals) {
+      if (node.groupId != null) groupMap.putIfAbsent(node.groupId!, () => 'group_${stamp}_${groupMap.length}');
+    }
+    final copies = originals.map((node) => StudioNode(
+      id: idMap[node.id]!,
       type: node.type,
       props: Map<String, dynamic>.from(node.props),
+      parentId: node.parentId == null ? null : idMap[node.parentId] ?? node.parentId,
+      groupId: node.groupId == null ? null : groupMap[node.groupId],
       hidden: node.hidden,
       locked: false,
     )).toList();
     _change(_doc.copyWith(nodes: [..._doc.nodes, ...copies]));
-    setState(() {
-      _selectedIds
-        ..clear()
-        ..addAll(copies.map((e) => e.id));
-    });
+    setState(() { _selectedIds..clear()..addAll(copies.map((node) => node.id)); });
   }
 
   void _deleteSelected() {
-    final removable = _doc.nodes.where((n) => _selectedIds.contains(n.id) && !n.locked).toList();
-    if (removable.isEmpty) {
-      _notice('لا توجد مكونات محددة قابلة للحذف.');
+    final removable = _doc.nodes.where((node) => _selectedIds.contains(node.id) && !node.locked).toList();
+    if (removable.isEmpty) { _notice('لا توجد مكونات محددة قابلة للحذف.'); return; }
+    final ids = removable.map((node) => node.id).toSet();
+    var expanded = true;
+    while (expanded) {
+      expanded = false;
+      for (final node in _doc.nodes) {
+        if (node.parentId != null && ids.contains(node.parentId) && ids.add(node.id)) expanded = true;
+      }
+    }
+    if (_doc.nodes.any((node) => ids.contains(node.id) && node.locked)) {
+      _notice('لا يمكن حذف المجموعة لأنها تحتوي على مكون مقفل. أزل القفل عن المكون أولاً.');
       return;
     }
-    final ids = removable.map((e) => e.id).toSet();
-    _change(_doc.copyWith(nodes: _doc.nodes.where((e) => !ids.contains(e.id)).toList()));
+    _change(_doc.copyWith(nodes: _doc.nodes.where((node) => !ids.contains(node.id)).toList()));
     setState(() => _selectedIds.clear());
   }
 
   void _groupSelected() {
-    if (_selectedIds.length < 2) {
-      _notice('حدد مكونين على الأقل لإنشاء مجموعة.');
-      return;
-    }
-    final groupId = 'group_${DateTime.now().microsecondsSinceEpoch}';
-    _change(_doc.copyWith(nodes: _doc.nodes.map((node) =>
-      _selectedIds.contains(node.id) && !node.locked ? node.copyWith(groupId: groupId) : node).toList()));
-    _notice('تم تجميع العناصر المحددة.');
+    final selected = _doc.nodes.where((node) => _selectedIds.contains(node.id) && !node.locked).toList();
+    if (selected.length < 2) { _notice('حدد مكونين على الأقل لإنشاء مجموعة.'); return; }
+    final groupId = 'group_' + DateTime.now().microsecondsSinceEpoch.toString();
+    final firstIndex = _doc.nodes.indexWhere((node) => _selectedIds.contains(node.id));
+    final selectedIds = selected.map((node) => node.id).toSet();
+    final remaining = _doc.nodes.where((node) => !selectedIds.contains(node.id)).toList();
+    final insertion = firstIndex.clamp(0, remaining.length).toInt();
+    final group = StudioNode(id: groupId, type: 'container', props: {'label': 'مجموعة عناصر', 'padding': 8});
+    remaining.insert(insertion, group);
+    final children = selected.map((node) => node.copyWith(clearGroup: true, parentId: groupId)).toList();
+    remaining.insertAll(insertion + 1, children);
+    _change(_doc.copyWith(nodes: remaining));
+    setState(() { _selectedIds..clear()..add(groupId); });
+    _notice('تم إنشاء حاوية مجموعة؛ ويمكن إنشاء مجموعات متداخلة داخلها.');
   }
 
   void _ungroupSelected() {
     if (_selectedIds.isEmpty) return;
-    _change(_doc.copyWith(nodes: _doc.nodes.map((node) =>
-      _selectedIds.contains(node.id) && !node.locked ? node.copyWith(clearGroup: true) : node).toList()));
+    final selectedGroups = _doc.nodes
+        .where((node) => _selectedIds.contains(node.id) && node.type == 'container' && !node.locked)
+        .map((node) => node.id).toSet();
+    final next = <StudioNode>[];
+    for (final node in _doc.nodes) {
+      if (selectedGroups.contains(node.id)) continue;
+      if (node.parentId != null && selectedGroups.contains(node.parentId)) {
+        next.add(node.copyWith(clearParent: true));
+      } else if (_selectedIds.contains(node.id) && !node.locked) {
+        next.add(node.copyWith(clearParent: true, clearGroup: true));
+      } else {
+        next.add(node);
+      }
+    }
+    _change(_doc.copyWith(nodes: next));
   }
 
   void _finishResize(StudioNode node) {
@@ -788,7 +829,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
           if (_activeTab == 0) _overviewPanel(),
           if (_activeTab >= 1 && _activeTab <= 4) _designerPanel(wide),
           if (_activeTab == 5) _dataBindingPanel(),
-          if (_activeTab == 6) Expanded(child: ErpScreenLayoutStudioScreen(companyId: widget.companyId)),
+          if (_activeTab == 6) Expanded(child: ErpScreenLayoutStudioScreen(companyId: widget.companyId, availableScreens: widget.availableScreens)),
           if (_activeTab == 7) _testPanel(),
           if (_activeTab == 8) _versionsPanel(),
           if (_activeTab == 9) _approvalPanel(),
@@ -961,6 +1002,18 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     );
   }
 
+  int _nodeDepth(StudioNode node) {
+    final byId = <String, StudioNode>{for (final item in _doc.nodes) item.id: item};
+    final visited = <String>{};
+    var parentId = node.parentId;
+    var depth = 0;
+    while (parentId != null && visited.add(parentId)) {
+      depth++;
+      parentId = byId[parentId]?.parentId;
+    }
+    return depth;
+  }
+
   Widget _canvas() => Container(
     margin: const EdgeInsets.all(8),
     decoration: BoxDecoration(
@@ -1003,6 +1056,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
               ),
               child: ListTile(
                 dense: true,
+                contentPadding: EdgeInsetsDirectional.only(start: 8 + (_nodeDepth(node) * 18), end: 8),
                 leading: Row(mainAxisSize: MainAxisSize.min, children: [
                   Checkbox(
                     value: _selectedIds.contains(node.id),
@@ -1061,6 +1115,23 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     ]),
   );
 
+  Future<void> _pickImageForNode(StudioNode node) async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: false, withData: true);
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.single;
+    final bytes = file.bytes;
+    if (bytes == null || bytes.isEmpty) { _notice('تعذر قراءة الصورة المختارة.', error: true); return; }
+    if (bytes.length > 512 * 1024) { _notice('حجم صورة التصميم يجب ألا يتجاوز 512 كيلوبايت.', error: true); return; }
+    final extension = (file.extension ?? '').toLowerCase();
+    const mimeTypes = <String, String>{'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','gif':'image/gif'};
+    final mime = mimeTypes[extension];
+    if (mime == null) { _notice('الصيغ المدعومة: JPG وPNG وWEBP وGIF.', error: true); return; }
+    final props = Map<String, dynamic>.from(node.props)
+      ..['url'] = 'data:$mime;base64,' + base64Encode(bytes)
+      ..['alt'] = file.name;
+    _updateNode(node, props: props);
+    _notice('تم إدراج الصورة في التصميم. احفظ التصميم لمزامنة الصورة معه.');
+  }
   Widget _properties() {
     final node = _selected;
     if (node == null) {
@@ -1105,6 +1176,15 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
                 }
                 _updateNode(node, props: props);
               },
+            ),
+          ),
+        if (node.type == 'image')
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: OutlinedButton.icon(
+              onPressed: _busy ? null : () => _pickImageForNode(node),
+              icon: const Icon(Icons.add_photo_alternate_outlined),
+              label: const Text('رفع صورة من الجهاز'),
             ),
           ),
         const SizedBox(height: 10),

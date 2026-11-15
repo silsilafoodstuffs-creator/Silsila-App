@@ -74,6 +74,21 @@ class StudioDocument {
       return StudioNode.fromJson(Map<String, dynamic>.from(e));
     }).toList();
     final ids = parsedNodes.map((e) => e.id).toSet();
+    final nodesById = <String, StudioNode>{for (final node in parsedNodes) node.id: node};
+    for (final node in parsedNodes) {
+      final visitedParents = <String>{node.id};
+      var parentId = node.parentId;
+      while (parentId != null) {
+        final parent = nodesById[parentId];
+        if (parent == null || parent.type != 'container') {
+          throw FormatException('الحاوية الأب للعنصر ${node.id} غير موجودة أو ليست حاوية.');
+        }
+        if (!visitedParents.add(parentId)) {
+          throw FormatException('يوجد تداخل دائري في طبقات التصميم عند ${node.id}.');
+        }
+        parentId = parent.parentId;
+      }
+    }
     if (ids.length != parsedNodes.length) {
       throw const FormatException('معرّفات المكونات يجب أن تكون فريدة.');
     }
@@ -193,7 +208,18 @@ class StudioNode {
     if (group != null && (group is! String || group.length > 100)) {
       throw const FormatException('مرجع المجموعة غير صالح.');
     }
-    _validateJsonValue(props);
+    final safeProps = Map<String, dynamic>.from(props);
+    final imageSource = safeProps['url'];
+    final embeddedImage = type == 'image' && imageSource is String && imageSource.startsWith('data:image/') && imageSource.contains(';base64,');
+    if (embeddedImage) {
+      if ((imageSource as String).length > 700000) {
+        throw const FormatException('حجم الصورة المضمنة أكبر من الحد المسموح.');
+      }
+      safeProps.remove('url');
+      _validateJsonValue(safeProps);
+    } else {
+      _validateJsonValue(safeProps);
+    }
     return StudioNode(
       id: id,
       type: type,
@@ -212,12 +238,13 @@ class StudioNode {
     bool? hidden,
     bool? locked,
     bool clearGroup = false,
+    bool clearParent = false,
   }) =>
       StudioNode(
         id: id,
         type: type,
         props: props ?? this.props,
-        parentId: parentId ?? this.parentId,
+        parentId: clearParent ? null : parentId ?? this.parentId,
         groupId: clearGroup ? null : groupId ?? this.groupId,
         hidden: hidden ?? this.hidden,
         locked: locked ?? this.locked,

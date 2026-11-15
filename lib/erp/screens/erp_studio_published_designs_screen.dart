@@ -40,8 +40,7 @@ class _ErpStudioPublishedDesignsScreenState extends State<ErpStudioPublishedDesi
       _error = null;
     });
     try {
-      final rows = await _repository.listDesigns(company);
-      final published = rows.where((row) => row['status'] == 'published').toList();
+      final published = await _repository.listPublishedDesigns(company);
       if (mounted) setState(() => _designs = published);
     } catch (error) {
       if (mounted) setState(() => _error = 'تعذر تحميل التصميمات المنشورة: $error');
@@ -55,9 +54,21 @@ class _ErpStudioPublishedDesignsScreenState extends State<ErpStudioPublishedDesi
     if (company == null) return;
     try {
       final id = row['id'].toString();
-      final remote = await _repository.getDesign(companyId: company, designId: id);
-      final raw = remote['design_json'];
-      if (raw is! Map) throw const FormatException('مخطط التصميم المنشور غير صالح.');
+      final remote = await _repository.getPublishedDesignMetadata(companyId: company, designId: id);
+      final publishedRevision = (remote['published_revision'] as num?)?.toInt();
+      if (publishedRevision == null || publishedRevision < 1) {
+        throw StateError('هذا التصميم لا يحتوي على إصدار منشور صالح.');
+      }
+
+      // Always render the immutable snapshot that was actually published.
+      // The design row may already contain a newer, unpublished draft revision.
+      final published = await _repository.getVersion(
+        companyId: company,
+        designId: id,
+        revision: publishedRevision,
+      );
+      final raw = published['design_json'];
+      if (raw is! Map) throw const FormatException('مخطط الإصدار المنشور غير صالح.');
       final document = StudioDocument.fromJson(Map<String, dynamic>.from(raw));
       final data = await _repository.previewBindings(companyId: company, document: document, limit: 50);
       if (!mounted) return;
@@ -65,7 +76,7 @@ class _ErpStudioPublishedDesignsScreenState extends State<ErpStudioPublishedDesi
         builder: (_) => _PublishedDesignPreview(
           document: document,
           dataBySource: data,
-          revision: (remote['published_revision'] as num?)?.toInt() ?? (remote['revision'] as num?)?.toInt() ?? 0,
+          revision: publishedRevision,
         ),
       ));
     } catch (error) {
@@ -101,7 +112,10 @@ class _ErpStudioPublishedDesignsScreenState extends State<ErpStudioPublishedDesi
                           child: ListTile(
                             leading: const Icon(Icons.web_asset_outlined, color: _publishedPurple),
                             title: Text((row['name'] ?? '').toString()),
-                            subtitle: Text('${row['design_kind']} • الإصدار المنشور ${row['published_revision'] ?? row['revision']}'),
+                            subtitle: Text(
+                              '${row['design_kind']} • الإصدار المنشور ${row['published_revision'] ?? row['revision']}'
+                              '${((row['revision'] as num?)?.toInt() ?? 0) > ((row['published_revision'] as num?)?.toInt() ?? 0) ? ' • توجد مسودة أحدث' : ''}',
+                            ),
                             trailing: const Icon(Icons.open_in_new),
                             onTap: () => _open(row),
                           ),
