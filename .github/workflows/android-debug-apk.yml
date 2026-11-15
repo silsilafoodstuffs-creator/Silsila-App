@@ -7,6 +7,16 @@ on:
     types:
       - completed
     branches: [main, 'feature/**']
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/**"
+      - "android/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "assets/**"
+      - "supabase/**"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:
@@ -19,7 +29,7 @@ concurrency:
 
 jobs:
   apk:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
