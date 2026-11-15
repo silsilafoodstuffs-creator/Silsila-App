@@ -31,6 +31,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   bool _gridEditing = false;
   String? _error;
   final Map<String, TextEditingController> _gridNameControllers = <String, TextEditingController>{};
+  final Map<String, TextEditingController> _gridEnglishControllers = <String, TextEditingController>{};
   String _viewMode = 'tree';
   final Set<String> _expandedGroups = <String>{};
 
@@ -48,6 +49,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   void dispose() {
     _search.dispose();
     for (final controller in _gridNameControllers.values) { controller.dispose(); }
+    for (final controller in _gridEnglishControllers.values) { controller.dispose(); }
     super.dispose();
   }
 
@@ -89,32 +91,46 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   void _syncGridNameControllers() {
     final keep = _rows.map((row) => _s(row['id'])).toSet();
     for (final id in _gridNameControllers.keys.where((id) => !keep.contains(id)).toList()) { _gridNameControllers.remove(id)?.dispose(); }
+    for (final id in _gridEnglishControllers.keys.where((id) => !keep.contains(id)).toList()) { _gridEnglishControllers.remove(id)?.dispose(); }
     for (final row in _rows) {
       final id = _s(row['id']);
-      final controller = _gridNameControllers.putIfAbsent(id, () => TextEditingController());
-      if (!_gridEditing) controller.text = _s(row['brand_name']);
+      final ar = _gridNameControllers.putIfAbsent(id, () => TextEditingController());
+      final en = _gridEnglishControllers.putIfAbsent(id, () => TextEditingController());
+      if (!_gridEditing) { ar.text = _s(row['brand_name']); en.text = _s(row['brand_name_en']); }
     }
   }
 
   Future<void> _saveGridNames({String? onlyId}) async {
     if (_saving) return;
-    final targets = _rows.where((row) => row['is_system'] != true && (onlyId == null || _s(row['id']) == onlyId) && _gridNameControllers.containsKey(_s(row['id'])) && _gridNameControllers[_s(row['id'])]!.text.trim() != _s(row['brand_name'])).toList();
+    final targets = _rows.where((row) {
+      final id = _s(row['id']);
+      if (row['is_system'] == true || (onlyId != null && id != onlyId)) return false;
+      final ar = _gridNameControllers[id]?.text.trim() ?? _s(row['brand_name']);
+      final en = _gridEnglishControllers[id]?.text.trim() ?? _s(row['brand_name_en']);
+      return ar != _s(row['brand_name']).trim() || en != _s(row['brand_name_en']).trim();
+    }).toList();
     if (targets.isEmpty) { if (mounted) ErpCenterToast.show(context, 'لا توجد أسماء تم تعديلها.'); return; }
-    final proposed = <String>{};
     for (final row in targets) {
-      final name = _gridNameControllers[_s(row['id'])]!.text.trim();
-      if (name.isEmpty) { ErpCenterToast.show(context, 'اسم البراند لا يمكن أن يكون فارغًا.', isError: true); return; }
-      final normalized = name.toLowerCase();
-      if (!proposed.add(normalized) || _rows.any((other) => _s(other['id']) != _s(row['id']) && _s(other['brand_name']).trim().toLowerCase() == normalized && !targets.any((target) => _s(target['id']) == _s(other['id'])))) { ErpCenterToast.show(context, 'اسم البراند مكرر داخل الشركة. اختر اسمًا مختلفًا.', isError: true); return; }
+      final id = _s(row['id']);
+      final ar = _gridNameControllers[id]!.text.trim();
+      final en = _gridEnglishControllers[id]!.text.trim();
+      if (ar.isEmpty) { ErpCenterToast.show(context, 'اسم البراند بالعربية لا يمكن أن يكون فارغًا.', isError: true); return; }
+      if (_rows.any((other) => _s(other['id']) != id && _s(other['brand_name']).trim().toLowerCase() == ar.toLowerCase())) { ErpCenterToast.show(context, 'اسم البراند العربي مستخدم بالفعل.', isError: true); return; }
+      if (en.isNotEmpty && _rows.any((other) => _s(other['id']) != id && _s(other['brand_name_en']).trim().toLowerCase() == en.toLowerCase())) { ErpCenterToast.show(context, 'اسم البراند الإنجليزي مستخدم بالفعل.', isError: true); return; }
     }
     setState(() { _saving = true; _error = null; });
     var saved = 0;
     try {
-      for (final row in targets) { final id = _s(row['id']); final name = _gridNameControllers[id]!.text.trim(); await _db.from('erp_brands').update({'brand_name': name}).eq('id', id).eq('company_id', widget.companyId.trim()).select('id').single(); saved++; }
+      for (final row in targets) {
+        final id = _s(row['id']);
+        final en = _gridEnglishControllers[id]!.text.trim();
+        await _db.from('erp_brands').update({'brand_name': _gridNameControllers[id]!.text.trim(), 'brand_name_en': en.isEmpty ? null : en}).eq('id', id).eq('company_id', widget.companyId.trim()).select('id').single();
+        saved++;
+      }
       await _load();
-      if (mounted) { setState(() => _gridEditing = false); ErpCenterToast.show(context, 'تم حفظ ' + saved.toString() + ' اسم براند بنجاح.'); }
+      if (mounted) { setState(() => _gridEditing = false); ErpCenterToast.show(context, 'تم حفظ أسماء $saved براند بنجاح.'); }
     } catch (error) {
-      if (mounted) { final raw = error.toString(); final friendly = raw.contains('erp_brands_company_name_ci_uq') || raw.contains('duplicate key') ? 'تعذر الحفظ: يوجد براند آخر بنفس الاسم. غيّر الاسم المكرر ثم أعد الحفظ.' : 'تعذر حفظ أسماء البراندات بعد حفظ ' + saved.toString() + ' من ' + targets.length.toString() + '. التفاصيل: ' + raw; ErpCenterToast.show(context, friendly, isError: true); }
+      if (mounted) ErpCenterToast.show(context, _friendlySaveError(error), isError: true);
       await _load();
     } finally { if (mounted) setState(() => _saving = false); }
   }
@@ -475,7 +491,2041 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
   List<Map<String,dynamic>> _rowsInGroup(String group) {
     return _visibleRows.where((row) => _groupKey(row) == group).toList()
-      ..sort((a,b) => _s(a['brand_code']).compareTo(_s(b['brand_code'])));
+      ..sort((a,b) => (int.tryParse(RegExp(r'([0-9]+)
+  }
+
+  Widget _logoPreview(Map<String,dynamic> row, {double size = 48}) {
+    final bytes = _logoBytes(row['logo_data']);
+    return Container(
+      width: size, height: size, alignment: Alignment.center,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: const Color(0xFFD8CBE7)),
+      ),
+      child: bytes != null && bytes.isNotEmpty
+        ? Image.memory(bytes, fit: BoxFit.contain, width: size, height: size,
+            errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.black38))
+        : const Icon(Icons.storefront_outlined, color: Color(0xFF9A86B5), size: 25),
+    );
+  }
+
+  Future<void> _removeLogo(Map<String,dynamic> row) async {
+    if (row['is_system'] == true) return;
+    setState(() => _saving = true);
+    try {
+      await _db.from('erp_brands').update({
+        'logo_data': null, 'logo_mime_type': null,
+      }).eq('id', _s(row['id']))
+        .eq('company_id', widget.companyId.trim()).select('id').single();
+      await _load();
+      if (mounted) ErpCenterToast.show(context, 'تم حذف شعار البراند.');
+    } catch (error) {
+      if (mounted) ErpCenterToast.show(context, 'تعذر حذف الشعار: $error', isError: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Widget _treeBrandRow(Map<String,dynamic> row) {
+    final id = _s(row['id']);
+    final selected = _selectedId == id;
+    final system = row['is_system'] == true;
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 18, bottom: 6),
+      child: Material(
+        color: selected ? const Color(0xFFF0E7FA) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => setState(() => _selectedId = id),
+          child: Container(
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 6, 8, 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: selected ? _brandPurple : _brandBorder),
+            ),
+            child: Row(children: [
+              const SizedBox(width: 34, child: Icon(Icons.subdirectory_arrow_left, color: _brandPurple, size: 18)),
+              SizedBox(width: 105, child: Text(_s(row['brand_code']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple, fontSize: 12))),
+              Expanded(flex: 3, child: Text(_s(row['brand_name']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700))),
+              Expanded(flex: 2, child: Text(_s(row['brand_name_en']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: Colors.black54))),
+              Checkbox(shape: const CircleBorder(), value: row['is_active'] == true,
+                activeColor: _brandPurple, visualDensity: VisualDensity.compact,
+                onChanged: system ? null : (_) => _toggle(row)),
+              const SizedBox(width: 6),
+              _logoPreview(row, size: 44),
+              IconButton(tooltip: 'اختيار/تغيير الشعار', visualDensity: VisualDensity.compact,
+                onPressed: _saving ? null : () => _uploadLogo(row),
+                icon: const Icon(Icons.photo_library_outlined, color: _brandPurple)),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _treeGroup(String group) {
+    final children = _rowsInGroup(group);
+    final expanded = _expandedGroups.contains(group);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEDE1F8),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _brandBorder),
+      ),
+      child: Column(children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => setState(() {
+            if (expanded) { _expandedGroups.remove(group); }
+            else { _expandedGroups.add(group); }
+          }),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(children: [
+              Icon(expanded ? Icons.keyboard_arrow_down : Icons.chevron_left, color: _brandPurple),
+              const Icon(Icons.folder_outlined, color: _brandPurple, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text(group == 'بدون مجموعة' ? 'براندات بدون مجموعة' : group,
+                style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
+              Text('${children.length} براند',
+                style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w700)),
+            ]),
+          ),
+        ),
+        if (expanded)
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 8),
+            child: Column(children: children.map(_treeBrandRow).toList()),
+          ),
+      ]),
+    );
+  }
+
+  Widget _treeHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      child: Row(children: [
+        const SizedBox(width: 34),
+        const SizedBox(width: 105, child: Text('كود البراند', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Expanded(flex: 3, child: Text('اسم البراند عربي', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Expanded(flex: 2, child: Text('الاسم الإنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Text('نشط', style: TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(width: 12),
+        const Text('الصورة', style: TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(width: 48),
+      ]),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _visibleRows.toList()..sort((a,b) => (int.tryParse(RegExp(r'([0-9]+)
+    final selected = _selectedRow();
+    final visibleGroups = rows.map(_groupKey).toSet().toList()
+      ..sort((a,b) {
+        if (a == 'بدون مجموعة') return 1;
+        if (b == 'بدون مجموعة') return -1;
+        return a.compareTo(b);
+      });
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: _brandCanvas,
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                ErpQuickTaskButton(label:'تحديث', icon:Icons.refresh_rounded, onPressed:_loading || _saving ? null : _load),
+                ErpQuickTaskButton(label:'عرض شجرة', icon:Icons.account_tree_outlined, onPressed:() => setState(() => _viewMode = 'tree')),
+                ErpQuickTaskButton(label:'عرض جدول', icon:Icons.table_rows_outlined, onPressed:() => setState(() => _viewMode = 'grid')),
+                ErpQuickTaskButton(label:'إضافة جديد', icon:Icons.add_circle_outline, onPressed:_saving ? null : () => _edit()),
+                ErpQuickTaskButton(label:'تعديل', icon:Icons.edit_outlined, onPressed:_saving ? null : () {
+                  if (_viewMode == 'grid') {
+                    setState(() => _gridEditing = !_gridEditing);
+                    if (_gridEditing) _syncGridNameControllers();
+                  } else if (selected != null && selected['is_system'] != true) { _edit(row:selected); }
+                }),
+                if (_viewMode == 'grid' && _gridEditing)
+                  ErpQuickTaskButton(label:'حفظ التعديلات', icon:Icons.save_outlined, onPressed:_saving ? null : () => _saveGridNames()),
+                ErpQuickTaskButton(label:'شعار البراند', icon:Icons.image_outlined, onPressed:_saving || selected == null ? null : () => _uploadLogo(selected)),
+                ErpQuickTaskButton(label:'استيراد شعارات متعددة', icon:Icons.collections_outlined, onPressed:_saving ? null : _bulkImportLogos),
+                ErpQuickTaskButton(label:'حذف', icon:Icons.delete_outline, onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
+              ]),
+            ),
+          ),
+          if (_showGroups) ...[
+            Padding(padding: const EdgeInsets.symmetric(horizontal:12, vertical:6), child: Row(children:[
+              Expanded(child:Text('عدد مجموعات البراندات: ${_groups.length}', style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              FilledButton.icon(onPressed:_saving ? null : _addGroup, icon:const Icon(Icons.add), label:const Text('إضافة مجموعة')),
+            ])),
+            Expanded(child:_loading ? const Center(child:CircularProgressIndicator()) : _groups.isEmpty ? const Center(child:Text('لم تنشئ مجموعات بعد.')) : ListView.builder(
+              padding:const EdgeInsets.all(10), itemCount:_groups.length, itemBuilder:(ctx,i) { final g=_groups[i]; final count=_rows.where((r) => _s(r['brand_group_id'])==_s(g['id'])).length;
+                return Card(child:ListTile(leading:const Icon(Icons.folder_outlined,color:_brandPurple), title:Text(_s(g['group_name']),style:const TextStyle(fontWeight:FontWeight.bold)), subtitle:Text(_s(g['group_code'])), trailing:Row(mainAxisSize:MainAxisSize.min,children:[Text('$count براند'),Checkbox(shape:const CircleBorder(),value:g['is_active']==true,onChanged:(_) => _toggleGroup(g)),IconButton(tooltip:'تعديل المجموعة',onPressed:()=>_editGroup(g),icon:const Icon(Icons.edit_outlined,color:_brandPurple))])));
+              })),
+          ] else ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12,7,12,3),
+            child: TextField(
+              controller:_search,
+              onChanged:(_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText:'ابحث بكود البراند أو اسمه أو المجموعة',
+                prefixIcon:const Icon(Icons.search,color:_brandPurple),
+                suffixIcon:_search.text.isEmpty ? null : IconButton(
+                  onPressed:() { _search.clear(); setState(() {}); },
+                  icon:const Icon(Icons.clear),
+                ),
+                border:OutlineInputBorder(borderRadius:BorderRadius.circular(10)),
+                isDense:true,
+              ),
+            ),
+          ),
+          if (_error != null)
+            Padding(padding:const EdgeInsets.all(7), child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:12))),
+          Padding(
+            padding:const EdgeInsets.symmetric(horizontal:12,vertical:3),
+            child:Row(children:[
+              Expanded(child:Text('عدد البراندات/الماركات: ${rows.length}',
+                style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              if (_viewMode == 'tree') ...[
+                TextButton.icon(
+                  onPressed:_loading || visibleGroups.isEmpty ? null : () => setState(() => _expandedGroups.addAll(visibleGroups)),
+                  icon:const Icon(Icons.unfold_more,size:18), label:const Text('فتح الكل')),
+                TextButton.icon(
+                  onPressed:_loading ? null : () => setState(() => _expandedGroups.clear()),
+                  icon:const Icon(Icons.unfold_less,size:18), label:const Text('طي الكل')),
+              ],
+            ]),
+          ),
+          if (_viewMode == 'tree') _treeHeader(),
+          Expanded(
+            child:_loading
+              ? const Center(child:CircularProgressIndicator())
+              : rows.isEmpty
+                ? const Center(child:Text('لا توجد براندات مطابقة للبحث.'))
+                : _viewMode == 'tree'
+                  ? ListView(
+                      padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
+                      children:visibleGroups.map(_treeGroup).toList(),
+                    )
+                  : SingleChildScrollView(
+                      scrollDirection:Axis.horizontal,
+                      child:SingleChildScrollView(
+                        child:DataTable(
+                          headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                          dataRowMinHeight:56,
+                          dataRowMaxHeight:64,
+                          columns:const [
+                            DataColumn(label:Text('كود البراند')),
+                            DataColumn(label:Text('اسم البراند عربي')),
+                            DataColumn(label:Text('الاسم الإنجليزي')),
+                            DataColumn(label:Text('الصورة')),
+                            DataColumn(label:Text('المجموعة')),
+                            DataColumn(label:Text('نوع السجل')),
+                            DataColumn(label:Text('نشط')),
+                            DataColumn(label:Text('إدارة الصورة')),
+                          ],
+                          rows:rows.map((row) {
+                            final id = _s(row['id']);
+                            final system = row['is_system'] == true;
+                            return DataRow(
+                              selected:_selectedId == id,
+                              onSelectChanged:(_) => setState(() => _selectedId = id),
+                              color:WidgetStateProperty.all(system ? const Color(0xFFEDE1F8) : Colors.white),
+                              cells:[
+                                DataCell(Text(_s(row['brand_code']),style:const TextStyle(fontWeight:FontWeight.w900,color:_brandPurple))),
+                                DataCell(SizedBox(width:210,child:_gridEditing && !system
+                                  ? TextField(
+                                      controller:_gridNameControllers.putIfAbsent(id, () => TextEditingController(text:_s(row['brand_name']))),
+                                      enabled:!_saving,
+                                      decoration:const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'اسم البراند'),
+                                      onSubmitted:(_) => _saveGridNames(onlyId:id),
+                                    )
+                                  : Text(_s(row['brand_name'])))),
+                                DataCell(SizedBox(width:150,child:Text(_s(row['brand_name_en'])))),
+                                DataCell(_logoPreview(row,size:46)),
+                                DataCell(SizedBox(width:170, child: DropdownButton<String?>(isExpanded:true, value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : null, hint: const Text('بدون مجموعة'), items: [const DropdownMenuItem<String?>(value:null, child:Text('بدون مجموعة')), ..._groups.map((g) => DropdownMenuItem<String?>(value:_s(g['id']), child:Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow:TextOverflow.ellipsis)))], onChanged: system ? null : (v) => _assignGroup(row,v)))),
+                                DataCell(Text(system ? 'افتراضي' : 'براند')),
+                                DataCell(Checkbox(
+                                  shape:const CircleBorder(), value:row['is_active'] == true,
+                                  activeColor:_brandPurple, onChanged:system ? null : (_) => _toggle(row))),
+                                DataCell(Row(mainAxisSize:MainAxisSize.min,children:[
+                                  IconButton(tooltip:'اختيار/تغيير الشعار',onPressed:_saving ? null : () => _uploadLogo(row),
+                                    icon:const Icon(Icons.photo_library_outlined,color:_brandPurple)),
+                                  IconButton(tooltip:'حذف الشعار',
+                                    onPressed:_saving || system || _logoBytes(row['logo_data']) == null ? null : () => _removeLogo(row),
+                                    icon:const Icon(Icons.hide_image_outlined,color:Colors.redAccent)),
+                                ])),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+          ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+).firstMatch(_s(a['brand_code']))?.group(1) ?? '') ?? 0).compareTo(int.tryParse(RegExp(r'([0-9]+)
+  }
+
+  Widget _logoPreview(Map<String,dynamic> row, {double size = 48}) {
+    final bytes = _logoBytes(row['logo_data']);
+    return Container(
+      width: size, height: size, alignment: Alignment.center,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: const Color(0xFFD8CBE7)),
+      ),
+      child: bytes != null && bytes.isNotEmpty
+        ? Image.memory(bytes, fit: BoxFit.contain, width: size, height: size,
+            errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.black38))
+        : const Icon(Icons.storefront_outlined, color: Color(0xFF9A86B5), size: 25),
+    );
+  }
+
+  Future<void> _removeLogo(Map<String,dynamic> row) async {
+    if (row['is_system'] == true) return;
+    setState(() => _saving = true);
+    try {
+      await _db.from('erp_brands').update({
+        'logo_data': null, 'logo_mime_type': null,
+      }).eq('id', _s(row['id']))
+        .eq('company_id', widget.companyId.trim()).select('id').single();
+      await _load();
+      if (mounted) ErpCenterToast.show(context, 'تم حذف شعار البراند.');
+    } catch (error) {
+      if (mounted) ErpCenterToast.show(context, 'تعذر حذف الشعار: $error', isError: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Widget _treeBrandRow(Map<String,dynamic> row) {
+    final id = _s(row['id']);
+    final selected = _selectedId == id;
+    final system = row['is_system'] == true;
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 18, bottom: 6),
+      child: Material(
+        color: selected ? const Color(0xFFF0E7FA) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => setState(() => _selectedId = id),
+          child: Container(
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 6, 8, 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: selected ? _brandPurple : _brandBorder),
+            ),
+            child: Row(children: [
+              const SizedBox(width: 34, child: Icon(Icons.subdirectory_arrow_left, color: _brandPurple, size: 18)),
+              SizedBox(width: 105, child: Text(_s(row['brand_code']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple, fontSize: 12))),
+              Expanded(flex: 3, child: Text(_s(row['brand_name']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700))),
+              Expanded(flex: 2, child: Text(_s(row['brand_name_en']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: Colors.black54))),
+              Checkbox(shape: const CircleBorder(), value: row['is_active'] == true,
+                activeColor: _brandPurple, visualDensity: VisualDensity.compact,
+                onChanged: system ? null : (_) => _toggle(row)),
+              const SizedBox(width: 6),
+              _logoPreview(row, size: 44),
+              IconButton(tooltip: 'اختيار/تغيير الشعار', visualDensity: VisualDensity.compact,
+                onPressed: _saving ? null : () => _uploadLogo(row),
+                icon: const Icon(Icons.photo_library_outlined, color: _brandPurple)),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _treeGroup(String group) {
+    final children = _rowsInGroup(group);
+    final expanded = _expandedGroups.contains(group);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEDE1F8),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _brandBorder),
+      ),
+      child: Column(children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => setState(() {
+            if (expanded) { _expandedGroups.remove(group); }
+            else { _expandedGroups.add(group); }
+          }),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(children: [
+              Icon(expanded ? Icons.keyboard_arrow_down : Icons.chevron_left, color: _brandPurple),
+              const Icon(Icons.folder_outlined, color: _brandPurple, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text(group == 'بدون مجموعة' ? 'براندات بدون مجموعة' : group,
+                style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
+              Text('${children.length} براند',
+                style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w700)),
+            ]),
+          ),
+        ),
+        if (expanded)
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 8),
+            child: Column(children: children.map(_treeBrandRow).toList()),
+          ),
+      ]),
+    );
+  }
+
+  Widget _treeHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      child: Row(children: [
+        const SizedBox(width: 34),
+        const SizedBox(width: 105, child: Text('كود البراند', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Expanded(flex: 3, child: Text('اسم البراند عربي', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Expanded(flex: 2, child: Text('الاسم الإنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Text('نشط', style: TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(width: 12),
+        const Text('الصورة', style: TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(width: 48),
+      ]),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _visibleRows;
+    final selected = _selectedRow();
+    final visibleGroups = rows.map(_groupKey).toSet().toList()
+      ..sort((a,b) {
+        if (a == 'بدون مجموعة') return 1;
+        if (b == 'بدون مجموعة') return -1;
+        return a.compareTo(b);
+      });
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: _brandCanvas,
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                ErpQuickTaskButton(label:'تحديث', icon:Icons.refresh_rounded, onPressed:_loading || _saving ? null : _load),
+                ErpQuickTaskButton(label:'عرض شجرة', icon:Icons.account_tree_outlined, onPressed:() => setState(() => _viewMode = 'tree')),
+                ErpQuickTaskButton(label:'عرض جدول', icon:Icons.table_rows_outlined, onPressed:() => setState(() => _viewMode = 'grid')),
+                ErpQuickTaskButton(label:'إضافة جديد', icon:Icons.add_circle_outline, onPressed:_saving ? null : () => _edit()),
+                ErpQuickTaskButton(label:'تعديل', icon:Icons.edit_outlined, onPressed:_saving ? null : () {
+                  if (_viewMode == 'grid') {
+                    setState(() => _gridEditing = !_gridEditing);
+                    if (_gridEditing) _syncGridNameControllers();
+                  } else if (selected != null && selected['is_system'] != true) { _edit(row:selected); }
+                }),
+                if (_viewMode == 'grid' && _gridEditing)
+                  ErpQuickTaskButton(label:'حفظ التعديلات', icon:Icons.save_outlined, onPressed:_saving ? null : () => _saveGridNames()),
+                ErpQuickTaskButton(label:'شعار البراند', icon:Icons.image_outlined, onPressed:_saving || selected == null ? null : () => _uploadLogo(selected)),
+                ErpQuickTaskButton(label:'استيراد شعارات متعددة', icon:Icons.collections_outlined, onPressed:_saving ? null : _bulkImportLogos),
+                ErpQuickTaskButton(label:'حذف', icon:Icons.delete_outline, onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
+              ]),
+            ),
+          ),
+          if (_showGroups) ...[
+            Padding(padding: const EdgeInsets.symmetric(horizontal:12, vertical:6), child: Row(children:[
+              Expanded(child:Text('عدد مجموعات البراندات: ${_groups.length}', style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              FilledButton.icon(onPressed:_saving ? null : _addGroup, icon:const Icon(Icons.add), label:const Text('إضافة مجموعة')),
+            ])),
+            Expanded(child:_loading ? const Center(child:CircularProgressIndicator()) : _groups.isEmpty ? const Center(child:Text('لم تنشئ مجموعات بعد.')) : ListView.builder(
+              padding:const EdgeInsets.all(10), itemCount:_groups.length, itemBuilder:(ctx,i) { final g=_groups[i]; final count=_rows.where((r) => _s(r['brand_group_id'])==_s(g['id'])).length;
+                return Card(child:ListTile(leading:const Icon(Icons.folder_outlined,color:_brandPurple), title:Text(_s(g['group_name']),style:const TextStyle(fontWeight:FontWeight.bold)), subtitle:Text(_s(g['group_code'])), trailing:Row(mainAxisSize:MainAxisSize.min,children:[Text('$count براند'),Checkbox(shape:const CircleBorder(),value:g['is_active']==true,onChanged:(_) => _toggleGroup(g)),IconButton(tooltip:'تعديل المجموعة',onPressed:()=>_editGroup(g),icon:const Icon(Icons.edit_outlined,color:_brandPurple))])));
+              })),
+          ] else ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12,7,12,3),
+            child: TextField(
+              controller:_search,
+              onChanged:(_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText:'ابحث بكود البراند أو اسمه أو المجموعة',
+                prefixIcon:const Icon(Icons.search,color:_brandPurple),
+                suffixIcon:_search.text.isEmpty ? null : IconButton(
+                  onPressed:() { _search.clear(); setState(() {}); },
+                  icon:const Icon(Icons.clear),
+                ),
+                border:OutlineInputBorder(borderRadius:BorderRadius.circular(10)),
+                isDense:true,
+              ),
+            ),
+          ),
+          if (_error != null)
+            Padding(padding:const EdgeInsets.all(7), child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:12))),
+          Padding(
+            padding:const EdgeInsets.symmetric(horizontal:12,vertical:3),
+            child:Row(children:[
+              Expanded(child:Text('عدد البراندات/الماركات: ${rows.length}',
+                style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              if (_viewMode == 'tree') ...[
+                TextButton.icon(
+                  onPressed:_loading || visibleGroups.isEmpty ? null : () => setState(() => _expandedGroups.addAll(visibleGroups)),
+                  icon:const Icon(Icons.unfold_more,size:18), label:const Text('فتح الكل')),
+                TextButton.icon(
+                  onPressed:_loading ? null : () => setState(() => _expandedGroups.clear()),
+                  icon:const Icon(Icons.unfold_less,size:18), label:const Text('طي الكل')),
+              ],
+            ]),
+          ),
+          if (_viewMode == 'tree') _treeHeader(),
+          Expanded(
+            child:_loading
+              ? const Center(child:CircularProgressIndicator())
+              : rows.isEmpty
+                ? const Center(child:Text('لا توجد براندات مطابقة للبحث.'))
+                : _viewMode == 'tree'
+                  ? ListView(
+                      padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
+                      children:visibleGroups.map(_treeGroup).toList(),
+                    )
+                  : SingleChildScrollView(
+                      scrollDirection:Axis.horizontal,
+                      child:SingleChildScrollView(
+                        child:DataTable(
+                          headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                          dataRowMinHeight:56,
+                          dataRowMaxHeight:64,
+                          columns:const [
+                            DataColumn(label:Text('كود البراند')),
+                            DataColumn(label:Text('اسم البراند عربي')),
+                            DataColumn(label:Text('الاسم الإنجليزي')),
+                            DataColumn(label:Text('الصورة')),
+                            DataColumn(label:Text('المجموعة')),
+                            DataColumn(label:Text('نوع السجل')),
+                            DataColumn(label:Text('نشط')),
+                            DataColumn(label:Text('إدارة الصورة')),
+                          ],
+                          rows:rows.map((row) {
+                            final id = _s(row['id']);
+                            final system = row['is_system'] == true;
+                            return DataRow(
+                              selected:_selectedId == id,
+                              onSelectChanged:(_) => setState(() => _selectedId = id),
+                              color:WidgetStateProperty.all(system ? const Color(0xFFEDE1F8) : Colors.white),
+                              cells:[
+                                DataCell(Text(_s(row['brand_code']),style:const TextStyle(fontWeight:FontWeight.w900,color:_brandPurple))),
+                                DataCell(SizedBox(width:210,child:_gridEditing && !system
+                                  ? TextField(
+                                      controller:_gridNameControllers.putIfAbsent(id, () => TextEditingController(text:_s(row['brand_name']))),
+                                      enabled:!_saving,
+                                      decoration:const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'اسم البراند'),
+                                      onSubmitted:(_) => _saveGridNames(onlyId:id),
+                                    )
+                                  : Text(_s(row['brand_name'])))),
+                                DataCell(SizedBox(width:150,child:Text(_s(row['brand_name_en'])))),
+                                DataCell(_logoPreview(row,size:46)),
+                                DataCell(SizedBox(width:170, child: DropdownButton<String?>(isExpanded:true, value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : null, hint: const Text('بدون مجموعة'), items: [const DropdownMenuItem<String?>(value:null, child:Text('بدون مجموعة')), ..._groups.map((g) => DropdownMenuItem<String?>(value:_s(g['id']), child:Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow:TextOverflow.ellipsis)))], onChanged: system ? null : (v) => _assignGroup(row,v)))),
+                                DataCell(Text(system ? 'افتراضي' : 'براند')),
+                                DataCell(Checkbox(
+                                  shape:const CircleBorder(), value:row['is_active'] == true,
+                                  activeColor:_brandPurple, onChanged:system ? null : (_) => _toggle(row))),
+                                DataCell(Row(mainAxisSize:MainAxisSize.min,children:[
+                                  IconButton(tooltip:'اختيار/تغيير الشعار',onPressed:_saving ? null : () => _uploadLogo(row),
+                                    icon:const Icon(Icons.photo_library_outlined,color:_brandPurple)),
+                                  IconButton(tooltip:'حذف الشعار',
+                                    onPressed:_saving || system || _logoBytes(row['logo_data']) == null ? null : () => _removeLogo(row),
+                                    icon:const Icon(Icons.hide_image_outlined,color:Colors.redAccent)),
+                                ])),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+          ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+).firstMatch(_s(b['brand_code']))?.group(1) ?? '') ?? 0));
+  }
+
+  Widget _logoPreview(Map<String,dynamic> row, {double size = 48}) {
+    final bytes = _logoBytes(row['logo_data']);
+    return Container(
+      width: size, height: size, alignment: Alignment.center,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: const Color(0xFFD8CBE7)),
+      ),
+      child: bytes != null && bytes.isNotEmpty
+        ? Image.memory(bytes, fit: BoxFit.contain, width: size, height: size,
+            errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.black38))
+        : const Icon(Icons.storefront_outlined, color: Color(0xFF9A86B5), size: 25),
+    );
+  }
+
+  Future<void> _removeLogo(Map<String,dynamic> row) async {
+    if (row['is_system'] == true) return;
+    setState(() => _saving = true);
+    try {
+      await _db.from('erp_brands').update({
+        'logo_data': null, 'logo_mime_type': null,
+      }).eq('id', _s(row['id']))
+        .eq('company_id', widget.companyId.trim()).select('id').single();
+      await _load();
+      if (mounted) ErpCenterToast.show(context, 'تم حذف شعار البراند.');
+    } catch (error) {
+      if (mounted) ErpCenterToast.show(context, 'تعذر حذف الشعار: $error', isError: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Widget _treeBrandRow(Map<String,dynamic> row) {
+    final id = _s(row['id']);
+    final selected = _selectedId == id;
+    final system = row['is_system'] == true;
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 18, bottom: 6),
+      child: Material(
+        color: selected ? const Color(0xFFF0E7FA) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => setState(() => _selectedId = id),
+          child: Container(
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 6, 8, 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: selected ? _brandPurple : _brandBorder),
+            ),
+            child: Row(children: [
+              const SizedBox(width: 34, child: Icon(Icons.subdirectory_arrow_left, color: _brandPurple, size: 18)),
+              SizedBox(width: 105, child: Text(_s(row['brand_code']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple, fontSize: 12))),
+              Expanded(flex: 3, child: Text(_s(row['brand_name']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700))),
+              Expanded(flex: 2, child: Text(_s(row['brand_name_en']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: Colors.black54))),
+              Checkbox(shape: const CircleBorder(), value: row['is_active'] == true,
+                activeColor: _brandPurple, visualDensity: VisualDensity.compact,
+                onChanged: system ? null : (_) => _toggle(row)),
+              const SizedBox(width: 6),
+              _logoPreview(row, size: 44),
+              IconButton(tooltip: 'اختيار/تغيير الشعار', visualDensity: VisualDensity.compact,
+                onPressed: _saving ? null : () => _uploadLogo(row),
+                icon: const Icon(Icons.photo_library_outlined, color: _brandPurple)),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _treeGroup(String group) {
+    final children = _rowsInGroup(group);
+    final expanded = _expandedGroups.contains(group);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEDE1F8),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _brandBorder),
+      ),
+      child: Column(children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => setState(() {
+            if (expanded) { _expandedGroups.remove(group); }
+            else { _expandedGroups.add(group); }
+          }),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(children: [
+              Icon(expanded ? Icons.keyboard_arrow_down : Icons.chevron_left, color: _brandPurple),
+              const Icon(Icons.folder_outlined, color: _brandPurple, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text(group == 'بدون مجموعة' ? 'براندات بدون مجموعة' : group,
+                style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
+              Text('${children.length} براند',
+                style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w700)),
+            ]),
+          ),
+        ),
+        if (expanded)
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 8),
+            child: Column(children: children.map(_treeBrandRow).toList()),
+          ),
+      ]),
+    );
+  }
+
+  Widget _treeHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      child: Row(children: [
+        const SizedBox(width: 34),
+        const SizedBox(width: 105, child: Text('كود البراند', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Expanded(flex: 3, child: Text('اسم البراند عربي', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Expanded(flex: 2, child: Text('الاسم الإنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Text('نشط', style: TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(width: 12),
+        const Text('الصورة', style: TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(width: 48),
+      ]),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _visibleRows;
+    final selected = _selectedRow();
+    final visibleGroups = rows.map(_groupKey).toSet().toList()
+      ..sort((a,b) {
+        if (a == 'بدون مجموعة') return 1;
+        if (b == 'بدون مجموعة') return -1;
+        return a.compareTo(b);
+      });
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: _brandCanvas,
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                ErpQuickTaskButton(label:'تحديث', icon:Icons.refresh_rounded, onPressed:_loading || _saving ? null : _load),
+                ErpQuickTaskButton(label:'عرض شجرة', icon:Icons.account_tree_outlined, onPressed:() => setState(() => _viewMode = 'tree')),
+                ErpQuickTaskButton(label:'عرض جدول', icon:Icons.table_rows_outlined, onPressed:() => setState(() => _viewMode = 'grid')),
+                ErpQuickTaskButton(label:'إضافة جديد', icon:Icons.add_circle_outline, onPressed:_saving ? null : () => _edit()),
+                ErpQuickTaskButton(label:'تعديل', icon:Icons.edit_outlined, onPressed:_saving ? null : () {
+                  if (_viewMode == 'grid') {
+                    setState(() => _gridEditing = !_gridEditing);
+                    if (_gridEditing) _syncGridNameControllers();
+                  } else if (selected != null && selected['is_system'] != true) { _edit(row:selected); }
+                }),
+                if (_viewMode == 'grid' && _gridEditing)
+                  ErpQuickTaskButton(label:'حفظ التعديلات', icon:Icons.save_outlined, onPressed:_saving ? null : () => _saveGridNames()),
+                ErpQuickTaskButton(label:'شعار البراند', icon:Icons.image_outlined, onPressed:_saving || selected == null ? null : () => _uploadLogo(selected)),
+                ErpQuickTaskButton(label:'استيراد شعارات متعددة', icon:Icons.collections_outlined, onPressed:_saving ? null : _bulkImportLogos),
+                ErpQuickTaskButton(label:'حذف', icon:Icons.delete_outline, onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
+              ]),
+            ),
+          ),
+          if (_showGroups) ...[
+            Padding(padding: const EdgeInsets.symmetric(horizontal:12, vertical:6), child: Row(children:[
+              Expanded(child:Text('عدد مجموعات البراندات: ${_groups.length}', style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              FilledButton.icon(onPressed:_saving ? null : _addGroup, icon:const Icon(Icons.add), label:const Text('إضافة مجموعة')),
+            ])),
+            Expanded(child:_loading ? const Center(child:CircularProgressIndicator()) : _groups.isEmpty ? const Center(child:Text('لم تنشئ مجموعات بعد.')) : ListView.builder(
+              padding:const EdgeInsets.all(10), itemCount:_groups.length, itemBuilder:(ctx,i) { final g=_groups[i]; final count=_rows.where((r) => _s(r['brand_group_id'])==_s(g['id'])).length;
+                return Card(child:ListTile(leading:const Icon(Icons.folder_outlined,color:_brandPurple), title:Text(_s(g['group_name']),style:const TextStyle(fontWeight:FontWeight.bold)), subtitle:Text(_s(g['group_code'])), trailing:Row(mainAxisSize:MainAxisSize.min,children:[Text('$count براند'),Checkbox(shape:const CircleBorder(),value:g['is_active']==true,onChanged:(_) => _toggleGroup(g)),IconButton(tooltip:'تعديل المجموعة',onPressed:()=>_editGroup(g),icon:const Icon(Icons.edit_outlined,color:_brandPurple))])));
+              })),
+          ] else ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12,7,12,3),
+            child: TextField(
+              controller:_search,
+              onChanged:(_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText:'ابحث بكود البراند أو اسمه أو المجموعة',
+                prefixIcon:const Icon(Icons.search,color:_brandPurple),
+                suffixIcon:_search.text.isEmpty ? null : IconButton(
+                  onPressed:() { _search.clear(); setState(() {}); },
+                  icon:const Icon(Icons.clear),
+                ),
+                border:OutlineInputBorder(borderRadius:BorderRadius.circular(10)),
+                isDense:true,
+              ),
+            ),
+          ),
+          if (_error != null)
+            Padding(padding:const EdgeInsets.all(7), child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:12))),
+          Padding(
+            padding:const EdgeInsets.symmetric(horizontal:12,vertical:3),
+            child:Row(children:[
+              Expanded(child:Text('عدد البراندات/الماركات: ${rows.length}',
+                style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              if (_viewMode == 'tree') ...[
+                TextButton.icon(
+                  onPressed:_loading || visibleGroups.isEmpty ? null : () => setState(() => _expandedGroups.addAll(visibleGroups)),
+                  icon:const Icon(Icons.unfold_more,size:18), label:const Text('فتح الكل')),
+                TextButton.icon(
+                  onPressed:_loading ? null : () => setState(() => _expandedGroups.clear()),
+                  icon:const Icon(Icons.unfold_less,size:18), label:const Text('طي الكل')),
+              ],
+            ]),
+          ),
+          if (_viewMode == 'tree') _treeHeader(),
+          Expanded(
+            child:_loading
+              ? const Center(child:CircularProgressIndicator())
+              : rows.isEmpty
+                ? const Center(child:Text('لا توجد براندات مطابقة للبحث.'))
+                : _viewMode == 'tree'
+                  ? ListView(
+                      padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
+                      children:visibleGroups.map(_treeGroup).toList(),
+                    )
+                  : SingleChildScrollView(
+                      scrollDirection:Axis.horizontal,
+                      child:SingleChildScrollView(
+                        child:DataTable(
+                          headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                          dataRowMinHeight:56,
+                          dataRowMaxHeight:64,
+                          columns:const [
+                            DataColumn(label:Text('كود البراند')),
+                            DataColumn(label:Text('اسم البراند عربي')),
+                            DataColumn(label:Text('الاسم الإنجليزي')),
+                            DataColumn(label:Text('الصورة')),
+                            DataColumn(label:Text('المجموعة')),
+                            DataColumn(label:Text('نوع السجل')),
+                            DataColumn(label:Text('نشط')),
+                            DataColumn(label:Text('إدارة الصورة')),
+                          ],
+                          rows:rows.map((row) {
+                            final id = _s(row['id']);
+                            final system = row['is_system'] == true;
+                            return DataRow(
+                              selected:_selectedId == id,
+                              onSelectChanged:(_) => setState(() => _selectedId = id),
+                              color:WidgetStateProperty.all(system ? const Color(0xFFEDE1F8) : Colors.white),
+                              cells:[
+                                DataCell(Text(_s(row['brand_code']),style:const TextStyle(fontWeight:FontWeight.w900,color:_brandPurple))),
+                                DataCell(SizedBox(width:210,child:_gridEditing && !system
+                                  ? TextField(
+                                      controller:_gridNameControllers.putIfAbsent(id, () => TextEditingController(text:_s(row['brand_name']))),
+                                      enabled:!_saving,
+                                      decoration:const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'اسم البراند'),
+                                      onSubmitted:(_) => _saveGridNames(onlyId:id),
+                                    )
+                                  : Text(_s(row['brand_name'])))),
+                                DataCell(SizedBox(width:150,child:Text(_s(row['brand_name_en'])))),
+                                DataCell(_logoPreview(row,size:46)),
+                                DataCell(SizedBox(width:170, child: DropdownButton<String?>(isExpanded:true, value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : null, hint: const Text('بدون مجموعة'), items: [const DropdownMenuItem<String?>(value:null, child:Text('بدون مجموعة')), ..._groups.map((g) => DropdownMenuItem<String?>(value:_s(g['id']), child:Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow:TextOverflow.ellipsis)))], onChanged: system ? null : (v) => _assignGroup(row,v)))),
+                                DataCell(Text(system ? 'افتراضي' : 'براند')),
+                                DataCell(Checkbox(
+                                  shape:const CircleBorder(), value:row['is_active'] == true,
+                                  activeColor:_brandPurple, onChanged:system ? null : (_) => _toggle(row))),
+                                DataCell(Row(mainAxisSize:MainAxisSize.min,children:[
+                                  IconButton(tooltip:'اختيار/تغيير الشعار',onPressed:_saving ? null : () => _uploadLogo(row),
+                                    icon:const Icon(Icons.photo_library_outlined,color:_brandPurple)),
+                                  IconButton(tooltip:'حذف الشعار',
+                                    onPressed:_saving || system || _logoBytes(row['logo_data']) == null ? null : () => _removeLogo(row),
+                                    icon:const Icon(Icons.hide_image_outlined,color:Colors.redAccent)),
+                                ])),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+          ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+).firstMatch(_s(a['brand_code']))?.group(1) ?? '') ?? 0).compareTo(int.tryParse(RegExp(r'([0-9]+)
+    final selected = _selectedRow();
+    final visibleGroups = rows.map(_groupKey).toSet().toList()
+      ..sort((a,b) {
+        if (a == 'بدون مجموعة') return 1;
+        if (b == 'بدون مجموعة') return -1;
+        return a.compareTo(b);
+      });
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: _brandCanvas,
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                ErpQuickTaskButton(label:'تحديث', icon:Icons.refresh_rounded, onPressed:_loading || _saving ? null : _load),
+                ErpQuickTaskButton(label:'عرض شجرة', icon:Icons.account_tree_outlined, onPressed:() => setState(() => _viewMode = 'tree')),
+                ErpQuickTaskButton(label:'عرض جدول', icon:Icons.table_rows_outlined, onPressed:() => setState(() => _viewMode = 'grid')),
+                ErpQuickTaskButton(label:'إضافة جديد', icon:Icons.add_circle_outline, onPressed:_saving ? null : () => _edit()),
+                ErpQuickTaskButton(label:'تعديل', icon:Icons.edit_outlined, onPressed:_saving ? null : () {
+                  if (_viewMode == 'grid') {
+                    setState(() => _gridEditing = !_gridEditing);
+                    if (_gridEditing) _syncGridNameControllers();
+                  } else if (selected != null && selected['is_system'] != true) { _edit(row:selected); }
+                }),
+                if (_viewMode == 'grid' && _gridEditing)
+                  ErpQuickTaskButton(label:'حفظ التعديلات', icon:Icons.save_outlined, onPressed:_saving ? null : () => _saveGridNames()),
+                ErpQuickTaskButton(label:'شعار البراند', icon:Icons.image_outlined, onPressed:_saving || selected == null ? null : () => _uploadLogo(selected)),
+                ErpQuickTaskButton(label:'استيراد شعارات متعددة', icon:Icons.collections_outlined, onPressed:_saving ? null : _bulkImportLogos),
+                ErpQuickTaskButton(label:'حذف', icon:Icons.delete_outline, onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
+              ]),
+            ),
+          ),
+          if (_showGroups) ...[
+            Padding(padding: const EdgeInsets.symmetric(horizontal:12, vertical:6), child: Row(children:[
+              Expanded(child:Text('عدد مجموعات البراندات: ${_groups.length}', style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              FilledButton.icon(onPressed:_saving ? null : _addGroup, icon:const Icon(Icons.add), label:const Text('إضافة مجموعة')),
+            ])),
+            Expanded(child:_loading ? const Center(child:CircularProgressIndicator()) : _groups.isEmpty ? const Center(child:Text('لم تنشئ مجموعات بعد.')) : ListView.builder(
+              padding:const EdgeInsets.all(10), itemCount:_groups.length, itemBuilder:(ctx,i) { final g=_groups[i]; final count=_rows.where((r) => _s(r['brand_group_id'])==_s(g['id'])).length;
+                return Card(child:ListTile(leading:const Icon(Icons.folder_outlined,color:_brandPurple), title:Text(_s(g['group_name']),style:const TextStyle(fontWeight:FontWeight.bold)), subtitle:Text(_s(g['group_code'])), trailing:Row(mainAxisSize:MainAxisSize.min,children:[Text('$count براند'),Checkbox(shape:const CircleBorder(),value:g['is_active']==true,onChanged:(_) => _toggleGroup(g)),IconButton(tooltip:'تعديل المجموعة',onPressed:()=>_editGroup(g),icon:const Icon(Icons.edit_outlined,color:_brandPurple))])));
+              })),
+          ] else ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12,7,12,3),
+            child: TextField(
+              controller:_search,
+              onChanged:(_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText:'ابحث بكود البراند أو اسمه أو المجموعة',
+                prefixIcon:const Icon(Icons.search,color:_brandPurple),
+                suffixIcon:_search.text.isEmpty ? null : IconButton(
+                  onPressed:() { _search.clear(); setState(() {}); },
+                  icon:const Icon(Icons.clear),
+                ),
+                border:OutlineInputBorder(borderRadius:BorderRadius.circular(10)),
+                isDense:true,
+              ),
+            ),
+          ),
+          if (_error != null)
+            Padding(padding:const EdgeInsets.all(7), child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:12))),
+          Padding(
+            padding:const EdgeInsets.symmetric(horizontal:12,vertical:3),
+            child:Row(children:[
+              Expanded(child:Text('عدد البراندات/الماركات: ${rows.length}',
+                style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              if (_viewMode == 'tree') ...[
+                TextButton.icon(
+                  onPressed:_loading || visibleGroups.isEmpty ? null : () => setState(() => _expandedGroups.addAll(visibleGroups)),
+                  icon:const Icon(Icons.unfold_more,size:18), label:const Text('فتح الكل')),
+                TextButton.icon(
+                  onPressed:_loading ? null : () => setState(() => _expandedGroups.clear()),
+                  icon:const Icon(Icons.unfold_less,size:18), label:const Text('طي الكل')),
+              ],
+            ]),
+          ),
+          if (_viewMode == 'tree') _treeHeader(),
+          Expanded(
+            child:_loading
+              ? const Center(child:CircularProgressIndicator())
+              : rows.isEmpty
+                ? const Center(child:Text('لا توجد براندات مطابقة للبحث.'))
+                : _viewMode == 'tree'
+                  ? ListView(
+                      padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
+                      children:visibleGroups.map(_treeGroup).toList(),
+                    )
+                  : SingleChildScrollView(
+                      scrollDirection:Axis.horizontal,
+                      child:SingleChildScrollView(
+                        child:DataTable(
+                          headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                          dataRowMinHeight:56,
+                          dataRowMaxHeight:64,
+                          columns:const [
+                            DataColumn(label:Text('كود البراند')),
+                            DataColumn(label:Text('اسم البراند عربي')),
+                            DataColumn(label:Text('الاسم الإنجليزي')),
+                            DataColumn(label:Text('الصورة')),
+                            DataColumn(label:Text('المجموعة')),
+                            DataColumn(label:Text('نوع السجل')),
+                            DataColumn(label:Text('نشط')),
+                            DataColumn(label:Text('إدارة الصورة')),
+                          ],
+                          rows:rows.map((row) {
+                            final id = _s(row['id']);
+                            final system = row['is_system'] == true;
+                            return DataRow(
+                              selected:_selectedId == id,
+                              onSelectChanged:(_) => setState(() => _selectedId = id),
+                              color:WidgetStateProperty.all(system ? const Color(0xFFEDE1F8) : Colors.white),
+                              cells:[
+                                DataCell(Text(_s(row['brand_code']),style:const TextStyle(fontWeight:FontWeight.w900,color:_brandPurple))),
+                                DataCell(SizedBox(width:210,child:_gridEditing && !system
+                                  ? TextField(
+                                      controller:_gridNameControllers.putIfAbsent(id, () => TextEditingController(text:_s(row['brand_name']))),
+                                      enabled:!_saving,
+                                      decoration:const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'اسم البراند'),
+                                      onSubmitted:(_) => _saveGridNames(onlyId:id),
+                                    )
+                                  : Text(_s(row['brand_name'])))),
+                                DataCell(SizedBox(width:150,child:Text(_s(row['brand_name_en'])))),
+                                DataCell(_logoPreview(row,size:46)),
+                                DataCell(SizedBox(width:170, child: DropdownButton<String?>(isExpanded:true, value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : null, hint: const Text('بدون مجموعة'), items: [const DropdownMenuItem<String?>(value:null, child:Text('بدون مجموعة')), ..._groups.map((g) => DropdownMenuItem<String?>(value:_s(g['id']), child:Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow:TextOverflow.ellipsis)))], onChanged: system ? null : (v) => _assignGroup(row,v)))),
+                                DataCell(Text(system ? 'افتراضي' : 'براند')),
+                                DataCell(Checkbox(
+                                  shape:const CircleBorder(), value:row['is_active'] == true,
+                                  activeColor:_brandPurple, onChanged:system ? null : (_) => _toggle(row))),
+                                DataCell(Row(mainAxisSize:MainAxisSize.min,children:[
+                                  IconButton(tooltip:'اختيار/تغيير الشعار',onPressed:_saving ? null : () => _uploadLogo(row),
+                                    icon:const Icon(Icons.photo_library_outlined,color:_brandPurple)),
+                                  IconButton(tooltip:'حذف الشعار',
+                                    onPressed:_saving || system || _logoBytes(row['logo_data']) == null ? null : () => _removeLogo(row),
+                                    icon:const Icon(Icons.hide_image_outlined,color:Colors.redAccent)),
+                                ])),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+          ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+).firstMatch(_s(a['brand_code']))?.group(1) ?? '') ?? 0).compareTo(int.tryParse(RegExp(r'([0-9]+)
+  }
+
+  Widget _logoPreview(Map<String,dynamic> row, {double size = 48}) {
+    final bytes = _logoBytes(row['logo_data']);
+    return Container(
+      width: size, height: size, alignment: Alignment.center,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: const Color(0xFFD8CBE7)),
+      ),
+      child: bytes != null && bytes.isNotEmpty
+        ? Image.memory(bytes, fit: BoxFit.contain, width: size, height: size,
+            errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.black38))
+        : const Icon(Icons.storefront_outlined, color: Color(0xFF9A86B5), size: 25),
+    );
+  }
+
+  Future<void> _removeLogo(Map<String,dynamic> row) async {
+    if (row['is_system'] == true) return;
+    setState(() => _saving = true);
+    try {
+      await _db.from('erp_brands').update({
+        'logo_data': null, 'logo_mime_type': null,
+      }).eq('id', _s(row['id']))
+        .eq('company_id', widget.companyId.trim()).select('id').single();
+      await _load();
+      if (mounted) ErpCenterToast.show(context, 'تم حذف شعار البراند.');
+    } catch (error) {
+      if (mounted) ErpCenterToast.show(context, 'تعذر حذف الشعار: $error', isError: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Widget _treeBrandRow(Map<String,dynamic> row) {
+    final id = _s(row['id']);
+    final selected = _selectedId == id;
+    final system = row['is_system'] == true;
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 18, bottom: 6),
+      child: Material(
+        color: selected ? const Color(0xFFF0E7FA) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => setState(() => _selectedId = id),
+          child: Container(
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 6, 8, 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: selected ? _brandPurple : _brandBorder),
+            ),
+            child: Row(children: [
+              const SizedBox(width: 34, child: Icon(Icons.subdirectory_arrow_left, color: _brandPurple, size: 18)),
+              SizedBox(width: 105, child: Text(_s(row['brand_code']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple, fontSize: 12))),
+              Expanded(flex: 3, child: Text(_s(row['brand_name']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700))),
+              Expanded(flex: 2, child: Text(_s(row['brand_name_en']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: Colors.black54))),
+              Checkbox(shape: const CircleBorder(), value: row['is_active'] == true,
+                activeColor: _brandPurple, visualDensity: VisualDensity.compact,
+                onChanged: system ? null : (_) => _toggle(row)),
+              const SizedBox(width: 6),
+              _logoPreview(row, size: 44),
+              IconButton(tooltip: 'اختيار/تغيير الشعار', visualDensity: VisualDensity.compact,
+                onPressed: _saving ? null : () => _uploadLogo(row),
+                icon: const Icon(Icons.photo_library_outlined, color: _brandPurple)),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _treeGroup(String group) {
+    final children = _rowsInGroup(group);
+    final expanded = _expandedGroups.contains(group);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEDE1F8),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _brandBorder),
+      ),
+      child: Column(children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => setState(() {
+            if (expanded) { _expandedGroups.remove(group); }
+            else { _expandedGroups.add(group); }
+          }),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(children: [
+              Icon(expanded ? Icons.keyboard_arrow_down : Icons.chevron_left, color: _brandPurple),
+              const Icon(Icons.folder_outlined, color: _brandPurple, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text(group == 'بدون مجموعة' ? 'براندات بدون مجموعة' : group,
+                style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
+              Text('${children.length} براند',
+                style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w700)),
+            ]),
+          ),
+        ),
+        if (expanded)
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 8),
+            child: Column(children: children.map(_treeBrandRow).toList()),
+          ),
+      ]),
+    );
+  }
+
+  Widget _treeHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      child: Row(children: [
+        const SizedBox(width: 34),
+        const SizedBox(width: 105, child: Text('كود البراند', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Expanded(flex: 3, child: Text('اسم البراند عربي', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Expanded(flex: 2, child: Text('الاسم الإنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Text('نشط', style: TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(width: 12),
+        const Text('الصورة', style: TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(width: 48),
+      ]),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _visibleRows;
+    final selected = _selectedRow();
+    final visibleGroups = rows.map(_groupKey).toSet().toList()
+      ..sort((a,b) {
+        if (a == 'بدون مجموعة') return 1;
+        if (b == 'بدون مجموعة') return -1;
+        return a.compareTo(b);
+      });
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: _brandCanvas,
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                ErpQuickTaskButton(label:'تحديث', icon:Icons.refresh_rounded, onPressed:_loading || _saving ? null : _load),
+                ErpQuickTaskButton(label:'عرض شجرة', icon:Icons.account_tree_outlined, onPressed:() => setState(() => _viewMode = 'tree')),
+                ErpQuickTaskButton(label:'عرض جدول', icon:Icons.table_rows_outlined, onPressed:() => setState(() => _viewMode = 'grid')),
+                ErpQuickTaskButton(label:'إضافة جديد', icon:Icons.add_circle_outline, onPressed:_saving ? null : () => _edit()),
+                ErpQuickTaskButton(label:'تعديل', icon:Icons.edit_outlined, onPressed:_saving ? null : () {
+                  if (_viewMode == 'grid') {
+                    setState(() => _gridEditing = !_gridEditing);
+                    if (_gridEditing) _syncGridNameControllers();
+                  } else if (selected != null && selected['is_system'] != true) { _edit(row:selected); }
+                }),
+                if (_viewMode == 'grid' && _gridEditing)
+                  ErpQuickTaskButton(label:'حفظ التعديلات', icon:Icons.save_outlined, onPressed:_saving ? null : () => _saveGridNames()),
+                ErpQuickTaskButton(label:'شعار البراند', icon:Icons.image_outlined, onPressed:_saving || selected == null ? null : () => _uploadLogo(selected)),
+                ErpQuickTaskButton(label:'استيراد شعارات متعددة', icon:Icons.collections_outlined, onPressed:_saving ? null : _bulkImportLogos),
+                ErpQuickTaskButton(label:'حذف', icon:Icons.delete_outline, onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
+              ]),
+            ),
+          ),
+          if (_showGroups) ...[
+            Padding(padding: const EdgeInsets.symmetric(horizontal:12, vertical:6), child: Row(children:[
+              Expanded(child:Text('عدد مجموعات البراندات: ${_groups.length}', style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              FilledButton.icon(onPressed:_saving ? null : _addGroup, icon:const Icon(Icons.add), label:const Text('إضافة مجموعة')),
+            ])),
+            Expanded(child:_loading ? const Center(child:CircularProgressIndicator()) : _groups.isEmpty ? const Center(child:Text('لم تنشئ مجموعات بعد.')) : ListView.builder(
+              padding:const EdgeInsets.all(10), itemCount:_groups.length, itemBuilder:(ctx,i) { final g=_groups[i]; final count=_rows.where((r) => _s(r['brand_group_id'])==_s(g['id'])).length;
+                return Card(child:ListTile(leading:const Icon(Icons.folder_outlined,color:_brandPurple), title:Text(_s(g['group_name']),style:const TextStyle(fontWeight:FontWeight.bold)), subtitle:Text(_s(g['group_code'])), trailing:Row(mainAxisSize:MainAxisSize.min,children:[Text('$count براند'),Checkbox(shape:const CircleBorder(),value:g['is_active']==true,onChanged:(_) => _toggleGroup(g)),IconButton(tooltip:'تعديل المجموعة',onPressed:()=>_editGroup(g),icon:const Icon(Icons.edit_outlined,color:_brandPurple))])));
+              })),
+          ] else ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12,7,12,3),
+            child: TextField(
+              controller:_search,
+              onChanged:(_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText:'ابحث بكود البراند أو اسمه أو المجموعة',
+                prefixIcon:const Icon(Icons.search,color:_brandPurple),
+                suffixIcon:_search.text.isEmpty ? null : IconButton(
+                  onPressed:() { _search.clear(); setState(() {}); },
+                  icon:const Icon(Icons.clear),
+                ),
+                border:OutlineInputBorder(borderRadius:BorderRadius.circular(10)),
+                isDense:true,
+              ),
+            ),
+          ),
+          if (_error != null)
+            Padding(padding:const EdgeInsets.all(7), child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:12))),
+          Padding(
+            padding:const EdgeInsets.symmetric(horizontal:12,vertical:3),
+            child:Row(children:[
+              Expanded(child:Text('عدد البراندات/الماركات: ${rows.length}',
+                style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              if (_viewMode == 'tree') ...[
+                TextButton.icon(
+                  onPressed:_loading || visibleGroups.isEmpty ? null : () => setState(() => _expandedGroups.addAll(visibleGroups)),
+                  icon:const Icon(Icons.unfold_more,size:18), label:const Text('فتح الكل')),
+                TextButton.icon(
+                  onPressed:_loading ? null : () => setState(() => _expandedGroups.clear()),
+                  icon:const Icon(Icons.unfold_less,size:18), label:const Text('طي الكل')),
+              ],
+            ]),
+          ),
+          if (_viewMode == 'tree') _treeHeader(),
+          Expanded(
+            child:_loading
+              ? const Center(child:CircularProgressIndicator())
+              : rows.isEmpty
+                ? const Center(child:Text('لا توجد براندات مطابقة للبحث.'))
+                : _viewMode == 'tree'
+                  ? ListView(
+                      padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
+                      children:visibleGroups.map(_treeGroup).toList(),
+                    )
+                  : SingleChildScrollView(
+                      scrollDirection:Axis.horizontal,
+                      child:SingleChildScrollView(
+                        child:DataTable(
+                          headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                          dataRowMinHeight:56,
+                          dataRowMaxHeight:64,
+                          columns:const [
+                            DataColumn(label:Text('كود البراند')),
+                            DataColumn(label:Text('اسم البراند عربي')),
+                            DataColumn(label:Text('الاسم الإنجليزي')),
+                            DataColumn(label:Text('الصورة')),
+                            DataColumn(label:Text('المجموعة')),
+                            DataColumn(label:Text('نوع السجل')),
+                            DataColumn(label:Text('نشط')),
+                            DataColumn(label:Text('إدارة الصورة')),
+                          ],
+                          rows:rows.map((row) {
+                            final id = _s(row['id']);
+                            final system = row['is_system'] == true;
+                            return DataRow(
+                              selected:_selectedId == id,
+                              onSelectChanged:(_) => setState(() => _selectedId = id),
+                              color:WidgetStateProperty.all(system ? const Color(0xFFEDE1F8) : Colors.white),
+                              cells:[
+                                DataCell(Text(_s(row['brand_code']),style:const TextStyle(fontWeight:FontWeight.w900,color:_brandPurple))),
+                                DataCell(SizedBox(width:210,child:_gridEditing && !system
+                                  ? TextField(
+                                      controller:_gridNameControllers.putIfAbsent(id, () => TextEditingController(text:_s(row['brand_name']))),
+                                      enabled:!_saving,
+                                      decoration:const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'اسم البراند'),
+                                      onSubmitted:(_) => _saveGridNames(onlyId:id),
+                                    )
+                                  : Text(_s(row['brand_name'])))),
+                                DataCell(SizedBox(width:150,child:Text(_s(row['brand_name_en'])))),
+                                DataCell(_logoPreview(row,size:46)),
+                                DataCell(SizedBox(width:170, child: DropdownButton<String?>(isExpanded:true, value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : null, hint: const Text('بدون مجموعة'), items: [const DropdownMenuItem<String?>(value:null, child:Text('بدون مجموعة')), ..._groups.map((g) => DropdownMenuItem<String?>(value:_s(g['id']), child:Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow:TextOverflow.ellipsis)))], onChanged: system ? null : (v) => _assignGroup(row,v)))),
+                                DataCell(Text(system ? 'افتراضي' : 'براند')),
+                                DataCell(Checkbox(
+                                  shape:const CircleBorder(), value:row['is_active'] == true,
+                                  activeColor:_brandPurple, onChanged:system ? null : (_) => _toggle(row))),
+                                DataCell(Row(mainAxisSize:MainAxisSize.min,children:[
+                                  IconButton(tooltip:'اختيار/تغيير الشعار',onPressed:_saving ? null : () => _uploadLogo(row),
+                                    icon:const Icon(Icons.photo_library_outlined,color:_brandPurple)),
+                                  IconButton(tooltip:'حذف الشعار',
+                                    onPressed:_saving || system || _logoBytes(row['logo_data']) == null ? null : () => _removeLogo(row),
+                                    icon:const Icon(Icons.hide_image_outlined,color:Colors.redAccent)),
+                                ])),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+          ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+).firstMatch(_s(b['brand_code']))?.group(1) ?? '') ?? 0));
+  }
+
+  Widget _logoPreview(Map<String,dynamic> row, {double size = 48}) {
+    final bytes = _logoBytes(row['logo_data']);
+    return Container(
+      width: size, height: size, alignment: Alignment.center,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: const Color(0xFFD8CBE7)),
+      ),
+      child: bytes != null && bytes.isNotEmpty
+        ? Image.memory(bytes, fit: BoxFit.contain, width: size, height: size,
+            errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.black38))
+        : const Icon(Icons.storefront_outlined, color: Color(0xFF9A86B5), size: 25),
+    );
+  }
+
+  Future<void> _removeLogo(Map<String,dynamic> row) async {
+    if (row['is_system'] == true) return;
+    setState(() => _saving = true);
+    try {
+      await _db.from('erp_brands').update({
+        'logo_data': null, 'logo_mime_type': null,
+      }).eq('id', _s(row['id']))
+        .eq('company_id', widget.companyId.trim()).select('id').single();
+      await _load();
+      if (mounted) ErpCenterToast.show(context, 'تم حذف شعار البراند.');
+    } catch (error) {
+      if (mounted) ErpCenterToast.show(context, 'تعذر حذف الشعار: $error', isError: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Widget _treeBrandRow(Map<String,dynamic> row) {
+    final id = _s(row['id']);
+    final selected = _selectedId == id;
+    final system = row['is_system'] == true;
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 18, bottom: 6),
+      child: Material(
+        color: selected ? const Color(0xFFF0E7FA) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => setState(() => _selectedId = id),
+          child: Container(
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 6, 8, 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: selected ? _brandPurple : _brandBorder),
+            ),
+            child: Row(children: [
+              const SizedBox(width: 34, child: Icon(Icons.subdirectory_arrow_left, color: _brandPurple, size: 18)),
+              SizedBox(width: 105, child: Text(_s(row['brand_code']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple, fontSize: 12))),
+              Expanded(flex: 3, child: Text(_s(row['brand_name']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700))),
+              Expanded(flex: 2, child: Text(_s(row['brand_name_en']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: Colors.black54))),
+              Checkbox(shape: const CircleBorder(), value: row['is_active'] == true,
+                activeColor: _brandPurple, visualDensity: VisualDensity.compact,
+                onChanged: system ? null : (_) => _toggle(row)),
+              const SizedBox(width: 6),
+              _logoPreview(row, size: 44),
+              IconButton(tooltip: 'اختيار/تغيير الشعار', visualDensity: VisualDensity.compact,
+                onPressed: _saving ? null : () => _uploadLogo(row),
+                icon: const Icon(Icons.photo_library_outlined, color: _brandPurple)),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _treeGroup(String group) {
+    final children = _rowsInGroup(group);
+    final expanded = _expandedGroups.contains(group);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEDE1F8),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _brandBorder),
+      ),
+      child: Column(children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => setState(() {
+            if (expanded) { _expandedGroups.remove(group); }
+            else { _expandedGroups.add(group); }
+          }),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(children: [
+              Icon(expanded ? Icons.keyboard_arrow_down : Icons.chevron_left, color: _brandPurple),
+              const Icon(Icons.folder_outlined, color: _brandPurple, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text(group == 'بدون مجموعة' ? 'براندات بدون مجموعة' : group,
+                style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
+              Text('${children.length} براند',
+                style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w700)),
+            ]),
+          ),
+        ),
+        if (expanded)
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 8),
+            child: Column(children: children.map(_treeBrandRow).toList()),
+          ),
+      ]),
+    );
+  }
+
+  Widget _treeHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      child: Row(children: [
+        const SizedBox(width: 34),
+        const SizedBox(width: 105, child: Text('كود البراند', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Expanded(flex: 3, child: Text('اسم البراند عربي', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Expanded(flex: 2, child: Text('الاسم الإنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Text('نشط', style: TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(width: 12),
+        const Text('الصورة', style: TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(width: 48),
+      ]),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _visibleRows;
+    final selected = _selectedRow();
+    final visibleGroups = rows.map(_groupKey).toSet().toList()
+      ..sort((a,b) {
+        if (a == 'بدون مجموعة') return 1;
+        if (b == 'بدون مجموعة') return -1;
+        return a.compareTo(b);
+      });
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: _brandCanvas,
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                ErpQuickTaskButton(label:'تحديث', icon:Icons.refresh_rounded, onPressed:_loading || _saving ? null : _load),
+                ErpQuickTaskButton(label:'عرض شجرة', icon:Icons.account_tree_outlined, onPressed:() => setState(() => _viewMode = 'tree')),
+                ErpQuickTaskButton(label:'عرض جدول', icon:Icons.table_rows_outlined, onPressed:() => setState(() => _viewMode = 'grid')),
+                ErpQuickTaskButton(label:'إضافة جديد', icon:Icons.add_circle_outline, onPressed:_saving ? null : () => _edit()),
+                ErpQuickTaskButton(label:'تعديل', icon:Icons.edit_outlined, onPressed:_saving ? null : () {
+                  if (_viewMode == 'grid') {
+                    setState(() => _gridEditing = !_gridEditing);
+                    if (_gridEditing) _syncGridNameControllers();
+                  } else if (selected != null && selected['is_system'] != true) { _edit(row:selected); }
+                }),
+                if (_viewMode == 'grid' && _gridEditing)
+                  ErpQuickTaskButton(label:'حفظ التعديلات', icon:Icons.save_outlined, onPressed:_saving ? null : () => _saveGridNames()),
+                ErpQuickTaskButton(label:'شعار البراند', icon:Icons.image_outlined, onPressed:_saving || selected == null ? null : () => _uploadLogo(selected)),
+                ErpQuickTaskButton(label:'استيراد شعارات متعددة', icon:Icons.collections_outlined, onPressed:_saving ? null : _bulkImportLogos),
+                ErpQuickTaskButton(label:'حذف', icon:Icons.delete_outline, onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
+              ]),
+            ),
+          ),
+          if (_showGroups) ...[
+            Padding(padding: const EdgeInsets.symmetric(horizontal:12, vertical:6), child: Row(children:[
+              Expanded(child:Text('عدد مجموعات البراندات: ${_groups.length}', style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              FilledButton.icon(onPressed:_saving ? null : _addGroup, icon:const Icon(Icons.add), label:const Text('إضافة مجموعة')),
+            ])),
+            Expanded(child:_loading ? const Center(child:CircularProgressIndicator()) : _groups.isEmpty ? const Center(child:Text('لم تنشئ مجموعات بعد.')) : ListView.builder(
+              padding:const EdgeInsets.all(10), itemCount:_groups.length, itemBuilder:(ctx,i) { final g=_groups[i]; final count=_rows.where((r) => _s(r['brand_group_id'])==_s(g['id'])).length;
+                return Card(child:ListTile(leading:const Icon(Icons.folder_outlined,color:_brandPurple), title:Text(_s(g['group_name']),style:const TextStyle(fontWeight:FontWeight.bold)), subtitle:Text(_s(g['group_code'])), trailing:Row(mainAxisSize:MainAxisSize.min,children:[Text('$count براند'),Checkbox(shape:const CircleBorder(),value:g['is_active']==true,onChanged:(_) => _toggleGroup(g)),IconButton(tooltip:'تعديل المجموعة',onPressed:()=>_editGroup(g),icon:const Icon(Icons.edit_outlined,color:_brandPurple))])));
+              })),
+          ] else ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12,7,12,3),
+            child: TextField(
+              controller:_search,
+              onChanged:(_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText:'ابحث بكود البراند أو اسمه أو المجموعة',
+                prefixIcon:const Icon(Icons.search,color:_brandPurple),
+                suffixIcon:_search.text.isEmpty ? null : IconButton(
+                  onPressed:() { _search.clear(); setState(() {}); },
+                  icon:const Icon(Icons.clear),
+                ),
+                border:OutlineInputBorder(borderRadius:BorderRadius.circular(10)),
+                isDense:true,
+              ),
+            ),
+          ),
+          if (_error != null)
+            Padding(padding:const EdgeInsets.all(7), child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:12))),
+          Padding(
+            padding:const EdgeInsets.symmetric(horizontal:12,vertical:3),
+            child:Row(children:[
+              Expanded(child:Text('عدد البراندات/الماركات: ${rows.length}',
+                style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              if (_viewMode == 'tree') ...[
+                TextButton.icon(
+                  onPressed:_loading || visibleGroups.isEmpty ? null : () => setState(() => _expandedGroups.addAll(visibleGroups)),
+                  icon:const Icon(Icons.unfold_more,size:18), label:const Text('فتح الكل')),
+                TextButton.icon(
+                  onPressed:_loading ? null : () => setState(() => _expandedGroups.clear()),
+                  icon:const Icon(Icons.unfold_less,size:18), label:const Text('طي الكل')),
+              ],
+            ]),
+          ),
+          if (_viewMode == 'tree') _treeHeader(),
+          Expanded(
+            child:_loading
+              ? const Center(child:CircularProgressIndicator())
+              : rows.isEmpty
+                ? const Center(child:Text('لا توجد براندات مطابقة للبحث.'))
+                : _viewMode == 'tree'
+                  ? ListView(
+                      padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
+                      children:visibleGroups.map(_treeGroup).toList(),
+                    )
+                  : SingleChildScrollView(
+                      scrollDirection:Axis.horizontal,
+                      child:SingleChildScrollView(
+                        child:DataTable(
+                          headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                          dataRowMinHeight:56,
+                          dataRowMaxHeight:64,
+                          columns:const [
+                            DataColumn(label:Text('كود البراند')),
+                            DataColumn(label:Text('اسم البراند عربي')),
+                            DataColumn(label:Text('الاسم الإنجليزي')),
+                            DataColumn(label:Text('الصورة')),
+                            DataColumn(label:Text('المجموعة')),
+                            DataColumn(label:Text('نوع السجل')),
+                            DataColumn(label:Text('نشط')),
+                            DataColumn(label:Text('إدارة الصورة')),
+                          ],
+                          rows:rows.map((row) {
+                            final id = _s(row['id']);
+                            final system = row['is_system'] == true;
+                            return DataRow(
+                              selected:_selectedId == id,
+                              onSelectChanged:(_) => setState(() => _selectedId = id),
+                              color:WidgetStateProperty.all(system ? const Color(0xFFEDE1F8) : Colors.white),
+                              cells:[
+                                DataCell(Text(_s(row['brand_code']),style:const TextStyle(fontWeight:FontWeight.w900,color:_brandPurple))),
+                                DataCell(SizedBox(width:210,child:_gridEditing && !system
+                                  ? TextField(
+                                      controller:_gridNameControllers.putIfAbsent(id, () => TextEditingController(text:_s(row['brand_name']))),
+                                      enabled:!_saving,
+                                      decoration:const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'اسم البراند'),
+                                      onSubmitted:(_) => _saveGridNames(onlyId:id),
+                                    )
+                                  : Text(_s(row['brand_name'])))),
+                                DataCell(SizedBox(width:150,child:Text(_s(row['brand_name_en'])))),
+                                DataCell(_logoPreview(row,size:46)),
+                                DataCell(SizedBox(width:170, child: DropdownButton<String?>(isExpanded:true, value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : null, hint: const Text('بدون مجموعة'), items: [const DropdownMenuItem<String?>(value:null, child:Text('بدون مجموعة')), ..._groups.map((g) => DropdownMenuItem<String?>(value:_s(g['id']), child:Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow:TextOverflow.ellipsis)))], onChanged: system ? null : (v) => _assignGroup(row,v)))),
+                                DataCell(Text(system ? 'افتراضي' : 'براند')),
+                                DataCell(Checkbox(
+                                  shape:const CircleBorder(), value:row['is_active'] == true,
+                                  activeColor:_brandPurple, onChanged:system ? null : (_) => _toggle(row))),
+                                DataCell(Row(mainAxisSize:MainAxisSize.min,children:[
+                                  IconButton(tooltip:'اختيار/تغيير الشعار',onPressed:_saving ? null : () => _uploadLogo(row),
+                                    icon:const Icon(Icons.photo_library_outlined,color:_brandPurple)),
+                                  IconButton(tooltip:'حذف الشعار',
+                                    onPressed:_saving || system || _logoBytes(row['logo_data']) == null ? null : () => _removeLogo(row),
+                                    icon:const Icon(Icons.hide_image_outlined,color:Colors.redAccent)),
+                                ])),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+          ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+).firstMatch(_s(b['brand_code']))?.group(1) ?? '') ?? 0));
+    final selected = _selectedRow();
+    final visibleGroups = rows.map(_groupKey).toSet().toList()
+      ..sort((a,b) {
+        if (a == 'بدون مجموعة') return 1;
+        if (b == 'بدون مجموعة') return -1;
+        return a.compareTo(b);
+      });
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: _brandCanvas,
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                ErpQuickTaskButton(label:'تحديث', icon:Icons.refresh_rounded, onPressed:_loading || _saving ? null : _load),
+                ErpQuickTaskButton(label:'عرض شجرة', icon:Icons.account_tree_outlined, onPressed:() => setState(() => _viewMode = 'tree')),
+                ErpQuickTaskButton(label:'عرض جدول', icon:Icons.table_rows_outlined, onPressed:() => setState(() => _viewMode = 'grid')),
+                ErpQuickTaskButton(label:'إضافة جديد', icon:Icons.add_circle_outline, onPressed:_saving ? null : () => _edit()),
+                ErpQuickTaskButton(label:'تعديل', icon:Icons.edit_outlined, onPressed:_saving ? null : () {
+                  if (_viewMode == 'grid') {
+                    setState(() => _gridEditing = !_gridEditing);
+                    if (_gridEditing) _syncGridNameControllers();
+                  } else if (selected != null && selected['is_system'] != true) { _edit(row:selected); }
+                }),
+                if (_viewMode == 'grid' && _gridEditing)
+                  ErpQuickTaskButton(label:'حفظ التعديلات', icon:Icons.save_outlined, onPressed:_saving ? null : () => _saveGridNames()),
+                ErpQuickTaskButton(label:'شعار البراند', icon:Icons.image_outlined, onPressed:_saving || selected == null ? null : () => _uploadLogo(selected)),
+                ErpQuickTaskButton(label:'استيراد شعارات متعددة', icon:Icons.collections_outlined, onPressed:_saving ? null : _bulkImportLogos),
+                ErpQuickTaskButton(label:'حذف', icon:Icons.delete_outline, onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
+              ]),
+            ),
+          ),
+          if (_showGroups) ...[
+            Padding(padding: const EdgeInsets.symmetric(horizontal:12, vertical:6), child: Row(children:[
+              Expanded(child:Text('عدد مجموعات البراندات: ${_groups.length}', style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              FilledButton.icon(onPressed:_saving ? null : _addGroup, icon:const Icon(Icons.add), label:const Text('إضافة مجموعة')),
+            ])),
+            Expanded(child:_loading ? const Center(child:CircularProgressIndicator()) : _groups.isEmpty ? const Center(child:Text('لم تنشئ مجموعات بعد.')) : ListView.builder(
+              padding:const EdgeInsets.all(10), itemCount:_groups.length, itemBuilder:(ctx,i) { final g=_groups[i]; final count=_rows.where((r) => _s(r['brand_group_id'])==_s(g['id'])).length;
+                return Card(child:ListTile(leading:const Icon(Icons.folder_outlined,color:_brandPurple), title:Text(_s(g['group_name']),style:const TextStyle(fontWeight:FontWeight.bold)), subtitle:Text(_s(g['group_code'])), trailing:Row(mainAxisSize:MainAxisSize.min,children:[Text('$count براند'),Checkbox(shape:const CircleBorder(),value:g['is_active']==true,onChanged:(_) => _toggleGroup(g)),IconButton(tooltip:'تعديل المجموعة',onPressed:()=>_editGroup(g),icon:const Icon(Icons.edit_outlined,color:_brandPurple))])));
+              })),
+          ] else ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12,7,12,3),
+            child: TextField(
+              controller:_search,
+              onChanged:(_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText:'ابحث بكود البراند أو اسمه أو المجموعة',
+                prefixIcon:const Icon(Icons.search,color:_brandPurple),
+                suffixIcon:_search.text.isEmpty ? null : IconButton(
+                  onPressed:() { _search.clear(); setState(() {}); },
+                  icon:const Icon(Icons.clear),
+                ),
+                border:OutlineInputBorder(borderRadius:BorderRadius.circular(10)),
+                isDense:true,
+              ),
+            ),
+          ),
+          if (_error != null)
+            Padding(padding:const EdgeInsets.all(7), child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:12))),
+          Padding(
+            padding:const EdgeInsets.symmetric(horizontal:12,vertical:3),
+            child:Row(children:[
+              Expanded(child:Text('عدد البراندات/الماركات: ${rows.length}',
+                style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              if (_viewMode == 'tree') ...[
+                TextButton.icon(
+                  onPressed:_loading || visibleGroups.isEmpty ? null : () => setState(() => _expandedGroups.addAll(visibleGroups)),
+                  icon:const Icon(Icons.unfold_more,size:18), label:const Text('فتح الكل')),
+                TextButton.icon(
+                  onPressed:_loading ? null : () => setState(() => _expandedGroups.clear()),
+                  icon:const Icon(Icons.unfold_less,size:18), label:const Text('طي الكل')),
+              ],
+            ]),
+          ),
+          if (_viewMode == 'tree') _treeHeader(),
+          Expanded(
+            child:_loading
+              ? const Center(child:CircularProgressIndicator())
+              : rows.isEmpty
+                ? const Center(child:Text('لا توجد براندات مطابقة للبحث.'))
+                : _viewMode == 'tree'
+                  ? ListView(
+                      padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
+                      children:visibleGroups.map(_treeGroup).toList(),
+                    )
+                  : SingleChildScrollView(
+                      scrollDirection:Axis.horizontal,
+                      child:SingleChildScrollView(
+                        child:DataTable(
+                          headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                          dataRowMinHeight:56,
+                          dataRowMaxHeight:64,
+                          columns:const [
+                            DataColumn(label:Text('كود البراند')),
+                            DataColumn(label:Text('اسم البراند عربي')),
+                            DataColumn(label:Text('الاسم الإنجليزي')),
+                            DataColumn(label:Text('الصورة')),
+                            DataColumn(label:Text('المجموعة')),
+                            DataColumn(label:Text('نوع السجل')),
+                            DataColumn(label:Text('نشط')),
+                            DataColumn(label:Text('إدارة الصورة')),
+                          ],
+                          rows:rows.map((row) {
+                            final id = _s(row['id']);
+                            final system = row['is_system'] == true;
+                            return DataRow(
+                              selected:_selectedId == id,
+                              onSelectChanged:(_) => setState(() => _selectedId = id),
+                              color:WidgetStateProperty.all(system ? const Color(0xFFEDE1F8) : Colors.white),
+                              cells:[
+                                DataCell(Text(_s(row['brand_code']),style:const TextStyle(fontWeight:FontWeight.w900,color:_brandPurple))),
+                                DataCell(SizedBox(width:210,child:_gridEditing && !system
+                                  ? TextField(
+                                      controller:_gridNameControllers.putIfAbsent(id, () => TextEditingController(text:_s(row['brand_name']))),
+                                      enabled:!_saving,
+                                      decoration:const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'اسم البراند'),
+                                      onSubmitted:(_) => _saveGridNames(onlyId:id),
+                                    )
+                                  : Text(_s(row['brand_name'])))),
+                                DataCell(SizedBox(width:150,child:Text(_s(row['brand_name_en'])))),
+                                DataCell(_logoPreview(row,size:46)),
+                                DataCell(SizedBox(width:170, child: DropdownButton<String?>(isExpanded:true, value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : null, hint: const Text('بدون مجموعة'), items: [const DropdownMenuItem<String?>(value:null, child:Text('بدون مجموعة')), ..._groups.map((g) => DropdownMenuItem<String?>(value:_s(g['id']), child:Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow:TextOverflow.ellipsis)))], onChanged: system ? null : (v) => _assignGroup(row,v)))),
+                                DataCell(Text(system ? 'افتراضي' : 'براند')),
+                                DataCell(Checkbox(
+                                  shape:const CircleBorder(), value:row['is_active'] == true,
+                                  activeColor:_brandPurple, onChanged:system ? null : (_) => _toggle(row))),
+                                DataCell(Row(mainAxisSize:MainAxisSize.min,children:[
+                                  IconButton(tooltip:'اختيار/تغيير الشعار',onPressed:_saving ? null : () => _uploadLogo(row),
+                                    icon:const Icon(Icons.photo_library_outlined,color:_brandPurple)),
+                                  IconButton(tooltip:'حذف الشعار',
+                                    onPressed:_saving || system || _logoBytes(row['logo_data']) == null ? null : () => _removeLogo(row),
+                                    icon:const Icon(Icons.hide_image_outlined,color:Colors.redAccent)),
+                                ])),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+          ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+).firstMatch(_s(a['brand_code']))?.group(1) ?? '') ?? 0).compareTo(int.tryParse(RegExp(r'([0-9]+)
+  }
+
+  Widget _logoPreview(Map<String,dynamic> row, {double size = 48}) {
+    final bytes = _logoBytes(row['logo_data']);
+    return Container(
+      width: size, height: size, alignment: Alignment.center,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: const Color(0xFFD8CBE7)),
+      ),
+      child: bytes != null && bytes.isNotEmpty
+        ? Image.memory(bytes, fit: BoxFit.contain, width: size, height: size,
+            errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.black38))
+        : const Icon(Icons.storefront_outlined, color: Color(0xFF9A86B5), size: 25),
+    );
+  }
+
+  Future<void> _removeLogo(Map<String,dynamic> row) async {
+    if (row['is_system'] == true) return;
+    setState(() => _saving = true);
+    try {
+      await _db.from('erp_brands').update({
+        'logo_data': null, 'logo_mime_type': null,
+      }).eq('id', _s(row['id']))
+        .eq('company_id', widget.companyId.trim()).select('id').single();
+      await _load();
+      if (mounted) ErpCenterToast.show(context, 'تم حذف شعار البراند.');
+    } catch (error) {
+      if (mounted) ErpCenterToast.show(context, 'تعذر حذف الشعار: $error', isError: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Widget _treeBrandRow(Map<String,dynamic> row) {
+    final id = _s(row['id']);
+    final selected = _selectedId == id;
+    final system = row['is_system'] == true;
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 18, bottom: 6),
+      child: Material(
+        color: selected ? const Color(0xFFF0E7FA) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => setState(() => _selectedId = id),
+          child: Container(
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 6, 8, 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: selected ? _brandPurple : _brandBorder),
+            ),
+            child: Row(children: [
+              const SizedBox(width: 34, child: Icon(Icons.subdirectory_arrow_left, color: _brandPurple, size: 18)),
+              SizedBox(width: 105, child: Text(_s(row['brand_code']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple, fontSize: 12))),
+              Expanded(flex: 3, child: Text(_s(row['brand_name']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700))),
+              Expanded(flex: 2, child: Text(_s(row['brand_name_en']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: Colors.black54))),
+              Checkbox(shape: const CircleBorder(), value: row['is_active'] == true,
+                activeColor: _brandPurple, visualDensity: VisualDensity.compact,
+                onChanged: system ? null : (_) => _toggle(row)),
+              const SizedBox(width: 6),
+              _logoPreview(row, size: 44),
+              IconButton(tooltip: 'اختيار/تغيير الشعار', visualDensity: VisualDensity.compact,
+                onPressed: _saving ? null : () => _uploadLogo(row),
+                icon: const Icon(Icons.photo_library_outlined, color: _brandPurple)),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _treeGroup(String group) {
+    final children = _rowsInGroup(group);
+    final expanded = _expandedGroups.contains(group);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEDE1F8),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _brandBorder),
+      ),
+      child: Column(children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => setState(() {
+            if (expanded) { _expandedGroups.remove(group); }
+            else { _expandedGroups.add(group); }
+          }),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(children: [
+              Icon(expanded ? Icons.keyboard_arrow_down : Icons.chevron_left, color: _brandPurple),
+              const Icon(Icons.folder_outlined, color: _brandPurple, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text(group == 'بدون مجموعة' ? 'براندات بدون مجموعة' : group,
+                style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
+              Text('${children.length} براند',
+                style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w700)),
+            ]),
+          ),
+        ),
+        if (expanded)
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 8),
+            child: Column(children: children.map(_treeBrandRow).toList()),
+          ),
+      ]),
+    );
+  }
+
+  Widget _treeHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      child: Row(children: [
+        const SizedBox(width: 34),
+        const SizedBox(width: 105, child: Text('كود البراند', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Expanded(flex: 3, child: Text('اسم البراند عربي', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Expanded(flex: 2, child: Text('الاسم الإنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Text('نشط', style: TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(width: 12),
+        const Text('الصورة', style: TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(width: 48),
+      ]),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _visibleRows;
+    final selected = _selectedRow();
+    final visibleGroups = rows.map(_groupKey).toSet().toList()
+      ..sort((a,b) {
+        if (a == 'بدون مجموعة') return 1;
+        if (b == 'بدون مجموعة') return -1;
+        return a.compareTo(b);
+      });
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: _brandCanvas,
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                ErpQuickTaskButton(label:'تحديث', icon:Icons.refresh_rounded, onPressed:_loading || _saving ? null : _load),
+                ErpQuickTaskButton(label:'عرض شجرة', icon:Icons.account_tree_outlined, onPressed:() => setState(() => _viewMode = 'tree')),
+                ErpQuickTaskButton(label:'عرض جدول', icon:Icons.table_rows_outlined, onPressed:() => setState(() => _viewMode = 'grid')),
+                ErpQuickTaskButton(label:'إضافة جديد', icon:Icons.add_circle_outline, onPressed:_saving ? null : () => _edit()),
+                ErpQuickTaskButton(label:'تعديل', icon:Icons.edit_outlined, onPressed:_saving ? null : () {
+                  if (_viewMode == 'grid') {
+                    setState(() => _gridEditing = !_gridEditing);
+                    if (_gridEditing) _syncGridNameControllers();
+                  } else if (selected != null && selected['is_system'] != true) { _edit(row:selected); }
+                }),
+                if (_viewMode == 'grid' && _gridEditing)
+                  ErpQuickTaskButton(label:'حفظ التعديلات', icon:Icons.save_outlined, onPressed:_saving ? null : () => _saveGridNames()),
+                ErpQuickTaskButton(label:'شعار البراند', icon:Icons.image_outlined, onPressed:_saving || selected == null ? null : () => _uploadLogo(selected)),
+                ErpQuickTaskButton(label:'استيراد شعارات متعددة', icon:Icons.collections_outlined, onPressed:_saving ? null : _bulkImportLogos),
+                ErpQuickTaskButton(label:'حذف', icon:Icons.delete_outline, onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
+              ]),
+            ),
+          ),
+          if (_showGroups) ...[
+            Padding(padding: const EdgeInsets.symmetric(horizontal:12, vertical:6), child: Row(children:[
+              Expanded(child:Text('عدد مجموعات البراندات: ${_groups.length}', style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              FilledButton.icon(onPressed:_saving ? null : _addGroup, icon:const Icon(Icons.add), label:const Text('إضافة مجموعة')),
+            ])),
+            Expanded(child:_loading ? const Center(child:CircularProgressIndicator()) : _groups.isEmpty ? const Center(child:Text('لم تنشئ مجموعات بعد.')) : ListView.builder(
+              padding:const EdgeInsets.all(10), itemCount:_groups.length, itemBuilder:(ctx,i) { final g=_groups[i]; final count=_rows.where((r) => _s(r['brand_group_id'])==_s(g['id'])).length;
+                return Card(child:ListTile(leading:const Icon(Icons.folder_outlined,color:_brandPurple), title:Text(_s(g['group_name']),style:const TextStyle(fontWeight:FontWeight.bold)), subtitle:Text(_s(g['group_code'])), trailing:Row(mainAxisSize:MainAxisSize.min,children:[Text('$count براند'),Checkbox(shape:const CircleBorder(),value:g['is_active']==true,onChanged:(_) => _toggleGroup(g)),IconButton(tooltip:'تعديل المجموعة',onPressed:()=>_editGroup(g),icon:const Icon(Icons.edit_outlined,color:_brandPurple))])));
+              })),
+          ] else ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12,7,12,3),
+            child: TextField(
+              controller:_search,
+              onChanged:(_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText:'ابحث بكود البراند أو اسمه أو المجموعة',
+                prefixIcon:const Icon(Icons.search,color:_brandPurple),
+                suffixIcon:_search.text.isEmpty ? null : IconButton(
+                  onPressed:() { _search.clear(); setState(() {}); },
+                  icon:const Icon(Icons.clear),
+                ),
+                border:OutlineInputBorder(borderRadius:BorderRadius.circular(10)),
+                isDense:true,
+              ),
+            ),
+          ),
+          if (_error != null)
+            Padding(padding:const EdgeInsets.all(7), child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:12))),
+          Padding(
+            padding:const EdgeInsets.symmetric(horizontal:12,vertical:3),
+            child:Row(children:[
+              Expanded(child:Text('عدد البراندات/الماركات: ${rows.length}',
+                style:const TextStyle(color:_brandPurple,fontWeight:FontWeight.w800))),
+              if (_viewMode == 'tree') ...[
+                TextButton.icon(
+                  onPressed:_loading || visibleGroups.isEmpty ? null : () => setState(() => _expandedGroups.addAll(visibleGroups)),
+                  icon:const Icon(Icons.unfold_more,size:18), label:const Text('فتح الكل')),
+                TextButton.icon(
+                  onPressed:_loading ? null : () => setState(() => _expandedGroups.clear()),
+                  icon:const Icon(Icons.unfold_less,size:18), label:const Text('طي الكل')),
+              ],
+            ]),
+          ),
+          if (_viewMode == 'tree') _treeHeader(),
+          Expanded(
+            child:_loading
+              ? const Center(child:CircularProgressIndicator())
+              : rows.isEmpty
+                ? const Center(child:Text('لا توجد براندات مطابقة للبحث.'))
+                : _viewMode == 'tree'
+                  ? ListView(
+                      padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
+                      children:visibleGroups.map(_treeGroup).toList(),
+                    )
+                  : SingleChildScrollView(
+                      scrollDirection:Axis.horizontal,
+                      child:SingleChildScrollView(
+                        child:DataTable(
+                          headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                          dataRowMinHeight:56,
+                          dataRowMaxHeight:64,
+                          columns:const [
+                            DataColumn(label:Text('كود البراند')),
+                            DataColumn(label:Text('اسم البراند عربي')),
+                            DataColumn(label:Text('الاسم الإنجليزي')),
+                            DataColumn(label:Text('الصورة')),
+                            DataColumn(label:Text('المجموعة')),
+                            DataColumn(label:Text('نوع السجل')),
+                            DataColumn(label:Text('نشط')),
+                            DataColumn(label:Text('إدارة الصورة')),
+                          ],
+                          rows:rows.map((row) {
+                            final id = _s(row['id']);
+                            final system = row['is_system'] == true;
+                            return DataRow(
+                              selected:_selectedId == id,
+                              onSelectChanged:(_) => setState(() => _selectedId = id),
+                              color:WidgetStateProperty.all(system ? const Color(0xFFEDE1F8) : Colors.white),
+                              cells:[
+                                DataCell(Text(_s(row['brand_code']),style:const TextStyle(fontWeight:FontWeight.w900,color:_brandPurple))),
+                                DataCell(SizedBox(width:210,child:_gridEditing && !system
+                                  ? TextField(
+                                      controller:_gridNameControllers.putIfAbsent(id, () => TextEditingController(text:_s(row['brand_name']))),
+                                      enabled:!_saving,
+                                      decoration:const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'اسم البراند'),
+                                      onSubmitted:(_) => _saveGridNames(onlyId:id),
+                                    )
+                                  : Text(_s(row['brand_name'])))),
+                                DataCell(SizedBox(width:150,child:Text(_s(row['brand_name_en'])))),
+                                DataCell(_logoPreview(row,size:46)),
+                                DataCell(SizedBox(width:170, child: DropdownButton<String?>(isExpanded:true, value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : null, hint: const Text('بدون مجموعة'), items: [const DropdownMenuItem<String?>(value:null, child:Text('بدون مجموعة')), ..._groups.map((g) => DropdownMenuItem<String?>(value:_s(g['id']), child:Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow:TextOverflow.ellipsis)))], onChanged: system ? null : (v) => _assignGroup(row,v)))),
+                                DataCell(Text(system ? 'افتراضي' : 'براند')),
+                                DataCell(Checkbox(
+                                  shape:const CircleBorder(), value:row['is_active'] == true,
+                                  activeColor:_brandPurple, onChanged:system ? null : (_) => _toggle(row))),
+                                DataCell(Row(mainAxisSize:MainAxisSize.min,children:[
+                                  IconButton(tooltip:'اختيار/تغيير الشعار',onPressed:_saving ? null : () => _uploadLogo(row),
+                                    icon:const Icon(Icons.photo_library_outlined,color:_brandPurple)),
+                                  IconButton(tooltip:'حذف الشعار',
+                                    onPressed:_saving || system || _logoBytes(row['logo_data']) == null ? null : () => _removeLogo(row),
+                                    icon:const Icon(Icons.hide_image_outlined,color:Colors.redAccent)),
+                                ])),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+          ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+).firstMatch(_s(b['brand_code']))?.group(1) ?? '') ?? 0));
   }
 
   Widget _logoPreview(Map<String,dynamic> row, {double size = 48}) {
