@@ -13,20 +13,6 @@ on:
       - "supabase/**"
       - "tools/web_view_test.mjs"
       - ".github/workflows/**"
-  pull_request:
-    branches: [main]
-    paths:
-      - "lib/**"
-      - "test/**"
-      - "integration_test/**"
-      - "android/**"
-      - "web/**"
-      - "pubspec.yaml"
-      - "pubspec.lock"
-      - "assets/**"
-      - "supabase/**"
-      - "tools/**"
-      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:
