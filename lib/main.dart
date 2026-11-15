@@ -7655,12 +7655,20 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     final client = database;
     if (client == null) return;
     try {
-      final categories = await client.from('categories').select('id,name,parent_id,is_active').eq('is_active', true).order('sort_order');
-      final products = await client.from('products').select('id,name,category_id,brand,unit,price,image_url,is_available').eq('is_available', true).order('name').limit(1000);
+      final categories = await client.from('categories').select('id,name,parent_id,is_active').eq('is_active', true).order('sort_order').range(0,1999);
+      final products = <Map<String,dynamic>>[];
+      const pageSize = 500;
+      var offset = 0;
+      while (true) {
+        final page = await client.from('products').select('id,name,category_id,brand,unit,price,image_url,is_available').eq('is_available', true).order('name').range(offset, offset + pageSize - 1);
+        products.addAll(page.whereType<Map>().map((e)=>Map<String,dynamic>.from(e)));
+        if (page.length < pageSize) break;
+        offset += pageSize;
+      }
       if (!mounted) return;
       setState(() {
         _marketCategories..clear()..addAll(categories.whereType<Map>().map((e)=>Map<String,dynamic>.from(e)));
-        _marketProducts..clear()..addAll(products.whereType<Map>().map((e)=>Map<String,dynamic>.from(e)));
+        _marketProducts..clear()..addAll(products);
       });
     } catch (_) {}
   }
