@@ -76,7 +76,6 @@ class ErpScreenFrame extends StatelessWidget {
                     margin: const EdgeInsets.fromLTRB(10, 8, 10, 5),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: _erpFramePurple,
                       borderRadius: BorderRadius.circular(radius + 3),
                       border: Border.all(color: _erpFramePink.withValues(alpha: .72), width: 1),
                       gradient: const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF26004F), Color(0xFF3E007D), Color(0xFF6120A0)]),
@@ -155,7 +154,6 @@ class ErpScreenFrame extends StatelessWidget {
                     margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white,
                       borderRadius: BorderRadius.circular(radius + 2),
                       border: Border.all(color: const Color(0xFFFFC9F3), width: 1),
                       gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.white, Color(0xFFFFF7FD), Color(0xFFF5EDFF)]),

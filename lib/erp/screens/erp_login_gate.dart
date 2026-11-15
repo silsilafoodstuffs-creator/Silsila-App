@@ -517,7 +517,6 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: const Color(0xFFFFC9F3), width: 1),
         gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.white, Color(0xFFFFFBFF), Color(0xFFF9F2FF)]),
