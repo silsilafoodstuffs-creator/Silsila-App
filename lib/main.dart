@@ -7573,10 +7573,10 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
       if (type == 'sell') {
         try {
           final supplier = await db.from('supplier_details')
-              .select('classification,business_name')
+              .select('supplier_type,business_name')
               .eq('user_id', id).maybeSingle();
           if (supplier != null) {
-            profile['supplier_classification'] = supplier['classification'];
+            profile['supplier_classification'] = supplier['supplier_type'];
             profile['supplier_business_name'] = supplier['business_name'];
           }
         } catch (_) {}
