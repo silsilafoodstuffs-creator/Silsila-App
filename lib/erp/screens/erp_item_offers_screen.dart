@@ -47,7 +47,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
 
   Future<List<Map<String,dynamic>>> _fetchAllItems(String companyId) async {
     const pageSize=500; var offset=0; final result=<Map<String,dynamic>>[];
-    while(true) { final page=await _inventory.fetchItems(companyId,offset:offset,pageSize:pageSize); result.addAll(page.where((item)=>item['is_active']!=false)); if(page.length<pageSize) break; offset+=page.length; }
+    while(true) { final page=await _inventory.fetchItems(companyId,offset:offset,pageSize:pageSize,includeImageData:true); result.addAll(page.where((item)=>item['is_active']!=false)); if(page.length<pageSize) break; offset+=page.length; }
     return result;
   }
   Future<void> _load() async {
