@@ -114,8 +114,8 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
           secondary: image.isEmpty ? const Icon(Icons.inventory_2_outlined) :
             ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.network(image, width: 40, height: 40, fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined))),
-          title: Text('\${_s(item['item_code'])} — \${_s(item['item_name'])}'),
-          subtitle: Text('سعر البيع: \${_s(item['sale_price'])} ج.م • الوحدة: \${_s(item['base_unit'])}'),
+          title: Text('${_s(item['item_code'])} — ${_s(item['item_name'])}'),
+          subtitle: Text('سعر البيع: ${_s(item['sale_price'])} ج.م • الوحدة: ${_s(item['base_unit'])}'),
           onChanged: (v) => refresh(() { if (v == true) { chosen.add(id); } else { chosen.remove(id); } }),
         );
       }
@@ -134,20 +134,20 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
             leading: Checkbox(tristate: true,
               value: count == 0 ? false : count == ids.length ? true : null,
               onChanged: (v) => refresh(() { if (v == true) { chosen.addAll(ids); } else { chosen.removeAll(ids); } })),
-            title: Text('\${_s(category['category_code'])} — \${_s(category['category_name'])}',
+            title: Text('${_s(category['category_code'])} — ${_s(category['category_name'])}',
               style: TextStyle(fontWeight: FontWeight.w800, color: depth == 0 ? const Color(0xFF3E007D) : Colors.black87)),
-            subtitle: Text('\${ids.length} صنف • \${nested.length} فئة تابعة'),
+            subtitle: Text('${ids.length} صنف • ${nested.length} فئة تابعة'),
             children: [
               ...grouped.entries.map((entry) {
                 final brand = brandById[entry.key];
                 final brandIds = entry.value.map((p) => _s(p['id'])).toSet();
                 final selectedCount = brandIds.where(chosen.contains).length;
                 return ExpansionTile(
-                  key: PageStorageKey<String>('offer-brand-\${id}-\${entry.key}'),
+                  key: PageStorageKey<String>('offer-brand-${id}-${entry.key}'),
                   leading: Checkbox(tristate: true,
                     value: selectedCount == 0 ? false : selectedCount == brandIds.length ? true : null,
                     onChanged: (v) => refresh(() { if (v == true) { chosen.addAll(brandIds); } else { chosen.removeAll(brandIds); } })),
-                  title: Text(brand == null ? 'بدون ماركة (\${entry.value.length})' : '\${_s(brand['brand_name'])} (\${entry.value.length})'),
+                  title: Text(brand == null ? 'بدون ماركة (${entry.value.length})' : '${_s(brand['brand_name'])} (${entry.value.length})'),
                   children: entry.value.map(productTile).toList(),
                 );
               }),
@@ -168,7 +168,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
           Wrap(spacing: 8, children: [
             TextButton(onPressed: () => refresh(() => chosen.addAll(allVisible.map((p) => _s(p['id'])))), child: const Text('تحديد نتائج البحث')),
             TextButton(onPressed: () => refresh(() => chosen.clear()), child: const Text('إلغاء التحديد')),
-            Text('المحدد: \${chosen.length}'),
+            Text('المحدد: ${chosen.length}'),
           ]),
           Expanded(child: _categories.isEmpty
             ? ListView(children: allVisible.map(productTile).toList())
