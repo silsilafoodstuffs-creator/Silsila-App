@@ -1,0 +1,98 @@
+name: Silsila Android Debug APK
+
+on:
+  workflow_run:
+    workflows:
+      - Silsila Mobile App Validation
+    types:
+      - completed
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# APK packaging is independent from the fast mobile test result and never cancels it.
+concurrency:
+  group: silsila-android-debug-apk-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout the exact mobile-tested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@fd55f4c5af5b953cc57a2be44cb082c8f6635e8e
+        with:
+          flutter-version: "3.29.3"
+          channel: stable
+          cache: true
+
+      - name: Ensure Android platform files and required NDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f android/app/build.gradle.kts ] || [ ! -f android/gradlew ] || [ ! -f android/settings.gradle.kts ]; then
+            flutter create --project-name=silsila_app --platforms=android .
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/build.gradle.kts")
+          if not p.exists():
+              raise SystemExit("Android Gradle file is missing")
+          s = p.read_text()
+          if 'ndkVersion = "27.0.12077973"' not in s:
+              if "android {" not in s:
+                  raise SystemExit("Android Gradle configuration block is missing")
+              s = s.replace("android {", 'android {\n    ndkVersion = "27.0.12077973"', 1)
+              p.write_text(s)
+          PY
+
+      - name: Cache Android NDK and CMake
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/lib/android/sdk/ndk/27.0.12077973
+            /usr/local/lib/android/sdk/cmake/3.22.1
+          key: android-sdk-ndk27-cmake322-${{ runner.os }}
+
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+
+      - name: Build ARM and ARM64 Android debug APK
+        run: flutter build apk --debug --no-pub --target-platform android-arm,android-arm64
+
+      - name: Verify Android package artifact
+        run: |
+          set -euo pipefail
+          APK="build/app/outputs/flutter-apk/app-debug.apk"
+          test -s "$APK"
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          APKANALYZER="$SDK/cmdline-tools/latest/bin/apkanalyzer"
+          if [ -x "$APKANALYZER" ]; then
+            "$APKANALYZER" manifest application-id "$APK"
+          fi
+
+      - name: Upload Android debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: silsila-android-debug-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
