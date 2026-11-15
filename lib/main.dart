@@ -348,6 +348,19 @@ class SilsilaApp extends StatelessWidget {
           secondaryContainer: const Color(0xFFFFE2B4),
           surfaceTint: Colors.transparent,
         ),
+        // Glossy Neon Luxury foundation: preserve Silsila's exact brand colors
+        // while adding restrained luminous depth to shared app, ERP and web surfaces.
+        cardTheme: CardThemeData(
+          color: Colors.white,
+          elevation: 3,
+          shadowColor: pink.withValues(alpha: 0.18),
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFFEADCF5), width: 0.8),
+          ),
+          margin: const EdgeInsets.all(4),
+        ),
         // Circular, modern checkbox styling shared by the customer app and ERP.
         checkboxTheme: CheckboxThemeData(
           shape: const CircleBorder(),
@@ -367,8 +380,8 @@ class SilsilaApp extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: purple,
             foregroundColor: Colors.white,
-            elevation: 2,
-            shadowColor: orange.withValues(alpha: 0.30),
+            elevation: 3,
+            shadowColor: pink.withValues(alpha: 0.30),
             animationDuration: const Duration(milliseconds: 180),
             overlayColor: orange.withValues(alpha: 0.18),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -381,8 +394,8 @@ class SilsilaApp extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: purple,
             foregroundColor: Colors.white,
-            elevation: 1,
-            shadowColor: orange.withValues(alpha: 0.24),
+            elevation: 2,
+            shadowColor: pink.withValues(alpha: 0.24),
             animationDuration: const Duration(milliseconds: 180),
             overlayColor: orange.withValues(alpha: 0.18),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -411,7 +424,8 @@ class SilsilaApp extends StatelessWidget {
           backgroundColor: purple,
           foregroundColor: Colors.white,
           centerTitle: true,
-          elevation: 1,
+          elevation: 2,
+          shadowColor: pink,
           surfaceTintColor: Colors.transparent,
         ),
         inputDecorationTheme: InputDecorationTheme(
