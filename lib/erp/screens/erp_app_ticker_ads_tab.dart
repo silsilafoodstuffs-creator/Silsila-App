@@ -287,6 +287,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           .eq('is_system', false)
           .order('display_order')
           .order('brand_code');
+      // Recompute the visible order from every numeric segment of the complete brand code.
       final brandRows = List<Map<String, dynamic>>.from(brandRowsResult)
         ..sort((a, b) {
           final aValue = _brandOrderValue(a) ?? 0;
