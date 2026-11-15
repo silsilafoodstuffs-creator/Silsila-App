@@ -111,14 +111,16 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
           _gridEnglishControllers[id]!.text.trim() != _s(r['brand_name_en']).trim();
     }).toList();
     if (targets.isEmpty) { ErpCenterToast.show(context, 'لا توجد أسماء تم تعديلها.'); return; }
+    final targetIds = targets.map((row) => _s(row['id'])).toSet();
+    final proposedArabic = <String>{};
     for (final r in targets) {
-      final id = _s(r['id']), ar = _gridNameControllers[id]!.text.trim(), en = _gridEnglishControllers[id]!.text.trim();
+      final id = _s(r['id']), ar = _gridNameControllers[id]!.text.trim();
       if (ar.isEmpty) { ErpCenterToast.show(context, 'اسم البراند بالعربية لا يمكن أن يكون فارغًا.', isError: true); return; }
-      if (_rows.any((o) => _s(o['id']) != id && _s(o['brand_name']).trim().toLowerCase() == ar.toLowerCase())) {
+      if (!proposedArabic.add(ar.toLowerCase()) || _rows.any((o) =>
+          _s(o['id']) != id &&
+          !targetIds.contains(_s(o['id'])) &&
+          _s(o['brand_name']).trim().toLowerCase() == ar.toLowerCase())) {
         ErpCenterToast.show(context, 'اسم البراند العربي مستخدم بالفعل.', isError: true); return;
-      }
-      if (en.isNotEmpty && _rows.any((o) => _s(o['id']) != id && _s(o['brand_name_en']).trim().toLowerCase() == en.toLowerCase())) {
-        ErpCenterToast.show(context, 'اسم البراند الإنجليزي مستخدم بالفعل.', isError: true); return;
       }
     }
     setState(() { _saving = true; _error = null; });
