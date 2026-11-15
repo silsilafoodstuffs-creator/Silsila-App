@@ -1,6 +1,6 @@
 name: Build Silsila Android App
 
-# Build the signed release APK only after the full validation batch passes.
+# Build the signed release APK only after independent mobile validation passes.
 # Manual dispatch remains available for an intentional standalone release build.
 concurrency:
   group: silsila-android-release-${{ github.run_id }}
@@ -200,7 +200,7 @@ jobs:
 
       - name: Build Android APK
         run: |
-          flutter build apk --release --dart-define=SILSILA_TEST_LOGIN=${{ inputs.test_login }}
+          flutter build apk --release --dart-define=SILSILA_TEST_LOGIN=${{ github.event_name == 'workflow_dispatch' && inputs.test_login || false }}
 
       - name: Verify APK signature
         shell: bash
