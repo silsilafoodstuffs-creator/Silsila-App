@@ -7522,7 +7522,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   final Set<String> selectedProducts = <String>{};
   final List<Map<String,dynamic>> _marketCategories = [];
   final List<Map<String,dynamic>> _marketProducts = [];
-  final Set<int> _expandedCategoryIds = {};
+  final Set<String> _expandedCategoryIds = {};
   final Map<String,TextEditingController> _productQuantities = {};
   final Map<String,TextEditingController> _productPrices = {};
   final Map<String,String> _productUnits = {};
@@ -7604,37 +7604,138 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     final client = database;
     if (client == null) return;
     try {
-      final categories = await client.from('categories').select('id,name,parent_id,is_active').eq('is_active', true).eq('activity_type', 'مواد غذائية').order('sort_order');
-      final allProducts = <Map<String,dynamic>>[];
-      var offset = 0;
+      final publicCategories = await client.from('categories')
+          .select('id,name,parent_id,is_active')
+          .eq('is_active', true).eq('activity_type', 'مواد غذائية').order('sort_order');
+      final publicProducts = <Map<String, dynamic>>[];
+      var publicOffset = 0;
       while (true) {
-        final page = await client.from('products').select('id,name,category_id,unit,price,brand,image_url,is_available')
-          .eq('is_available', true).eq('activity_type', 'مواد غذائية').order('name').range(offset, offset + 499);
-        allProducts.addAll(page.whereType<Map>().map((e)=>Map<String,dynamic>.from(e)));
+        final page = await client.from('products')
+            .select('id,name,category_id,unit,price,brand,image_url,image_data,image_mime_type,is_available')
+            .eq('is_available', true).eq('activity_type', 'مواد غذائية')
+            .order('name').range(publicOffset, publicOffset + 499);
+        publicProducts.addAll(page.whereType<Map>().map((e) => Map<String, dynamic>.from(e)));
         if (page.length < 500) break;
-        offset += page.length;
+        publicOffset += page.length;
       }
+
+      // The marketplace must also use the ERP master catalog. Public supplier
+      // listings can be empty while the company's app-visible ERP catalog exists.
+      final activity = await client.from('activity_types').select('code')
+          .eq('name', 'مواد غذائية').eq('is_active', true).maybeSingle();
+      final foodActivityCode = (activity?['code'] ?? '').toString();
+      final erpCategories = <Map<String, dynamic>>[];
+      if (foodActivityCode.isNotEmpty) {
+        var categoryOffset = 0;
+        while (true) {
+          final page = await client.from('erp_item_categories')
+              .select('id,parent_id,category_code,category_name,activity_code')
+              .eq('is_active', true).eq('show_in_app', true)
+              .eq('activity_code', foodActivityCode)
+              .order('category_code').range(categoryOffset, categoryOffset + 499);
+          erpCategories.addAll(page.whereType<Map>().map((e) => Map<String, dynamic>.from(e)));
+          if (page.length < 500) break;
+          categoryOffset += page.length;
+        }
+      }
+      final erpCategoryIds = erpCategories.map((c) => (c['id'] ?? '').toString()).toSet();
+      final erpBrands = <String, String>{};
+      try {
+        final rows = await client.from('erp_brands').select('id,brand_name')
+            .eq('is_active', true).order('brand_name').limit(2000);
+        for (final row in rows.whereType<Map>()) {
+          erpBrands[(row['id'] ?? '').toString()] = (row['brand_name'] ?? '').toString();
+        }
+      } catch (_) {}
+
+      final erpProducts = <Map<String, dynamic>>[];
+      if (erpCategoryIds.isNotEmpty) {
+        var itemOffset = 0;
+        while (true) {
+          final page = await client.from('erp_items')
+              .select('id,item_code,barcode,item_name,category_id,brand_id,brand_name,base_unit,sale_price,is_active,show_in_app,image_url,image_data,image_mime_type')
+              .eq('is_active', true).eq('show_in_app', true)
+              .order('item_name').range(itemOffset, itemOffset + 499);
+          for (final raw in page.whereType<Map>()) {
+            final item = Map<String, dynamic>.from(raw);
+            final categoryId = (item['category_id'] ?? '').toString();
+            if (!erpCategoryIds.contains(categoryId)) continue;
+            erpProducts.add({
+              'id': item['id'],
+              'item_code': item['item_code'],
+              'barcode': item['barcode'],
+              'name': item['item_name'],
+              'category_id': 'erp:$categoryId',
+              'unit': item['base_unit'] ?? 'وحدة',
+              'price': item['sale_price'] ?? 0,
+              'brand': erpBrands[(item['brand_id'] ?? '').toString()] ??
+                  (item['brand_name'] ?? '').toString(),
+              'image_url': item['image_url'],
+              'image_data': item['image_data'],
+              'image_mime_type': item['image_mime_type'],
+              'catalog_source': 'erp',
+            });
+          }
+          if (page.length < 500) break;
+          itemOffset += page.length;
+        }
+      }
+
+      final categories = <Map<String, dynamic>>[
+        ...publicCategories.whereType<Map>().map((raw) {
+          final row = Map<String, dynamic>.from(raw);
+          final parent = (row['parent_id'] ?? '').toString();
+          return <String, dynamic>{
+            'id': 'public:${row['id']}',
+            'name': row['name'],
+            'parent_id': parent.isEmpty ? null : 'public:$parent',
+          };
+        }),
+        ...erpCategories.map((row) {
+          final parent = (row['parent_id'] ?? '').toString();
+          return <String, dynamic>{
+            'id': 'erp:${row['id']}',
+            'name': row['category_name'],
+            'parent_id': parent.isEmpty ? null : 'erp:$parent',
+          };
+        }),
+      ];
+      final products = <Map<String, dynamic>>[
+        ...publicProducts.map((row) {
+          final category = (row['category_id'] ?? '').toString();
+          return <String, dynamic>{
+            ...row,
+            'category_id': category.isEmpty ? null : 'public:$category',
+            'catalog_source': 'marketplace',
+          };
+        }),
+        ...erpProducts,
+      ];
       if (!mounted) return;
       setState(() {
-        _marketCategories..clear()..addAll(categories.whereType<Map>().map((e)=>Map<String,dynamic>.from(e)));
-        _marketProducts..clear()..addAll(allProducts);
+        _marketCategories..clear()..addAll(categories);
+        _marketProducts..clear()..addAll(products);
       });
     } catch (_) {}
   }
 
-  List<Map<String,dynamic>> _marketCategoryChildren(int? parentId) => _marketCategories.where((row)=>(row['parent_id'] as num?)?.toInt()==parentId).toList();
+  List<Map<String,dynamic>> _marketCategoryChildren(String? parentId) =>
+      _marketCategories.where((row) => (row['parent_id'] ?? '').toString() == (parentId ?? '')).toList();
 
-  Set<String> _marketCategoryProductIds(int categoryId) {
-    final ids=_marketProducts.where((p)=>(p['category_id'] as num?)?.toInt()==categoryId).map((p)=>(p['id']??'').toString()).where((v)=>v.isNotEmpty).toSet();
-    for(final child in _marketCategoryChildren(categoryId)){ids.addAll(_marketCategoryProductIds((child['id'] as num).toInt()));}
+  Set<String> _marketCategoryProductIds(String categoryId) {
+    final ids = _marketProducts.where((p) => (p['category_id'] ?? '').toString() == categoryId)
+        .map((p) => (p['id'] ?? '').toString()).where((v) => v.isNotEmpty).toSet();
+    for (final child in _marketCategoryChildren(categoryId)) {
+      ids.addAll(_marketCategoryProductIds((child['id'] ?? '').toString()));
+    }
     return ids;
   }
 
   Widget _marketCategoryNode(Map<String,dynamic> category, int depth) {
-    final id=(category['id'] as num).toInt();
+    final id = (category['id'] ?? '').toString();
     final expanded=_expandedCategoryIds.contains(id);
     final children=_marketCategoryChildren(id);
-    final products=_marketProducts.where((p)=>(p['category_id'] as num?)?.toInt()==id).toList();
+    final products=_marketProducts.where((p)=>(p['category_id'] ?? '').toString() == id).toList();
     final color=depth==0?purple:depth==1?orange:const Color(0xFFFF27C3);
     final productIds=_marketCategoryProductIds(id);
     final selectedCount=productIds.where(selectedProducts.contains).length;
@@ -7669,8 +7770,11 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             final selected=selectedProducts.contains(key),image=(product['image_url']??'').toString();
             return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
               CheckboxListTile(dense:true,contentPadding:const EdgeInsets.all(0),value:selected,
-                secondary:image.isEmpty?const Icon(Icons.inventory_2_outlined,color:purple):ClipRRect(borderRadius:BorderRadius.circular(6),child:Image.network(image,width:40,height:40,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.inventory_2_outlined))),
-                title:Text(name),onChanged:(v)=>setState((){
+                secondary: imageBytes != null && imageBytes.isNotEmpty
+                  ? ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.memory(imageBytes, width: 40, height: 40, fit: BoxFit.cover))
+                  : image.isEmpty ? const Icon(Icons.inventory_2_outlined, color: purple)
+                  : ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.network(image, width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined))),
+                title:Text(name),subtitle: Text([product['item_code'], 'السعر: ${product['price'] ?? 0} • الوحدة: ${product['unit'] ?? '—'}'].where((v) => v != null && v.toString().trim().isNotEmpty).join(' • ')),onChanged:(v)=>setState((){
                   if(v==true){selectedProducts.add(key);_productQuantities.putIfAbsent(key,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(key,()=>TextEditingController(text:(product['price']??'0').toString()));_productUnits[key]=(product['unit']??'كبري').toString();_productQuality[key]='good';_productNegotiable[key]=false;}
                   else{selectedProducts.remove(key);}
                   selectAllProducts=_marketProducts.isNotEmpty&&selectedProducts.length==_marketProducts.length;
@@ -7852,8 +7956,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
                 child: Text(selectAllProducts ? 'إلغاء تحديد الكل' : 'تحديد الكل'),
               ),
             ]),
-            if (_marketCategories.any((category) => category['parent_id'] == null))
-              ..._marketCategories.where((category) => category['parent_id'] == null).map((category) => _marketCategoryNode(category, 0))
+            if (_marketCategories.any((category) => (category['parent_id'] ?? '').toString().isEmpty))
+              ..._marketCategories.where((category) => (category['parent_id'] ?? '').toString().isEmpty).map((category) => _marketCategoryNode(category, 0))
             else
               ..._marketProducts.map((product) {
                 final key = (product['id'] ?? '').toString();
