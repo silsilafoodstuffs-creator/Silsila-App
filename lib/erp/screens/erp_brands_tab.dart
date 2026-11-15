@@ -260,9 +260,17 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
           .single();
         if (mounted) _selectedId = _s(inserted['id']);
       } else {
-        await _db.from('erp_brands').update(payload)
-          .eq('id',_s(row['id'])).eq('company_id',widget.companyId.trim())
-          .select('id').single();
+        await _db.rpc('erp_update_brand_names_batch', params: {
+          'p_company_id': widget.companyId.trim(),
+          'p_rows': [
+            {
+              'id': _s(row['id']),
+              'brand_name': name.text.trim(),
+              'brand_name_en': english.text.trim(),
+              'activity_code': activityCode,
+            },
+          ],
+        });
       }
       await _load();
       if (mounted) ErpCenterToast.show(context, row == null ? 'تمت إضافة البراند وتوليد كوده.' : 'تم تعديل بيانات البراند.');
