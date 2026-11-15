@@ -125,7 +125,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
       ]));
     }
     Widget brandNode(String categoryKey, String brand, List<Map<String,dynamic>> products, void Function(void Function()) refresh) {
-      final key=categoryKey+'|'+brand; final expanded=expandedBrands.contains(key);
+      final key=categoryKey+'|'+brand; final expanded=expandedBrands.contains(key) || search.text.trim().isNotEmpty;
       return Padding(padding:const EdgeInsetsDirectional.only(start:16),child:Column(children:[
         InkWell(onTap:()=>refresh(()=>expanded?expandedBrands.remove(key):expandedBrands.add(key)),child:Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Row(children:[Icon(expanded?Icons.expand_more:Icons.chevron_left,color:const Color(0xFFFF27C3)),Expanded(child:Text(brand,style:const TextStyle(color:Color(0xFFFF27C3),fontWeight:FontWeight.w800))),Text(products.length.toString()+' صنف',style:const TextStyle(fontSize:11)),TextButton(onPressed:()=>refresh(()=>addProducts(products)),child:const Text('تحديد الكل'))]))),
         if(expanded)...products.map((item)=>productNode(item,refresh)),
@@ -133,7 +133,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
     }
     late Widget Function(Map<String,dynamic>,int,void Function(void Function())) categoryNode;
     categoryNode=(category,depth,refresh) {
-      final id=categoryId(category); final expanded=expandedCategories.contains(id); final products=itemsOf(id); final childRows=childrenOf(id);
+      final id=categoryId(category); final expanded=expandedCategories.contains(id) || search.text.trim().isNotEmpty; final products=itemsOf(id); final childRows=childrenOf(id);
       final groups=groupByBrand(products);
       final all=descendantsItems(id);
       return Padding(padding:EdgeInsetsDirectional.only(start:depth*14.0,bottom:5),child:Container(decoration:BoxDecoration(color:depth==0?const Color(0xFFF5EFFB):Colors.white,borderRadius:BorderRadius.circular(9),border:Border.all(color:const Color(0xFFE2D5EF))),child:Column(children:[
