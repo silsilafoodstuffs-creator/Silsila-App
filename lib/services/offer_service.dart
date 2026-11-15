@@ -181,11 +181,11 @@ class OfferService {
 
     final items = await _requireClient
         .from('offer_items')
-        .select('product_id, offer_price, offer_id')
+        .select('product_id, erp_item_id, offer_price, offer_id')
         .inFilter('offer_id', offerIds);
     final prices = <String, double>{};
     for (final item in items.whereType<Map>()) {
-      final productId = item['product_id']?.toString();
+      final productId = (item['product_id'] ?? item['erp_item_id'])?.toString();
       final rawPrice = item['offer_price'];
       if (productId != null && rawPrice is num) {
         prices[productId] = rawPrice.toDouble();
