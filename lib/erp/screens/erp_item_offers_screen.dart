@@ -28,7 +28,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
   String? _categoryId;
   bool _loading = false, _saving = false;
   String? _error, _message;
-  List<Map<String,dynamic>> _items = [], _categories = [], _parties = [], _warehouses = [], _branches = [], _campaigns = [];
+  List<Map<String,dynamic>> _items = [], _categories = [], _brands = [], _parties = [], _warehouses = [], _branches = [], _campaigns = [];
   final Set<String> _selectedCustomers = {}, _selectedWarehouses = {}, _selectedBranches = {}, _governorates = {}, _districts = {}, _centers = {}, _areas = {}, _customerTypes = {};
   final List<Map<String,dynamic>> _offerLines = [];
   SupabaseClient? get _db { try { return Supabase.instance.client; } catch (_) { return null; } }
@@ -49,7 +49,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final values = await Future.wait([
-        _inventory.fetchItems(company), _inventory.fetchCategories(company), _inventory.fetchWarehouses(company), _inventory.fetchBranches(company),
+        _inventory.fetchItems(company), _inventory.fetchCategories(company), _inventory.fetchWarehouses(company), _inventory.fetchBranches(company), _inventory.fetchBrands(company),
         _partiesRepo.fetchParties(company, kind: 'customer'),
         _db!.from('erp_sales_campaigns').select('id,title,campaign_type,start_date,end_date,is_active').eq('company_id', company).order('created_at', ascending: false).limit(100),
       ]);
@@ -59,8 +59,9 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
         _categories = (values[1] as List).cast<Map<String,dynamic>>();
         _warehouses = (values[2] as List).cast<Map<String,dynamic>>();
         _branches = (values[3] as List).cast<Map<String,dynamic>>();
-        _parties = (values[4] as List).cast<Map<String,dynamic>>();
-        _campaigns = (values[5] as List).map((r) => Map<String,dynamic>.from(r)).where((r) => !widget.lockCampaignType || _s(r['campaign_type']) == _campaignType).toList();
+        _brands = (values[4] as List).cast<Map<String,dynamic>>();
+        _parties = (values[5] as List).cast<Map<String,dynamic>>();
+        _campaigns = (values[6] as List).map((r) => Map<String,dynamic>.from(r)).where((r) => !widget.lockCampaignType || _s(r['campaign_type']) == _campaignType).toList();
         _loading = false;
       });
     } catch (e) { if (mounted) setState(() { _loading = false; _error = 'تعذر تحميل بيانات العروض: $e'; }); }
@@ -89,27 +90,107 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
   }
 
   Future<void> _pickProducts() async {
-    final chosen = <String>{};
+    final chosen = <String>{..._offerLines.map((e) => _s(e['item_id']))};
     final search = TextEditingController();
-    String? category = _categoryId;
-    await showDialog<void>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, refresh) {
+    final brandById = <String,Map<String,dynamic>>{for (final b in _brands) _s(b['id']): b};
+    List<Map<String,dynamic>> children(String id) => _categories.where((c) => _s(c['parent_id']) == id).toList();
+    List<Map<String,dynamic>> products(String id) {
       final q = search.text.trim().toLowerCase();
-      final list = _items.where((i) => (category == null || _s(i['category_id']) == category) && (q.isEmpty || _s(i['item_name']).toLowerCase().contains(q) || _s(i['item_code']).toLowerCase().contains(q) || _s(i['barcode']).toLowerCase().contains(q))).toList();
-      return AlertDialog(title: const Text('جلب الأصناف — اختيار متعدد'),
+      return _items.where((p) => _s(p['category_id']) == id &&
+        (q.isEmpty || _s(p['item_name']).toLowerCase().contains(q) ||
+         _s(p['item_code']).toLowerCase().contains(q) || _s(p['barcode']).toLowerCase().contains(q))).toList();
+    }
+    Set<String> descendants(String id) {
+      final result = products(id).map((p) => _s(p['id'])).toSet();
+      for (final child in children(id)) { result.addAll(descendants(_s(child['id']))); }
+      return result;
+    }
+    await showDialog<void>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, refresh) {
+      Widget productTile(Map<String,dynamic> item) {
+        final id = _s(item['id']);
+        final image = _s(item['image_url']);
+        return CheckboxListTile(
+          dense: true, value: chosen.contains(id),
+          secondary: image.isEmpty ? const Icon(Icons.inventory_2_outlined) :
+            ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.network(image, width: 40, height: 40, fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined))),
+          title: Text('\${_s(item['item_code'])} — \${_s(item['item_name'])}'),
+          subtitle: Text('سعر البيع: \${_s(item['sale_price'])} ج.م • الوحدة: \${_s(item['base_unit'])}'),
+          onChanged: (v) => refresh(() { if (v == true) { chosen.add(id); } else { chosen.remove(id); } }),
+        );
+      }
+      Widget categoryNode(Map<String,dynamic> category, int depth) {
+        final id = _s(category['id']);
+        final nested = children(id);
+        final rows = products(id);
+        final ids = descendants(id);
+        final count = ids.where(chosen.contains).length;
+        final grouped = <String,List<Map<String,dynamic>>>{};
+        for (final p in rows) { grouped.putIfAbsent(_s(p['brand_id']), () => []).add(p); }
+        return Padding(
+          padding: EdgeInsetsDirectional.only(start: depth * 14),
+          child: ExpansionTile(
+            key: PageStorageKey<String>('offer-category-$id'),
+            leading: Checkbox(tristate: true,
+              value: count == 0 ? false : count == ids.length ? true : null,
+              onChanged: (v) => refresh(() { if (v == true) { chosen.addAll(ids); } else { chosen.removeAll(ids); } })),
+            title: Text('\${_s(category['category_code'])} — \${_s(category['category_name'])}',
+              style: TextStyle(fontWeight: FontWeight.w800, color: depth == 0 ? const Color(0xFF3E007D) : Colors.black87)),
+            subtitle: Text('\${ids.length} صنف • \${nested.length} فئة تابعة'),
+            children: [
+              ...grouped.entries.map((entry) {
+                final brand = brandById[entry.key];
+                final brandIds = entry.value.map((p) => _s(p['id'])).toSet();
+                final selectedCount = brandIds.where(chosen.contains).length;
+                return ExpansionTile(
+                  key: PageStorageKey<String>('offer-brand-\${id}-\${entry.key}'),
+                  leading: Checkbox(tristate: true,
+                    value: selectedCount == 0 ? false : selectedCount == brandIds.length ? true : null,
+                    onChanged: (v) => refresh(() { if (v == true) { chosen.addAll(brandIds); } else { chosen.removeAll(brandIds); } })),
+                  title: Text(brand == null ? 'بدون ماركة (\${entry.value.length})' : '\${_s(brand['brand_name'])} (\${entry.value.length})'),
+                  children: entry.value.map(productTile).toList(),
+                );
+              }),
+              ...nested.map((child) => categoryNode(child, depth + 1)),
+            ],
+          ),
+        );
+      }
+      final q = search.text.trim().toLowerCase();
+      final allVisible = _items.where((p) => q.isEmpty || _s(p['item_name']).toLowerCase().contains(q) ||
+        _s(p['item_code']).toLowerCase().contains(q) || _s(p['barcode']).toLowerCase().contains(q)).toList();
+      final roots = _categories.where((c) => _s(c['parent_id']).isEmpty).toList();
+      return AlertDialog(
+        title: const Text('اختيار أصناف العرض'),
         content: SizedBox(width: 760, height: 560, child: Column(children: [
-          Row(children: [Expanded(child: TextField(controller: search, onChanged: (_) => refresh(() {}), decoration: const InputDecoration(labelText: 'بحث بالاسم أو الكود أو الباركود'))), const SizedBox(width: 8), DropdownButton<String?>(itemHeight: 48, value: category, hint: const Text('كل الفئات'), items: [const DropdownMenuItem<String?>(value: null, child: Text('كل الفئات')), ..._categories.map((g) => DropdownMenuItem<String?>(value: _s(g['id']), child: Text(_s(g['category_name']))))], onChanged: (v) => refresh(() => category = v))]),
-          Align(alignment: Alignment.centerRight, child: Wrap(spacing: 8, children: [TextButton(onPressed: () => refresh(() => chosen.addAll(list.map((e) => _s(e['id'])))), child: const Text('تحديد الظاهر')), TextButton(onPressed: () => refresh(() => chosen.clear()), child: const Text('إلغاء التحديد'))])),
-          Expanded(child: ListView(children: list.map((item) => CheckboxListTile(value: chosen.contains(_s(item['id'])), title: Text('${_s(item['item_code'])} — ${_s(item['item_name'])}', textDirection: TextDirection.rtl), subtitle: Text('سعر البيع: ${_s(item['sale_price'])} | الوحدة: ${_s(item['base_unit'])}'), onChanged: (v) => refresh(() { v == true ? chosen.add(_s(item['id'])) : chosen.remove(_s(item['id'])); }))).toList())),
+          TextField(controller: search, onChanged: (_) => refresh(() {}),
+            decoration: const InputDecoration(labelText: 'بحث بالاسم أو الكود أو الباركود', prefixIcon: Icon(Icons.search))),
+          Wrap(spacing: 8, children: [
+            TextButton(onPressed: () => refresh(() => chosen.addAll(allVisible.map((p) => _s(p['id'])))), child: const Text('تحديد نتائج البحث')),
+            TextButton(onPressed: () => refresh(() => chosen.clear()), child: const Text('إلغاء التحديد')),
+            Text('المحدد: \${chosen.length}'),
+          ]),
+          Expanded(child: _categories.isEmpty
+            ? ListView(children: allVisible.map(productTile).toList())
+            : ListView(children: roots.map((c) => categoryNode(c, 0)).toList())),
         ])),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')), FilledButton(onPressed: () {
-          setState(() {
-            for (final id in chosen) {
-              if (_offerLines.any((l) => _s(l['item_id']) == id)) continue;
-              final item = _items.firstWhere((i) => _s(i['id']) == id);
-              _offerLines.add({'item_id':id,'item_code':_s(item['item_code']),'item_name':_s(item['item_name']),'unit':_s(item['base_unit']),'sale_price':_n(item['sale_price']),'offer_price':_n(item['sale_price']),'offer_qty':100.0,'remaining_qty':100.0,'discount':0.0});
-            }
-          }); Navigator.pop(ctx);
-        }, child: const Text('إضافة الأصناف المحددة'))],
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+          FilledButton(onPressed: () {
+            setState(() {
+              for (final id in chosen) {
+                if (_offerLines.any((e) => _s(e['item_id']) == id)) continue;
+                final item = _items.firstWhere((p) => _s(p['id']) == id);
+                final price = _n(item['sale_price']);
+                _offerLines.add({'item_id':id,'item_code':_s(item['item_code']),'item_name':_s(item['item_name']),
+                  'image_url':_s(item['image_url']),'unit':_s(item['base_unit']),'sale_price':price,
+                  'offer_price':price,'offer_qty':100.0,'remaining_qty':100.0,'discount':0.0});
+              }
+              _offerLines.removeWhere((e) => !chosen.contains(_s(e['item_id'])));
+            });
+            Navigator.pop(ctx);
+          }, child: const Text('تطبيق الأصناف المحددة')),
+        ],
       );
     }));
     search.dispose();
