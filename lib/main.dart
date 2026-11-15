@@ -1311,7 +1311,7 @@ class _MainShellState extends State<MainShell> {
 
   @override
   void dispose() {
-    _closeStartupAdvertisement();
+    _closeStartupAdvertisement(showPopup: false);
     _closePopupAdvertisement();
     searchController.dispose();
     super.dispose();
@@ -1449,10 +1449,7 @@ class _MainShellState extends State<MainShell> {
         ),
       ));
       Overlay.of(context, rootOverlay: true).insert(_introAdEntry!);
-      _introAdTimer = Timer(Duration(seconds: duration), () {
-        _closeStartupAdvertisement();
-        _showPopupAdvertisement(activityCode);
-      });
+      _introAdTimer = Timer(Duration(seconds: duration), _closeStartupAdvertisement);
     } catch (_) {
       // Startup media is optional and must never block app entry.
       _closeStartupAdvertisement();
@@ -1568,13 +1565,16 @@ class _MainShellState extends State<MainShell> {
     _popupAdEntry = null;
   }
 
-  void _closeStartupAdvertisement() {
+  void _closeStartupAdvertisement({bool showPopup = true}) {
     _introAdTimer?.cancel();
     _introAdTimer = null;
     _introAdEntry?.remove();
     _introAdEntry = null;
     _introVideoController?.dispose();
     _introVideoController = null;
+    if (showPopup && mounted) {
+      _showPopupAdvertisement(currentActivityCode);
+    }
   }
 
   Future<void> _changeActivity(String nextActivity) async {
