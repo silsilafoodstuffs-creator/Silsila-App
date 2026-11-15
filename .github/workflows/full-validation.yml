@@ -1,7 +1,18 @@
 name: Silsila Full Validation - All Recent Changes
 
-# Run the broad audit for Studio PRs and manually at planned milestones.
+# Run the broad audit on the Studio integration branch and manually at planned milestones.
 on:
+  push:
+    branches: [feature/silsila-studio-unified-main-2026-11-15]
+    paths:
+      - "lib/**"
+      - "test/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "android/**"
+      - "tools/web_view_test.mjs"
+      - "supabase/**"
+      - ".github/workflows/full-validation.yml"
   pull_request:
     branches: [main]
     paths:
