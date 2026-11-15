@@ -22,7 +22,7 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('home ticker renders logo-only circular items with horizontal scrolling', () {
+  test('home ticker renders circular brand logos with their names below and horizontal scrolling', () {
     final start = homeSource.indexOf('class _HomeTickerAdsStrip extends StatefulWidget');
     final end = homeSource.indexOf('class MainShell extends StatefulWidget', start);
     expect(start, greaterThanOrEqualTo(0));
@@ -34,7 +34,7 @@ void main() {
     expect(ticker, contains('scrollDirection: Axis.horizontal'));
     expect(ticker, contains('shape: BoxShape.circle'));
     expect(ticker, contains('Image.memory'));
-    expect(ticker, isNot(contains("ad['brand_name']")));
+    expect(ticker, contains("ad['brand_name']"));
     expect(ticker, isNot(contains("ad['brand_code']")));
   });
 
