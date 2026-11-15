@@ -80,14 +80,6 @@ jobs:
               p.write_text(s)
           PY
 
-      - name: Cache Android NDK and CMake
-        uses: actions/cache@v4
-        with:
-          path: |
-            /usr/local/lib/android/sdk/ndk/27.0.12077973
-            /usr/local/lib/android/sdk/cmake/3.22.1
-          key: android-sdk-ndk27-cmake322-${{ runner.os }}
-
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
