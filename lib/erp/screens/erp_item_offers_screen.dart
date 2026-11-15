@@ -159,13 +159,13 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
     final id=_s(campaign['id']); if(id.isEmpty) return;
     setState(()=>_loading=true);
     try {
-      final rows=await _db!.from('erp_sales_campaign_items').select('item_id,offer_price,min_quantity,offer_quantity,remaining_quantity,discount_value,discount_kind,is_active').eq('company_id',widget.companyId!.trim()).eq('campaign_id',id);
+      final rows=await _db!.from('erp_sales_campaign_items').select('item_id,offer_price,min_quantity,max_quantity,offer_quantity,remaining_quantity,discount_value,discount_kind,is_active').eq('company_id',widget.companyId!.trim()).eq('campaign_id',id);
       final next=<Map<String,dynamic>>[];
       for(final raw in rows) {
         final row=Map<String,dynamic>.from(raw); if(row['is_active']==false) continue;
         final matches=_items.where((v)=>_s(v['id'])==_s(row['item_id'])).toList(); final item=matches.isEmpty?null:matches.first;
         if(item==null) continue;
-        next.add({'item_id':_s(item['id']),'item_code':_s(item['item_code']),'item_name':_s(item['item_name']),'unit':_s(item['base_unit']),'sale_price':_n(item['sale_price']),'offer_price':_n(row['offer_price']),'offer_qty':_n(row['offer_quantity']),'remaining_qty':_n(row['remaining_quantity']),'discount':_n(row['discount_value']),'min_quantity':_n(row['min_quantity'])});
+        next.add({'item_id':_s(item['id']),'item_code':_s(item['item_code']),'item_name':_s(item['item_name']),'unit':_s(item['base_unit']),'sale_price':_n(item['sale_price']),'offer_price':_n(row['offer_price']),'offer_qty':_n(row['offer_quantity'])>0?_n(row['offer_quantity']):_n(row['max_quantity']),'remaining_qty':_n(row['remaining_quantity']),'discount':_n(row['discount_value']),'min_quantity':_n(row['min_quantity'])});
       }
       if(!mounted)return;
       setState(() {
@@ -256,7 +256,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
         return <String,dynamic>{
           'company_id':company, 'campaign_id':campaignId, 'item_id':_s(line['item_id']),
           'offer_price':offerPrice, 'min_quantity':_n(line['min_quantity'])>0?_n(line['min_quantity']):1,
-          'offer_quantity':_n(line['offer_qty']), 'remaining_quantity':_n(line['remaining_qty']),
+          'max_quantity':_n(line['offer_qty']), 'offer_quantity':_n(line['offer_qty']), 'remaining_quantity':_n(line['remaining_qty']),
           'discount_value':discountValue, 'discount_kind':_discountKind,
           'representative_incentive':_campaignType == 'slow_moving' ? 2 : 0,
           'customer_incentive':_campaignType == 'promotion' ? 2 : 0, 'is_active':true,
