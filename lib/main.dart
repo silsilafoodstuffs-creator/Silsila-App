@@ -7562,6 +7562,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   final List<Map<String,dynamic>> _marketCategories = [];
   final List<Map<String,dynamic>> _marketProducts = [];
   final Set<int> _expandedCategoryIds = {};
+  final Set<String> _expandedBrandKeys = <String>{};
   final Map<String,TextEditingController> _productQuantities = {};
   final Map<String,TextEditingController> _productPrices = {};
   final Map<String,String> _productUnits = {};
@@ -7687,9 +7688,9 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
 
   Widget _marketBrandNode(String brand, List<Map<String,dynamic>> products) {
     final key='brand:'+brand+':'+products.map((p)=>(p['id']??'').toString()).join(',');
-    final expanded=_expandedCategoryIds.contains(key.hashCode);
+    final expanded=_expandedBrandKeys.contains(key);
     return Padding(padding:const EdgeInsetsDirectional.only(start:16),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      InkWell(onTap:()=>setState(()=>expanded?_expandedCategoryIds.remove(key.hashCode):_expandedCategoryIds.add(key.hashCode)),child:Padding(padding:const EdgeInsets.symmetric(vertical:4),child:Row(children:[
+      InkWell(onTap:()=>setState(()=>expanded?_expandedBrandKeys.remove(key):_expandedBrandKeys.add(key)),child:Padding(padding:const EdgeInsets.symmetric(vertical:4),child:Row(children:[
         Icon(expanded?Icons.expand_less:Icons.chevron_left,color:const Color(0xFFFF27C3),size:17),
         Expanded(child:Text(brand,style:const TextStyle(color:Color(0xFFFF27C3),fontWeight:FontWeight.w700))),
         Text(products.length.toString()+' صنف',style:const TextStyle(fontSize:10,color:Colors.black54)),
