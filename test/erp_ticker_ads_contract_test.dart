@@ -39,6 +39,8 @@ void main() {
     expect(ticker, contains('Image.memory'));
     expect(ticker, contains("ad['brand_name']"));
     expect(ticker, contains('widget.onBrandTap'));
+    expect(ticker, contains('_manualScrollPaused'));
+    expect(ticker, contains('ScrollStartNotification'));
     expect(homeSource, contains("(p.brand ?? '').toLowerCase().contains(q)"));
     expect(ticker, isNot(contains("ad['brand_code']")));
   });
