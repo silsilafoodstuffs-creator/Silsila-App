@@ -62,7 +62,7 @@ void main() {
     expect(adminSource, contains('class _TickerBrandCircle extends StatelessWidget'));
     expect(adminSource, contains('InteractiveViewer('));
     expect(adminSource, contains('panAxis: PanAxis.free'));
-    expect(adminSource, contains('minScale: 1'));
+    expect(adminSource, contains('minScale: 0.5'));
     expect(adminSource, contains('maxScale: 4'));
     expect(adminSource, contains('BoxFit.cover'));
     expect(adminSource, contains('Switch.adaptive('));
