@@ -6,7 +6,7 @@ on:
       - Silsila Web App Validation
     types:
       - completed
-    branches: [main]
+    branches: [main, 'feature/**']
 
 permissions:
   contents: read
