@@ -43,13 +43,25 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
   @override void initState() { super.initState(); if (widget.initialCampaignType != null && const {'customer_magazine','promotion','slow_moving'}.contains(widget.initialCampaignType)) _campaignType = widget.initialCampaignType!; _load(); }
   @override void dispose() { _name.dispose(); _search.dispose(); super.dispose(); }
 
+  Future<List<Map<String,dynamic>>> _fetchAllItems(String company) async {
+    final all = <Map<String,dynamic>>[];
+    var offset = 0;
+    while (true) {
+      final page = await _inventory.fetchItems(company, offset: offset, pageSize: 500);
+      all.addAll(page);
+      if (page.length < 500) break;
+      offset += page.length;
+    }
+    return all;
+  }
+
   Future<void> _load() async {
     final company = widget.companyId;
     if (company == null || company.isEmpty) { setState(() => _error = 'اربط الشاشة بشركة نشطة أولًا.'); return; }
     setState(() { _loading = true; _error = null; });
     try {
       final values = await Future.wait([
-        _inventory.fetchItems(company), _inventory.fetchCategories(company), _inventory.fetchWarehouses(company), _inventory.fetchBranches(company), _inventory.fetchBrands(company),
+        _fetchAllItems(company), _inventory.fetchCategories(company), _inventory.fetchWarehouses(company), _inventory.fetchBranches(company), _inventory.fetchBrands(company),
         _partiesRepo.fetchParties(company, kind: 'customer'),
         _db!.from('erp_sales_campaigns').select('id,title,campaign_type,start_date,end_date,is_active').eq('company_id', company).order('created_at', ascending: false).limit(100),
       ]);
