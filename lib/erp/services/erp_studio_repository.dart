@@ -47,6 +47,28 @@ class ErpStudioRepository {
     };
   }
 
+  Future<bool> canViewPublishedDesigns(String companyId) async {
+    _requireCompany(companyId);
+    final userId = _client.auth.currentUser!.id;
+    final member = await _client.from('erp_company_members')
+        .select('member_role,is_active')
+        .eq('company_id', companyId)
+        .eq('user_id', userId)
+        .maybeSingle();
+    if (member == null || member['is_active'] != true) return false;
+    final role = (member['member_role'] ?? '').toString().trim().toLowerCase();
+    if (role == 'owner' || role == 'admin') return true;
+    final permission = await _client.from('erp_user_permission_matrix')
+        .select('can_access')
+        .eq('company_id', companyId)
+        .eq('user_id', userId)
+        .eq('menu_name', 'إعدادات عامة')
+        .eq('submenu_name', 'بيانات أساسية')
+        .eq('page_name', 'شاشات الاستوديو المنشورة')
+        .maybeSingle();
+    return permission?['can_access'] == true;
+  }
+
   Future<Map<String, dynamic>> getPublishedDesignMetadata({
     required String companyId,
     required String designId,
