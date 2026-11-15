@@ -69,6 +69,7 @@ class ErpStudioRepository {
           .select('id,design_key,name,design_kind,status,schema_version,revision,published_revision,updated_at')
           .eq('company_id', companyId)
           .order('updated_at', ascending: false)
+          .order('id', ascending: true)
           .range(offset, offset + pageSize - 1);
       final page = (rows as List)
           .map((e) => Map<String, dynamic>.from(e as Map))
@@ -92,6 +93,7 @@ class ErpStudioRepository {
           .eq('company_id', companyId)
           .gt('published_revision', 0)
           .order('updated_at', ascending: false)
+          .order('id', ascending: true)
           .range(offset, offset + pageSize - 1);
       final page = (rows as List)
           .map((e) => Map<String, dynamic>.from(e as Map))
