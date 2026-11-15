@@ -7788,9 +7788,19 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             decoration: BoxDecoration(color: type == 'buy' ? purple : type == 'transfer' ? const Color(0xFFFF27C3) : orange, borderRadius: BorderRadius.circular(14)),
             child: Column(mainAxisSize:MainAxisSize.min,children:[
               Text(type == 'buy' ? 'عايز أشتري' : type == 'transfer' ? 'عايز أنقل' : 'عايز أبيع',textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:19)),
-              Text((_publisherProfile['full_name'] ?? 'حساب المستخدم').toString(),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700)),
-              Text((_publisherProfile['phone'] ?? 'رقم الهاتف من بيانات الحساب').toString(),style:const TextStyle(color:Colors.white,fontSize:11)),
-              Text([_publisherProfile['governorate'],_publisherProfile['district'],_publisherProfile['area'],_publisherProfile['address']].where((v)=>v!=null&&v.toString().trim().isNotEmpty).join(' - '),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:10)),
+              const SizedBox(height:8),
+              Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+                ClipRRect(borderRadius:BorderRadius.circular(9),child:(_publisherProfile['avatar_url']??'').toString().trim().isEmpty
+                  ? Container(width:58,height:58,color:Colors.white24,child:const Icon(Icons.person,color:Colors.white,size:30))
+                  : Image.network(_publisherProfile['avatar_url'].toString(),width:58,height:58,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Container(width:58,height:58,color:Colors.white24,child:const Icon(Icons.person,color:Colors.white,size:30)))),
+                const SizedBox(width:10),
+                Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+                  Text((_publisherProfile['full_name'] ?? 'حساب المستخدم').toString(),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
+                  Text('موبايل 1: \${(_publisherProfile['phone'] ?? '—').toString()}   •   موبايل 2: \${(_publisherProfile['whatsapp_phone'] ?? '—').toString()}',style:const TextStyle(color:Colors.white,fontSize:10),maxLines:2),
+                  Text([_publisherProfile['governorate'],_publisherProfile['district'],_publisherProfile['area'],_publisherProfile['address']].where((v)=>v!=null&&v.toString().trim().isNotEmpty).join(' - '),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:10)),
+                  Align(alignment:Alignment.centerLeft,child:Text('\${(_publisherProfile['account_type']??'حساب').toString()} • \${(type=='sell'?_publisherProfile['supplier_type']:_publisherProfile['customer_type']??'').toString()}',style:const TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w700))),
+                ])),
+              ]),
             ]),
           ),
           const SizedBox(height: 12),
@@ -7847,11 +7857,6 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             decoration: const InputDecoration(labelText: 'المحافظة (اختياري)'),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: contactPhoneController,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(labelText: 'رقم للتواصل (اختياري)', prefixIcon: Icon(Icons.phone_outlined)),
-          ),
           const SizedBox(height: 8),
           SwitchListTile(contentPadding: EdgeInsets.zero, value: isNegotiable, onChanged: (value) => setState(() => isNegotiable = value), title: Text(silsilaText(silsilaText('السعر قابل للتفاوض البسيط'))), subtitle: Text(silsilaText(silsilaText('يمكن للطرف الآخر إرسال سعر مقترح للموافقة أو الرفض أو التعديل.')))),
           if (type == 'transfer') ...[
