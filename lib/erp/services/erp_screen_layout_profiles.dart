@@ -25,15 +25,11 @@ class ErpScreenLayoutProfiles {
     return base64Url.encode(utf8.encode(normalized)).replaceAll('=', '');
   }
 
-  static String get _profilesKey =>
-      _activeScope == null || _activeScope == 'local'
-          ? storageKey
-          : '${storageKey}__$_activeScope';
+  static String _profilesKeyFor(String scope) =>
+      scope == 'local' ? storageKey : '${storageKey}__$scope';
 
-  static String get _pendingKey =>
-      _activeScope == null || _activeScope == 'local'
-          ? pendingStorageKey
-          : '${pendingStorageKey}__$_activeScope';
+  static String _pendingKeyFor(String scope) =>
+      scope == 'local' ? pendingStorageKey : '${pendingStorageKey}__$scope';
 
   static Set<String> get pendingKeys =>
       Set<String>.unmodifiable(_pendingKeys);
@@ -58,23 +54,37 @@ class ErpScreenLayoutProfiles {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_profilesKey);
+      final raw = prefs.getString(_profilesKeyFor(scope));
+      final decodedProfiles = <String, dynamic>{};
       if (raw != null && raw.isNotEmpty) {
         final decoded = jsonDecode(raw);
         if (decoded is Map) {
-          profiles.value = Map<String, dynamic>.from(decoded);
+          decodedProfiles.addAll(Map<String, dynamic>.from(decoded));
         }
       }
+      final pending = prefs.getStringList(_pendingKeyFor(scope)) ??
+          const <String>[];
 
-      final pending = prefs.getStringList(_pendingKey) ?? const <String>[];
-      _pendingKeys.addAll(pending);
+      // A different company may have become active while storage was loading.
+      // Do not publish stale results into the newly active company's UI state.
+      if (_activeScope != scope) return;
+      profiles.value = decodedProfiles;
+      _pendingKeys
+        ..clear()
+        ..addAll(pending);
     } finally {
-      _loaded = true;
+      if (_activeScope == scope) _loaded = true;
     }
   }
 
   static bool _matchesScope(String? companyId) =>
       _activeScope == scopeForCompany(companyId);
+
+  static void _requireActiveScope(String scope) {
+    if (_activeScope != scope) {
+      throw StateError('تغيرت الشركة النشطة أثناء تحديث إعدادات تخطيط الشاشات.');
+    }
+  }
 
   static Map<String, dynamic> forScreen(String screen) {
     final exact = profiles.value[screen];
@@ -102,12 +112,21 @@ class ErpScreenLayoutProfiles {
     return result;
   }
 
-  static Future<void> _persist() async {
+  static Future<void> _persist(String scope) async {
+    _requireActiveScope(scope);
+    // Capture both keys and values before awaiting SharedPreferences so a
+    // company switch cannot redirect one tenant's data into another key.
+    final profilesKey = _profilesKeyFor(scope);
+    final pendingKey = _pendingKeyFor(scope);
+    final profilesSnapshot = jsonEncode(
+      Map<String, dynamic>.from(profiles.value),
+    );
+    final pendingSnapshot = _pendingKeys.toList(growable: false);
     final prefs = await SharedPreferences.getInstance();
-    if (!await prefs.setString(_profilesKey, jsonEncode(profiles.value))) {
+    if (!await prefs.setString(profilesKey, profilesSnapshot)) {
       throw StateError('تعذر حفظ إعدادات تخطيط الشاشات محلياً.');
     }
-    if (!await prefs.setStringList(_pendingKey, _pendingKeys.toList())) {
+    if (!await prefs.setStringList(pendingKey, pendingSnapshot)) {
       throw StateError('تعذر حفظ قائمة التخطيطات المعلقة للمزامنة.');
     }
   }
@@ -117,12 +136,14 @@ class ErpScreenLayoutProfiles {
     Map<String, dynamic> profile, {
     String? companyId,
   }) async {
+    final scope = scopeForCompany(companyId);
     await load(companyId: companyId);
+    _requireActiveScope(scope);
     final next = Map<String, dynamic>.from(profiles.value)
       ..[profileKey] = Map<String, dynamic>.from(profile);
     profiles.value = next;
     _pendingKeys.add(profileKey);
-    await _persist();
+    await _persist(scope);
   }
 
   /// Merge remote values without overwriting unsynchronized local edits.
@@ -130,7 +151,9 @@ class ErpScreenLayoutProfiles {
     Map<String, Map<String, dynamic>> remote, {
     String? companyId,
   }) async {
+    final scope = scopeForCompany(companyId);
     await load(companyId: companyId);
+    _requireActiveScope(scope);
     final next = Map<String, dynamic>.from(profiles.value);
     for (final entry in remote.entries) {
       if (!_pendingKeys.contains(entry.key)) {
@@ -138,26 +161,30 @@ class ErpScreenLayoutProfiles {
       }
     }
     profiles.value = next;
-    await _persist();
+    await _persist(scope);
   }
 
   static Future<void> markSynced(
     String profileKey, {
     String? companyId,
   }) async {
+    final scope = scopeForCompany(companyId);
     await load(companyId: companyId);
+    _requireActiveScope(scope);
     _pendingKeys.remove(profileKey);
-    await _persist();
+    await _persist(scope);
   }
 
   static Future<void> reset(
     String profileKey, {
     String? companyId,
   }) async {
+    final scope = scopeForCompany(companyId);
     await load(companyId: companyId);
+    _requireActiveScope(scope);
     final next = Map<String, dynamic>.from(profiles.value)..remove(profileKey);
     profiles.value = next;
     _pendingKeys.remove(profileKey);
-    await _persist();
+    await _persist(scope);
   }
 }
