@@ -1050,8 +1050,9 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
 }
 
 class _HomeTickerAdsStrip extends StatefulWidget {
-  const _HomeTickerAdsStrip({this.activityCode});
+  const _HomeTickerAdsStrip({this.activityCode, this.onBrandTap});
   final String? activityCode;
+  final ValueChanged<String>? onBrandTap;
 
   @override
   State<_HomeTickerAdsStrip> createState() => _HomeTickerAdsStripState();
@@ -1147,7 +1148,9 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
           final ad = _ads[index % _ads.length];
           final logo = _decodeDatabaseBytea(ad['logo_data']);
           final brandName = (ad['brand_name'] ?? '').toString().trim();
-          return SizedBox(
+          return GestureDetector(
+            onTap: brandName.isEmpty ? null : () => widget.onBrandTap?.call(brandName),
+            child: SizedBox(
             width: _itemWidth,
             child: Padding(
               padding: const EdgeInsetsDirectional.only(end: _itemGap),
@@ -1205,6 +1208,7 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
                   ),
                 ],
               ),
+            ),
             ),
           );
         },
@@ -2055,7 +2059,8 @@ class _MainShellState extends State<MainShell> {
       final q = search.trim().toLowerCase();
       final searchMatch = q.isEmpty ||
           p.name.toLowerCase().contains(q) ||
-          p.category.toLowerCase().contains(q);
+          p.category.toLowerCase().contains(q) ||
+          (p.brand ?? '').toLowerCase().contains(q);
       return categoryMatch && searchMatch;
     }).toList();
 
@@ -2105,7 +2110,19 @@ class _MainShellState extends State<MainShell> {
           }
         }),
         const SizedBox(height: 6),
-        _HomeTickerAdsStrip(activityCode: currentActivityCode),
+        _HomeTickerAdsStrip(
+          activityCode: currentActivityCode,
+          onBrandTap: (brandName) {
+            setState(() {
+              selectedEntity = 'فئات';
+              selectedCategory = 'الكل';
+              browseSubcategory = 'الكل';
+              search = brandName;
+              searchController.text = brandName;
+              expandedCatalogBrands.clear();
+            });
+          },
+        ),
         const SizedBox(height: 12),
         Text(silsilaText(silsilaText('نوع النشاط')),
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
