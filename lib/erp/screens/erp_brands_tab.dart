@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
@@ -719,59 +720,87 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
                       children:visibleGroups.map(_treeGroup).toList(),
                     )
-                  : SingleChildScrollView(
-                      scrollDirection:Axis.horizontal,
-                      child:SingleChildScrollView(
-                        child:DataTable(
-                          headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
-                          dataRowMinHeight:56,
-                          dataRowMaxHeight:64,
-                          columns:const [
-                            DataColumn(label:Text('كود البراند')),
-                            DataColumn(label:Text('اسم البراند عربي')),
-                            DataColumn(label:Text('الاسم الإنجليزي')),
-                            DataColumn(label:Text('الصورة')),
-                            DataColumn(label:Text('المجموعة')),
-                            DataColumn(label:Text('نوع السجل')),
-                            DataColumn(label:Text('نشط')),
-                            DataColumn(label:Text('إدارة الصورة')),
-                          ],
-                          rows:rows.map((row) {
-                            final id = _s(row['id']);
-                            final system = row['is_system'] == true;
-                            return DataRow(
-                              selected:_selectedId == id,
-                              onSelectChanged:(_) => setState(() => _selectedId = id),
-                              color:WidgetStateProperty.all(system ? const Color(0xFFEDE1F8) : Colors.white),
-                              cells:[
-                                DataCell(Text(_s(row['brand_code']),style:const TextStyle(fontWeight:FontWeight.w900,color:_brandPurple))),
-                                DataCell(SizedBox(width:210,child:_gridEditing && !system
-                                  ? TextField(
-                                      controller:_gridNameControllers.putIfAbsent(id, () => TextEditingController(text:_s(row['brand_name']))),
-                                      enabled:!_saving,
-                                      decoration:const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'اسم البراند'),
-                                      onSubmitted:(_) => _saveGridNames(onlyId:id),
-                                    )
-                                  : Text(_s(row['brand_name'])))),
-                                DataCell(SizedBox(width:150,child:Text(_s(row['brand_name_en'])))),
-                                DataCell(_logoPreview(row,size:46)),
-                                DataCell(SizedBox(width:170, child: DropdownButton<String?>(isExpanded:true, value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : null, hint: const Text('بدون مجموعة'), items: [const DropdownMenuItem<String?>(value:null, child:Text('بدون مجموعة')), ..._groups.map((g) => DropdownMenuItem<String?>(value:_s(g['id']), child:Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow:TextOverflow.ellipsis)))], onChanged: system ? null : (v) => _assignGroup(row,v)))),
-                                DataCell(Text(system ? 'افتراضي' : 'براند')),
-                                DataCell(Checkbox(
-                                  shape:const CircleBorder(), value:row['is_active'] == true,
-                                  activeColor:_brandPurple, onChanged:system ? null : (_) => _toggle(row))),
-                                DataCell(Row(mainAxisSize:MainAxisSize.min,children:[
-                                  IconButton(tooltip:'اختيار/تغيير الشعار',onPressed:_saving ? null : () => _uploadLogo(row),
-                                    icon:const Icon(Icons.photo_library_outlined,color:_brandPurple)),
-                                  IconButton(tooltip:'حذف الشعار',
-                                    onPressed:_saving || system || _logoBytes(row['logo_data']) == null ? null : () => _removeLogo(row),
-                                    icon:const Icon(Icons.hide_image_outlined,color:Colors.redAccent)),
-                                ])),
+                  : DataTable2(
+                      fixedTopRows: 1,
+                      fixedLeftColumns: 2,
+                      minWidth: 1040,
+                      columnSpacing: 8,
+                      horizontalMargin: 8,
+                      headingRowHeight: 42,
+                      dataRowMinHeight: 56,
+                      dataRowMaxHeight: 64,
+                      showCheckboxColumn: false,
+                      headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                      columns: const [
+                        DataColumn2(label: Text('م'), size: ColumnSize.S, fixedWidth: 52),
+                        DataColumn2(label: Text('كود البراند'), size: ColumnSize.S, fixedWidth: 110),
+                        DataColumn2(label: Text('اسم البراند عربي'), size: ColumnSize.L, fixedWidth: 220),
+                        DataColumn2(label: Text('الاسم الإنجليزي'), size: ColumnSize.L, fixedWidth: 190),
+                        DataColumn2(label: Text('الصورة'), size: ColumnSize.S, fixedWidth: 115),
+                        DataColumn2(label: Text('المجموعة'), size: ColumnSize.M, fixedWidth: 190),
+                        DataColumn2(label: Text('نشط'), size: ColumnSize.S, fixedWidth: 70),
+                      ],
+                      rows: List<DataRow>.generate(rows.length, (index) {
+                        final row = rows[index];
+                        final id = _s(row['id']);
+                        final system = row['is_system'] == true;
+                        final ar = _gridNameControllers.putIfAbsent(id, () => TextEditingController(text: _s(row['brand_name'])));
+                        final en = _gridEnglishControllers.putIfAbsent(id, () => TextEditingController(text: _s(row['brand_name_en'])));
+                        return DataRow(
+                          color: WidgetStateProperty.all(system ? const Color(0xFFEDE1F8) : Colors.white),
+                          cells: [
+                            DataCell(Text('${index + 1}', style: const TextStyle(fontWeight: FontWeight.w800))),
+                            DataCell(Text(_s(row['brand_code']), style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
+                            DataCell(SizedBox(width: 210, child: _gridEditing && !system
+                              ? Focus(
+                                  onKeyEvent: (_, event) {
+                                    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) { FocusScope.of(context).nextFocus(); return KeyEventResult.handled; }
+                                    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowUp) { FocusScope.of(context).previousFocus(); return KeyEventResult.handled; }
+                                    return KeyEventResult.ignored;
+                                  },
+                                  child: TextField(controller: ar, enabled: !_saving, textInputAction: TextInputAction.next,
+                                    decoration: const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'اسم البراند بالعربية'),
+                                    onSubmitted: (_) => FocusScope.of(context).nextFocus()),
+                                )
+                              : Text(_s(row['brand_name'])))),
+                            DataCell(SizedBox(width: 180, child: _gridEditing && !system
+                              ? Focus(
+                                  onKeyEvent: (_, event) {
+                                    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) { FocusScope.of(context).nextFocus(); return KeyEventResult.handled; }
+                                    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowUp) { FocusScope.of(context).previousFocus(); return KeyEventResult.handled; }
+                                    return KeyEventResult.ignored;
+                                  },
+                                  child: TextField(controller: en, enabled: !_saving, textDirection: TextDirection.ltr, textInputAction: TextInputAction.next,
+                                    decoration: const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'Brand name'),
+                                    onSubmitted: (_) => FocusScope.of(context).nextFocus()),
+                                )
+                              : Text(_s(row['brand_name_en'])))),
+                            DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
+                              _logoPreview(row, size: 46),
+                              const SizedBox(width: 4),
+                              Column(mainAxisSize: MainAxisSize.min, children: [
+                                IconButton(tooltip:'تعديل صورة البراند', visualDensity:VisualDensity.compact, padding:EdgeInsets.zero,
+                                  constraints:const BoxConstraints.tightFor(width:30,height:25), onPressed:_saving ? null : () => _uploadLogo(row),
+                                  icon:const Icon(Icons.edit_outlined,color:_brandPurple,size:18)),
+                                IconButton(tooltip:'حذف صورة البراند', visualDensity:VisualDensity.compact, padding:EdgeInsets.zero,
+                                  constraints:const BoxConstraints.tightFor(width:30,height:25), onPressed:_saving || system || _logoBytes(row['logo_data']) == null ? null : () => _removeLogo(row),
+                                  icon:const Icon(Icons.delete_outline,color:Colors.redAccent,size:18)),
+                              ]),
+                            ])),
+                            DataCell(SizedBox(width: 180, child: DropdownButton<String?>(
+                              isExpanded: true,
+                              value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : null,
+                              hint: const Text('بدون مجموعة'),
+                              items: [
+                                const DropdownMenuItem<String?>(value: null, child: Text('بدون مجموعة')),
+                                ..._groups.map((g) => DropdownMenuItem<String?>(value: _s(g['id']), child: Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow: TextOverflow.ellipsis))),
                               ],
-                            );
-                          }).toList(),
-                        ),
-                      ),
+                              onChanged: system ? null : (v) => _assignGroup(row, v),
+                            ))),
+                            DataCell(Checkbox(shape: const CircleBorder(), value: row['is_active'] == true, activeColor: _brandPurple, onChanged: system ? null : (_) => _toggle(row))),
+                          ],
+                        );
+                      }),
                     ),
           ),
           ],
