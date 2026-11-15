@@ -71,6 +71,7 @@ void main() {
 
   test('poster ads use compact responsive rows and branded WhatsApp placeholder', () {
     expect(adsScreenSource, contains('Widget _buildAdCard(String slot)'));
+    expect(adsScreenSource, contains('if (snap.hasError)'));
     expect(adsScreenSource, contains('constraints.maxWidth < 560'));
     expect(adsScreenSource, contains('assets/images/silsila_logo.png'));
     expect(adsScreenSource, contains('ضع إعلانك هنا'));
