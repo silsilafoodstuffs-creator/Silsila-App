@@ -5814,6 +5814,12 @@ class _OffersScreenState extends State<OffersScreen> {
           } catch (_) {}
         }
         if (companyId != null && companyId.isNotEmpty) {
+          try {
+            final activityRow = await db.from('activity_types')
+                .select('code').eq('name', widget.activityType).eq('is_active', true).maybeSingle();
+            final resolvedCode = (activityRow?['code'] ?? '').toString().trim();
+            if (resolvedCode.isNotEmpty) activityCode = resolvedCode;
+          } catch (_) {}
           final categoryResult = await db.from('erp_item_categories')
               .select('id,parent_id,category_name,category_code,activity_code')
               .eq('company_id', companyId).eq('is_active', true).eq('show_in_app', true)
