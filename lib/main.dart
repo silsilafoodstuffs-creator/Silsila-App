@@ -7832,6 +7832,8 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
             final category = (post['category'] ?? '').toString();
             final governorate = (post['governorate'] ?? '').toString();
             final contactPhone = (post['contact_phone'] ?? '').toString();
+            final ownerPhone = (post['owner_phone'] ?? '').toString();
+            final displayPhone = ownerPhone.isNotEmpty ? ownerPhone : contactPhone;
             final subtitle = [
               type == 'transfer' ? 'طلب نقل' : isBuy ? 'عايز أشتري' : 'عايز أبيع',
               if (category.isNotEmpty) 'القسم: $category',
@@ -7839,9 +7841,9 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
               if (targetPrice != null) 'السعر: $targetPrice جنيه',
               if (governorate.isNotEmpty) governorate,
               if ((post['owner_display_name'] ?? '').toString().isNotEmpty) 'صاحب الطلب: ${post['owner_display_name']}',
-              if ((post['owner_phone'] ?? contactPhone).toString().isNotEmpty) 'الهاتف: ${post['owner_phone'] ?? contactPhone}',
+              if (displayPhone.isNotEmpty) 'الهاتف: $displayPhone',
               if ((post['owner_address'] ?? '').toString().isNotEmpty) 'العنوان: ${post['owner_address']}',
-              if (contactPhone.isNotEmpty) 'للتواصل: $contactPhone',
+              if (contactPhone.isNotEmpty && contactPhone != displayPhone) 'للتواصل: $contactPhone',
               details,
             ].where((part) => part.toString().trim().isNotEmpty).join('\n');
             return MarketCard(
@@ -7853,7 +7855,7 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
               type: type == 'transfer' ? 'عايز أنقل' : isBuy ? 'عايز أشتري' : 'عايز أبيع',
               details: subtitle,
               ownerDisplayName: (post['owner_display_name'] ?? '').toString(),
-              ownerPhone: (post['owner_phone'] ?? contactPhone).toString(),
+              ownerPhone: displayPhone,
               ownerAddress: (post['owner_address'] ?? '').toString(),
               publishedAt: (post['published_at'] ?? post['created_at'] ?? '').toString(),
               color: color,
