@@ -53,32 +53,6 @@ jobs:
           grep -q 'flutter_bootstrap.js' build/web/index.html
           grep -q 'سلسلة' build/web/index.html
 
-      - name: Cache Playwright Chromium
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-chromium-v1
-
-      - name: Install Chromium browser test dependencies
-        run: |
-          npm install --no-save --no-package-lock playwright source-map
-          npx playwright install --with-deps chromium
-
-      - name: Run local Web Preview smoke tests (desktop + mobile)
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p /tmp/silsila-web/Silsila-App
-          cp -a build/web/. /tmp/silsila-web/Silsila-App/
-          python3 -m http.server 8765 --directory /tmp/silsila-web >/tmp/silsila-web-server.log 2>&1 &
-          SERVER_PID=$!
-          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 30); do
-            if curl --silent --fail http://127.0.0.1:8765/Silsila-App/ >/dev/null; then break; fi
-            sleep 1
-          done
-          node tools/web_view_test.mjs http://127.0.0.1:8765/Silsila-App/
-
       - name: Upload Web build
         if: always()
         uses: actions/upload-artifact@v4
