@@ -3,7 +3,7 @@ name: Build Silsila Android App
 # Build the signed release APK only after the full validation batch passes.
 # Manual dispatch remains available for an intentional standalone release build.
 concurrency:
-  group: silsila-android-release
+  group: silsila-android-release-${{ github.run_id }}
   cancel-in-progress: false
 
 'on':
