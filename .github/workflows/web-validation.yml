@@ -19,7 +19,7 @@ permissions:
 
 # Separate from Android and Pages; active Web checks are not cancelled by pushes.
 concurrency:
-  group: silsila-web-validation-${{ github.ref }}
+  group: silsila-web-validation-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
