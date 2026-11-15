@@ -1268,6 +1268,9 @@ class _MainShellState extends State<MainShell> {
   OverlayEntry? _introAdEntry;
   Timer? _introAdTimer;
   VideoPlayerController? _introVideoController;
+  OverlayEntry? _popupAdEntry;
+  Timer? _popupAdTimer;
+  bool _popupAdvertisementAttempted = false;
   String selectedCategory = 'الكل';
   String? adSupplierTargetId;
   String search = '';
@@ -1309,6 +1312,7 @@ class _MainShellState extends State<MainShell> {
   @override
   void dispose() {
     _closeStartupAdvertisement();
+    _closePopupAdvertisement();
     searchController.dispose();
     super.dispose();
   }
@@ -1336,6 +1340,44 @@ class _MainShellState extends State<MainShell> {
     final code = selected?['code']?.toString();
     setState(() => currentActivityCode = code);
     await _showStartupAdvertisement(code);
+    if (mounted && _introAdEntry == null) {
+      await _showPopupAdvertisement(code);
+    }
+  }
+
+  Future<void> _handleAdDestination(String type, String? code) async {
+    if (type == 'category') {
+      try {
+        final rows = await categoryService.getCategories(limit: 500);
+        final matches = rows.where((row) =>
+            (row['category_code'] ?? row['code'] ?? '').toString().trim() ==
+            (code ?? '').trim()).toList();
+        final match = matches.isEmpty ? null : matches.first;
+        final name = match?['category_name']?.toString() ?? match?['name']?.toString();
+        if (!mounted) return;
+        setState(() {
+          selectedEntity = 'فئات';
+          selectedCategory = name ?? 'الكل';
+          browseSubcategory = name ?? 'الكل';
+          adSupplierTargetId = null;
+        });
+      } catch (_) {
+        if (!mounted) return;
+        setState(() {
+          selectedEntity = 'فئات';
+          selectedCategory = 'الكل';
+          browseSubcategory = 'الكل';
+        });
+      }
+    } else if (type == 'supplier') {
+      if (!mounted) return;
+      setState(() {
+        selectedEntity = 'موردين';
+        browseSubcategory = 'الكل';
+        adSupplierTargetId = (code ?? '').trim().isEmpty ? null : code!.trim();
+        search = '';
+      });
+    }
   }
 
   Future<void> _showStartupAdvertisement(String? activityCode) async {
@@ -1407,11 +1449,123 @@ class _MainShellState extends State<MainShell> {
         ),
       ));
       Overlay.of(context, rootOverlay: true).insert(_introAdEntry!);
-      _introAdTimer = Timer(Duration(seconds: duration), _closeStartupAdvertisement);
+      _introAdTimer = Timer(Duration(seconds: duration), () {
+        _closeStartupAdvertisement();
+        _showPopupAdvertisement(activityCode);
+      });
     } catch (_) {
       // Startup media is optional and must never block app entry.
       _closeStartupAdvertisement();
     }
+  }
+
+
+  Future<void> _showPopupAdvertisement(String? activityCode) async {
+    if (_popupAdvertisementAttempted || !mounted) return;
+    _popupAdvertisementAttempted = true;
+    final client = database;
+    if (client == null) return;
+    try {
+      final rows = await client.rpc('get_silsila_public_popup_ads', params: {
+        'p_activity_code': activityCode,
+      });
+      final candidates = (rows as List).whereType<Map<String, dynamic>>();
+      if (candidates.isEmpty || !mounted) return;
+      final row = candidates.first;
+      final path = row['storage_path']?.toString() ?? '';
+      if (path.isEmpty) return;
+      final url = client.storage.from('silsila-public-ads').getPublicUrl(path);
+      final targetType = row['target_type']?.toString() ?? 'none';
+      final targetCode = row['target_code']?.toString();
+      final duration = ((row['duration_seconds'] as num?)?.toInt() ?? 5)
+          .clamp(1, 120).toInt();
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      if (!mounted) return;
+      _popupAdEntry = OverlayEntry(
+        builder: (overlayContext) {
+          final size = MediaQuery.of(overlayContext).size;
+          return Positioned.fill(
+            child: Material(
+              color: Colors.black54,
+              child: SafeArea(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SizedBox(
+                      width: size.width * .9,
+                      height: size.height * .78,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Container(
+                              color: Colors.white,
+                              alignment: Alignment.center,
+                              child: Image.network(
+                                url,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => const Center(
+                                  child: Icon(Icons.broken_image_outlined,
+                                      color: purple, size: 48),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 7,
+                              right: 7,
+                              child: Material(
+                                color: Colors.white.withValues(alpha: .94),
+                                shape: const CircleBorder(),
+                                child: IconButton(
+                                  tooltip: 'إغلاق الإعلان',
+                                  onPressed: _closePopupAdvertisement,
+                                  icon: const Icon(Icons.close, color: purple),
+                                ),
+                              ),
+                            ),
+                            if (targetType != 'none')
+                              Positioned(
+                                bottom: 12,
+                                left: 12,
+                                right: 12,
+                                child: Center(
+                                  child: FilledButton(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: orange,
+                                      foregroundColor: purple,
+                                    ),
+                                    onPressed: () {
+                                      _closePopupAdvertisement();
+                                      _handleAdDestination(targetType, targetCode);
+                                    },
+                                    child: const Text('اعرف المزيد'),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+      Overlay.of(context, rootOverlay: true).insert(_popupAdEntry!);
+      _popupAdTimer = Timer(Duration(seconds: duration), _closePopupAdvertisement);
+    } catch (_) {
+      _closePopupAdvertisement();
+    }
+  }
+
+  void _closePopupAdvertisement() {
+    _popupAdTimer?.cancel();
+    _popupAdTimer = null;
+    _popupAdEntry?.remove();
+    _popupAdEntry = null;
   }
 
   void _closeStartupAdvertisement() {
@@ -2102,34 +2256,7 @@ class _MainShellState extends State<MainShell> {
       children: [
         if (loadingLiveProducts)
           const LinearProgressIndicator(minHeight: 2),
-        _HomeAdvertisementsCarousel(activityCode: currentActivityCode, onDestinationTap: (type, code) async {
-          if (type == 'category') {
-            try {
-              final rows = await categoryService.getCategories(limit: 500);
-              final matches = rows.where((row) => (row['category_code'] ?? row['code'] ?? '').toString().trim() == (code ?? '').trim()).toList();
-              final match = matches.isEmpty ? null : matches.first;
-              final name = match?['category_name']?.toString() ?? match?['name']?.toString();
-              if (!mounted) return;
-              setState(() {
-                selectedEntity = 'فئات';
-                selectedCategory = name ?? 'الكل';
-                browseSubcategory = name ?? 'الكل';
-                adSupplierTargetId = null;
-              });
-            } catch (_) {
-              if (!mounted) return;
-              setState(() { selectedEntity = 'فئات'; selectedCategory = 'الكل'; browseSubcategory = 'الكل'; });
-            }
-          } else if (type == 'supplier') {
-            if (!mounted) return;
-            setState(() {
-              selectedEntity = 'موردين';
-              browseSubcategory = 'الكل';
-              adSupplierTargetId = (code ?? '').trim().isEmpty ? null : code!.trim();
-              search = '';
-            });
-          }
-        }),
+        _HomeAdvertisementsCarousel(activityCode: currentActivityCode, onDestinationTap: _handleAdDestination),
         const SizedBox(height: 6),
         _HomeTickerAdsStrip(
           activityCode: currentActivityCode,
