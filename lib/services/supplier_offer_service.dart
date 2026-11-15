@@ -236,9 +236,17 @@ class SupplierOfferService {
       if (minQuantity is! num || !minQuantity.isFinite || minQuantity <= 0) {
         throw ArgumentError('أقل كمية للصنف "$name" يجب أن تكون أكبر من صفر.');
       }
+      final productId = (item['product_id'] ?? '').toString().trim();
+      final erpItemId = (item['erp_item_id'] ?? '').toString().trim();
+      if (productId.isEmpty && erpItemId.isEmpty) {
+        throw ArgumentError('اربط كل صنف بمنتج المورد أو بصنف ERP تابع لشركته.');
+      }
+      if (productId.isNotEmpty && erpItemId.isNotEmpty) {
+        throw ArgumentError('لا يمكن ربط سطر العرض بمصدرَي أصناف في الوقت نفسه.');
+      }
       itemRows.add({
-        if ((item['product_id'] ?? '').toString().trim().isNotEmpty)
-          'product_id': item['product_id'].toString().trim(),
+        if (productId.isNotEmpty) 'product_id': productId,
+        if (erpItemId.isNotEmpty) 'erp_item_id': erpItemId,
         'product_name': name,
         'original_price': originalPrice,
         'offer_price': offerPrice,
