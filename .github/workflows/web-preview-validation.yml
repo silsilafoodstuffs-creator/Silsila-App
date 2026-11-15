@@ -57,7 +57,7 @@ jobs:
       - name: Install browser smoke-test dependencies
         run: |
           npm install --no-save --no-package-lock playwright source-map
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
 
       - name: Serve the exact Web build as a local preview
         shell: bash
