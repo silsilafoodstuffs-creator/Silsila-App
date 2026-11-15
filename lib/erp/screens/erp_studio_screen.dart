@@ -139,9 +139,11 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       _testedRevision = null;
       _lastTestReport = null;
     });
-    _store.save(_doc).catchError((Object error) {
-      _notice('تعذر حفظ نسخة العمل المحلية: $error', error: true);
-    });
+    if (_allowed('canSave')) {
+      _store.save(_doc).catchError((Object error) {
+        _notice('تعذر حفظ نسخة العمل المحلية: $error', error: true);
+      });
+    }
   }
 
   void _newDesign(String kind) {
@@ -173,7 +175,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       _previewData = {};
       _activeTab = kind == 'report' ? 2 : kind == 'icon' ? 3 : kind == 'table' || kind == 'grid' || kind == 'tree' ? 4 : 1;
     });
-    _store.save(next);
+    if (_allowed('canSave')) _store.save(next);
   }
 
   Map<String, dynamic> _defaultProps(String type) {
@@ -587,8 +589,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
         _dirty = true;
         _testedRevision = null;
       });
-      await _store.save(imported);
-      _notice('تم التحقق من التصميم واستيراده كمسودة محلية.');
+      if (_allowed('canSave')) await _store.save(imported);
+      _notice(_allowed('canSave')
+          ? 'تم التحقق من التصميم واستيراده كمسودة محلية.'
+          : 'تم التحقق من التصميم وفتحه مؤقتاً؛ لا تملك صلاحية حفظ المسودات.');
     } catch (e) {
       _notice('رفض الاستيراد: $e', error: true);
     } finally {
@@ -618,7 +622,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       final decoded = StudioDocument.fromJson(Map<String, dynamic>.from(raw));
       final revision = (row['revision'] as num?)?.toInt() ?? 0;
       final next = decoded.copyWith(remoteId: id, remoteRevision: revision);
-      await _store.save(next);
+      if (_allowed('canSave')) await _store.save(next);
       if (!mounted) return;
       setState(() {
         _doc = next;
