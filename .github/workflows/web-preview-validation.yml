@@ -7,6 +7,19 @@ on:
     types:
       - completed
     branches: [main]
+  push:
+    branches: ['feature/**']
+    paths:
+      - "lib/**"
+      - "test/**"
+      - "web/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "assets/**"
+      - "tools/web_view_test.mjs"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
 permissions:
   contents: read
   actions: read
@@ -32,7 +45,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Set up Flutter for pull request preview
+      - name: Set up Flutter for feature preview
         if: ${{ github.event_name != 'workflow_run' }}
         uses: subosito/flutter-action@fd55f4c5af5b953cc57a2be44cb082c8f6635e8e
         with:
@@ -40,12 +53,12 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Resolve Flutter dependencies for pull request preview
-        if: ${{ github.event_name == 'pull_request' }}
+      - name: Resolve Flutter dependencies for feature preview
+        if: ${{ github.event_name != 'workflow_run' }}
         run: flutter pub get
 
-      - name: Build exact pull request Web preview
-        if: ${{ github.event_name == 'pull_request' }}
+      - name: Build exact feature Web preview
+        if: ${{ github.event_name != 'workflow_run' }}
         run: flutter build web --release --base-href "/Silsila-App/"
 
       - name: Download the exact production Web build
@@ -97,15 +110,3 @@ jobs:
 
       - name: Run real desktop + mobile WebView smoke tests
         run: node tools/web_view_test.mjs http://127.0.0.1:8765/Silsila-App/
-  push:
-    branches: ['feature/**']
-    paths:
-      - "lib/**"
-      - "test/**"
-      - "web/**"
-      - "pubspec.yaml"
-      - "pubspec.lock"
-      - "assets/**"
-      - "tools/web_view_test.mjs"
-      - ".github/workflows/**"
-
