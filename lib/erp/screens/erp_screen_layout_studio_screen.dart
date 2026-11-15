@@ -7,20 +7,37 @@ const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
 
 class ErpScreenLayoutStudioScreen extends StatefulWidget {
-  const ErpScreenLayoutStudioScreen({super.key, this.companyId});
+  const ErpScreenLayoutStudioScreen({
+    super.key,
+    this.companyId,
+    this.availableScreens = const <String>[],
+  });
   final String? companyId;
+  final List<String> availableScreens;
   @override
   State<ErpScreenLayoutStudioScreen> createState() => _ErpScreenLayoutStudioScreenState();
 }
 
-class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScreen> {
+class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScreen> with WidgetsBindingObserver {
   final _repository = ErpStudioRepository();
   String? _syncMessage;
-  static const _screens = <String>[
-    'كل الشاشات - الإعداد الافتراضي', 'فئات الأصناف', 'دليل الأصناف', 'بيانات المخازن',
-    'سياسات البرنامج', 'بيانات الشركة', 'المستخدمين', 'الملخص التنفيذي',
-    'شاشة المبيعات', 'شاشة المشتريات', 'شاشة الحسابات المالية', 'شاشة الموارد البشرية',
+  Map<String, bool> _permissions = const <String, bool>{};
+
+  bool _allowed(String key) =>
+      widget.companyId == null ||
+      widget.companyId!.trim().isEmpty ||
+      _permissions[key] == true;
+  static const _defaultScreen = 'كل الشاشات - الإعداد الافتراضي';
+  static const _fallbackScreens = <String>[
+    'فئات الأصناف', 'دليل الأصناف', 'بيانات المخازن', 'سياسات البرنامج',
+    'بيانات الشركة', 'المستخدمين', 'الملخص التنفيذي', 'شاشة المبيعات',
+    'شاشة المشتريات', 'شاشة الحسابات المالية', 'شاشة الموارد البشرية',
   ];
+  List<String> get _screens => <String>{
+    _defaultScreen,
+    ..._fallbackScreens,
+    ...widget.availableScreens.where((screen) => screen.trim().isNotEmpty),
+  }.toList();
   static const _views = <String, String>{
     'tree': 'شجرة', 'table': 'جدول بيانات', 'grid': 'شبكي - بطاقات', 'split': 'تقسيم جانبي',
   };
@@ -28,8 +45,11 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     'top': 'أعلى الشاشة', 'below_title': 'أسفل العنوان', 'above_content': 'قبل المحتوى',
     'right': 'يمين الشاشة', 'left': 'يسار الشاشة', 'bottom': 'أسفل الشاشة', 'hidden': 'مخفي',
   };
+  static const _scrollPositions = <String, String>{
+    'right': 'يمين الشاشة', 'left': 'يسار الشاشة', 'hidden': 'مخفي',
+  };
 
-  String _screen = _screens.first;
+  String _screen = _defaultScreen;
   String _view = 'table';
   String _tabsPosition = 'below_title';
   String _tasksPosition = 'below_title';
@@ -44,11 +64,11 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   Color _primary = _purple;
   Color _accent = _orange;
   bool _showTitle = true, _showTabs = true, _showTasks = true, _showDate = true;
-  bool _showFooter = true, _showImages = true, _showSidebar = false, _showScroll = true;
+  bool _showFooter = true, _showImages = true, _showSidebar = true, _showScroll = true;
   bool _loading = true;
   Map<String, dynamic> _profiles = {};
 
-  String get _profileKey => _screen == _screens.first ? '*' : _screen;
+  String get _profileKey => _screen == _defaultScreen ? '*' : _screen;
 
   Map<String, dynamic> get _current => Map<String, dynamic>.from(_profiles[_profileKey] is Map
       ? _profiles[_profileKey] as Map : _profiles['*'] is Map ? _profiles['*'] as Map : <String,dynamic>{});
@@ -56,17 +76,49 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        !_loading &&
+        widget.companyId != null &&
+        ErpScreenLayoutProfiles.pendingProfiles(companyId: widget.companyId).isNotEmpty) {
+      _syncPendingProfiles();
+    }
+  }
+
   Future<void> _load() async {
+    final company = widget.companyId;
+    if (company != null && company.trim().isNotEmpty) {
+      try {
+        _permissions = await _repository.loadStudioPermissions(company);
+        if (_permissions['canAccess'] != true) {
+          _syncMessage = 'ليس لديك تصريح للوصول إلى إعدادات تخطيط الاستوديو.';
+          if (mounted) setState(() => _loading = false);
+          return;
+        }
+      } catch (error) {
+        _syncMessage = 'تعذر التحقق من صلاحيات تخطيط الاستوديو: $error';
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+    }
     try {
-      await ErpScreenLayoutProfiles.load();
+      await ErpScreenLayoutProfiles.load(companyId: widget.companyId);
       final company = widget.companyId;
       if (company != null && company.trim().isNotEmpty) {
         try {
           final remote = await _repository.loadLayoutProfiles(company);
-          await ErpScreenLayoutProfiles.mergeRemote(remote);
+          await ErpScreenLayoutProfiles.mergeRemote(remote, companyId: widget.companyId);
         } catch (error) {
           _syncMessage = 'تعذر تحميل التخطيطات المركزية؛ تم الاحتفاظ بالنسخ المحلية: $error';
         }
@@ -77,6 +129,9 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
       // Keep usable defaults if local preferences are unavailable.
     }
     if (mounted) setState(() => _loading = false);
+    if (widget.companyId != null && ErpScreenLayoutProfiles.pendingProfiles(companyId: widget.companyId).isNotEmpty) {
+      await _syncPendingProfiles();
+    }
   }
 
   void _apply(Map<String, dynamic> value) {
@@ -97,7 +152,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     _showDate = value['showDate'] as bool? ?? true;
     _showFooter = value['showFooter'] as bool? ?? true;
     _showImages = value['showImages'] as bool? ?? true;
-    _showSidebar = value['showSidebar'] as bool? ?? false;
+    _showSidebar = value['showSidebar'] as bool? ?? true;
     _showScroll = value['showScroll'] as bool? ?? true;
     _primary = Color((value['primary'] as int?) ?? _purple.value);
     _accent = Color((value['accent'] as int?) ?? _orange.value);
@@ -115,12 +170,16 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   };
 
   Future<void> _save() async {
-    await ErpScreenLayoutProfiles.save(_profileKey, _serialize());
+    if (!_allowed('canSave')) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ليست لديك صلاحية حفظ تخطيطات الشاشات.')));
+      return;
+    }
+    await ErpScreenLayoutProfiles.save(_profileKey, _serialize(), companyId: widget.companyId);
     final company = widget.companyId;
     if (company != null && company.trim().isNotEmpty) {
       try {
         await _repository.saveLayoutProfile(companyId: company, profileKey: _profileKey, profile: _serialize());
-        await ErpScreenLayoutProfiles.markSynced(_profileKey);
+        await ErpScreenLayoutProfiles.markSynced(_profileKey, companyId: widget.companyId);
         _syncMessage = 'تم حفظ التخطيط محلياً ومركزياً.';
       } catch (error) {
         _syncMessage = 'حُفظ التخطيط محلياً، والمزامنة المركزية معلقة: $error';
@@ -134,6 +193,10 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   }
 
   Future<void> _reset() async {
+    if (!_allowed('canDelete')) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ليست لديك صلاحية استعادة أو حذف تخطيط الشاشة.')));
+      return;
+    }
     final company = widget.companyId;
     if (company != null && company.trim().isNotEmpty) {
       try {
@@ -143,25 +206,29 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
         return;
       }
     }
-    await ErpScreenLayoutProfiles.reset(_profileKey);
+    await ErpScreenLayoutProfiles.reset(_profileKey, companyId: widget.companyId);
     if (!mounted) return;
     setState(() { _profiles = Map<String, dynamic>.from(ErpScreenLayoutProfiles.profiles.value); _apply(_current); });
   }
 
   Future<void> _syncPendingProfiles() async {
+    if (!_allowed('canSave')) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ليست لديك صلاحية مزامنة تخطيطات الشاشات.')));
+      return;
+    }
     final company = widget.companyId;
     if (company == null || company.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يجب اختيار شركة نشطة للمزامنة المركزية.')));
       return;
     }
     try {
-      final pending = ErpScreenLayoutProfiles.pendingProfiles();
+      final pending = ErpScreenLayoutProfiles.pendingProfiles(companyId: company);
       var synced = 0;
       final errors = <String>[];
       for (final entry in pending.entries) {
         try {
           await _repository.saveLayoutProfile(companyId: company, profileKey: entry.key, profile: entry.value);
-          await ErpScreenLayoutProfiles.markSynced(entry.key);
+          await ErpScreenLayoutProfiles.markSynced(entry.key, companyId: company);
           synced++;
         } catch (error) {
           errors.add('${entry.key}: $error');
@@ -193,21 +260,21 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
         value:value, isExpanded:true, isDense:true,
         decoration:const InputDecoration(border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:9,vertical:8)),
         items:keys.map((k)=>DropdownMenuItem(value:k,child:Text(labels[k]??k,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:12)))).toList(),
-        onChanged:onChanged,
+        onChanged:_allowed('canEdit')?onChanged:null,
       )),
     ]));
 
   Widget _toggle(String label, bool value, ValueChanged<bool> onChanged) => SizedBox(
     width: 190, child: CheckboxListTile(
       dense:true, contentPadding:EdgeInsets.zero, controlAffinity:ListTileControlAffinity.leading,
-      activeColor:_purple, value:value, onChanged:(v)=>onChanged(v==true),
+      activeColor:_purple, value:value, onChanged:_allowed('canEdit')?(v)=>onChanged(v==true):null,
       title:Text(label,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600)),
     ));
 
   Widget _slider(String label, double value, double min, double max, String suffix, ValueChanged<double> onChanged) =>
     Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Row(children:[
       SizedBox(width:150,child:Text(label,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700))),
-      Expanded(child:Slider(value:value,min:min,max:max,divisions:(max-min).round(),activeColor:_purple,onChanged:onChanged)),
+      Expanded(child:Slider(value:value,min:min,max:max,divisions:(max-min).round(),activeColor:_purple,onChanged:_allowed('canEdit')?onChanged:null)),
       SizedBox(width:52,child:Text('${value.toStringAsFixed(0)}$suffix',textAlign:TextAlign.end,style:const TextStyle(fontSize:11))),
     ]));
 
@@ -219,14 +286,21 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
       subtitle:'تخصيص تخطيط الواجهات مع الحفاظ على وظائف كل شاشة',
       icon:Icons.dashboard_customize_outlined,
       actions:[
-        ElevatedButton.icon(onPressed:_loading?null:_save,icon:const Icon(Icons.save_outlined),label:const Text('حفظ الإعدادات')),
+        ElevatedButton.icon(onPressed:_loading || !_allowed('canSave')?null:_save,icon:const Icon(Icons.save_outlined),label:const Text('حفظ الإعدادات')),
         const SizedBox(width:6),
-        OutlinedButton.icon(onPressed:_loading?null:_syncPendingProfiles,icon:const Icon(Icons.cloud_sync_outlined),label:const Text('مزامنة التخطيطات')),
+        OutlinedButton.icon(onPressed:_loading || !_allowed('canSave')?null:_syncPendingProfiles,icon:const Icon(Icons.cloud_sync_outlined),label:const Text('مزامنة التخطيطات')),
         const SizedBox(width:6),
-        OutlinedButton.icon(onPressed:_loading?null:_reset,icon:const Icon(Icons.restart_alt),label:const Text('استعادة الافتراضي')),
+        OutlinedButton.icon(onPressed:_loading || !_allowed('canDelete')?null:_reset,icon:const Icon(Icons.restart_alt),label:const Text('استعادة الافتراضي')),
       ],
       footer:Text(_syncMessage ?? 'التخطيطات تحفظ محلياً وتتم مزامنتها مركزياً عند توفر الاتصال وصلاحية مدير الشركة. إعدادات الألوان والكثافة تطبق على صفحات ERP؛ خيارات إظهار عناصر العنوان تعمل مع الإطار الموحد.'),
-      child:_loading?const Center(child:CircularProgressIndicator()):SingleChildScrollView(
+      child:_loading
+          ? const Center(child:CircularProgressIndicator())
+          : !_allowed('canAccess')
+              ? Center(child:Padding(
+                  padding:const EdgeInsets.all(24),
+                  child:Text(_syncMessage ?? 'ليس لديك تصريح للوصول إلى إعدادات تخطيط الاستوديو.',textAlign:TextAlign.center),
+                ))
+              : SingleChildScrollView(
         padding:const EdgeInsets.all(4),
         child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           _section('الشاشة المستهدفة',Icons.web_asset_outlined,[
@@ -243,7 +317,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
             _choice('مكان أزرار المهام',_tasksPosition,_positions.keys.toList(),_positions,(v)=>setState(()=>_tasksPosition=v??_tasksPosition)),
             _choice('مكان التاريخ والفلاتر الزمنية',_datePosition,_positions.keys.toList(),_positions,(v)=>setState(()=>_datePosition=v??_datePosition)),
             _choice('مكان الصور',_imagesPosition,_positions.keys.toList(),_positions,(v)=>setState(()=>_imagesPosition=v??_imagesPosition)),
-            _choice('مكان شريط التمرير',_scrollPosition,_positions.keys.toList(),_positions,(v)=>setState(()=>_scrollPosition=v??_scrollPosition)),
+            _choice('مكان شريط التمرير',_scrollPosition,_scrollPositions.keys.toList(),_scrollPositions,(v)=>setState(()=>_scrollPosition=v??_scrollPosition)),
           ]),
           _section('إظهار وإخفاء المكونات',Icons.visibility_outlined,[
             Wrap(spacing:8,runSpacing:0,children:[
@@ -278,16 +352,139 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
             Container(
               padding:const EdgeInsets.all(10),
               decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(_cornerRadius),border:Border.all(color:_primary.withValues(alpha:.35)),boxShadow:const [BoxShadow(color:Color(0x10000000),blurRadius:5)]),
-              child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-                if(_showTitle)Text(_screen,style:TextStyle(color:_primary,fontWeight:FontWeight.w900,fontSize:17)),
-                if(_showTabs)Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Wrap(spacing:5,children:['بيانات','حركات','تقارير'].map((t)=>Chip(label:Text(t),backgroundColor:_primary.withValues(alpha:.10),side:BorderSide(color:_primary))).toList())),
-                if(_showTasks)Wrap(spacing:5,children:['تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','Excel','PDF'].map((t)=>Container(padding:const EdgeInsets.symmetric(horizontal:9,vertical:6),decoration:BoxDecoration(color:_accent.withValues(alpha:.16),borderRadius:BorderRadius.circular(7)),child:Text(t,style:const TextStyle(fontSize:10)))).toList()),
-                const SizedBox(height:8),
-                Container(height:_rowHeight,alignment:Alignment.centerRight,padding:const EdgeInsets.symmetric(horizontal:8),color:_primary.withValues(alpha:.06),child:Text('صف بيانات تجريبي • ${_views[_view]} • ${_gridStyle}',style:const TextStyle(fontSize:11))),
-                if(_showImages)const Align(alignment:Alignment.centerLeft,child:Icon(Icons.image_outlined,size:30,color:Colors.black38)),
-                if(_showFooter)const Text('معلومات الصفحة • إجمالي السجلات • حالة التحميل',style:TextStyle(fontSize:10,color:Colors.black54)),
-              ]),
+              child:LayoutBuilder(builder:(context,constraints){
+                Widget chip(String label,Color color)=>Container(
+                  padding:const EdgeInsets.symmetric(horizontal:9,vertical:6),
+                  decoration:BoxDecoration(color:color.withValues(alpha:.13),borderRadius:BorderRadius.circular(7),border:Border.all(color:color.withValues(alpha:.25))),
+                  child:Text(label,style:TextStyle(fontSize:10,color:color,fontWeight:FontWeight.w700)),
+                );
+                Widget tabs()=>Wrap(spacing:5,runSpacing:4,children:['بيانات','حركات','تقارير'].map((t)=>chip(t,_primary)).toList());
+                Widget tasks()=>Wrap(spacing:4,runSpacing:4,children:['تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','Excel','PDF'].map((t)=>chip(t,_accent)).toList());
+                Widget date()=>Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:6),decoration:BoxDecoration(color:const Color(0xFFF5EFFB),borderRadius:BorderRadius.circular(7)),child:const Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.calendar_month_outlined,size:15),SizedBox(width:5),Text('من تاريخ — إلى تاريخ',style:TextStyle(fontSize:10))]));
+                Widget images()=>const Column(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.image_outlined,size:34,color:Colors.black38),Text('صور الأصناف',style:TextStyle(fontSize:9,color:Colors.black54))]);
+                Widget scrollIndicator()=>Container(width:5,height:54,decoration:BoxDecoration(color:_showScroll?const Color(0xFFD9CDE8):Colors.transparent,borderRadius:BorderRadius.circular(5)));
+                Widget sampleData() {
+                  final dataDecoration = BoxDecoration(
+                    color: _primary.withValues(alpha: .045),
+                    border: Border.all(color: _primary.withValues(alpha: .12)),
+                    borderRadius: BorderRadius.circular(6),
+                  );
+                  if (_view == 'grid') {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(7),
+                      decoration: dataDecoration,
+                      child: Wrap(
+                        spacing: 5,
+                        runSpacing: 5,
+                        children: List.generate(4, (i) => Container(
+                          width: (constraints.maxWidth - 55) / 2,
+                          height: _rowHeight,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: _primary.withValues(alpha: .2)),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Text('بطاقة ${i + 1}', style: const TextStyle(fontSize: 10)),
+                        )),
+                      ),
+                    );
+                  }
+                  if (_view == 'tree') {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(7),
+                      decoration: dataDecoration,
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('▾ دليل البيانات', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                          Padding(
+                            padding: EdgeInsetsDirectional.only(start: 18),
+                            child: Text('• عنصر رئيسي\\n• عنصر فرعي', style: TextStyle(fontSize: 10)),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  if (_view == 'split') {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(7),
+                      decoration: dataDecoration,
+                      child: Row(
+                        children: [
+                          const Expanded(child: Text('قائمة العناصر\\nعنصر 1\\nعنصر 2', style: TextStyle(fontSize: 10))),
+                          const VerticalDivider(width: 12),
+                          const Expanded(child: Text('تفاصيل العنصر المحدد', style: TextStyle(fontSize: 10))),
+                        ],
+                      ),
+                    );
+                  }
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(7),
+                    decoration: dataDecoration,
+                    child: Column(
+                      children: [
+                        Container(
+                          height: 28,
+                          alignment: Alignment.centerRight,
+                          color: _primary.withValues(alpha: .10),
+                          child: const Text('الكود     اسم الصنف     الرصيد', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
+                        ),
+                        for (var i = 0; i < 3; i++)
+                          Container(
+                            height: _rowHeight / 1.7,
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.symmetric(horizontal: 5),
+                            color: i.isEven ? Colors.white : const Color(0xFFFAF8FC),
+                            child: Text('ITM-00${i + 1}     صنف تجريبي     120', style: const TextStyle(fontSize: 9)),
+                          ),
+                      ],
+                    ),
+                  );
+                }
+                final dateWidget=_showDate&&_datePosition!='hidden'?date():null;
+                final tabsWidget=_showTabs&&_tabsPosition!='hidden'?tabs():null;
+                final tasksWidget=_showTasks&&_tasksPosition!='hidden'?tasks():null;
+                final imagesWidget=_showImages&&_imagesPosition!='hidden'?images():null;
+                final top=<Widget>[], middle=<Widget>[], bottom=<Widget>[];
+                final sideLeft=<Widget>[],sideRight=<Widget>[];
+                void place(Widget? widget,String position){
+                  if(widget==null||position=='hidden')return;
+                  if(position=='top'||position=='above_content')top.add(widget);
+                  else if(position=='bottom')bottom.add(widget);
+                  else if(position=='left')sideLeft.add(widget);
+                  else if(position=='right')sideRight.add(widget);
+                  else middle.add(widget);
+                }
+                place(dateWidget,_datePosition);
+                place(tabsWidget,_tabsPosition);
+                place(tasksWidget,_tasksPosition);
+                place(imagesWidget,_imagesPosition);
+                if(_showSidebar){
+                  sideLeft.insert(0,Container(width:42,padding:const EdgeInsets.all(5),color:_primary.withValues(alpha:.06),child:const Column(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.dashboard_outlined,size:16),Icon(Icons.inventory_2_outlined,size:16),Icon(Icons.settings_outlined,size:16)])));
+                }
+                if(_showScroll&&_scrollPosition=='left')sideLeft.add(scrollIndicator());
+                if(_showScroll&&_scrollPosition=='right')sideRight.add(scrollIndicator());
+                return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+                  if(_showTitle)Text(_screen,style:TextStyle(color:_primary,fontWeight:FontWeight.w900,fontSize:17)),
+                  for(final item in top)Padding(padding:const EdgeInsets.symmetric(vertical:3),child:item),
+                  Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    if(sideLeft.isNotEmpty)Column(children:sideLeft.map((w)=>Padding(padding:const EdgeInsets.all(3),child:w)).toList()),
+                    Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+                      for(final item in middle)Padding(padding:const EdgeInsets.symmetric(vertical:3),child:item),
+                      sampleData(),
+                    ])),
+                    if(sideRight.isNotEmpty)Column(children:sideRight.map((w)=>Padding(padding:const EdgeInsets.all(3),child:w)).toList()),
+                  ]),
+                  for(final item in bottom)Padding(padding:const EdgeInsets.symmetric(vertical:3),child:item),
+                  if(_showFooter)const Text('معلومات الصفحة • إجمالي السجلات • حالة التحميل',style:TextStyle(fontSize:10,color:Colors.black54)),
+                ]);
+              }),
             ),
+            const Padding(padding:EdgeInsets.only(top:5),child:Text('المعاينة توضح توزيع العناصر المختارة قبل الحفظ؛ تطبيق المواضع على الشاشة الفعلية يعتمد على مكونات الشاشة المرتبطة بإطار التخطيط.',style:TextStyle(fontSize:10,color:Colors.black54))),
           ]),
         ]),
       ),
