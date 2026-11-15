@@ -20,7 +20,7 @@ permissions:
 
 # An active Android test/build must finish; new pushes must not cancel it.
 concurrency:
-  group: silsila-mobile-validation-${{ github.ref }}
+  group: silsila-mobile-validation-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
