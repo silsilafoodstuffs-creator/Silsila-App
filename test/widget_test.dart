@@ -70,7 +70,7 @@ void main() {
     expect(theme.listTileTheme.selectedTileColor, isNotNull);
     expect(theme.scaffoldBackgroundColor, const Color(0xFFF5EFFB));
     expect(theme.cardTheme.elevation, greaterThanOrEqualTo(5));
-    expect(theme.cardTheme.shadowColor, const Color(0x42FF27C3));
+    expect(theme.cardTheme.shadowColor?.withValues(alpha: 1), const Color(0xFFFF27C3));
     expect(theme.appBarTheme.elevation, greaterThanOrEqualTo(5));
     expect(theme.dataTableTheme.dataRowMinHeight, 40);
     expect(theme.dataTableTheme.dataRowMaxHeight, 40);
