@@ -21,6 +21,12 @@ class ErpScreenLayoutStudioScreen extends StatefulWidget {
 class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScreen> with WidgetsBindingObserver {
   final _repository = ErpStudioRepository();
   String? _syncMessage;
+  Map<String, bool> _permissions = const <String, bool>{};
+
+  bool _allowed(String key) =>
+      widget.companyId == null ||
+      widget.companyId!.trim().isEmpty ||
+      _permissions[key] == true;
   static const _defaultScreen = 'كل الشاشات - الإعداد الافتراضي';
   static const _fallbackScreens = <String>[
     'فئات الأصناف', 'دليل الأصناف', 'بيانات المخازن', 'سياسات البرنامج',
@@ -91,6 +97,21 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   }
 
   Future<void> _load() async {
+    final company = widget.companyId;
+    if (company != null && company.trim().isNotEmpty) {
+      try {
+        _permissions = await _repository.loadStudioPermissions(company);
+        if (_permissions['canAccess'] != true) {
+          _syncMessage = 'ليس لديك تصريح للوصول إلى إعدادات تخطيط الاستوديو.';
+          if (mounted) setState(() => _loading = false);
+          return;
+        }
+      } catch (error) {
+        _syncMessage = 'تعذر التحقق من صلاحيات تخطيط الاستوديو: $error';
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+    }
     try {
       await ErpScreenLayoutProfiles.load();
       final company = widget.companyId;
@@ -149,6 +170,10 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   };
 
   Future<void> _save() async {
+    if (!_allowed('canSave')) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ليست لديك صلاحية حفظ تخطيطات الشاشات.')));
+      return;
+    }
     await ErpScreenLayoutProfiles.save(_profileKey, _serialize());
     final company = widget.companyId;
     if (company != null && company.trim().isNotEmpty) {
@@ -168,6 +193,10 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   }
 
   Future<void> _reset() async {
+    if (!_allowed('canDelete')) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ليست لديك صلاحية استعادة أو حذف تخطيط الشاشة.')));
+      return;
+    }
     final company = widget.companyId;
     if (company != null && company.trim().isNotEmpty) {
       try {
@@ -183,6 +212,10 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   }
 
   Future<void> _syncPendingProfiles() async {
+    if (!_allowed('canSave')) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ليست لديك صلاحية مزامنة تخطيطات الشاشات.')));
+      return;
+    }
     final company = widget.companyId;
     if (company == null || company.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يجب اختيار شركة نشطة للمزامنة المركزية.')));
@@ -227,21 +260,21 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
         value:value, isExpanded:true, isDense:true,
         decoration:const InputDecoration(border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:9,vertical:8)),
         items:keys.map((k)=>DropdownMenuItem(value:k,child:Text(labels[k]??k,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:12)))).toList(),
-        onChanged:onChanged,
+        onChanged:_allowed('canEdit')?onChanged:null,
       )),
     ]));
 
   Widget _toggle(String label, bool value, ValueChanged<bool> onChanged) => SizedBox(
     width: 190, child: CheckboxListTile(
       dense:true, contentPadding:EdgeInsets.zero, controlAffinity:ListTileControlAffinity.leading,
-      activeColor:_purple, value:value, onChanged:(v)=>onChanged(v==true),
+      activeColor:_purple, value:value, onChanged:_allowed('canEdit')?(v)=>onChanged(v==true):null,
       title:Text(label,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600)),
     ));
 
   Widget _slider(String label, double value, double min, double max, String suffix, ValueChanged<double> onChanged) =>
     Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Row(children:[
       SizedBox(width:150,child:Text(label,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700))),
-      Expanded(child:Slider(value:value,min:min,max:max,divisions:(max-min).round(),activeColor:_purple,onChanged:onChanged)),
+      Expanded(child:Slider(value:value,min:min,max:max,divisions:(max-min).round(),activeColor:_purple,onChanged:_allowed('canEdit')?onChanged:null)),
       SizedBox(width:52,child:Text('${value.toStringAsFixed(0)}$suffix',textAlign:TextAlign.end,style:const TextStyle(fontSize:11))),
     ]));
 
@@ -253,14 +286,21 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
       subtitle:'تخصيص تخطيط الواجهات مع الحفاظ على وظائف كل شاشة',
       icon:Icons.dashboard_customize_outlined,
       actions:[
-        ElevatedButton.icon(onPressed:_loading?null:_save,icon:const Icon(Icons.save_outlined),label:const Text('حفظ الإعدادات')),
+        ElevatedButton.icon(onPressed:_loading || !_allowed('canSave')?null:_save,icon:const Icon(Icons.save_outlined),label:const Text('حفظ الإعدادات')),
         const SizedBox(width:6),
-        OutlinedButton.icon(onPressed:_loading?null:_syncPendingProfiles,icon:const Icon(Icons.cloud_sync_outlined),label:const Text('مزامنة التخطيطات')),
+        OutlinedButton.icon(onPressed:_loading || !_allowed('canSave')?null:_syncPendingProfiles,icon:const Icon(Icons.cloud_sync_outlined),label:const Text('مزامنة التخطيطات')),
         const SizedBox(width:6),
-        OutlinedButton.icon(onPressed:_loading?null:_reset,icon:const Icon(Icons.restart_alt),label:const Text('استعادة الافتراضي')),
+        OutlinedButton.icon(onPressed:_loading || !_allowed('canDelete')?null:_reset,icon:const Icon(Icons.restart_alt),label:const Text('استعادة الافتراضي')),
       ],
       footer:Text(_syncMessage ?? 'التخطيطات تحفظ محلياً وتتم مزامنتها مركزياً عند توفر الاتصال وصلاحية مدير الشركة. إعدادات الألوان والكثافة تطبق على صفحات ERP؛ خيارات إظهار عناصر العنوان تعمل مع الإطار الموحد.'),
-      child:_loading?const Center(child:CircularProgressIndicator()):SingleChildScrollView(
+      child:_loading
+          ? const Center(child:CircularProgressIndicator())
+          : !_allowed('canAccess')
+              ? Center(child:Padding(
+                  padding:const EdgeInsets.all(24),
+                  child:Text(_syncMessage ?? 'ليس لديك تصريح للوصول إلى إعدادات تخطيط الاستوديو.',textAlign:TextAlign.center),
+                ))
+              : SingleChildScrollView(
         padding:const EdgeInsets.all(4),
         child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           _section('الشاشة المستهدفة',Icons.web_asset_outlined,[
