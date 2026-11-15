@@ -461,11 +461,11 @@ class SilsilaApp extends StatelessWidget {
         ),
         // Approved global grid standard: compact but readable spacing across ERP tables; only documented dense grids override it.
         dataTableTheme: const DataTableThemeData(
-          headingRowHeight: 48,
-          dataRowMinHeight: 48,
-          dataRowMaxHeight: 64,
-          horizontalMargin: 12,
-          columnSpacing: 14,
+          headingRowHeight: 40,
+          dataRowMinHeight: 40,
+          dataRowMaxHeight: 40,
+          horizontalMargin: 5,
+          columnSpacing: 5,
           dividerThickness: 0.7,
           headingTextStyle: TextStyle(
             color: Color(0xFF3E007D),
@@ -482,6 +482,30 @@ class SilsilaApp extends StatelessWidget {
         ),
         // Shared Silsila visual language: crisp surfaces, warm interactive states,
         // and accessible contrast across customer and ERP screens.
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: Colors.white,
+          indicatorColor: pink.withValues(alpha: 0.12),
+          elevation: 3,
+          shadowColor: pink.withValues(alpha: 0.18),
+          height: 64,
+          labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+            fontFamily: 'Tajawal',
+            fontSize: 11,
+            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w500,
+            color: states.contains(WidgetState.selected) ? purple : const Color(0xFF51465D),
+          )),
+          iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+            color: states.contains(WidgetState.selected) ? purple : const Color(0xFF51465D),
+          )),
+        ),
+        navigationRailTheme: NavigationRailThemeData(
+          backgroundColor: Colors.white,
+          indicatorColor: pink.withValues(alpha: 0.12),
+          selectedIconTheme: const IconThemeData(color: purple),
+          unselectedIconTheme: const IconThemeData(color: Color(0xFF51465D)),
+          selectedLabelTextStyle: const TextStyle(color: purple, fontWeight: FontWeight.w800),
+          unselectedLabelTextStyle: const TextStyle(color: Color(0xFF51465D)),
+        ),
         listTileTheme: ListTileThemeData(
           iconColor: purple,
           selectedColor: purple,
