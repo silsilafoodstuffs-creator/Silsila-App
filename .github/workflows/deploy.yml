@@ -1,4 +1,4 @@
-name: Deploy Silsila Web App
+name: Silsila Web Preview - Deploy + Smoke Tests
 
 'on':
   push:
