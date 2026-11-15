@@ -47,7 +47,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
 
   Future<List<Map<String,dynamic>>> _fetchAllItems(String companyId) async {
     const pageSize=500; var offset=0; final result=<Map<String,dynamic>>[];
-    while(true) { final page=await _inventory.fetchItems(companyId,offset:offset,pageSize:pageSize); result.addAll(page); if(page.length<pageSize) break; offset+=page.length; }
+    while(true) { final page=await _inventory.fetchItems(companyId,offset:offset,pageSize:pageSize); result.addAll(page.where((item)=>item['is_active']!=false)); if(page.length<pageSize) break; offset+=page.length; }
     return result;
   }
   Future<void> _load() async {
@@ -63,7 +63,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
       if (!mounted) return;
       setState(() {
         _items = (values[0] as List).cast<Map<String,dynamic>>();
-        _categories = (values[1] as List).cast<Map<String,dynamic>>();
+        _categories = (values[1] as List).cast<Map<String,dynamic>>().where((row)=>row['is_active']!=false).toList();
         _brands = (values[2] as List).cast<Map<String,dynamic>>();
         _warehouses = (values[3] as List).cast<Map<String,dynamic>>();
         _branches = (values[4] as List).cast<Map<String,dynamic>>();
@@ -203,7 +203,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
         TextField(controller:search,onChanged:(_)=>refresh((){}),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),labelText:'ابحث باسم الصنف أو الكود أو الباركود',isDense:true,border:OutlineInputBorder())),
         const SizedBox(height:7),
         Row(children:[Text('المحدد: '+chosen.length.toString()+' صنف',style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF3E007D))),const Spacer(),TextButton(onPressed:()=>refresh(()=>addProducts(allVisible)),child:Text(search.text.trim().isEmpty?'تحديد كل الأصناف':'تحديد نتائج البحث')),TextButton(onPressed:()=>refresh(()=>chosen.clear()),child:const Text('إلغاء الكل'))]),
-        Expanded(child:_categories.isEmpty?ListView(children:allVisible.map((item)=>productNode(item,refresh)).toList()):ListView(children:roots.map((category)=>categoryNode(category,0,refresh)).toList())),
+        Expanded(child:_categories.isEmpty||roots.isEmpty?ListView(children:allVisible.map((item)=>productNode(item,refresh)).toList()):ListView(children:roots.map((category)=>categoryNode(category,0,refresh)).toList())),
       ])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){setState(()=>_offerLines.removeWhere((line)=>!chosen.contains(_s(line['item_id']))));for(final id in chosen){if(_offerLines.any((line)=>_s(line['item_id'])==id))continue;final item=_items.firstWhere((row)=>_s(row['id'])==id);final sale=_n(item['sale_price']);_offerLines.add({'item_id':id,'item_code':_s(item['item_code']),'item_name':_s(item['item_name']),'unit':_s(item['base_unit']),'sale_price':sale,'offer_price':sale,'offer_qty':100.0,'remaining_qty':100.0,'min_quantity':1.0,'discount':0.0});}Navigator.pop(ctx);},child:const Text('اعتماد الأصناف المحددة'))]);
     }));
     search.dispose();
