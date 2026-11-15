@@ -1319,7 +1319,7 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
                               logo,
                               width: 46,
                               height: 46,
-                              fit: BoxFit.contain,
+                              fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => const Icon(
                                 Icons.storefront_outlined,
                                 color: purple,
