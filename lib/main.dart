@@ -3682,113 +3682,6 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
     final offerPrice = TextEditingController();
     selectedProductImage = null;
     bool trackStock = false;
-    List<Map<String,dynamic>> offerCategoryChildren(String parentId) =>
-        offerItemCategories.where((row) => (row['parent_id'] ?? '').toString() == parentId).toList();
-
-    List<Product> offerProductsForCategory(String categoryId) =>
-        offerableProducts.where((product) => offerItemCategoryByCartKey[product.cartKey] == categoryId).toList();
-
-    List<Product> offerDescendantProducts(String categoryId, [Set<String>? visited]) {
-      final seen = visited ?? <String>{};
-      if (!seen.add(categoryId)) return <Product>[];
-      final result = <Product>[]..addAll(offerProductsForCategory(categoryId));
-      for (final child in offerCategoryChildren(categoryId)) {
-        result.addAll(offerDescendantProducts((child['id'] ?? '').toString(), seen));
-      }
-      return result;
-    }
-
-    Map<String,List<Product>> offerBrandGroups(List<Product> items) {
-      final groups = <String,List<Product>>{};
-      for (final product in items) {
-        final label = (product.brand ?? '').trim().isEmpty ? 'بدون ماركة' : product.brand!.trim();
-        (groups[label] ??= <Product>[]).add(product);
-      }
-      final keys = groups.keys.toList()
-        ..sort((a,b) => a == 'بدون ماركة' ? 1 : b == 'بدون ماركة' ? -1 : a.compareTo(b));
-      return {for (final key in keys) key: groups[key]!};
-    }
-
-    Widget offerProductNode(Product product, void Function(void Function()) refresh) {
-      final key = product.cartKey;
-      offerPrices.putIfAbsent(key, () => TextEditingController(text: product.price.toStringAsFixed(2)));
-      minimumQuantities.putIfAbsent(key, () => TextEditingController(text: product.minQuantity.toString()));
-      final price = double.tryParse(offerPrices[key]!.text) ?? product.price;
-      final difference = product.price - price;
-      final productPath = [(product.subcategory ?? '').trim(), (product.brand ?? '').trim()]
-          .where((value) => value.isNotEmpty).join(' • ');
-      return Container(
-        margin: const EdgeInsetsDirectional.only(start:18,bottom:7),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color:Colors.white,border:Border.all(color:purple.withValues(alpha:.12)),borderRadius:BorderRadius.circular(10)),
-        child: Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-          Row(children:[
-            Checkbox(shape:const CircleBorder(),value:selectedProductIds.contains(key),onChanged:(value)=>refresh(() {
-              if(value==true){selectedProductIds.add(key);}else{selectedProductIds.remove(key);}
-            })),
-            SizedBox(width:38,height:38,child:product.imageBytes!=null
-              ? ClipRRect(borderRadius:BorderRadius.circular(7),child:Image.memory(product.imageBytes!,fit:BoxFit.cover))
-              : product.imageUrl!=null
-                ? ClipRRect(borderRadius:BorderRadius.circular(7),child:Image.network(product.imageUrl!,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Icon(product.icon,color:purple)))
-                : Icon(product.icon,color:purple)),
-            const SizedBox(width:7),
-            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              Text(product.name,style:const TextStyle(fontWeight:FontWeight.w700,fontSize:12)),
-              if(productPath.isNotEmpty) Text(productPath,style:const TextStyle(fontSize:10,color:Colors.black54)),
-            ])),
-          ]),
-          Wrap(spacing:8,runSpacing:6,crossAxisAlignment:WrapCrossAlignment.center,children:[
-            SizedBox(width:132,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              const Text('السعر الحالي عند المورد',style:TextStyle(fontSize:10,color:Colors.black54)),
-              Text('${product.price.toStringAsFixed(2)} ج.م',style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700)),
-            ])),
-            SizedBox(width:142,child:TextField(controller:offerPrices[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>refresh((){}),decoration:const InputDecoration(isDense:true,labelText:'سعر العرض',suffixText:'ج.م'))),
-            SizedBox(width:132,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              const Text('معاينة الفرق',style:TextStyle(fontSize:10,color:Colors.black54)),
-              Text('${difference>=0?'توفير':'زيادة'} ${difference.abs().toStringAsFixed(2)} ج.م',style:TextStyle(fontSize:11,color:difference>=0?Colors.green.shade700:Colors.red.shade700,fontWeight:FontWeight.w800)),
-            ])),
-            SizedBox(width:132,child:TextField(controller:minimumQuantities[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,labelText:'أقل كمية'))),
-          ]),
-        ]),
-      );
-    }
-
-    Widget offerBrandNode(String categoryId, String brand, List<Product> items, void Function(void Function()) refresh) {
-      final selectedCount = items.where((product)=>selectedProductIds.contains(product.cartKey)).length;
-      return ExpansionTile(
-        key:PageStorageKey<String>('offer-brand-$categoryId-$brand'),
-        leading:Checkbox(shape:const CircleBorder(),tristate:true,value:selectedCount==0?false:selectedCount==items.length?true:null,onChanged:(value)=>refresh(() {
-          if(value==true){selectedProductIds.addAll(items.map((product)=>product.cartKey));}
-          else{selectedProductIds.removeAll(items.map((product)=>product.cartKey));}
-        })),
-        title:Text('$brand (${items.length})',style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFFFF27C3))),
-        children:items.map((product)=>offerProductNode(product,refresh)).toList(),
-      );
-    }
-
-    Widget offerCategoryNode(Map<String,dynamic> category, int depth, void Function(void Function()) refresh) {
-      final id=(category['id']??'').toString();
-      final products=offerDescendantProducts(id);
-      final selectedCount=products.where((product)=>selectedProductIds.contains(product.cartKey)).length;
-      final directGroups=offerBrandGroups(offerProductsForCategory(id));
-      final children=offerCategoryChildren(id);
-      return Padding(
-        padding:EdgeInsetsDirectional.only(start:depth*13.0),
-        child:ExpansionTile(
-          key:PageStorageKey<String>('offer-category-$id'),
-          leading:Checkbox(shape:const CircleBorder(),tristate:true,value:selectedCount==0?false:selectedCount==products.length?true:null,onChanged:(value)=>refresh(() {
-            if(value==true){selectedProductIds.addAll(products.map((product)=>product.cartKey));}
-            else{selectedProductIds.removeAll(products.map((product)=>product.cartKey));}
-          })),
-          title:Text('${(category['category_name']??'').toString()} (${products.length})',style:TextStyle(fontWeight:FontWeight.w900,color:depth==0?purple:orange)),
-          children:[
-            ...directGroups.entries.map((entry)=>offerBrandNode(id,entry.key,entry.value,refresh)),
-            ...children.map((child)=>offerCategoryNode(child,depth+1,refresh)),
-          ],
-        ),
-      );
-    }
-
     final accepted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -6056,6 +5949,113 @@ class _OffersScreenState extends State<OffersScreen> {
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ إعدادات المورد: $e')));
       }
+    }
+
+    List<Map<String,dynamic>> offerCategoryChildren(String parentId) =>
+        offerItemCategories.where((row) => (row['parent_id'] ?? '').toString() == parentId).toList();
+
+    List<Product> offerProductsForCategory(String categoryId) =>
+        offerableProducts.where((product) => offerItemCategoryByCartKey[product.cartKey] == categoryId).toList();
+
+    List<Product> offerDescendantProducts(String categoryId, [Set<String>? visited]) {
+      final seen = visited ?? <String>{};
+      if (!seen.add(categoryId)) return <Product>[];
+      final result = <Product>[]..addAll(offerProductsForCategory(categoryId));
+      for (final child in offerCategoryChildren(categoryId)) {
+        result.addAll(offerDescendantProducts((child['id'] ?? '').toString(), seen));
+      }
+      return result;
+    }
+
+    Map<String,List<Product>> offerBrandGroups(List<Product> items) {
+      final groups = <String,List<Product>>{};
+      for (final product in items) {
+        final label = (product.brand ?? '').trim().isEmpty ? 'بدون ماركة' : product.brand!.trim();
+        (groups[label] ??= <Product>[]).add(product);
+      }
+      final keys = groups.keys.toList()
+        ..sort((a,b) => a == 'بدون ماركة' ? 1 : b == 'بدون ماركة' ? -1 : a.compareTo(b));
+      return {for (final key in keys) key: groups[key]!};
+    }
+
+    Widget offerProductNode(Product product, void Function(void Function()) refresh) {
+      final key = product.cartKey;
+      offerPrices.putIfAbsent(key, () => TextEditingController(text: product.price.toStringAsFixed(2)));
+      minimumQuantities.putIfAbsent(key, () => TextEditingController(text: product.minQuantity.toString()));
+      final price = double.tryParse(offerPrices[key]!.text) ?? product.price;
+      final difference = product.price - price;
+      final productPath = [(product.subcategory ?? '').trim(), (product.brand ?? '').trim()]
+          .where((value) => value.isNotEmpty).join(' • ');
+      return Container(
+        margin: const EdgeInsetsDirectional.only(start:18,bottom:7),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color:Colors.white,border:Border.all(color:purple.withValues(alpha:.12)),borderRadius:BorderRadius.circular(10)),
+        child: Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          Row(children:[
+            Checkbox(shape:const CircleBorder(),value:selectedProductIds.contains(key),onChanged:(value)=>refresh(() {
+              if(value==true){selectedProductIds.add(key);}else{selectedProductIds.remove(key);}
+            })),
+            SizedBox(width:38,height:38,child:product.imageBytes!=null
+              ? ClipRRect(borderRadius:BorderRadius.circular(7),child:Image.memory(product.imageBytes!,fit:BoxFit.cover))
+              : product.imageUrl!=null
+                ? ClipRRect(borderRadius:BorderRadius.circular(7),child:Image.network(product.imageUrl!,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Icon(product.icon,color:purple)))
+                : Icon(product.icon,color:purple)),
+            const SizedBox(width:7),
+            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Text(product.name,style:const TextStyle(fontWeight:FontWeight.w700,fontSize:12)),
+              if(productPath.isNotEmpty) Text(productPath,style:const TextStyle(fontSize:10,color:Colors.black54)),
+            ])),
+          ]),
+          Wrap(spacing:8,runSpacing:6,crossAxisAlignment:WrapCrossAlignment.center,children:[
+            SizedBox(width:132,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              const Text('السعر الحالي عند المورد',style:TextStyle(fontSize:10,color:Colors.black54)),
+              Text('${product.price.toStringAsFixed(2)} ج.م',style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700)),
+            ])),
+            SizedBox(width:142,child:TextField(controller:offerPrices[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>refresh((){}),decoration:const InputDecoration(isDense:true,labelText:'سعر العرض',suffixText:'ج.م'))),
+            SizedBox(width:132,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              const Text('معاينة الفرق',style:TextStyle(fontSize:10,color:Colors.black54)),
+              Text('${difference>=0?'توفير':'زيادة'} ${difference.abs().toStringAsFixed(2)} ج.م',style:TextStyle(fontSize:11,color:difference>=0?Colors.green.shade700:Colors.red.shade700,fontWeight:FontWeight.w800)),
+            ])),
+            SizedBox(width:132,child:TextField(controller:minimumQuantities[key],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,labelText:'أقل كمية'))),
+          ]),
+        ]),
+      );
+    }
+
+    Widget offerBrandNode(String categoryId, String brand, List<Product> items, void Function(void Function()) refresh) {
+      final selectedCount = items.where((product)=>selectedProductIds.contains(product.cartKey)).length;
+      return ExpansionTile(
+        key:PageStorageKey<String>('offer-brand-$categoryId-$brand'),
+        leading:Checkbox(shape:const CircleBorder(),tristate:true,value:selectedCount==0?false:selectedCount==items.length?true:null,onChanged:(value)=>refresh(() {
+          if(value==true){selectedProductIds.addAll(items.map((product)=>product.cartKey));}
+          else{selectedProductIds.removeAll(items.map((product)=>product.cartKey));}
+        })),
+        title:Text('$brand (${items.length})',style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFFFF27C3))),
+        children:items.map((product)=>offerProductNode(product,refresh)).toList(),
+      );
+    }
+
+    Widget offerCategoryNode(Map<String,dynamic> category, int depth, void Function(void Function()) refresh) {
+      final id=(category['id']??'').toString();
+      final products=offerDescendantProducts(id);
+      final selectedCount=products.where((product)=>selectedProductIds.contains(product.cartKey)).length;
+      final directGroups=offerBrandGroups(offerProductsForCategory(id));
+      final children=offerCategoryChildren(id);
+      return Padding(
+        padding:EdgeInsetsDirectional.only(start:depth*13.0),
+        child:ExpansionTile(
+          key:PageStorageKey<String>('offer-category-$id'),
+          leading:Checkbox(shape:const CircleBorder(),tristate:true,value:selectedCount==0?false:selectedCount==products.length?true:null,onChanged:(value)=>refresh(() {
+            if(value==true){selectedProductIds.addAll(products.map((product)=>product.cartKey));}
+            else{selectedProductIds.removeAll(products.map((product)=>product.cartKey));}
+          })),
+          title:Text('${(category['category_name']??'').toString()} (${products.length})',style:TextStyle(fontWeight:FontWeight.w900,color:depth==0?purple:orange)),
+          children:[
+            ...directGroups.entries.map((entry)=>offerBrandNode(id,entry.key,entry.value,refresh)),
+            ...children.map((child)=>offerCategoryNode(child,depth+1,refresh)),
+          ],
+        ),
+      );
     }
 
     final accepted = await showDialog<bool>(
