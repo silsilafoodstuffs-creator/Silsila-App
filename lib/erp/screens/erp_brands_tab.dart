@@ -756,7 +756,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                           color: WidgetStateProperty.all(system ? const Color(0xFFEDE1F8) : Colors.white),
                           cells: [
                             DataCell(Text('${index + 1}', style: const TextStyle(fontWeight: FontWeight.w800))),
-                            DataCell(Text(_s(row['brand_code']), style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
+                            DataCell(Text(_s(row['brand_code']), style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple)), onTap: () => setState(() => _selectedId = id)),
                             DataCell(SizedBox(width: 210, child: _gridEditing && !system
                               ? Focus(
                                   onKeyEvent: (_, event) {
