@@ -143,6 +143,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
     if (!_ready || _busySlot != null) return;
     setState(() { _busySlot = slot; _error = null; _message = null; });
     String? newPath;
+    var registered = false;
     try {
       String fileName;
       Uint8List bytes;
@@ -228,6 +229,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
         targetCode: (_targetCodes[_keyFor(slot, _scopeCode)] ?? '').trim().isEmpty ? null : _targetCodes[_keyFor(slot, _scopeCode)]!.trim(),
         durationSeconds: _durations[_keyFor(slot, _scopeCode)] ?? (slot == _introSlot ? 4 : slot == _popupSlot ? 5 : 2),
       ));
+      registered = true;
       // The new image is registered first. Only then remove the previous slot image.
       if (old != null && old.id != null) {
         await _repository.deleteAssetRecord(assetId: old.id!);
@@ -246,12 +248,18 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
       setState(() => _message = 'تم حفظ $slot بنجاح. سيظهر الإعلان في واجهة التطبيق بعد تحديث بياناته.');
       await _load();
     } catch (error) {
-      if (newPath != null) {
+      if (newPath != null && !registered) {
         try {
           await _storage.deleteImage(companyId: widget.companyId!, appId: widget.appId!, storagePath: newPath);
         } catch (_) {}
       }
-      if (mounted) setState(() => _error = 'تعذر حفظ $slot: $error');
+      if (registered) {
+        _urls.clear();
+        await _load();
+      }
+      if (mounted) setState(() => _error = registered
+          ? 'تم حفظ الإعلان الجديد، لكن تعذر تنظيف الإعلان السابق: $error'
+          : 'تعذر حفظ $slot: $error');
     } finally {
       if (mounted) setState(() => _busySlot = null);
     }
