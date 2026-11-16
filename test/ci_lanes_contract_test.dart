@@ -11,6 +11,12 @@ void main() {
 
     expect(dashboard, contains("'موارد بشرية': {"));
     expect(dashboard, isNot(contains("'شئون موظفين': {")));
+    final permissionCatalog = File('lib/erp/screens/erp_permissions_screen.dart').readAsStringSync();
+    final userAdmin = File('lib/erp/screens/erp_user_admin_screen.dart').readAsStringSync();
+    expect(permissionCatalog, contains("'موارد بشرية':{"));
+    expect(permissionCatalog, isNot(contains("'شئون موظفين':{")));
+    expect(userAdmin, contains("'موارد بشرية':{"));
+    expect(userAdmin, isNot(contains("'شئون موظفين':{")));
     expect(hr, contains("page == 'أجهزة البصمة وربط الحضور'"));
     expect(hr, contains('HrFingerprintDevicesScreen(companyId: companyId)'));
     expect(hr, contains("page == 'الوظائف الشاغرة'"));
