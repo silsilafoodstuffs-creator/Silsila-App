@@ -9,20 +9,18 @@ void main() {
     final deploy = File('.github/workflows/deploy.yml').readAsStringSync();
     final preview = File('.github/workflows/web-preview-validation.yml').readAsStringSync();
     final release = File('.github/workflows/build.yml').readAsStringSync();
-    final androidBuild = File('.github/workflows/android-debug-apk.yml').readAsStringSync();
+    // The signed production APK is built only by build.yml; no separate debug APK workflow exists.
 
     expect(mobile, contains('name: Silsila Mobile App Validation'));
     expect(mobile, contains('flutter test --reporter expanded'));
     expect(mobile, isNot(contains('flutter build apk')));
     expect(mobile, contains('Flutter analyze + tests'));
     expect(mobile, isNot(contains('Set up Java 17')));
-    expect(androidBuild, contains('github.event.workflow_run.head_sha'));
-    expect(androidBuild, contains('github.sha'));
-    expect(androidBuild, contains('cancel-in-progress: false'));
-    expect(androidBuild, contains('Silsila Mobile App Validation'));
-    expect(androidBuild, contains('flutter build apk --debug --no-pub --target-platform android-arm,android-arm64'));
-    expect(androidBuild, contains('Cache Android NDK and CMake'));
-    expect(androidBuild, contains('workflow_dispatch:'));
+    expect(release, contains('name: Build Silsila Android App'));
+    expect(release, contains('flutter build apk --release'));
+    expect(release, contains('Verify APK signature'));
+    expect(release, contains('Verify APK identity, version, and launcher icon'));
+    expect(release, contains('silsila-android-apk'));
 
     expect(web, contains('name: Silsila Web App Validation'));
     expect(web, contains('flutter build web --release'));
