@@ -353,15 +353,9 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
           Material(
             color: Colors.white,
             child: TabBar(
-              isScrollable: false,
-              tabAlignment: TabAlignment.fill,
-              dividerColor: Colors.transparent,
-              indicatorSize: TabBarIndicatorSize.tab,
-              indicatorWeight: 3,
+              isScrollable: true,
               labelColor: _adsPurple,
               unselectedLabelColor: Colors.black54,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
               indicatorColor: _adsOrange,
               tabs: const [
                 Tab(text: 'إعلانات بوسترات التمرير'),
