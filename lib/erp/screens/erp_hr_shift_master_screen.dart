@@ -191,6 +191,12 @@ class _ErpHrShiftMasterScreenState extends State<ErpHrShiftMasterScreen> {
               style: FilledButton.styleFrom(backgroundColor: _shiftPurple),
               onPressed: _saving ? null : () async {
                 if (!(formKey.currentState?.validate() ?? false)) return;
+                if (existing != null &&
+                    branchId != existing['branch_id']?.toString() &&
+                    _activeAssignmentCount(existing['id'].toString()) > 0) {
+                  _showMessage('لا يمكن تغيير فرع الوردية قبل إنهاء توزيعات الموظفين الحالية.', isError: true);
+                  return;
+                }
                 final startValue = start.text.trim();
                 final endValue = end.text.trim();
                 final payload = <String, dynamic>{
@@ -276,6 +282,11 @@ class _ErpHrShiftMasterScreenState extends State<ErpHrShiftMasterScreen> {
 
   Future<void> _deactivateShift(Map<String, dynamic> shift) async {
     final id = shift['id'].toString();
+    final assignedCount = _activeAssignmentCount(id);
+    if (assignedCount > 0) {
+      _showMessage('لا يمكن إيقاف الوردية قبل إنهاء أو نقل توزيع $assignedCount موظفًا.', isError: true);
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
