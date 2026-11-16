@@ -28,8 +28,8 @@ void main() {
     expect(decoration.gradient, isA<LinearGradient>());
     expect(decoration.boxShadow, isNotEmpty);
 
-    expect(find.byType(FilledButton), findsOneWidget);
-    await tester.tap(find.byType(FilledButton));
+    expect(find.text('إضافة'), findsOneWidget);
+    await tester.tap(find.text('إضافة'));
     await tester.pump();
     expect(pressed, isTrue);
   });
