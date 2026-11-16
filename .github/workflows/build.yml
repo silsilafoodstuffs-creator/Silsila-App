@@ -87,20 +87,180 @@ jobs:
               marker = s.find('>', s.find('<manifest'))
               if marker == -1:
                   raise SystemExit("ERROR: Manifest tag not found")
-
               s = (
                   s[:marker + 1]
                   + '\n    <uses-permission android:name="android.permission.INTERNET" />'
                   + s[marker + 1:]
               )
-              p.write_text(s)
 
-          print("SUCCESS: Android internet permission is present")
+          import re
+          s = re.sub(r'android:label="[^"]*"', 'android:label="سلسلة"', s, count=1)
+          if 'android:label=' not in s:
+              s = s.replace("<application", '<application android:label="سلسلة"', 1)
+          p.write_text(s)
+          print("SUCCESS: Android permission and Silsila app label are present")
           PY
 
       - name: Get dependencies
         run: |
           flutter pub get
+
+      - name: Set a monotonically increasing Android version code
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_CODE=$(( $(date -u +%y%m%d) * 1000 + GITHUB_RUN_ID % 1000 ))
+          python3 - "$VERSION_CODE" <<'PY'
+          from pathlib import Path
+          import re, sys
+          p = Path("pubspec.yaml")
+          s = p.read_text()
+          code = sys.argv[1]
+          s, n = re.subn(r'(?m)^(version:\s*[^+\n]+)\+\d+\s*
+
+      - name: Configure permanent signing key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -e
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/silsila-upload-key.jks
+
+          cat > android/key.properties <<EOF
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyPassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=silsila
+          storeFile=silsila-upload-key.jks
+          EOF
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("android/app/build.gradle.kts")
+          if not p.exists():
+              raise SystemExit("Kotlin Gradle file not found")
+
+          s = p.read_text()
+
+          imports = (
+              "import java.util.Properties\n"
+              "import java.io.FileInputStream\n"
+          )
+          if "import java.util.Properties" not in s:
+              s = imports + s
+
+          if 'ndkVersion = "27.0.12077973"' not in s:
+              s = s.replace("android {", 'android {\n    ndkVersion = "27.0.12077973"', 1)
+
+          props = """
+          val keystoreProperties = Properties()
+          val keystorePropertiesFile = rootProject.file("key.properties")
+          if (keystorePropertiesFile.exists()) {
+              keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+          }
+
+          """
+          if "val keystoreProperties = Properties()" not in s:
+              marker = "android {"
+              if marker not in s:
+                  raise SystemExit("Android configuration not found")
+              s = s.replace(marker, props + marker, 1)
+
+          signing = """
+              signingConfigs {
+                  create("release") {
+                      keyAlias = keystoreProperties["keyAlias"] as String
+                      keyPassword = keystoreProperties["keyPassword"] as String
+                      storeFile = file(keystoreProperties["storeFile"] as String)
+                      storePassword = keystoreProperties["storePassword"] as String
+                  }
+              }
+
+          """
+          if 'create("release")' not in s:
+              marker = "    buildTypes {"
+              if marker not in s:
+                  raise SystemExit("Build types configuration not found")
+              s = s.replace(marker, signing + marker, 1)
+
+          debug = 'signingConfig = signingConfigs.getByName("debug")'
+          release = 'signingConfig = signingConfigs.getByName("release")'
+
+          if debug in s:
+              s = s.replace(debug, release, 1)
+          elif release not in s:
+              raise SystemExit("Could not configure release signing")
+
+          p.write_text(s)
+          print("Permanent signing configuration prepared")
+          PY
+
+      - name: Test catalog image matching
+        run: python3 -m unittest tools/catalog_import/test_import_real_product_images.py -v
+
+      - name: Check code
+        run: flutter analyze lib test --no-fatal-infos --no-fatal-warnings
+
+      - name: Build Android APK
+        run: |
+          flutter build apk --release --dart-define=SILSILA_TEST_LOGIN=${{ github.event_name == 'workflow_dispatch' && inputs.test_login || false }}
+
+      - name: Verify APK signature
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          APKSIGNER="$(find "$SDK/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+
+          if [ -z "$APKSIGNER" ]; then
+            echo "ERROR: apksigner not found"
+            exit 1
+          fi
+
+          OUTPUT="$("$APKSIGNER" verify --verbose --print-certs "$APK")"
+          printf '%s\n' "$OUTPUT"
+
+          ACTUAL="$(printf '%s\n' "$OUTPUT" | sed -n 's/.*certificate SHA-256 digest: *//Ip' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          EXPECTED="a69301fe3009183301d1751aa99ef8d9025c696e2870e4dfb5fd9732be4d8e42"
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "ERROR: APK certificate does not match the permanent signing certificate"
+            exit 1
+          fi
+
+          echo "SUCCESS: APK signature matches the permanent signing certificate"
+
+      - name: Check APK package ID
+        run: |
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          APKANALYZER="$SDK/cmdline-tools/latest/bin/apkanalyzer"
+          if [ ! -x "$APKANALYZER" ]; then
+            APKANALYZER="$(find "$SDK/cmdline-tools" "$SDK/build-tools" -name apkanalyzer -type f -print -quit 2>/dev/null || true)"
+          fi
+          if [ -z "$APKANALYZER" ]; then
+            echo "apkanalyzer was not found"
+            exit 1
+          fi
+          "$APKANALYZER" manifest application-id "$APK"
+
+      - name: Save APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: silsila-android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+, rf'\1+{code}', s, count=1)
+          if n != 1:
+              raise SystemExit("Could not safely update Flutter versionCode in pubspec.yaml")
+          p.write_text(s)
+          print(f"Android versionCode: {code}")
+          PY
 
       - name: Generate Silsila App Icon
         run: dart run flutter_launcher_icons
