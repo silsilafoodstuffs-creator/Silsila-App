@@ -18,6 +18,7 @@ class SilsilaTheme {
       secondary: orange,
       tertiary: pink,
       surface: Colors.white,
+      surfaceTint: Colors.transparent,
       error: const Color(0xFFB3261E),
     );
 
@@ -47,7 +48,7 @@ class SilsilaTheme {
         backgroundColor: purple,
         foregroundColor: Colors.white,
         centerTitle: false,
-        elevation: 5,
+        elevation: 4,
         shadowColor: Color(0x66FF27C3),
         scrolledUnderElevation: 3,
         iconTheme: IconThemeData(
@@ -189,7 +190,7 @@ class SilsilaTheme {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(
-            color: purple,
+            color: pink,
             width: 1.8,
           ),
         ),
@@ -211,8 +212,9 @@ class SilsilaTheme {
       // Cards
       cardTheme: CardThemeData(
         color: Colors.white,
-        elevation: 6,
+        elevation: 5,
         shadowColor: Color(0x44FF27C3),
+        surfaceTintColor: Colors.transparent,
         margin: const EdgeInsets.symmetric(
           horizontal: 0,
           vertical: 6,
@@ -231,6 +233,8 @@ class SilsilaTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: purple,
           foregroundColor: Colors.white,
+          animationDuration: Duration(milliseconds: 180),
+          overlayColor: Color(0x22FFA015),
           disabledBackgroundColor: const Color(0xFFE3DCEB),
           disabledForegroundColor: silsilaMuted,
           elevation: 5,
@@ -255,6 +259,10 @@ class SilsilaTheme {
         style: FilledButton.styleFrom(
           backgroundColor: purple,
           foregroundColor: Colors.white,
+          elevation: 2,
+          shadowColor: Color(0x55FF27C3),
+          animationDuration: Duration(milliseconds: 180),
+          overlayColor: Color(0x22FFA015),
           disabledBackgroundColor: const Color(0xFFE3DCEB),
           disabledForegroundColor: silsilaMuted,
           minimumSize: const Size(0, 48),
@@ -313,7 +321,8 @@ class SilsilaTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        elevation: 4,
+        elevation: 6,
+        shadowColor: Color(0x33FF27C3),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(22),
         ),
