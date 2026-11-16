@@ -3,6 +3,25 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('unified HR routing and active global UI standards stay wired', () {
+    final dashboard = File('lib/erp/erp_dashboard_screen.dart').readAsStringSync();
+    final hr = File('lib/erp/screens/erp_hr_affairs_screen.dart').readAsStringSync();
+    final hrRecords = File('lib/erp/screens/erp_hr_records_screen.dart').readAsStringSync();
+    final app = File('lib/main.dart').readAsStringSync();
+
+    expect(dashboard, contains("'موارد بشرية': {"));
+    expect(dashboard, isNot(contains("'شئون موظفين': {")));
+    expect(hr, contains("page == 'أجهزة البصمة وربط الحضور'"));
+    expect(hr, contains('HrFingerprintDevicesScreen(companyId: companyId)'));
+    expect(hr, contains("page == 'الوظائف الشاغرة'"));
+    expect(hrRecords, isNot(contains("p.contains('الوظائف الشاغرة')")));
+
+    expect(app, contains('headingRowHeight: 40'));
+    expect(app, contains('dataRowMinHeight: 40'));
+    expect(app, contains('dataRowMaxHeight: 40'));
+    expect(app, contains('space: 5'));
+  });
+
   test('independent mobile, web app, and web preview workflows stay active', () {
     final mobile = File('.github/workflows/mobile-validation.yml').readAsStringSync();
     final web = File('.github/workflows/web-validation.yml').readAsStringSync();
