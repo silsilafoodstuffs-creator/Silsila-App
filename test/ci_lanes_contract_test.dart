@@ -28,6 +28,15 @@ void main() {
     expect(hr, contains("page == 'تقرير الحضور'"));
     expect(hr, contains("page == 'تقرير الإجازات'"));
     expect(hr, contains("page == 'كشف الرواتب'"));
+    final shiftMaster = File('lib/erp/screens/erp_hr_shift_master_screen.dart').readAsStringSync();
+    final shiftMigration = File('supabase/migrations/20261116040000_prevent_overlapping_hr_shift_assignments.sql').readAsStringSync();
+    expect(hr, contains('ErpHrShiftMasterScreen(companyId: companyId)'));
+    expect(shiftMaster, contains("from('erp_hr_shifts')"));
+    expect(shiftMaster, contains("from('erp_hr_shift_assignments')"));
+    expect(shiftMaster, contains("from('erp_employees')"));
+    expect(shiftMaster, contains("'weekly_holidays'"));
+    expect(shiftMigration, contains('daterange'));
+    expect(shiftMigration, contains('erp_hr_shift_assignment_overlap_guard'));
     expect(hr, contains("page == 'أجهزة البصمة وربط الحضور'"));
     expect(hr, contains('HrFingerprintDevicesScreen(companyId: companyId)'));
     expect(hr, contains("page == 'الوظائف الشاغرة'"));
