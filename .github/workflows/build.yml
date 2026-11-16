@@ -254,7 +254,7 @@ jobs:
           test -n "$APP_ID"
           test "$VERSION_CODE" -ge 2
 
-          if ! unzip -l "$APK" | grep -Eq 'res/mipmap-(hdpi|xhdpi|xxhdpi|xxxhdpi)-v4/(ic_launcher|ic_launcher_foreground)\.png'; then
+          if ! unzip -l "$APK" | grep -Eq 'res/mipmap-(hdpi|xhdpi|xxhdpi|xxxhdpi)(-v4)?/(ic_launcher|ic_launcher_foreground)\.png'; then
             echo "ERROR: Silsila launcher icon resources were not found in the APK"
             exit 1
           fi
