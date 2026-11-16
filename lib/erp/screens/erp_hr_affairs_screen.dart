@@ -10,6 +10,7 @@ import 'erp_payroll_screen.dart';
 import 'erp_salary_elements_screen.dart';
 import 'erp_sales_targets_commissions_screen.dart';
 import 'hr_attendance_rules_screen.dart';
+import 'erp_hr_shift_master_screen.dart';
 
 class ErpHrAffairsScreen extends StatelessWidget {
   const ErpHrAffairsScreen({
@@ -79,9 +80,10 @@ class ErpHrAffairsScreen extends StatelessWidget {
         page == 'شريط قبض مجمع' || page == 'مفردات المرتب' || page == 'ملخص الرواتب' || page == 'كشف الرواتب') {
       return ErpPayrollScreen(initialCompanyId: companyId);
     }
-    if (page == 'قواعد الورديات والحضور والانصراف' || page == 'قواعد وسياسات الحضور' ||
-        page == 'الورديات وجداول العمل' || page == 'الجداول والورديات' ||
-        page == 'سياسات شئون الموظفين') {
+    if (page == 'الورديات وجداول العمل' || page == 'الجداول والورديات') {
+      return ErpHrShiftMasterScreen(companyId: companyId);
+    }
+    if (page == 'قواعد الورديات والحضور والانصراف' || page == 'قواعد وسياسات الحضور') {
       return HrShiftRulesScreen(companyId: companyId);
     }
     return ErpHrRecordsScreen(page: page, companyId: companyId);
