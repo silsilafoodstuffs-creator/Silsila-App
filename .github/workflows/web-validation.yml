@@ -31,10 +31,10 @@ on:
 permissions:
   contents: read
 
-# Separate from Android and Pages; active Web checks are not cancelled by pushes.
+# Keep only the latest commit's Web validation active on each ref.
 concurrency:
-  group: silsila-web-validation-${{ github.run_id }}
-  cancel-in-progress: false
+  group: silsila-web-validation-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   web:
