@@ -252,7 +252,7 @@ class _ErpHrShiftMasterScreenState extends State<ErpHrShiftMasterScreen> {
 
   String? _validateTime(String? value) {
     final text = (value ?? '').trim();
-    if (!RegExp(r'^([01]\d|2[0-3]):[0-5]\d).hasMatch(text)) return 'اكتب الوقت بصيغة HH:mm';
+    if (!RegExp(r'^([01]\d|2[0-3]):[0-5]\d$').hasMatch(text)) return 'اكتب الوقت بصيغة HH:mm';
     return null;
   }
 
@@ -688,9 +688,9 @@ class _ErpHrShiftMasterScreenState extends State<ErpHrShiftMasterScreen> {
         else
           ..._shifts.map((shift) {
             final id = shift['id'].toString();
-            final branch = _branches.where((row) => row['id'].toString() == shift['branch_id']?.toString()).firstOrNull;
+            final branch = _branchFor(shift['branch_id']?.toString());
             final days = (shift['weekly_holidays'] as List? ?? const [])
-                .map((value) => _weekdayNumbers.entries.where((entry) => entry.value == int.tryParse(value.toString())).map((entry) => entry.key).firstOrNull)
+                .map((value) => _weekdayName(int.tryParse(value.toString())))
                 .whereType<String>().toList();
             return Card(
               margin: const EdgeInsets.only(bottom: 10),
