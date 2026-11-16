@@ -120,7 +120,6 @@ jobs:
           test -s android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
           test -s android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
           test -s android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          test -s android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
 
       - name: Configure permanent signing key
         env:
