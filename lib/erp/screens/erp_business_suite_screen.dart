@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_center_toast.dart';
+import '../widgets/erp_screen_frame.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _p=Color(0xFF3E007D);
@@ -614,17 +615,184 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   try{await _db.rpc('erp_delete_business_suite_record',params:{'p_record_id':r['id']});await _load();}
   catch(e){if(mounted)ErpCenterToast.show(context, 'تعذر الحذف: $e', isError: true, duration: const Duration(seconds: 3));}
  }
- @override Widget build(BuildContext context){final list=_filtered;final total=_rows.fold<num>(0,(s,r)=>s+(r['amount'] as num? ?? 0));return Directionality(textDirection:TextDirection.rtl,child:Container(color:const Color(0xFFFAF8FC),padding:const EdgeInsets.all(15),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-  Card(elevation:0,color:Colors.white,child:Padding(padding:const EdgeInsets.all(15),child:Column(children:[
-   Row(children:[CircleAvatar(backgroundColor:const Color(0xFFF1EAF7),child:Icon(_moduleKey=='fixed_assets'?Icons.account_balance_outlined:_moduleKey=='manufacturing'?Icons.precision_manufacturing_outlined:_moduleKey=='contracting'?Icons.construction_outlined:Icons.support_agent_outlined,color:_p)),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(widget.page,style:const TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:_p)),Text(widget.module+' • '+widget.group,style:const TextStyle(fontSize:12,color:Colors.black54))])),if(!_report)FilledButton.icon(onPressed:()=>_edit(),icon:const Icon(Icons.add),label:const Text('إنشاء'),style:FilledButton.styleFrom(backgroundColor:_p)),IconButton(onPressed:_load,icon:const Icon(Icons.refresh,color:_p))]),
-   const SizedBox(height:12),Wrap(spacing:8,runSpacing:8,children:[_metric('السجلات الفعلية',_rows.length.toString()),_metric('قيد التنفيذ',_rows.where((r)=>r['status']=='in_progress').length.toString()),_metric('مكتمل',_rows.where((r)=>['done','completed','posted','resolved'].contains(r['status'])).length.toString()),_metric('إجمالي القيمة',total.toStringAsFixed(2))]),
-  ]))),
-  Row(children:[
-   Expanded(child:TextField(controller:_search,onChanged:(_)=>setState((){}),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'بحث بالكود أو الاسم أو الجهة',border:OutlineInputBorder(),isDense:true,filled:true,fillColor:Colors.white))),
-   const SizedBox(width:8),
-   SizedBox(width:155,child:DropdownButtonFormField<String>(itemHeight: 48, value:_filter,decoration:const InputDecoration(labelText:'تصفية الحالة',border:OutlineInputBorder(),isDense:true,filled:true,fillColor:Colors.white),items:const [DropdownMenuItem(value:'all',child:Text('كل الحالات')),DropdownMenuItem(value:'draft',child:Text('مسودة')),DropdownMenuItem(value:'active',child:Text('نشط')),DropdownMenuItem(value:'planned',child:Text('مخطط')),DropdownMenuItem(value:'in_progress',child:Text('قيد التنفيذ')),DropdownMenuItem(value:'waiting',child:Text('بانتظار إجراء')),DropdownMenuItem(value:'approved',child:Text('معتمد')),DropdownMenuItem(value:'done',child:Text('مكتمل')),DropdownMenuItem(value:'closed',child:Text('مغلق'))],onChanged:(v)=>setState(()=>_filter=v??'all'))),
-  ]),
-  const SizedBox(height:8),Expanded(child:_loading?const Center(child:CircularProgressIndicator(color:_p)):_error!=null?Center(child:Text(_error!,style:const TextStyle(color:Colors.red))):list.isEmpty?Center(child:Text(_report?'لا توجد بيانات فعلية كافية للتقرير.':'لا توجد سجلات فعلية في هذا القسم بعد.')):Card(elevation:0,child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(columns:const [DataColumn(label:Text('الكود')),DataColumn(label:Text('الاسم / الوصف')),DataColumn(label:Text('التاريخ')),DataColumn(label:Text('الجهة')),DataColumn(label:Text('القيمة')),DataColumn(label:Text('الحالة')),DataColumn(label:Text('إجراءات'))],rows:list.map((r)=>DataRow(cells:[DataCell(Text(r['record_code']?.toString()??'—')),DataCell(ConstrainedBox(constraints:const BoxConstraints(maxWidth:230),child:Text(r['name']?.toString()??'—',overflow:TextOverflow.ellipsis))),DataCell(Text(r['record_date']?.toString()??'—')),DataCell(Text(r['counterparty']?.toString()??'—')),DataCell(Text((r['amount']??0).toString())),DataCell(Text(_status(r['status']))),DataCell(_report?const Text('—'):Row(mainAxisSize:MainAxisSize.min,children:[IconButton(onPressed:()=>_edit(row:r),icon:const Icon(Icons.edit_outlined,color:_p)),IconButton(onPressed:()=>_delete(r),icon:const Icon(Icons.delete_outline,color:Colors.red))]))])).toList()))))
- ])));}
- Widget _metric(String label,String value)=>Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(color:const Color(0xFFF5EFFB),borderRadius:BorderRadius.circular(10)),child:Text(label+': '+value,style:const TextStyle(color:_p,fontWeight:FontWeight.w700,fontSize:12)));
+ @override
+ Widget build(BuildContext context) {
+  final list = _filtered;
+  final total = _rows.fold<num>(0, (sum, row) => sum + (row['amount'] as num? ?? 0));
+  final actions = <Widget>[
+   if (!_report)
+    FilledButton.icon(
+     onPressed: () => _edit(),
+     icon: const Icon(Icons.add),
+     label: const Text('إنشاء'),
+     style: FilledButton.styleFrom(
+      backgroundColor: _p,
+      foregroundColor: Colors.white,
+      elevation: 4,
+      shadowColor: const Color(0xFFFF27C3).withValues(alpha: .28),
+     ),
+    ),
+   IconButton(
+    tooltip: 'تحديث',
+    onPressed: _load,
+    icon: const Icon(Icons.refresh, color: _p),
+   ),
+  ];
+
+  return ErpScreenFrame(
+   title: widget.page,
+   subtitle: '${widget.module} • ${widget.group}',
+   icon: _moduleKey == 'fixed_assets'
+       ? Icons.account_balance_outlined
+       : _moduleKey == 'manufacturing'
+           ? Icons.precision_manufacturing_outlined
+           : _moduleKey == 'contracting'
+               ? Icons.construction_outlined
+               : Icons.support_agent_outlined,
+   actions: actions,
+   child: Directionality(
+    textDirection: TextDirection.rtl,
+    child: Container(
+     color: const Color(0xFFFAF8FC),
+     padding: const EdgeInsets.all(8),
+     child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+       Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+         borderRadius: BorderRadius.circular(14),
+         border: Border.all(color: const Color(0xFFFF27C3).withValues(alpha: .24)),
+         gradient: const LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [Colors.white, Color(0xFFF9F3FF), Color(0xFFF5EFFB)],
+         ),
+         boxShadow: [
+          BoxShadow(color: const Color(0xFF3E007D).withValues(alpha: .08), blurRadius: 14, offset: const Offset(0, 4)),
+          BoxShadow(color: const Color(0xFFFF27C3).withValues(alpha: .08), blurRadius: 16, spreadRadius: -5),
+         ],
+        ),
+        child: Wrap(
+         spacing: 8,
+         runSpacing: 8,
+         children: [
+          _metric('السجلات الفعلية', _rows.length.toString()),
+          _metric('قيد التنفيذ', _rows.where((row) => row['status'] == 'in_progress').length.toString()),
+          _metric('مكتمل', _rows.where((row) => ['done', 'completed', 'posted', 'resolved'].contains(row['status'])).length.toString()),
+          _metric('إجمالي القيمة', total.toStringAsFixed(2)),
+         ],
+        ),
+       ),
+       const SizedBox(height: 8),
+       Row(
+        children: [
+         Expanded(
+          child: TextField(
+           controller: _search,
+           onChanged: (_) => setState(() {}),
+           decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.search),
+            hintText: 'بحث بالكود أو الاسم أو الجهة',
+            border: OutlineInputBorder(),
+            isDense: true,
+            filled: true,
+            fillColor: Colors.white,
+           ),
+          ),
+         ),
+         const SizedBox(width: 8),
+         SizedBox(
+          width: 155,
+          child: DropdownButtonFormField<String>(
+           itemHeight: 48,
+           value: _filter,
+           decoration: const InputDecoration(
+            labelText: 'تصفية الحالة',
+            border: OutlineInputBorder(),
+            isDense: true,
+            filled: true,
+            fillColor: Colors.white,
+           ),
+           items: const [
+            DropdownMenuItem(value: 'all', child: Text('كل الحالات')),
+            DropdownMenuItem(value: 'draft', child: Text('مسودة')),
+            DropdownMenuItem(value: 'active', child: Text('نشط')),
+            DropdownMenuItem(value: 'planned', child: Text('مخطط')),
+            DropdownMenuItem(value: 'in_progress', child: Text('قيد التنفيذ')),
+            DropdownMenuItem(value: 'waiting', child: Text('بانتظار إجراء')),
+            DropdownMenuItem(value: 'approved', child: Text('معتمد')),
+            DropdownMenuItem(value: 'done', child: Text('مكتمل')),
+            DropdownMenuItem(value: 'closed', child: Text('مغلق')),
+           ],
+           onChanged: (value) => setState(() => _filter = value ?? 'all'),
+          ),
+         ),
+        ],
+       ),
+       const SizedBox(height: 8),
+       Expanded(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: _p))
+            : _error != null
+                ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
+                : list.isEmpty
+                    ? Center(child: Text(_report ? 'لا توجد بيانات فعلية كافية للتقرير.' : 'لا توجد سجلات فعلية في هذا القسم بعد.'))
+                    : Card(
+                        elevation: 3,
+                        shadowColor: const Color(0xFF3E007D).withValues(alpha: .12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        child: SingleChildScrollView(
+                         scrollDirection: Axis.horizontal,
+                         child: DataTable(
+                          columns: const [
+                           DataColumn(label: Text('الكود')),
+                           DataColumn(label: Text('الاسم / الوصف')),
+                           DataColumn(label: Text('التاريخ')),
+                           DataColumn(label: Text('الجهة')),
+                           DataColumn(label: Text('القيمة')),
+                           DataColumn(label: Text('الحالة')),
+                           DataColumn(label: Text('إجراءات')),
+                          ],
+                          rows: list.map((row) => DataRow(cells: [
+                           DataCell(Text(row['record_code']?.toString() ?? '—')),
+                           DataCell(ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 230),
+                            child: Text(row['name']?.toString() ?? '—', overflow: TextOverflow.ellipsis),
+                           )),
+                           DataCell(Text(row['record_date']?.toString() ?? '—')),
+                           DataCell(Text(row['counterparty']?.toString() ?? '—')),
+                           DataCell(Text((row['amount'] ?? 0).toString())),
+                           DataCell(Text(_status(row['status']))),
+                           DataCell(_report
+                               ? const Text('—')
+                               : Row(mainAxisSize: MainAxisSize.min, children: [
+                                   IconButton(onPressed: () => _edit(row: row), icon: const Icon(Icons.edit_outlined, color: _p)),
+                                   IconButton(onPressed: () => _delete(row), icon: const Icon(Icons.delete_outline, color: Colors.red)),
+                                  ])),
+                          ])).toList(),
+                         ),
+                        ),
+                       ),
+       ),
+      ],
+     ),
+    ),
+   ),
+  );
+ }
+
+ Widget _metric(String label, String value) => Container(
+  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  decoration: BoxDecoration(
+   gradient: const LinearGradient(colors: [Colors.white, Color(0xFFF5EFFB)]),
+   borderRadius: BorderRadius.circular(10),
+   border: Border.all(color: const Color(0xFFFF27C3).withValues(alpha: .20)),
+   boxShadow: [
+    BoxShadow(color: const Color(0xFF3E007D).withValues(alpha: .07), blurRadius: 8, offset: const Offset(0, 2)),
+   ],
+  ),
+  child: Text(label + ': ' + value, style: const TextStyle(color: _p, fontWeight: FontWeight.w700, fontSize: 12)),
+ );
+
 }
