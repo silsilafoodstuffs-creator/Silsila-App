@@ -93,6 +93,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'skip_purchase_order','category':'شرائية','ar':'تخطي أمر الشراء في فاتورة الشراء','en':'Skip purchase order in purchase invoice'},
     {'key':'supplier_bonus_variance','category':'شرائية','ar':'تحديد نسبة فروقات وارد حوافز الموردين','en':'Set supplier incentives incoming variance','value':'0.025%'},
     {'key':'national_id_required','category':'إدارية','ar':'الرقم القومي الزامي لتسجيل موظف جديد','en':'Require national ID for new employees','all':true},
+    {'key':'appearance.theme_preset','category':'الخطوط والألوان','ar':'الثيم الافتراضي','en':'Default theme','value':'glossy','options':['glossy','classic'],'mandatory':true,'all':true},
+    {'key':'appearance.dark_mode','category':'الخطوط والألوان','ar':'الوضع الداكن','en':'Dark mode','value':'false','options':['false','true'],'mandatory':true,'all':true},
     {'key':'appearance.language','category':'الخطوط والألوان','ar':'لغة واجهة البرنامج والتطبيقات','en':'Program and apps interface language','value':'العربية','options':['العربية','الإنجليزية'],'mandatory':true,'all':true},
     {'key':'appearance.header_background','category':'الخطوط والألوان','ar':'لون الهيدر في جميع الشاشات والتقارير','en':'Header background color','value':'#3E007D','mandatory':true,'all':true},
     {'key':'appearance.screen_background','category':'الخطوط والألوان','ar':'لون الخلفية في جميع الشاشات والتقارير','en':'Screen and report background color','value':'#FFFFFF','mandatory':true,'all':true},
@@ -1087,40 +1089,91 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   }
 
   Future<void> _chooseAppearanceColor(Map<String, dynamic> policy, {bool fontStyle = false}) async {
-    const swatches = <Color>[
-      Color(0xFF3E007D), Color(0xFF5E35B1), Color(0xFF7E57C2), Color(0xFF9575CD),
-      Color(0xFFFFA015), Color(0xFFFF8F00), Color(0xFFFF5722), Color(0xFFE53935),
-      Color(0xFFFF27C3), Color(0xFFD81B60), Color(0xFF8E24AA), Color(0xFF3949AB),
-      Color(0xFF039BE5), Color(0xFF00897B), Color(0xFF43A047), Color(0xFF795548),
-      Color(0xFF333333), Color(0xFF666666), Color(0xFF999999), Color(0xFFCCCCCC),
-      Color(0xFFF5EFFB), Color(0xFFFFFFFF),
-    ];
-    final current = fontStyle ? (_fontStyle(policy)['color'] ?? '#3E007D').toString() : (policy['value'] ?? '#FFFFFF').toString();
+    final initial = fontStyle
+        ? (_fontStyle(policy)['color'] ?? '#3E007D').toString()
+        : (policy['value'] ?? '#FFFFFF').toString();
+    final initialColor = _appearanceColor(initial);
+    final initialHsv = HSVColor.fromColor(initialColor);
     final selected = await showDialog<Color>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('اختيار اللون'),
-        content: SizedBox(width: 300, child: Wrap(
-          spacing: 8, runSpacing: 8,
-          children: swatches.map((color) => InkWell(
-            onTap: () => Navigator.pop(ctx, color),
-            child: Container(
-              width: 30, height: 30,              decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: Colors.black26)),
-              child: _appearanceColor(current).toARGB32() == color.toARGB32()
-                  ? Icon(Icons.check, size: 16, color: color.computeLuminance() < .45 ? Colors.white : Colors.black87)
-                  : null,
-            ),
-          )).toList(),        )),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء'))],
-      ),
+      builder: (ctx) => StatefulBuilder(builder: (ctx, refresh) {
+        HSVColor hsv = initialHsv;
+        String hex = '#${initialColor.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+        Color current = initialColor;
+        void update(HSVColor next) {
+          hsv = next; current = hsv.toColor();
+          hex = '#${current.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+          refresh(() {});
+        }
+        return AlertDialog(
+          title: const Text('لوحة اختيار الألوان الكاملة'),
+          content: SizedBox(width: 420, child: SingleChildScrollView(child: Column(
+            mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(height: 170, child: Row(children: [
+                SizedBox(width: 48, child: RotatedBox(quarterTurns: 3, child: Slider(
+                  value: hsv.hue, min: 0, max: 360,
+                  activeColor: current,
+                  onChanged: (v) => update(hsv.withHue(v)),
+                ))),
+                Expanded(child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.black26),
+                    gradient: LinearGradient(colors: [
+                      HSVColor.fromAHSV(1, hsv.hue, 1, 1).toColor(), Colors.white,
+                    ]),
+                  ),
+                  child: Stack(children: [
+                    Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black]),
+                    ))),
+                    Positioned.fill(child: GestureDetector(
+                      onPanDown: (d) { final box = ctx.findRenderObject() as RenderBox; final p = box.globalToLocal(d.globalPosition); update(hsv.withSaturation((p.dx / 420).clamp(0,1)).withValue((1-p.dy/170).clamp(0,1))); },
+                      onPanUpdate: (d) { final box = ctx.findRenderObject() as RenderBox; final p = box.globalToLocal(d.globalPosition); update(hsv.withSaturation((p.dx / 420).clamp(0,1)).withValue((1-p.dy/170).clamp(0,1))); },
+                    )),
+                  ]),
+                )),
+              ])),
+              const SizedBox(height: 8),
+              Text('درجة اللون الحالية: $hex', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              Row(children: [
+                Container(width: 42, height: 34, decoration: BoxDecoration(color: current, borderRadius: BorderRadius.circular(7), border: Border.all(color: Colors.black26))),
+                const SizedBox(width: 8),
+                Expanded(child: TextFormField(
+                  initialValue: hex, textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(labelText: 'كود HEX', hintText: '#3E007D'),
+                  onChanged: (v) {
+                    final normalized = v.startsWith('#') ? v : '#$v';
+                    if (RegExp(r'^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$').hasMatch(normalized)) {
+                      current = _appearanceColor(normalized); hsv = HSVColor.fromColor(current); hex = normalized.toUpperCase(); refresh(() {});
+                    }
+                  },
+                )),
+              ]),
+              const SizedBox(height: 6),
+              Slider(value: hsv.saturation, onChanged: (v) => update(hsv.withSaturation(v))),
+              Slider(value: hsv.value, onChanged: (v) => update(hsv.withValue(v))),
+            ],
+          ))),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, current), child: const Text('اعتماد اللون')),
+          ],
+        );
+      }),
     );
     if (selected == null || !mounted) return;
-    final hex = '#${selected.toARGB32().toRadixString(16).substring(2).toUpperCase()}';    setState(() {
+    final hex = '#${selected.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+    setState(() {
       if (fontStyle) {
         final style = _fontStyle(policy)..['color'] = hex;
         policy['value'] = jsonEncode(style);
-      } else {
-        policy['value'] = hex;      }
+      } else { policy['value'] = hex; }
+      _appearanceColorController(policy, fontStyle: fontStyle).text = hex;
     });
   }
 
@@ -1169,7 +1222,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         icon: const Icon(Icons.palette_outlined, size: 17),
       )),
       const SizedBox(width: 3),
-      Container(width: 4, height: 4, decoration: BoxDecoration(
+      Container(width: 30, height: 30, decoration: BoxDecoration(
         color: _appearanceColor(value), shape: BoxShape.circle, border: Border.all(color: Colors.black26),
       )),
     ]));
@@ -1222,7 +1275,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
             ...List.generate(rows.length, (index) {
               final p = rows[index];              final key = (p['key'] ?? '').toString();
               Widget editor;
-              if (key == 'appearance.language') {
+              if (key == 'appearance.theme_preset') {\n                editor = SizedBox(width: 190, height: 40, child: DropdownButtonFormField<String>(value: (p['value'] ?? 'glossy').toString(), isExpanded: true, isDense: true, decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight:40,maxHeight:40), contentPadding: EdgeInsets.symmetric(horizontal:6,vertical:4), border: OutlineInputBorder()), items: const [DropdownMenuItem(value:'glossy',child:Text('Glossy Neon Luxury')),DropdownMenuItem(value:'classic',child:Text('الثيم الحالي'))], onChanged: (v) { if(v!=null) setState(()=>p['value']=v); }));\n              } else if (key == 'appearance.dark_mode') {\n                editor = SizedBox(width: 150, height: 40, child: DropdownButtonFormField<String>(value: (p['value'] ?? 'false').toString(), isExpanded: true, isDense: true, decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight:40,maxHeight:40), contentPadding: EdgeInsets.symmetric(horizontal:6,vertical:4), border: OutlineInputBorder()), items: const [DropdownMenuItem(value:'false',child:Text('إيقاف الوضع الداكن')),DropdownMenuItem(value:'true',child:Text('تفعيل الوضع الداكن'))], onChanged: (v) { if(v!=null) setState(()=>p['value']=v); }));\n              } else if (key == 'appearance.language') {
                 editor = SizedBox(width: 150, height: 40, child: DropdownButtonFormField<String>(
                   value: (p['value'] ?? 'العربية').toString(),
                   isExpanded: true, isDense: true, itemHeight: 48,
