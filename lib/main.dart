@@ -37,6 +37,7 @@ import 'services/activity_service.dart';
 import 'services/app_language.dart';
 import 'widgets/silsila_white_logo.dart';
 import 'core/app_theme.dart' show SilsilaThemePresets, SilsilaThemeController;
+import 'core/app_theme.dart' show SilsilaThemePresets, SilsilaThemeController;
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
@@ -633,9 +634,6 @@ class SilsilaApp extends StatelessWidget {
             color: Colors.white,
             fontWeight: FontWeight.w600,
           )),
-      darkTheme: SilsilaThemePresets.dark(ThemeData(useMaterial3: true, fontFamily: 'Tajawal')),
-      themeMode: SilsilaThemeController.mode.value,
-
           actionTextColor: orange,
           behavior: SnackBarBehavior.floating,
           elevation: 4,
@@ -643,7 +641,9 @@ class SilsilaApp extends StatelessWidget {
             borderRadius: BorderRadius.circular(13),
           ),
         ),
-      ),
+      )),
+      darkTheme: SilsilaThemePresets.dark(ThemeData(useMaterial3: true, fontFamily: 'Tajawal')),
+      themeMode: SilsilaThemeController.mode.value,
       home: kIsWeb
           ? FutureBuilder<void>(
               future: startupFuture,
