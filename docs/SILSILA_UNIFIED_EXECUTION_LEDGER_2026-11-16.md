@@ -78,5 +78,13 @@
 - جداول الورديات والتوزيعات كانت خالية وقت الفحص؛ لم ننشئ بيانات تجريبية.
 - لا تزال قواعد الحضور التفصيلية في `HrShiftRulesScreen` مخزنة كإعدادات JSON، ولم يتم بعد ربط محرك احتساب الحضور/الرواتب بهذه الجداول؛ لذلك الشاشة الجديدة هي إدارة تعريف وتوزيع تشغيلي، وليست إثباتًا لاكتمال دورة الحضور والرواتب.
 - Mobile Validation وWeb App Validation على commit `d095366` نجحا؛ 101 اختبار ناجح. Web Preview Validation وDeployment على commit `d095366` نجحا، ومر اختبار Chromium desktop/mobile RTL.
-- Android Release run `43800126196` على commit `9b95bfc` ما زال في خطوة Build Android APK عند آخر تحديث؛ لا يوجد artifact v4 مؤكد بعد. `pubspec.yaml` versionName `1.0.0` / versionCode `4`.
+- Android Release run `43800126196` على commit `9b95bfc` اكتمل بنجاح. Artifact ID `14196008685`، ملف APK بحجم 32,598,917 bytes، SHA-256 `6827db93a808208ed18888dd6049c57dd177243c2dc48660384e06bdfdb42008`. `applicationId=com.example.silsila_app`، `versionName=1.0.0`، `versionCode=4`، وشهادة SHA-256 مطابقة للبصمة الدائمة `a69301fe3009183301d1751aa99ef8d9025c696e2870e4dfb5fd9732be4d8e42`، وفحص أيقونة Manifest ناجح. لم يتم اختبار تثبيت/تحديث الهاتف فعليًا.
 - لا يزال اختبار تثبيت/تحديث APK على هاتف فعلي غير متاح من بيئة CI.
+
+
+## ملحق إغلاق Android v4 — 2026-11-16 03:53 UTC
+- تم حفظ APK Release بنجاح من run `43800126196` على commit `9b95bfc283f22c1d6918b05b39e75ffbd8341230`.
+- Artifact ID: `14196008685`; APK size: `32,598,917` bytes; APK SHA-256: `6827db93a808208ed18888dd6049c57dd177243c2dc48660384e06bdfdb42008`.
+- التطبيق يحمل `com.example.silsila_app`, version `1.0.0+4`; شهادة التوقيع الدائمة مطابقة؛ فحص Manifest resolved launcher icon ناجح.
+- commits بعد `9b95bfc` حتى `473c7c5` كانت اختبار/توثيق فقط ولم تغيّر كود التطبيق.
+- هذا لا يثبت التثبيت/التحديث على هاتف فعلي؛ ذلك يحتاج اختبار الجهاز نفسه.
