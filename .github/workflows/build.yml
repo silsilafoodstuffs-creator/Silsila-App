@@ -1,19 +1,24 @@
 name: Build Silsila Android App
 
-# Keep the signed production APK as an intentional manual release task.
-# Routine mobile validation already builds and verifies a debug APK on every relevant change.
+# Keep one signed production APK build for the latest app source on main.
+# Superseded builds on the same ref are cancelled so the latest release artifact stays current.
 concurrency:
   group: silsila-android-release-${{ github.ref }}
   cancel-in-progress: true
 
 'on':
-  # Build the signed production APK when this release workflow itself is updated.
-  # This allows a maintainer-approved release configuration change to produce an artifact
-  # without requiring a separate debug APK path.
+  # Build a signed production APK whenever shipped app code, assets, dependencies,
+  # database migrations, or this release workflow changes.
   push:
     branches: [main]
     paths:
       - ".github/workflows/build.yml"
+      - "lib/**"
+      - "assets/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "android/**"
+      - "supabase/migrations/**"
   workflow_dispatch:
     inputs:
       test_login:
