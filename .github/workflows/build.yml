@@ -273,14 +273,14 @@ jobs:
             exit 1
           fi
 
-          echo "Compiled launcher resources:"
-          RESOURCE_DUMP="$("$AAPT" dump resources "$APK")"
-          printf '%s\n' "$RESOURCE_DUMP" | grep -E 'mipmap/ic_launcher(_foreground)?' || true
-          if ! printf '%s\n' "$RESOURCE_DUMP" | grep -Fq 'mipmap/ic_launcher'; then
-            echo "ERROR: Compiled APK resource table does not contain mipmap/ic_launcher"
+          echo "Resolved launcher icon from APK manifest:"
+          BADGING="$("$AAPT" dump badging "$APK")"
+          printf '%s\n' "$BADGING" | grep -E '^application-icon-[0-9]+:' || true
+          if ! printf '%s\n' "$BADGING" | grep -Eq '^application-icon-[0-9]+:'; then
+            echo "ERROR: APK manifest does not resolve a compiled application launcher icon"
             exit 1
           fi
-          echo "SUCCESS: APK applicationId, version code, and compiled launcher resource verified"
+          echo "SUCCESS: APK applicationId, version code, and manifest-resolved launcher icon verified"
 
       - name: Save APK
         uses: actions/upload-artifact@v4
