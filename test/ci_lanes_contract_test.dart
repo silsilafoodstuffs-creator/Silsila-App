@@ -42,10 +42,14 @@ void main() {
     expect(release, contains('workflow_dispatch:'));
     expect(release, isNot(contains('workflow_run:')));
 
-    for (final workflow in [mobile, web, preview]) {
-      expect(workflow, contains('cancel-in-progress: false'));
-      expect(workflow, contains('github.run_id'));
+    // Mobile and Web validation keep only the newest commit per ref active.
+    for (final workflow in [mobile, web]) {
+      expect(workflow, contains('cancel-in-progress: true'));
+      expect(workflow, contains('github.ref'));
     }
+    // Preview smoke tests remain tied to the exact completed Web artifact.
+    expect(preview, contains('cancel-in-progress: false'));
+    expect(preview, contains('github.run_id'));
     expect(mobile, contains('workflow_dispatch:'));
     expect(web, contains('workflow_dispatch:'));
   });
