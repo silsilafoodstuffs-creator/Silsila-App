@@ -89,14 +89,35 @@ void main() {
     expect(mobile, contains('workflow_dispatch:'));
     expect(web, contains('workflow_dispatch:'));
   });
-  test('unified HR permissions migration preserves the consolidated 71-page catalog', () {
+  test('unified HR permissions migration preserves the consolidated 78-page catalog', () {
     final migration = File('supabase/migrations/20261116034000_unify_hr_permission_template_menu.sql').readAsStringSync();
+    final expansion = File('supabase/migrations/20261116034500_complete_hr_manager_template_78_pages.sql').readAsStringSync();
+    final dashboard = File('lib/erp/erp_dashboard_screen.dart').readAsStringSync();
+    final permissionCatalog = File('lib/erp/screens/erp_permissions_screen.dart').readAsStringSync();
+    final userAdmin = File('lib/erp/screens/erp_user_admin_screen.dart').readAsStringSync();
     expect(migration, contains("set menu_name='موارد بشرية'"));
     expect(migration, contains("where menu_name='شئون موظفين'"));
     expect(migration, contains("name_ar='مدير موارد بشرية'"));
     expect(migration, contains("'شريط قبض مجمع'"));
     expect(migration, contains("show_in_quick_tasks"));
     expect(migration, contains("on conflict (template_id,menu_name,submenu_name,page_name)"));
+    expect(expansion, contains("'الهيكل الوظيفي'"));
+    expect(expansion, contains("'تقرير التدريب'"));
+    List<String> hrPages(String source, String nextMenu) {
+      final start = source.indexOf("'موارد بشرية'");
+      final end = source.indexOf(nextMenu, start);
+      final block = source.substring(start, end);
+      const headings = {'موارد بشرية', 'بيانات أساسية', 'حركات', 'تقارير'};
+      return RegExp(r"'([^']+)'")
+          .allMatches(block)
+          .map((match) => match.group(1)!)
+          .where((value) => !headings.contains(value))
+          .toList();
+    }
+    final pages = hrPages(dashboard, "'علاقات عملاء'");
+    expect(pages, hasLength(78));
+    expect(hrPages(permissionCatalog, "'الخزائن والبنوك'"), equals(pages));
+    expect(hrPages(userAdmin, "'علاقات عملاء'"), equals(pages));
   });
 
 }
