@@ -78,4 +78,14 @@ void main() {
     expect(mobile, contains('workflow_dispatch:'));
     expect(web, contains('workflow_dispatch:'));
   });
+  test('unified HR permissions migration preserves the consolidated 71-page catalog', () {
+    final migration = File('supabase/migrations/20261116034000_unify_hr_permission_template_menu.sql').readAsStringSync();
+    expect(migration, contains("set menu_name='موارد بشرية'"));
+    expect(migration, contains("where menu_name='شئون موظفين'"));
+    expect(migration, contains("name_ar='مدير موارد بشرية'"));
+    expect(migration, contains("'شريط قبض مجمع'"));
+    expect(migration, contains("show_in_quick_tasks"));
+    expect(migration, contains("on conflict (template_id,menu_name,submenu_name,page_name)"));
+  });
+
 }
