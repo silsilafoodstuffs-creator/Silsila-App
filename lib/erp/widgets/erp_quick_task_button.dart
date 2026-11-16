@@ -73,9 +73,28 @@ class ErpQuickTaskButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _color;
+    final lowerColor = Color.lerp(color, Colors.black, .16)!;
+    final radius = BorderRadius.circular(9);
+    final disabled = onPressed == null;
     return Padding(
       padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
-      child: FilledButton.icon(
+      child: Opacity(
+        opacity: disabled ? .58 : 1,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [color, lowerColor],
+            ),
+            border: Border.all(color: Colors.white.withValues(alpha: .34), width: .8),
+            boxShadow: [
+              BoxShadow(color: color.withValues(alpha: .28), blurRadius: 9, offset: const Offset(0, 3)),
+              BoxShadow(color: Colors.white.withValues(alpha: .20), blurRadius: 3, offset: const Offset(0, -1)),
+            ],
+          ),
+          child: FilledButton.icon(
         onPressed: onPressed == null ? null : () async {
           final action = label.trim();
           final isSave = action.contains('حفظ');
@@ -142,7 +161,9 @@ class ErpQuickTaskButton extends StatelessWidget {
             vertical: compact ? 8 : 10,
           ),
           visualDensity: VisualDensity.compact,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+          shape: RoundedRectangleBorder(borderRadius: radius),
+        ),
+          ),
         ),
       ),
     );
