@@ -633,7 +633,7 @@ class SilsilaApp extends StatelessWidget {
           contentTextStyle: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w600,
-          )),
+          ),
           actionTextColor: orange,
           behavior: SnackBarBehavior.floating,
           elevation: 4,
