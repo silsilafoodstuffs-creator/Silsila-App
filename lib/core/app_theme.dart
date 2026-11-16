@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';\nimport 'package:shared_preferences/shared_preferences.dart';
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
@@ -487,5 +487,108 @@ class SilsilaTheme {
         ),
       ),
     );
+  }
+}
+
+
+/// Theme presets shared by the customer app and ERP.
+class SilsilaThemePresets {
+  static ThemeData glossy(ThemeData base) => base.copyWith(
+    colorScheme: base.colorScheme.copyWith(
+      primary: purple, secondary: orange, tertiary: pink,
+      surface: Colors.white, surfaceTint: Colors.transparent,
+    ),
+    scaffoldBackgroundColor: const Color(0xFFF5EFFB),
+    appBarTheme: base.appBarTheme.copyWith(
+      backgroundColor: purple, foregroundColor: Colors.white,
+      elevation: 7, shadowColor: pink.withValues(alpha: .55),
+      surfaceTintColor: Colors.transparent,
+    ),
+    cardTheme: (base.cardTheme as CardThemeData).copyWith(
+      color: Colors.white, elevation: 7,
+      shadowColor: pink.withValues(alpha: .30),
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: pink.withValues(alpha: .22), width: 1),
+      ),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(style: ElevatedButton.styleFrom(
+      backgroundColor: purple, foregroundColor: Colors.white,
+      elevation: 7, shadowColor: pink.withValues(alpha: .65),
+      overlayColor: orange.withValues(alpha: .22),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    )),
+    filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
+      backgroundColor: purple, foregroundColor: Colors.white,
+      elevation: 5, shadowColor: pink.withValues(alpha: .55),
+      overlayColor: orange.withValues(alpha: .22),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    )),
+  );
+
+  static ThemeData dark(ThemeData base) => base.copyWith(
+    brightness: Brightness.dark,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: purple, brightness: Brightness.dark,
+      primary: const Color(0xFFBD8BFF), secondary: orange,
+      tertiary: pink, surface: const Color(0xFF21152E),
+    ),
+    scaffoldBackgroundColor: const Color(0xFF130D1C),
+    appBarTheme: base.appBarTheme.copyWith(
+      backgroundColor: const Color(0xFF21152E),
+      foregroundColor: Colors.white,
+      shadowColor: pink.withValues(alpha: .35),
+    ),
+    cardTheme: CardThemeData(
+      color: const Color(0xFF21152E), elevation: 5,
+      shadowColor: pink.withValues(alpha: .25),
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: const Color(0xFFBD8BFF).withValues(alpha: .22)),
+      ),
+    ),
+    dialogTheme: base.dialogTheme.copyWith(
+      backgroundColor: const Color(0xFF21152E),
+      surfaceTintColor: Colors.transparent,
+    ),
+    inputDecorationTheme: base.inputDecorationTheme.copyWith(
+      filled: true, fillColor: const Color(0xFF2B2038),
+    ),
+  );
+}
+
+/// Lightweight persisted selector; policy values remain the source of truth,
+/// while this notifier applies a selection immediately to every Material route.
+class SilsilaThemeController {
+  static final ValueNotifier<String> preset = ValueNotifier<String>('glossy');
+  static final ValueNotifier<ThemeMode> mode = ValueNotifier<ThemeMode>(ThemeMode.light);
+
+  static Future<void> load() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      preset.value = prefs.getString('silsila_theme_preset') ?? 'glossy';
+      mode.value = prefs.getBool('silsila_dark_mode') == true
+          ? ThemeMode.dark : ThemeMode.light;
+    } catch (_) {}
+  }
+
+  static Future<void> selectPreset(String value) async {
+    preset.value = value;
+    try { final prefs = await SharedPreferences.getInstance(); await prefs.setString('silsila_theme_preset', value); } catch (_) {}
+  }
+
+  static Future<void> selectDark(bool enabled) async {
+    mode.value = enabled ? ThemeMode.dark : ThemeMode.light;
+    try { final prefs = await SharedPreferences.getInstance(); await prefs.setBool('silsila_dark_mode', enabled); } catch (_) {}
+  }
+
+  static ThemeData resolve(ThemeData classic) {
+    switch (preset.value) {
+      case 'classic': return classic;
+      case 'dark': return SilsilaThemePresets.dark(classic);
+      default: return SilsilaThemePresets.glossy(classic);
+    }
   }
 }
