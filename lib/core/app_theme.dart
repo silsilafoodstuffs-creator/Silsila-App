@@ -233,8 +233,6 @@ class SilsilaTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: purple,
           foregroundColor: Colors.white,
-          elevation: 3,
-          shadowColor: Color(0x66FF27C3),
           animationDuration: Duration(milliseconds: 180),
           overlayColor: Color(0x22FFA015),
           disabledBackgroundColor: const Color(0xFFE3DCEB),
