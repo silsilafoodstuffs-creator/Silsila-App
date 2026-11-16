@@ -62,8 +62,12 @@ void main() {
     expect(adminSource, contains('class _TickerBrandCircle extends StatelessWidget'));
     expect(adminSource, contains('InteractiveViewer('));
     expect(adminSource, contains('panAxis: PanAxis.free'));
-    expect(adminSource, contains('minScale: 0.5'));
-    expect(adminSource, contains('maxScale: 4'));
+    expect(adminSource, contains('minScale: 1'));
+    expect(adminSource, contains('maxScale: 5'));
+    expect(adminSource, contains('constrained: false'));
+    expect(adminSource, contains('class _TickerNumberCircle'));
+    expect(adminSource, contains('_TickerNumberCircle(number: rowIndex, size: 58)'));
+    expect(adminSource, contains('_TickerBrandCircle(bytes: bytes, size: 58)'));
     expect(adminSource, contains('BoxFit.cover'));
     expect(adminSource, contains('Switch.adaptive('));
     expect(adminSource, contains('Slider('));
@@ -82,6 +86,8 @@ void main() {
     expect(adsScreenSource, contains('https://wa.me/201019617100'));
     expect(adsScreenSource, contains('_adSlots.map(_buildAdCard)'));
     expect(adsScreenSource, contains('إعلانات بوسترات التمرير'));
+    expect(adsScreenSource, contains('isScrollable: true'));
+    expect(adsScreenSource, isNot(contains('tabAlignment: TabAlignment.fill')));
   });
 
   test('admin ticker orders all active brands by numeric brand code in one order column', () {
@@ -101,7 +107,7 @@ void main() {
   test('ticker brand grid uses a bounded DataTable2 so rows remain visible inside the tab', () {
     expect(adminSource, contains("import 'package:data_table_2/data_table_2.dart';"));
     expect(adminSource, contains('DataTable2('));
-    expect(adminSource, contains('minWidth: 520'));
+    expect(adminSource, contains('minWidth: 570'));
     expect(adminSource, contains('fixedTopRows: 1'));
     expect(adminSource, contains("rows: brands.asMap().entries.map((entry)"));
     expect(adminSource, contains("Text('معاينة دائرية')"));
