@@ -109,8 +109,18 @@ jobs:
         run: |
           flutter pub get
 
-      - name: Generate Silsila App Icon
-        run: dart run flutter_launcher_icons
+      - name: Generate and verify Silsila App Icon sources
+        run: |
+          set -euo pipefail
+          dart run flutter_launcher_icons
+          echo "Generated launcher resources:"
+          find android/app/src/main/res -maxdepth 2 -type f -iname '*launcher*' -print | sort
+          test -s android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          test -s android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          test -s android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          test -s android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          test -s android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          test -s android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
 
       - name: Configure permanent signing key
         env:
@@ -258,19 +268,20 @@ jobs:
           fi
           test "$VERSION_CODE" -ge 2
 
-          echo "APK launcher-related resources:"
-          unzip -Z1 "$APK" | grep -E '(^|/)(mipmap|drawable)[^/]*/|ic_launcher|launcher_icon' || true
+          AAPT="$(find "$SDK/build-tools" -name aapt -type f | sort -V | tail -n 1)"
+          if [ -z "$AAPT" ]; then
+            echo "ERROR: aapt was not found in the Android SDK build-tools"
+            exit 1
+          fi
 
-          # Android build tools may package raster launcher assets as PNG or WebP.
-          if ! unzip -Z1 "$APK" | grep -Eq '^res/mipmap-(mdpi|hdpi|xhdpi|xxhdpi|xxxhdpi)(-v4)?/(ic_launcher|ic_launcher_foreground|launcher_icon)\.(png|webp)$'; then
-            echo "ERROR: No density-specific Silsila launcher image was found in the APK"
+          echo "Compiled launcher resources:"
+          RESOURCE_DUMP="$("$AAPT" dump resources "$APK")"
+          printf '%s\\n' "$RESOURCE_DUMP" | grep -E 'mipmap/ic_launcher(_foreground)?' || true
+          if ! printf '%s\\n' "$RESOURCE_DUMP" | grep -Fq 'mipmap/ic_launcher'; then
+            echo "ERROR: Compiled APK resource table does not contain mipmap/ic_launcher"
             exit 1
           fi
-          if ! unzip -Z1 "$APK" | grep -Eq '^res/mipmap-anydpi-v26/(ic_launcher|launcher_icon)\.xml$'; then
-            echo "ERROR: Adaptive launcher icon XML was not found in the APK"
-            exit 1
-          fi
-          echo "SUCCESS: APK applicationId, version code, and launcher icon resources verified"
+          echo "SUCCESS: APK applicationId, version code, and compiled launcher resource verified"
 
       - name: Save APK
         uses: actions/upload-artifact@v4
