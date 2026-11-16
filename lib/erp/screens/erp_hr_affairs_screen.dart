@@ -25,6 +25,11 @@ class ErpHrAffairsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Keep this route inside the unified HR module; the dashboard's module
+    // dispatcher otherwise captures the page before its legacy direct route.
+    if (page == 'أجهزة البصمة وربط الحضور') {
+      return HrFingerprintDevicesScreen(companyId: companyId);
+    }
     if (page == 'عمولات المبيعات' || page == 'عمولات المندوبين' || page == 'سياسات العمولة') {
       return ErpSalesTargetsCommissionsScreen(companyId: companyId, initialTabIndex: page == 'سياسات العمولة' ? 2 : 1);
     }
