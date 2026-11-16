@@ -120,7 +120,6 @@ do update set
  can_import_excel=excluded.can_import_excel,
  can_print_pdf=excluded.can_print_pdf,
  can_access=excluded.can_access,
- show_in_quick_tasks=excluded.show_in_quick_tasks,
- updated_at=now();
+ show_in_quick_tasks=excluded.show_in_quick_tasks;
 
 commit;
