@@ -132,6 +132,11 @@ class ErpQuickTaskButton extends StatelessWidget {
           foregroundColor: Colors.white,
           disabledBackgroundColor: color.withValues(alpha: .35),
           disabledForegroundColor: Colors.white70,
+          elevation: 2,
+          shadowColor: color.withValues(alpha: .34),
+          animationDuration: const Duration(milliseconds: 160),
+          overlayColor: Colors.white.withValues(alpha: .16),
+          side: BorderSide(color: Colors.white.withValues(alpha: .24), width: .8),
           padding: EdgeInsets.symmetric(
             horizontal: compact ? 9 : 11,
             vertical: compact ? 8 : 10,
