@@ -275,8 +275,8 @@ jobs:
 
           echo "Compiled launcher resources:"
           RESOURCE_DUMP="$("$AAPT" dump resources "$APK")"
-          printf '%s\\n' "$RESOURCE_DUMP" | grep -E 'mipmap/ic_launcher(_foreground)?' || true
-          if ! printf '%s\\n' "$RESOURCE_DUMP" | grep -Fq 'mipmap/ic_launcher'; then
+          printf '%s\n' "$RESOURCE_DUMP" | grep -E 'mipmap/ic_launcher(_foreground)?' || true
+          if ! printf '%s\n' "$RESOURCE_DUMP" | grep -Fq 'mipmap/ic_launcher'; then
             echo "ERROR: Compiled APK resource table does not contain mipmap/ic_launcher"
             exit 1
           fi
