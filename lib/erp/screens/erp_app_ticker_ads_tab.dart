@@ -10,30 +10,82 @@ import '../../services/activity_service.dart';
 
 const _tickerPurple = Color(0xFF3E007D);
 
-/// Circular brand mark: drag to reposition and pinch to zoom inside a fixed circle.
+/// Fixed ticker circle. The image itself can be dragged and zoomed without
+/// changing the circle's size or decorative frame.
 class _TickerBrandCircle extends StatelessWidget {
   const _TickerBrandCircle({required this.bytes, this.size = 60});
   final Uint8List? bytes;
   final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final innerSize = size - 10;
+    return Container(
+      width: size,
+      height: size,
+      padding: const EdgeInsets.all(3),
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: SweepGradient(colors: [
+          Color(0xFFFFA015), Color(0xFFFF27C3), _tickerPurple, Color(0xFFFFA015),
+        ]),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(2),
+        decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+        clipBehavior: Clip.antiAlias,
+        child: ClipOval(
+          child: bytes == null
+              ? const Icon(Icons.storefront_outlined, color: _tickerPurple, size: 27)
+              : InteractiveViewer(
+                  constrained: false,
+                  panEnabled: true,
+                  scaleEnabled: true,
+                  panAxis: PanAxis.free,
+                  minScale: 1,
+                  maxScale: 5,
+                  boundaryMargin: EdgeInsets.all(size / 2),
+                  child: SizedBox(
+                    width: innerSize,
+                    height: innerSize,
+                    child: Image.memory(
+                      bytes!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.storefront_outlined,
+                        color: _tickerPurple,
+                      ),
+                    ),
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TickerNumberCircle extends StatelessWidget {
+  const _TickerNumberCircle({required this.number, this.size = 58});
+  final int number;
+  final double size;
+
   @override
   Widget build(BuildContext context) => Container(
-    width: size, height: size, padding: const EdgeInsets.all(3),
-    decoration: const BoxDecoration(shape: BoxShape.circle, gradient: SweepGradient(colors: [
-      Color(0xFFFFA015), Color(0xFFFF27C3), _tickerPurple, Color(0xFFFFA015),
-    ])),
+    width: size,
+    height: size,
+    padding: const EdgeInsets.all(3),
+    decoration: const BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: SweepGradient(colors: [
+        Color(0xFFFFA015), Color(0xFFFF27C3), _tickerPurple, Color(0xFFFFA015),
+      ]),
+    ),
     child: Container(
-      padding: const EdgeInsets.all(2),
       decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
-      clipBehavior: Clip.antiAlias,
-      child: ClipOval(child: bytes == null
-        ? const Icon(Icons.storefront_outlined, color: _tickerPurple, size: 27)
-        : InteractiveViewer(
-            constrained: true, panEnabled: true, scaleEnabled: true,
-            panAxis: PanAxis.free, minScale: 0.5, maxScale: 4,
-            boundaryMargin: EdgeInsets.zero,
-            child: SizedBox.expand(child: Image.memory(bytes!, fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const Icon(Icons.storefront_outlined, color: _tickerPurple))),
-          )),
+      alignment: Alignment.center,
+      child: Text('$number', style: const TextStyle(
+        color: _tickerPurple, fontWeight: FontWeight.w900, fontSize: 15,
+      )),
     ),
   );
 }
@@ -228,8 +280,10 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
   String _brandOrderDigits(Map<String, dynamic> brand) =>
       _s(brand['brand_code']).replaceAll(RegExp(r'[^0-9]'), '');
 
-  int? _brandOrderValue(Map<String, dynamic> brand) =>
-      int.tryParse(_brandOrderDigits(brand));
+  BigInt? _brandOrderValue(Map<String, dynamic> brand) {
+    final digits = _brandOrderDigits(brand);
+    return digits.isEmpty ? null : BigInt.tryParse(digits);
+  }
 
   bool get _ready =>
       (widget.companyId ?? '').trim().isNotEmpty &&
@@ -291,8 +345,8 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
       // Recompute the visible order from every numeric segment of the complete brand code.
       final brandRows = List<Map<String, dynamic>>.from(brandRowsResult)
         ..sort((a, b) {
-          final aValue = _brandOrderValue(a) ?? 0;
-          final bValue = _brandOrderValue(b) ?? 0;
+          final aValue = _brandOrderValue(a) ?? BigInt.zero;
+          final bValue = _brandOrderValue(b) ?? BigInt.zero;
           final numeric = aValue.compareTo(bValue);
           return numeric != 0 ? numeric : _s(a['brand_code']).compareTo(_s(b['brand_code']));
         });
@@ -433,26 +487,6 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
     }
   }
 
-  Widget _brandLogo(Map<String, dynamic> brand) {
-    final bytes = _logoBytes(brand['logo_data']);
-    return Container(
-      width: 32,
-      height: 32,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5EFFB),
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: const Color(0xFFE5DDEE)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: bytes == null
-          ? const Icon(Icons.storefront_outlined, color: _tickerPurple)
-          : Image.memory(bytes, fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) =>
-                  const Icon(Icons.broken_image_outlined, color: _tickerPurple)),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final brands = _visibleBrands;
@@ -544,7 +578,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                         ),
                       )
                     : DataTable2(
-                        minWidth: 520,
+                        minWidth: 570,
                         fixedTopRows: 1,
                         columnSpacing: 6,
                         horizontalMargin: 6,
@@ -558,7 +592,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                           DataColumn2(
                             label: Text('م'),
                             size: ColumnSize.S,
-                            fixedWidth: 42,
+                            fixedWidth: 64,
                           ),
                           DataColumn2(
                             label: Text('كود البراند'),
@@ -568,12 +602,12 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                           DataColumn2(
                             label: Text('الصورة'),
                             size: ColumnSize.S,
-                            fixedWidth: 58,
+                            fixedWidth: 68,
                           ),
                           DataColumn2(
                             label: Text('معاينة دائرية'),
                             size: ColumnSize.S,
-                            fixedWidth: 76,
+                            fixedWidth: 78,
                           ),
                           DataColumn2(
                             label: Text('اسم البراند'),
@@ -582,7 +616,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                           DataColumn2(
                             label: Text('ترتيبه في العرض'),
                             size: ColumnSize.S,
-                            fixedWidth: 88,
+                            fixedWidth: 92,
                           ),
                         ],
                         rows: brands.asMap().entries.map((entry) {
@@ -592,7 +626,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                           final bytes = _logoBytes(brand['logo_data']);
                           return DataRow(cells: [
                             DataCell(
-                              Center(child: Text('$rowIndex')),
+                              Center(child: _TickerNumberCircle(number: rowIndex, size: 58)),
                             ),
                             DataCell(
                               Text(
@@ -602,7 +636,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                               ),
                             ),
                             DataCell(
-                              Center(child: _brandLogo(brand)),
+                              Center(child: _TickerBrandCircle(bytes: bytes, size: 58)),
                             ),
                             DataCell(
                               Center(
