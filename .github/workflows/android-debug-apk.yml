@@ -1,4 +1,4 @@
-name: Silsila Android Debug APK
+name: Silsila Android Release APK
 
 on:
   workflow_run:
@@ -12,9 +12,8 @@ on:
 permissions:
   contents: read
 
-# APK packaging is independent from the fast mobile test result and never cancels it.
 concurrency:
-  group: silsila-android-debug-apk-${{ github.event.workflow_run.head_sha || github.sha }}
+  group: silsila-android-release-${{ github.event.workflow_run.head_sha || github.sha }}
   cancel-in-progress: false
 
 jobs:
@@ -29,10 +28,10 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
 
       - name: Cache Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -40,59 +39,144 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@fd55f4c5af5b953cc57a2be44cb082c8f6635e8e
         with:
-          flutter-version: "3.29.3"
+          flutter-version: '3.29.3'
           channel: stable
           cache: true
 
-      - name: Ensure Android platform files and required NDK
+      - name: Generate only missing Android platform files
         shell: bash
         run: |
           set -euo pipefail
-          if [ ! -f android/app/build.gradle.kts ] || [ ! -f android/gradlew ] || [ ! -f android/settings.gradle.kts ]; then
+          if [ ! -f android/app/build.gradle.kts ] || [ ! -f android/gradlew ]; then
             flutter create --project-name=silsila_app --platforms=android .
           fi
+
+      - name: Set Silsila app label and Android internet permission
+        shell: bash
+        run: |
+          set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          p = Path("android/app/build.gradle.kts")
-          if not p.exists():
-              raise SystemExit("Android Gradle file is missing")
+          import re
+          p = Path("android/app/src/main/AndroidManifest.xml")
           s = p.read_text()
-          if 'ndkVersion = "27.0.12077973"' not in s:
-              if "android {" not in s:
-                  raise SystemExit("Android Gradle configuration block is missing")
-              s = s.replace("android {", 'android {\n    ndkVersion = "27.0.12077973"', 1)
-              p.write_text(s)
+          if "android.permission.INTERNET" not in s:
+              s = s.replace("<application", '    <uses-permission android:name="android.permission.INTERNET" />\\n    <application', 1)
+          s = re.sub(r'android:label="[^"]*"', 'android:label="سلسلة"', s, count=1)
+          if 'android:label=' not in s:
+              s = s.replace("<application", '<application android:label="سلسلة"', 1)
+          p.write_text(s)
           PY
 
-      - name: Cache Android NDK and CMake
-        uses: actions/cache@v4
-        with:
-          path: |
-            /usr/local/lib/android/sdk/ndk/27.0.12077973
-            /usr/local/lib/android/sdk/cmake/3.22.1
-          key: android-sdk-ndk27-cmake322-${{ runner.os }}
+      - name: Set a monotonically increasing Android version code
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_CODE=$(( $(date -u +%y%m%d) * 1000 + GITHUB_RUN_ID % 1000 ))
+          python3 - "$VERSION_CODE" <<'PY'
+          from pathlib import Path
+          import re, sys
+          p = Path("pubspec.yaml")
+          s = p.read_text()
+          code = sys.argv[1]
+          s, n = re.subn(r'(?m)^(version:\\s*[^+\\n]+)\\+\\d+\\s*$', rf'\\1+{code}', s, count=1)
+          if n != 1:
+              raise SystemExit("Could not safely update Flutter versionCode in pubspec.yaml")
+          p.write_text(s)
+          print(f"Android versionCode: {code}")
+          PY
 
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
-      - name: Build ARM and ARM64 Android debug APK
-        run: flutter build apk --debug --no-pub --target-platform android-arm,android-arm64
+      - name: Generate official Silsila launcher icon
+        run: dart run flutter_launcher_icons
 
-      - name: Verify Android package artifact
+      - name: Configure permanent Silsila release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        shell: bash
         run: |
           set -euo pipefail
-          APK="build/app/outputs/flutter-apk/app-debug.apk"
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/silsila-upload-key.jks
+          cat > android/key.properties <<EOF
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyPassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=silsila
+          storeFile=silsila-upload-key.jks
+          EOF
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/build.gradle.kts")
+          s = p.read_text()
+          imports = "import java.util.Properties\\nimport java.io.FileInputStream\\n"
+          if "import java.util.Properties" not in s:
+              s = imports + s
+          if 'ndkVersion = "27.0.12077973"' not in s:
+              s = s.replace("android {", 'android {\\n    ndkVersion = "27.0.12077973"', 1)
+          props = """
+          val keystoreProperties = Properties()
+          val keystorePropertiesFile = rootProject.file("key.properties")
+          if (keystorePropertiesFile.exists()) {
+              keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+          }
+
+          """
+          if "val keystoreProperties = Properties()" not in s:
+              s = s.replace("android {", props + "android {", 1)
+          signing = """
+              signingConfigs {
+                  create("release") {
+                      keyAlias = keystoreProperties["keyAlias"] as String
+                      keyPassword = keystoreProperties["keyPassword"] as String
+                      storeFile = file(keystoreProperties["storeFile"] as String)
+                      storePassword = keystoreProperties["storePassword"] as String
+                  }
+              }
+
+          """
+          if 'create("release")' not in s:
+              s = s.replace("    buildTypes {", signing + "    buildTypes {", 1)
+          debug = 'signingConfig = signingConfigs.getByName("debug")'
+          release = 'signingConfig = signingConfigs.getByName("release")'
+          if debug in s:
+              s = s.replace(debug, release, 1)
+          elif release not in s:
+              raise SystemExit("Could not configure permanent release signing")
+          p.write_text(s)
+          PY
+
+      - name: Build signed production APK
+        run: flutter build apk --release --target-platform android-arm,android-arm64
+
+      - name: Verify release signature and package metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="build/app/outputs/flutter-apk/app-release.apk"
           test -s "$APK"
           SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
-          APKANALYZER="$SDK/cmdline-tools/latest/bin/apkanalyzer"
-          if [ -x "$APKANALYZER" ]; then
-            "$APKANALYZER" manifest application-id "$APK"
-          fi
+          APKSIGNER="$(find "$SDK/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          APKANALYZER="$(find "$SDK/cmdline-tools" "$SDK/build-tools" -name apkanalyzer -type f -print -quit 2>/dev/null || true)"
+          test -n "$APKSIGNER"
+          test -n "$APKANALYZER"
+          OUTPUT="$("$APKSIGNER" verify --verbose --print-certs "$APK")"
+          printf '%s\\n' "$OUTPUT"
+          ACTUAL="$(printf '%s\\n' "$OUTPUT" | sed -n 's/.*certificate SHA-256 digest: *//Ip' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          EXPECTED="a69301fe3009183301d1751aa99ef8d9025c696e2870e4dfb5fd9732be4d8e42"
+          test "$ACTUAL" = "$EXPECTED"
+          echo "Verified permanent signing certificate."
+          "$APKANALYZER" manifest application-id "$APK"
+          "$APKANALYZER" manifest version-code "$APK"
+          "$APKANALYZER" manifest version-name "$APK"
 
-      - name: Upload Android debug APK
+      - name: Upload the standard Silsila Android APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: silsila-android-debug-${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: silsila-android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
