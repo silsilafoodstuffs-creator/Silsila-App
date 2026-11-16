@@ -499,3 +499,4 @@ class _ErpHrShiftMasterScreenState extends State<ErpHrShiftMasterScreen> {
       ],
     );
   }
+}
