@@ -17,6 +17,17 @@ void main() {
     expect(permissionCatalog, isNot(contains("'شئون موظفين':{")));
     expect(userAdmin, contains("'موارد بشرية':{"));
     expect(userAdmin, isNot(contains("'شئون موظفين':{")));
+    expect(dashboard, contains("'الهيكل الوظيفي'"));
+    expect(dashboard, contains("'سلف الموظفين'"));
+    expect(dashboard, contains("'تقرير الحضور'"));
+    expect(dashboard, contains("'تقرير الإجازات'"));
+    expect(dashboard, contains("'تقرير التدريب'"));
+    expect(dashboard, contains("'التأمينات والتراخيص'"));
+    expect(dashboard, contains("'كشف الرواتب'"));
+    expect(hr, contains("page == 'تقرير التدريب'"));
+    expect(hr, contains("page == 'تقرير الحضور'"));
+    expect(hr, contains("page == 'تقرير الإجازات'"));
+    expect(hr, contains("page == 'كشف الرواتب'"));
     expect(hr, contains("page == 'أجهزة البصمة وربط الحضور'"));
     expect(hr, contains('HrFingerprintDevicesScreen(companyId: companyId)'));
     expect(hr, contains("page == 'الوظائف الشاغرة'"));

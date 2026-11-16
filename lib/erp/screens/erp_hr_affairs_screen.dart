@@ -33,7 +33,7 @@ class ErpHrAffairsScreen extends StatelessWidget {
     if (page == 'عمولات المبيعات' || page == 'عمولات المندوبين' || page == 'سياسات العمولة') {
       return ErpSalesTargetsCommissionsScreen(companyId: companyId, initialTabIndex: page == 'سياسات العمولة' ? 2 : 1);
     }
-    if (page == 'ملخص إدارة موارد بشرية' || page == 'ملخص تنفيذي الموارد البشرية' || page == 'توزيع القوى العاملة' || page == 'تكلفة العمالة' || page == 'معدل دوران العمالة' || page == 'الوظائف الشاغرة') {
+    if (page == 'ملخص إدارة موارد بشرية' || page == 'ملخص تنفيذي الموارد البشرية' || page == 'توزيع القوى العاملة' || page == 'تكلفة العمالة' || page == 'معدل دوران العمالة' || page == 'الوظائف الشاغرة' || page == 'تقرير التدريب' || page == 'التأمينات والتراخيص') {
       return ErpHrExecutiveDashboardScreen(companyId: companyId, canManage: canManage);
     }
     if (page == 'أنواع التوظيف' || page == 'أنواع العقود') {
@@ -65,10 +65,10 @@ class ErpHrAffairsScreen extends StatelessWidget {
       );
     }
     if (page == 'الحضور والانصراف' || page == 'كشف الحضور والغياب' || page == 'الحضور والغياب' ||
-        page == 'الحضور والغياب والتأخيرات') {
+        page == 'الحضور والغياب والتأخيرات' || page == 'تقرير الحضور') {
       return ErpHrOperationsScreen(initialCompanyId: companyId);
     }
-    if (page == 'الإجازات والأذونات' || page == 'أنواع الإجازات' || page == 'أرصدة الإجازات' || page == 'رصيد الإجازات') {
+    if (page == 'الإجازات والأذونات' || page == 'أنواع الإجازات' || page == 'أرصدة الإجازات' || page == 'رصيد الإجازات' || page == 'تقرير الإجازات') {
       return ErpHrLeaveScreen(initialCompanyId: companyId);
     }
     if (page == 'عناصر المرتبات' || page == 'مكونات الأجر' || page == 'المزايا والاستحقاقات' ||
@@ -76,7 +76,7 @@ class ErpHrAffairsScreen extends StatelessWidget {
       return ErpSalaryElementsScreen(companyId: companyId);
     }
     if (page == 'مسير الرواتب' || page == 'صرف الرواتب' || page == 'شريط قبض موظف' ||
-        page == 'شريط قبض مجمع' || page == 'مفردات المرتب' || page == 'ملخص الرواتب') {
+        page == 'شريط قبض مجمع' || page == 'مفردات المرتب' || page == 'ملخص الرواتب' || page == 'كشف الرواتب') {
       return ErpPayrollScreen(initialCompanyId: companyId);
     }
     if (page == 'قواعد الورديات والحضور والانصراف' || page == 'قواعد وسياسات الحضور' ||
