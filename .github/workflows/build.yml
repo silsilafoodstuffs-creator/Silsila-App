@@ -112,11 +112,22 @@ jobs:
           VERSION_CODE=$(( $(date -u +%y%m%d) * 1000 + GITHUB_RUN_ID % 1000 ))
           python3 - "$VERSION_CODE" <<'PY'
           from pathlib import Path
-          import re, sys
+          import sys
           p = Path("pubspec.yaml")
-          s = p.read_text()
+          lines = p.read_text().splitlines()
           code = sys.argv[1]
-          s, n = re.subn(r'(?m)^(version:\s*[^+\n]+)\+\d+\s*
+          found = False
+          for i, line in enumerate(lines):
+              if line.startswith("version:"):
+                  base = line.split("+", 1)[0]
+                  lines[i] = f"{base}+{code}"
+                  found = True
+                  break
+          if not found:
+              raise SystemExit("Flutter version entry not found in pubspec.yaml")
+          p.write_text("\n".join(lines) + "\n")
+          print(f"Android versionCode: {code}")
+          PY
 
       - name: Configure permanent signing key
         env:
