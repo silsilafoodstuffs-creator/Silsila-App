@@ -33,7 +33,7 @@ class ErpHrAffairsScreen extends StatelessWidget {
     if (page == 'عمولات المبيعات' || page == 'عمولات المندوبين' || page == 'سياسات العمولة') {
       return ErpSalesTargetsCommissionsScreen(companyId: companyId, initialTabIndex: page == 'سياسات العمولة' ? 2 : 1);
     }
-    if (page == 'ملخص إدارة موارد بشرية' || page == 'ملخص تنفيذي الموارد البشرية' || page == 'توزيع القوى العاملة' || page == 'تكلفة العمالة' || page == 'معدل دوران العمالة') {
+    if (page == 'ملخص إدارة موارد بشرية' || page == 'ملخص تنفيذي الموارد البشرية' || page == 'توزيع القوى العاملة' || page == 'تكلفة العمالة' || page == 'معدل دوران العمالة' || page == 'الوظائف الشاغرة') {
       return ErpHrExecutiveDashboardScreen(companyId: companyId, canManage: canManage);
     }
     if (page == 'أنواع التوظيف' || page == 'أنواع العقود') {

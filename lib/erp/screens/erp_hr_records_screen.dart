@@ -36,7 +36,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
 
   _Config get _config {
     final p=widget.page;
-    if (p.contains('توظيف') || p.contains('مرشحين') || p.contains('مقابلات') || p.contains('عروض العمل') || p.contains('الوظائف الشاغرة')) {
+    if (p.contains('توظيف') || p.contains('مرشحين') || p.contains('مقابلات') || p.contains('عروض العمل')) {
       return _Config(p,'erp_hr_recruitment_candidates',const [
         _Field('candidate_name','اسم المرشح',required:true),_Field('job_id','الوظيفة',type:'job'),
         _Field('phone','رقم الهاتف'),_Field('email','البريد الإلكتروني'),
