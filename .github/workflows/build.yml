@@ -251,18 +251,26 @@ jobs:
           echo "APK versionName: $VERSION_NAME"
           echo "APK versionCode: $VERSION_CODE"
 
-          test -n "$APP_ID"
+          EXPECTED_APP_ID="com.example.silsila_app"
+          if [ "$APP_ID" != "$EXPECTED_APP_ID" ]; then
+            echo "ERROR: APK applicationId changed. Expected $EXPECTED_APP_ID, got $APP_ID"
+            exit 1
+          fi
           test "$VERSION_CODE" -ge 2
 
-          if ! unzip -l "$APK" | grep -Eq 'res/mipmap-(hdpi|xhdpi|xxhdpi|xxxhdpi)(-v4)?/(ic_launcher|ic_launcher_foreground)\.png'; then
-            echo "ERROR: Silsila launcher icon resources were not found in the APK"
+          echo "APK launcher-related resources:"
+          unzip -Z1 "$APK" | grep -E '(^|/)(mipmap|drawable)[^/]*/|ic_launcher|launcher_icon' || true
+
+          # Android build tools may package raster launcher assets as PNG or WebP.
+          if ! unzip -Z1 "$APK" | grep -Eq '^res/mipmap-(mdpi|hdpi|xhdpi|xxhdpi|xxxhdpi)(-v4)?/(ic_launcher|ic_launcher_foreground|launcher_icon)\.(png|webp)$'; then
+            echo "ERROR: No density-specific Silsila launcher image was found in the APK"
             exit 1
           fi
-          if ! unzip -l "$APK" | grep -q 'res/mipmap-anydpi-v26/ic_launcher.xml'; then
-            echo "ERROR: Adaptive launcher icon resource was not found in the APK"
+          if ! unzip -Z1 "$APK" | grep -Eq '^res/mipmap-anydpi-v26/(ic_launcher|launcher_icon)\.xml$'; then
+            echo "ERROR: Adaptive launcher icon XML was not found in the APK"
             exit 1
           fi
-          echo "SUCCESS: APK identity metadata and launcher icon resources verified"
+          echo "SUCCESS: APK applicationId, version code, and launcher icon resources verified"
 
       - name: Save APK
         uses: actions/upload-artifact@v4
