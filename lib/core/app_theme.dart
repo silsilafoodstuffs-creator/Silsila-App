@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';\nimport 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
