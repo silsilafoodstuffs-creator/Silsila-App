@@ -1112,30 +1112,24 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
             children: [
               SizedBox(height: 170, child: Row(children: [
                 SizedBox(width: 48, child: RotatedBox(quarterTurns: 3, child: Slider(
-                  value: hsv.hue, min: 0, max: 360,
-                  activeColor: current,
+                  value: hsv.hue, min: 0, max: 360, activeColor: current,
                   onChanged: (v) => update(hsv.withHue(v)),
                 ))),
-                Expanded(child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.black26),
-                    gradient: LinearGradient(colors: [
-                      HSVColor.fromAHSV(1, hsv.hue, 1, 1).toColor(), Colors.white,
-                    ]),
-                  ),
-                  child: Stack(children: [
-                    Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(
+                Expanded(child: LayoutBuilder(builder: (context, constraints) => GestureDetector(
+                  onPanDown: (d) => update(hsv.withSaturation((d.localPosition.dx / constraints.maxWidth).clamp(0.0,1.0)).withValue((1-d.localPosition.dy / constraints.maxHeight).clamp(0.0,1.0))),
+                  onPanUpdate: (d) => update(hsv.withSaturation((d.localPosition.dx / constraints.maxWidth).clamp(0.0,1.0)).withValue((1-d.localPosition.dy / constraints.maxHeight).clamp(0.0,1.0))),
+                  child: Container(
+                    decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.black]),
-                    ))),
-                    Positioned.fill(child: GestureDetector(
-                      onPanDown: (d) { final box = ctx.findRenderObject() as RenderBox; final p = box.globalToLocal(d.globalPosition); update(hsv.withSaturation((p.dx / 420).clamp(0,1)).withValue((1-p.dy/170).clamp(0,1))); },
-                      onPanUpdate: (d) { final box = ctx.findRenderObject() as RenderBox; final p = box.globalToLocal(d.globalPosition); update(hsv.withSaturation((p.dx / 420).clamp(0,1)).withValue((1-p.dy/170).clamp(0,1))); },
+                      border: Border.all(color: Colors.black26),
+                      gradient: LinearGradient(colors: [HSVColor.fromAHSV(1, hsv.hue, 1, 1).toColor(), Colors.white]),
+                    ),
+                    child: DecoratedBox(decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black]),
                     )),
-                  ]),
-                )),
+                  ),
+                ))),
               ])),
               const SizedBox(height: 8),
               Text('درجة اللون الحالية: $hex', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -1275,7 +1269,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
             ...List.generate(rows.length, (index) {
               final p = rows[index];              final key = (p['key'] ?? '').toString();
               Widget editor;
-              if (key == 'appearance.theme_preset') {\n                editor = SizedBox(width: 190, height: 40, child: DropdownButtonFormField<String>(value: (p['value'] ?? 'glossy').toString(), isExpanded: true, isDense: true, decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight:40,maxHeight:40), contentPadding: EdgeInsets.symmetric(horizontal:6,vertical:4), border: OutlineInputBorder()), items: const [DropdownMenuItem(value:'glossy',child:Text('Glossy Neon Luxury')),DropdownMenuItem(value:'classic',child:Text('الثيم الحالي'))], onChanged: (v) { if(v!=null) setState(()=>p['value']=v); }));\n              } else if (key == 'appearance.dark_mode') {\n                editor = SizedBox(width: 150, height: 40, child: DropdownButtonFormField<String>(value: (p['value'] ?? 'false').toString(), isExpanded: true, isDense: true, decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight:40,maxHeight:40), contentPadding: EdgeInsets.symmetric(horizontal:6,vertical:4), border: OutlineInputBorder()), items: const [DropdownMenuItem(value:'false',child:Text('إيقاف الوضع الداكن')),DropdownMenuItem(value:'true',child:Text('تفعيل الوضع الداكن'))], onChanged: (v) { if(v!=null) setState(()=>p['value']=v); }));\n              } else if (key == 'appearance.language') {
+              if (key == 'appearance.theme_preset') {
+                editor = SizedBox(width: 190, height: 40, child: DropdownButtonFormField<String>(value: (p['value'] ?? 'glossy').toString(), isExpanded: true, isDense: true, decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight:40,maxHeight:40), contentPadding: EdgeInsets.symmetric(horizontal:6,vertical:4), border: OutlineInputBorder()), items: const [DropdownMenuItem(value:'glossy',child:Text('Glossy Neon Luxury')),DropdownMenuItem(value:'classic',child:Text('الثيم الحالي'))], onChanged: (v) { if(v!=null) setState(()=>p['value']=v); }));
+              } else if (key == 'appearance.dark_mode') {
+                editor = SizedBox(width: 150, height: 40, child: DropdownButtonFormField<String>(value: (p['value'] ?? 'false').toString(), isExpanded: true, isDense: true, decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight:40,maxHeight:40), contentPadding: EdgeInsets.symmetric(horizontal:6,vertical:4), border: OutlineInputBorder()), items: const [DropdownMenuItem(value:'false',child:Text('إيقاف الوضع الداكن')),DropdownMenuItem(value:'true',child:Text('تفعيل الوضع الداكن'))], onChanged: (v) { if(v!=null) setState(()=>p['value']=v); }));
+              } else if (key == 'appearance.language') {
                 editor = SizedBox(width: 150, height: 40, child: DropdownButtonFormField<String>(
                   value: (p['value'] ?? 'العربية').toString(),
                   isExpanded: true, isDense: true, itemHeight: 48,
