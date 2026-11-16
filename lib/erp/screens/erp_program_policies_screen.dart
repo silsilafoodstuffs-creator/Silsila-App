@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_center_toast.dart';
+import '../../core/app_theme.dart' show SilsilaThemeController;
 
 class ErpProgramPoliciesScreen extends StatefulWidget {
   const ErpProgramPoliciesScreen({super.key, required this.companyId});
@@ -309,6 +310,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         }
       }
       final programSettings = await db.from('erp_program_settings').select().eq('company_id', company).maybeSingle();
+      await SilsilaThemeController.selectPreset((values['appearance.theme_preset']?['value'] ?? 'glossy').toString());
+      await SilsilaThemeController.selectDark((values['appearance.dark_mode']?['value'] ?? 'false').toString() == 'true');
       _programNameController.text = (programSettings?['program_name'] ?? 'سلسلة').toString();
       _programLogoBase64 = programSettings?['logo_base64']?.toString();
       _programLogoMime = programSettings?['logo_mime_type']?.toString();
@@ -378,7 +381,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         throw StateError(error!);
       }
     }
-    for (final key in _appearancePolicyKeys.where((key) => key != 'appearance.language' && key != 'appearance.header_background' && key != 'appearance.screen_background')) {
+    for (final key in _appearancePolicyKeys.where((key) => key != 'appearance.theme_preset' && key != 'appearance.dark_mode' && key != 'appearance.language' && key != 'appearance.header_background' && key != 'appearance.screen_background')) {
       final style = _fontStyle(values[key]!);
       final size = double.tryParse((style['size'] ?? '').toString());
       final color = (style['color'] ?? '').toString().trim();
@@ -490,6 +493,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       if (values.containsKey('code_generation_registry')) values['code_generation_registry']!['value'] = jsonEncode(registryPayload);
       final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??'','policy_code':_policyCodes[p['key']] }).toList();
       await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key');
+      await SilsilaThemeController.selectPreset((values['appearance.theme_preset']?['value'] ?? 'glossy').toString());
+      await SilsilaThemeController.selectDark((values['appearance.dark_mode']?['value'] ?? 'false').toString() == 'true');
       final settings = await db.from('erp_program_settings').select().eq('company_id',company).maybeSingle();
       await db.from('erp_program_settings').upsert({...?settings,'company_id':company,'program_name':_programNameController.text.trim().isEmpty?'سلسلة':_programNameController.text.trim(),'logo_base64':_programLogoBase64,'logo_mime_type':_programLogoMime,'updated_at':DateTime.now().toUtc().toIso8601String(),'updated_by':db.auth.currentUser?.id},onConflict:'company_id');
       if(mounted){setState(() { saving=false; _isEditing=false; _editSnapshot=''; message='تم الحفظ'; }); ErpCenterToast.show(context, 'تم الحفظ');} } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; }); rethrow;}
@@ -1060,6 +1065,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   }
 
   static const List<String> _appearancePolicyKeys = [
+    'appearance.theme_preset',
+    'appearance.dark_mode',
     'appearance.language',
     'appearance.header_background',
     'appearance.screen_background',
