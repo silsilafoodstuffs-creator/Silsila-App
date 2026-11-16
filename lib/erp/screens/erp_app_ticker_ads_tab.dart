@@ -590,6 +590,11 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                         ),
                         columns: const [
                           DataColumn2(
+                            label: Text('الصورة'),
+                            size: ColumnSize.S,
+                            fixedWidth: 68,
+                          ),
+                          DataColumn2(
                             label: Text('م'),
                             size: ColumnSize.S,
                             fixedWidth: 64,
@@ -598,11 +603,6 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                             label: Text('كود البراند'),
                             size: ColumnSize.M,
                             fixedWidth: 90,
-                          ),
-                          DataColumn2(
-                            label: Text('الصورة'),
-                            size: ColumnSize.S,
-                            fixedWidth: 68,
                           ),
                           DataColumn2(
                             label: Text('معاينة دائرية'),
@@ -626,6 +626,9 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                           final bytes = _logoBytes(brand['logo_data']);
                           return DataRow(cells: [
                             DataCell(
+                              Center(child: _TickerBrandCircle(bytes: bytes, size: 58)),
+                            ),
+                            DataCell(
                               Center(child: _TickerNumberCircle(number: rowIndex, size: 58)),
                             ),
                             DataCell(
@@ -634,9 +637,6 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            DataCell(
-                              Center(child: _TickerBrandCircle(bytes: bytes, size: 58)),
                             ),
                             DataCell(
                               Center(
