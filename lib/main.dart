@@ -535,7 +535,7 @@ class SilsilaApp extends StatelessWidget {
         ),
         // Approved global grid standard: compact but readable spacing across ERP tables; only documented dense grids override it.
         dataTableTheme: const DataTableThemeData(
-          headingRowHeight: 42,
+          headingRowHeight: 40,
           dataRowMinHeight: 40,
           dataRowMaxHeight: 40,
           horizontalMargin: 5,
@@ -615,7 +615,7 @@ class SilsilaApp extends StatelessWidget {
         dividerTheme: const DividerThemeData(
           color: Color(0xFFE8DDF2),
           thickness: 1,
-          space: 19,
+          space: 5,
         ),
         iconTheme: const IconThemeData(color: purple),
         textSelectionTheme: TextSelectionThemeData(
