@@ -61,7 +61,7 @@ jobs:
           p = Path("android/app/src/main/AndroidManifest.xml")
           s = p.read_text()
           if "android.permission.INTERNET" not in s:
-              s = s.replace("<application", '    <uses-permission android:name="android.permission.INTERNET" />\\n    <application', 1)
+              s = s.replace("<application", '    <uses-permission android:name="android.permission.INTERNET" />\n    <application', 1)
           s = re.sub(r'android:label="[^"]*"', 'android:label="سلسلة"', s, count=1)
           if 'android:label=' not in s:
               s = s.replace("<application", '<application android:label="سلسلة"', 1)
@@ -79,7 +79,7 @@ jobs:
           p = Path("pubspec.yaml")
           s = p.read_text()
           code = sys.argv[1]
-          s, n = re.subn(r'(?m)^(version:\\s*[^+\\n]+)\\+\\d+\\s*$', rf'\\1+{code}', s, count=1)
+          s, n = re.subn(r'(?m)^(version:\s*[^+\n]+)\+\d+\s*$', rf'\1+{code}', s, count=1)
           if n != 1:
               raise SystemExit("Could not safely update Flutter versionCode in pubspec.yaml")
           p.write_text(s)
@@ -112,11 +112,11 @@ jobs:
           from pathlib import Path
           p = Path("android/app/build.gradle.kts")
           s = p.read_text()
-          imports = "import java.util.Properties\\nimport java.io.FileInputStream\\n"
+          imports = "import java.util.Properties\nimport java.io.FileInputStream\n"
           if "import java.util.Properties" not in s:
               s = imports + s
           if 'ndkVersion = "27.0.12077973"' not in s:
-              s = s.replace("android {", 'android {\\n    ndkVersion = "27.0.12077973"', 1)
+              s = s.replace("android {", 'android {\n    ndkVersion = "27.0.12077973"', 1)
           props = """
           val keystoreProperties = Properties()
           val keystorePropertiesFile = rootProject.file("key.properties")
@@ -164,8 +164,8 @@ jobs:
           test -n "$APKSIGNER"
           test -n "$APKANALYZER"
           OUTPUT="$("$APKSIGNER" verify --verbose --print-certs "$APK")"
-          printf '%s\\n' "$OUTPUT"
-          ACTUAL="$(printf '%s\\n' "$OUTPUT" | sed -n 's/.*certificate SHA-256 digest: *//Ip' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          printf '%s\n' "$OUTPUT"
+          ACTUAL="$(printf '%s\n' "$OUTPUT" | sed -n 's/.*certificate SHA-256 digest: *//Ip' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
           EXPECTED="a69301fe3009183301d1751aa99ef8d9025c696e2870e4dfb5fd9732be4d8e42"
           test "$ACTUAL" = "$EXPECTED"
           echo "Verified permanent signing certificate."
