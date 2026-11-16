@@ -37,6 +37,11 @@ void main() {
     expect(shiftMaster, contains("'weekly_holidays'"));
     expect(shiftMigration, contains('daterange'));
     expect(shiftMigration, contains('erp_hr_shift_assignment_overlap_guard'));
+    final shiftRlsMigration = File('supabase/migrations/20261116040500_hr_shift_master_rls_for_hr_manager.sql').readAsStringSync();
+    expect(shiftRlsMigration, contains('erp_user_can_manage_hr_shift'));
+    expect(shiftRlsMigration, contains("r.page_name = 'الورديات وجداول العمل'"));
+    expect(shiftRlsMigration, contains('erp_scope_guard_erp_hr_shifts'));
+    expect(shiftRlsMigration, contains('erp_scope_guard_erp_hr_shift_assignments'));
     expect(hr, contains("page == 'أجهزة البصمة وربط الحضور'"));
     expect(hr, contains('HrFingerprintDevicesScreen(companyId: companyId)'));
     expect(hr, contains("page == 'الوظائف الشاغرة'"));
