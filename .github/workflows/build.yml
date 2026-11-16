@@ -1,7 +1,7 @@
 name: Build Silsila Android App
 
 # Keep the signed production APK as an intentional manual release task.
-# Routine mobile validation already builds and verifies a debug APK on every relevant change.
+# Automatic mobile validation now produces the signed production APK through the same release pipeline.
 concurrency:
   group: silsila-android-release-${{ github.run_id }}
   cancel-in-progress: false
