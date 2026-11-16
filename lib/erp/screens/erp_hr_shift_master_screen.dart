@@ -27,8 +27,9 @@ class _ErpHrShiftMasterScreenState extends State<ErpHrShiftMasterScreen> {
   static const _weekdays = <String>[
     'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت',
   ];
+  // Database uses ISO weekday numbers: Monday=1 through Sunday=7.
   static const _weekdayNumbers = <String, int>{
-    'الأحد': 0, 'الإثنين': 1, 'الثلاثاء': 2, 'الأربعاء': 3,
+    'الأحد': 7, 'الإثنين': 1, 'الثلاثاء': 2, 'الأربعاء': 3,
     'الخميس': 4, 'الجمعة': 5, 'السبت': 6,
   };
 
