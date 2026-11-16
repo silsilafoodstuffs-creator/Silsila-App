@@ -68,3 +68,15 @@
 - APK الجديد: `applicationId=com.example.silsila_app`، `versionName=1.0.0`، `versionCode=3`، شهادة SHA-256 `a69301fe3009183301d1751aa99ef8d9025c696e2870e4dfb5fd9732be4d8e42`، وفحص الأيقونة من Manifest نجح. Artifact ID `14195776070`، وحجم APK 32,598,923 bytes، وSHA-256 `fb03dae5bd4231fd1bcd2d63fb49fbbe83e67471b58d7591fbcc1f1f3924e6a0`.
 - commits بعد `df604a9` في هذا التحديث توثيق/اختبار فقط؛ لا تغيّر ملفات التطبيق التي بُني منها APK.
 - ما زال اختبار تثبيت/تحديث APK على هاتف فعلي غير منفذ من بيئة GitHub، فلا يُدّعى نجاحه. كذلك لا يزال استكمال 31 نوعًا عامًا من أصل 53 نوع Business Suite، وتطبيق Glossy Neon Luxury بصريًا على كل شاشة، وإكمال فجوات HR/التقارير المتخصصة مفتوحًا؛ لا إعلان 100%.
+
+
+## ملحق الورديات التشغيلية — 2026-11-16 03:52 UTC
+- أضيفت شاشة `ErpHrShiftMasterScreen` وربطت من «الورديات وجداول العمل» و«الجداول والورديات»؛ تستخدم `erp_hr_shifts` و`erp_hr_shift_assignments` مباشرة بدل تخزين تعريف الوردية كسجل عام.
+- الشاشة تدير إنشاء/تعديل/إيقاف الوردية، وقت البداية والنهاية، العطلات الأسبوعية وفق ترقيم ISO (1–7)، سماح الحضور والانصراف، ربط الفرع، وتوزيع الموظفين مع تاريخ سريان.
+- أضيف trigger `erp_hr_shift_assignment_overlap_guard` لمنع تداخل فترات تكليف الموظف بورديات مختلفة.
+- أضيفت دالة RLS `erp_user_can_manage_hr_shift` التي تقرأ صلاحية «الورديات وجداول العمل» من قالب مدير الموارد البشرية، مع ضبط scope للفرع/الشركة وتوسيع سياسات insert/update/delete وفق القالب. تحقق قاعدة البيانات: الدالة قابلة للتنفيذ لـ authenticated وغير متاحة لـ anon، وسياسات RLS أصبحت restrictive scope + permissive manager/template.
+- جداول الورديات والتوزيعات كانت خالية وقت الفحص؛ لم ننشئ بيانات تجريبية.
+- لا تزال قواعد الحضور التفصيلية في `HrShiftRulesScreen` مخزنة كإعدادات JSON، ولم يتم بعد ربط محرك احتساب الحضور/الرواتب بهذه الجداول؛ لذلك الشاشة الجديدة هي إدارة تعريف وتوزيع تشغيلي، وليست إثباتًا لاكتمال دورة الحضور والرواتب.
+- Mobile Validation وWeb App Validation على commit `d095366` نجحا؛ 101 اختبار ناجح. Web Preview Validation وDeployment على commit `d095366` نجحا، ومر اختبار Chromium desktop/mobile RTL.
+- Android Release run `43800126196` على commit `9b95bfc` ما زال في خطوة Build Android APK عند آخر تحديث؛ لا يوجد artifact v4 مؤكد بعد. `pubspec.yaml` versionName `1.0.0` / versionCode `4`.
+- لا يزال اختبار تثبيت/تحديث APK على هاتف فعلي غير متاح من بيئة CI.
