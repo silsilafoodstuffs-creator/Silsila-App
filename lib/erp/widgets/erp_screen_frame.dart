@@ -49,8 +49,8 @@ class ErpScreenFrame extends StatelessWidget {
         final spacing = ((profile['spacing'] as num?)?.toDouble() ?? 5).clamp(0, 30).toDouble();
         final radius = ((profile['cornerRadius'] as num?)?.toDouble() ?? 12).clamp(0, 30).toDouble();
         final contentWidth = ((profile['contentWidth'] as num?)?.toDouble() ?? 100).clamp(40, 100).toDouble();
-        final primary = Color((profile['primary'] as int?) ?? _erpFramePurple.value);
-        final accent = Color((profile['accent'] as int?) ?? _erpFrameOrange.value);
+        final primary = Color((profile['primary'] as int?) ?? _erpFramePurple.toARGB32());
+        final accent = Color((profile['accent'] as int?) ?? _erpFrameOrange.toARGB32());
         final baseTheme = Theme.of(context);
         final themed = baseTheme.copyWith(
           colorScheme: baseTheme.colorScheme.copyWith(primary: primary, secondary: accent),
