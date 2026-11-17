@@ -111,7 +111,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     'cornerRadius':_cornerRadius, 'showTitle':_showTitle, 'showTabs':_showTabs,
     'showTasks':_showTasks, 'showDate':_showDate, 'showFooter':_showFooter,
     'showImages':_showImages, 'showSidebar':_showSidebar, 'showScroll':_showScroll,
-    'primary':_primary.value, 'accent':_accent.value,
+    'primary':_primary.toARGB32(), 'accent':_accent.toARGB32(),
   };
 
   Future<void> _save() async {
@@ -268,7 +268,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
                 ChoiceChip(label:Text(entry.key),selected:_primary==entry.value,onSelected:(_)=>setState(()=>_primary=entry.value),selectedColor:entry.value.withValues(alpha:.18),side:BorderSide(color:entry.value)),
             ]),
             const SizedBox(height:6),
-            Row(children:[const Text('لون التمييز: ',style:TextStyle(fontSize:12,fontWeight:FontWeight.w700)),Container(width:24,height:24,decoration:BoxDecoration(color:_accent,borderRadius:BorderRadius.circular(6))),const SizedBox(width:8),Text('#${_accent.value.toRadixString(16).substring(2).toUpperCase()}',style:const TextStyle(fontSize:11))]),
+            Row(children:[const Text('لون التمييز: ',style:TextStyle(fontSize:12,fontWeight:FontWeight.w700)),Container(width:24,height:24,decoration:BoxDecoration(color:_accent,borderRadius:BorderRadius.circular(6))),const SizedBox(width:8),Text('#${_accent.toARGB32().toRadixString(16).substring(2).toUpperCase()}',style:const TextStyle(fontSize:11))]),
             Wrap(spacing:6,children:[
               for(final c in const [Color(0xFFFFA015),Color(0xFFFF27C3),Color(0xFF1976D2),Color(0xFF26A69A),Color(0xFF6D4C41)])
                 InkWell(onTap:()=>setState(()=>_accent=c),child:Container(width:25,height:25,decoration:BoxDecoration(color:c,shape:BoxShape.circle,border:Border.all(color:Colors.black12)))),
