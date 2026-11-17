@@ -26,6 +26,7 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
   bool _hasMore = false;
   static const int _pageSize = 500;
   String? _error;
+  String? _warning;
   String? _sourceTable;
   List<String> _activeSourceTables = <String>[];
   final Map<String, int> _sourceOffsets = <String, int>{};
@@ -140,6 +141,7 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _warning = null;
       _rows = <Map<String, dynamic>>[];
       _hasMore = false;
       _sourceTable = null;
@@ -200,6 +202,9 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
       _sourceTable = loadedTables.join(' + ');
       _loading = false;
       _error = null;
+      _warning = loadedTables.length < candidates.length
+          ? 'تم تحميل التقرير جزئيًا فقط. نجح: ${loadedTables.join('، ')}. تعذر تحميل: ${candidates.where((table) => !loadedTables.contains(table)).join('، ')}. راجع صلاحية المصدر أو اتصاله قبل الاعتماد على الأرقام.'
+          : null;
     });
   }
 
@@ -259,12 +264,12 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
 
   List<String> get _columns {
     final keys = <String>[];
-    for (final row in _visibleRows.take(100)) {
+    for (final row in _visibleRows) {
       for (final key in row.keys) {
-        if (!keys.contains(key)) keys.add(key);
+        if (key != '_source_table' && !keys.contains(key)) keys.add(key);
       }
     }
-    return keys.take(10).toList();
+    return keys;
   }
 
   String _csvCell(dynamic value) {
@@ -322,6 +327,13 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
             ),
           ),
           if (_loading) const LinearProgressIndicator(),
+          if (_warning != null) Card(
+            color: const Color(0xFFFFF5E6),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(_warning!, style: const TextStyle(color: Color(0xFF805000))),
+            ),
+          ),
           if (_error != null) Card(
             color: const Color(0xFFFFF4F2),
             child: Padding(padding: const EdgeInsets.all(12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
