@@ -1,6 +1,5 @@
 import 'dart:convert';
 import '../services/erp_print_support.dart';
-import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:excel/excel.dart' as excel;
@@ -1358,8 +1357,13 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       return aCode.compareTo(bCode);
     });
 
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: !_hasUnsavedChanges,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldPop = await _onWillPop();
+        if (shouldPop && mounted) Navigator.of(context).pop();
+      },
       child: Column(children: [
       Container(
         color: const Color(0xFF3E007D),
