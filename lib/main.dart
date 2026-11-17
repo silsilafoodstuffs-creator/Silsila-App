@@ -5348,8 +5348,8 @@ class _StoriesScreenState extends State<StoriesScreen> {
                       IconButton(
                         tooltip: 'إخفاء هذه القصة',
                         onPressed: () async {
-                          await _hideStory((active['id'] ?? '').toString());
-                          if (dialogContext.mounted) Navigator.pop(dialogContext);
+                          final hidden = await _hideStory((active['id'] ?? '').toString());
+                          if (hidden && dialogContext.mounted) Navigator.pop(dialogContext);
                         },
                         icon: const Icon(Icons.visibility_off_outlined, color: Colors.white),
                       ),
@@ -5378,12 +5378,15 @@ class _StoriesScreenState extends State<StoriesScreen> {
     }
   }
 
-  Future<void> _hideStory(String id) async {
+  Future<bool> _hideStory(String id) async {
+    if (id.isEmpty) return false;
     try {
       await storyService.hideStoryForMe(id);
       if (mounted) setState(() => hiddenStoryIds.add(id));
+      return true;
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إخفاء القصة: $e')));
+      return false;
     }
   }
 
