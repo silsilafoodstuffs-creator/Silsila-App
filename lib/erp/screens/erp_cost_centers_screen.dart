@@ -54,35 +54,49 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
     // Invalidate previous company scope immediately. A late network response
     // from an older load must never replace the currently selected company.
     _activeCompanyId = null;
-    if (_db == null) {
+    if (_db == null || _db!.auth.currentUser == null) {
       setState(() { _loading = false; _error = 'سجّل الدخول إلى Supabase أولًا.'; });
       return;
     }
     setState(() { _loading = true; _error = null; _message = null; });
-    if (company.isEmpty) {
-      try {
-        final userId = _db!.auth.currentUser?.id;
-        if (userId != null) {
-          final memberships = await _db!
-              .from('erp_company_members')
-              .select('company_id')
-              .eq('user_id', userId)
-              .eq('is_active', true)
-              .order('created_at')
-              .limit(1);
-          if (!mounted || generation != _loadGeneration) return;
-          if (memberships.isNotEmpty) {
-            company = (memberships.first['company_id'] ?? '').toString().trim();
-          }
-        }
-      } catch (e) {
-        if (!mounted || generation != _loadGeneration) return;
+    // Always validate the requested company against the signed-in user's active
+    // memberships. A stale dashboard company ID must not silently produce an
+    // empty result set under RLS while another active company is available.
+    try {
+      final userId = _db!.auth.currentUser!.id;
+      final memberships = await _db!
+          .from('erp_company_members')
+          .select('company_id')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .order('created_at');
+      if (!mounted || generation != _loadGeneration) return;
+      final activeCompanyIds = (memberships as List)
+          .whereType<Map<String, dynamic>>()
+          .map((row) => (row['company_id'] ?? '').toString().trim())
+          .where((id) => id.isNotEmpty)
+          .toSet();
+      if (activeCompanyIds.isEmpty) {
         setState(() {
           _loading = false;
-          _error = 'تعذر تحديد الشركة النشطة: $e';
+          _centers = [];
+          _branches = [];
+          _error = 'لا توجد عضوية شركة نشطة لهذا المستخدم؛ تحقق من عضوية الشركة قبل تحميل مراكز التكلفة.';
         });
         return;
       }
+      if (!activeCompanyIds.contains(company)) {
+        company = activeCompanyIds.first;
+      }
+    } catch (e) {
+      if (!mounted || generation != _loadGeneration) return;
+      setState(() {
+        _loading = false;
+        _centers = [];
+        _branches = [];
+        _error = 'تعذر التحقق من عضوية الشركة النشطة: $e';
+      });
+      return;
     }
     if (!mounted || generation != _loadGeneration) return;
     if (company.isEmpty) {
@@ -114,10 +128,13 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
           ..addAll(_treeRoots.map((r) => _s(r['id'])).where((id) => id.isNotEmpty));
         _selectedIds.removeWhere((id) => !_centers.any((r) => _s(r['id']) == id));
         _loading = false;
-        _error = _centers.isEmpty
-            ? 'لم تُرجع قاعدة البيانات مراكز تكلفة لهذه الشركة. تحقق من الشركة النشطة وصلاحيات الوصول.'
-            : null;
-        _message = _centers.isEmpty ? null : 'تم تحميل ${_centers.length} مركز تكلفة.';
+        // An empty directory is a valid first-use state, not evidence of an
+        // RLS or company-selection failure. Membership was verified above;
+        // actual query failures are reported by the catch block.
+        _error = null;
+        _message = _centers.isEmpty
+            ? 'لا توجد مراكز تكلفة معرفة لهذه الشركة حتى الآن. أضف مركزًا رئيسيًا أو راجع إعداد الهيكل.'
+            : 'تم تحميل ${_centers.length} مركز تكلفة للشركة النشطة.';
       });
     } catch (e) {
       if (mounted && generation == _loadGeneration) {
