@@ -1313,19 +1313,29 @@ class _HomeTickerAdsStripState extends State<_HomeTickerAdsStrip> {
                       padding: const EdgeInsets.all(4),
                       clipBehavior: Clip.antiAlias,
                       alignment: Alignment.center,
-                      child: logo == null
-                          ? const Icon(Icons.storefront_outlined, color: purple, size: 27)
-                          : Image.memory(
-                              logo,
-                              width: 46,
-                              height: 46,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.storefront_outlined,
-                                color: purple,
-                                size: 27,
-                              ),
-                            ),
+                      child: ClipOval(
+                        child: SizedBox(
+                          width: 46,
+                          height: 46,
+                          child: logo == null
+                              ? const Center(child: Icon(
+                                  Icons.storefront_outlined,
+                                  color: purple,
+                                  size: 27,
+                                ))
+                              : Image.memory(
+                                  logo,
+                                  width: 46,
+                                  height: 46,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Center(child: Icon(
+                                    Icons.storefront_outlined,
+                                    color: purple,
+                                    size: 27,
+                                  )),
+                                ),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -1838,7 +1848,13 @@ class _MainShellState extends State<MainShell> {
   Future<void> loadLiveCategories() async {
     if (database == null) return;
     try {
-      final rows = await categoryService.getCategories(activityType: activity);
+      final selectedActivity = await ActivityService().findActivity(activity);
+      final activityCode = selectedActivity?['code']?.toString();
+      final rows = await categoryService.getCategories(
+        activityType: activity,
+        activityCode: activityCode,
+        limit: 500,
+      );
       if (!mounted) return;
       setState(() {
         final rootRows = rows.where((row) => row['parent_id'] == null).toList();
@@ -2028,7 +2044,7 @@ class _MainShellState extends State<MainShell> {
         child: bytes == null
             ? Container(color: const Color(0xFFF5EFFB), alignment: Alignment.center,
                 child: Icon(_iconForCategory(category), color: purple, size: size * .52))
-            : Image.memory(bytes, fit: BoxFit.contain,
+            : Image.memory(bytes, fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(color: const Color(0xFFF5EFFB),
                   alignment: Alignment.center,
                   child: Icon(_iconForCategory(category), color: purple, size: size * .52))),
