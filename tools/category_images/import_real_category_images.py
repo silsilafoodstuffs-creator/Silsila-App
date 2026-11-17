@@ -141,7 +141,8 @@ def main() -> int:
         print("::error::SUPABASE_SERVICE_ROLE_KEY is missing.")
         return 2
     rows = get_category_rows()
-    print(f"Loaded {len(rows)} category rows for company {COMPANY_ID}.", flush=True)
+    pending = [row for row in rows if str(row.get("image_mime_type") or "") not in RASTER]
+    print(f"Loaded {len(rows)} category rows for company {COMPANY_ID}; {len(pending)} need real photos, {len(rows) - len(pending)} already have raster photos.", flush=True)
     imported = already_real = not_found = errors = 0
     for index, row in enumerate(rows, 1):
         mime = str(row.get("image_mime_type") or "")
