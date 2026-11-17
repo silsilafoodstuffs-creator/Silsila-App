@@ -20,6 +20,7 @@ HEADERS = {
 SESSION = requests.Session()
 SESSION.headers.update(HEADERS)
 RASTER = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+MIN_REAL_IMAGE_BYTES = 10_000
 
 
 def detect_mime(data: bytes) -> str | None:
@@ -84,7 +85,7 @@ def commons_match(query: str) -> dict[str, Any] | None:
         info = infos[0]
         if info.get("mime") not in RASTER:
             continue
-        if int(info.get("size") or 0) < 10000:
+        if int(info.get("size") or 0) < MIN_REAL_IMAGE_BYTES:
             continue
         image_url = info.get("thumburl") or info.get("url")
         if not image_url or not image_url.startswith("https://"):
@@ -98,7 +99,7 @@ def commons_match(query: str) -> dict[str, Any] | None:
                 if len(data) > 5 * 1024 * 1024:
                     break
             image_response.close()
-            if len(data) < 10000 or len(data) > 5 * 1024 * 1024:
+            if len(data) < MIN_REAL_IMAGE_BYTES or len(data) > 5 * 1024 * 1024:
                 continue
             mime = detect_mime(bytes(data))
             if mime not in RASTER:
