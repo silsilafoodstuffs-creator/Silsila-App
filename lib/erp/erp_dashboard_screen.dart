@@ -2380,7 +2380,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
       final batches = <String, Map<String, dynamic>>{};
       for (final raw in rows) {
-        if (raw is! Map) continue;
         final row = Map<String, dynamic>.from(raw);
         final expiry = DateTime.tryParse(row['expiry_date']?.toString() ?? '');
         if (expiry == null) continue;
