@@ -99,8 +99,8 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     _showImages = value['showImages'] as bool? ?? true;
     _showSidebar = value['showSidebar'] as bool? ?? false;
     _showScroll = value['showScroll'] as bool? ?? true;
-    _primary = Color((value['primary'] as int?) ?? _purple.value);
-    _accent = Color((value['accent'] as int?) ?? _orange.value);
+    _primary = Color((value['primary'] as int?) ?? _purple.toARGB32());
+    _accent = Color((value['accent'] as int?) ?? _orange.toARGB32());
   }
 
   Map<String, dynamic> _serialize() => <String,dynamic>{
