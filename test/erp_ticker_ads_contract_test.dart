@@ -9,6 +9,7 @@ void main() {
   late String migrationSource;
   late String activityMigrationSource;
   late String adsScreenSource;
+  late String categoryServiceSource;
 
   setUpAll(() {
     homeSource = File('lib/main.dart').readAsStringSync();
@@ -23,8 +24,27 @@ void main() {
     ).readAsStringSync();
     adsScreenSource = File('lib/erp/screens/erp_app_advertisements_screen.dart')
         .readAsStringSync();
+    categoryServiceSource = File('lib/services/category_service.dart').readAsStringSync();
   });
 
+
+  test('public category loading resolves and filters the selected activity code', () {
+    expect(homeSource, contains('final selectedActivity = await ActivityService().findActivity(activity)'));
+    expect(homeSource, contains('activityCode: activityCode'));
+    expect(categoryServiceSource, contains('Never query the entire cross-activity catalogue'));
+    expect(categoryServiceSource, contains("eq('activity_code', resolvedActivityCode)"));
+  });
+
+  test('ticker brand artwork is explicitly circular and consistently cover-cropped', () {
+    final start = homeSource.indexOf('class _HomeTickerAdsStrip extends StatefulWidget');
+    final end = homeSource.indexOf('class MainShell extends StatefulWidget', start);
+    final ticker = homeSource.substring(start, end);
+    expect(ticker, contains('ClipOval('));
+    expect(ticker, contains('width: 46'));
+    expect(ticker, contains('height: 46'));
+    expect(ticker, contains('fit: BoxFit.cover'));
+    expect(homeSource, contains('Image.memory(bytes, fit: BoxFit.cover'));
+  });
 
   test('public app displays activity-scoped popup ads after the startup intro', () {
     expect(homeSource, contains("get_silsila_public_intro_ad"));
