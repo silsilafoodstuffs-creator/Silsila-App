@@ -3730,8 +3730,8 @@ class ErpScreenLayoutRuntime extends StatelessWidget {
             ? profiles[screen] as Map
             : profiles['*'] is Map ? profiles['*'] as Map : const {};
         final profile = Map<String, dynamic>.from(raw);
-        final primary = Color((profile['primary'] as int?) ?? const Color(0xFF3E007D).value);
-        final accent = Color((profile['accent'] as int?) ?? const Color(0xFFFFA015).value);
+        final primary = Color((profile['primary'] as int?) ?? const Color(0xFF3E007D).toARGB32());
+        final accent = Color((profile['accent'] as int?) ?? const Color(0xFFFFA015).toARGB32());
         final rowHeight = ((profile['rowHeight'] as num?)?.toDouble() ?? 40).clamp(28, 80).toDouble();
         final spacing = ((profile['spacing'] as num?)?.toDouble() ?? 5).clamp(0, 30).toDouble();
         final radius = ((profile['cornerRadius'] as num?)?.toDouble() ?? 12).clamp(0, 30).toDouble();
