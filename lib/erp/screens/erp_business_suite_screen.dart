@@ -534,9 +534,31 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   }
  }
  Future<void> _load()async{
-  final co=(widget.companyId??'').trim();if(co.isEmpty){setState(()=>_loading=false);_error='حدد الشركة أولًا.';return;}
-  setState(()=>_loading=true);try{if(_report){final table=_reportTable;var q=_db.from(table).select('*').eq('company_id',co);final orderColumn=table=='erp_production_quality_checks'?'inspected_at':['erp_v_service_customer_satisfaction','erp_v_service_response_rate_summary'].contains(table)?'last_ticket_update':'created_at';final data=table=='erp_construction_boq_lines'?await q.order('line_order',ascending:true).limit(1500):await q.order(orderColumn,ascending:false).limit(1500);if(!mounted)return;_rows=(data as List).map((e)=>_reportRow(Map<String,dynamic>.from(e),table)).toList();}else{final data=await _db.from('erp_business_suite_records').select('*').eq('company_id',co).eq('module_key',_moduleKey).eq('record_type',_c.type).order('created_at',ascending:false).limit(1500);if(!mounted)return;_rows=(data as List).map((e)=>Map<String,dynamic>.from(e)).toList();}}
-  catch(e){_error='تعذر تحميل بيانات الشاشة: $e';}finally{if(mounted)setState(()=>_loading=false);}
+  final co=(widget.companyId??'').trim();
+  if(co.isEmpty){
+   if(!mounted)return;
+   setState(()=>{_loading=false;_error='حدد الشركة أولًا.';_rows=[];});
+   return;
+  }
+  setState(()=>{_loading=true;_error=null;_rows=[];});
+  try{
+   if(_report){
+    final table=_reportTable;
+    var q=_db.from(table).select('*').eq('company_id',co);
+    final orderColumn=table=='erp_production_quality_checks'?'inspected_at':['erp_v_service_customer_satisfaction','erp_v_service_response_rate_summary'].contains(table)?'last_ticket_update':'created_at';
+    final data=table=='erp_construction_boq_lines'?await q.order('line_order',ascending:true).limit(1500):await q.order(orderColumn,ascending:false).limit(1500);
+    if(!mounted)return;
+    _rows=(data as List).map((e)=>_reportRow(Map<String,dynamic>.from(e),table)).toList();
+   }else{
+    final data=await _db.from('erp_business_suite_records').select('*').eq('company_id',co).eq('module_key',_moduleKey).eq('record_type',_c.type).order('created_at',ascending:false).limit(1500);
+    if(!mounted)return;
+    _rows=(data as List).map((e)=>Map<String,dynamic>.from(e)).toList();
+   }
+  }catch(e){
+   if(mounted)setState(()=>_error='تعذر تحميل بيانات الشاشة: $e');
+  }finally{
+   if(mounted)setState(()=>_loading=false);
+  }
  }
  List<Map<String,dynamic>> get _display=>_rows;
  List<Map<String,dynamic>> get _filtered{final q=_search.text.trim().toLowerCase();return _display.where((r)=>(_filter=='all'||r['status']==_filter)&&(q.isEmpty||[r['record_code'],r['name'],r['counterparty'],r['details']].join(' ').toLowerCase().contains(q))).toList();}
