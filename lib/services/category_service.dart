@@ -29,6 +29,7 @@ class CategoryService {
   /// جلب الأقسام الرئيسية والفرعية.
   Future<List<Map<String, dynamic>>> getCategories({
     String? activityType,
+    String? activityCode,
     bool activeOnly = true,
     int limit = 200,
   }) async {
@@ -39,15 +40,20 @@ class CategoryService {
     // Prefer the ERP's canonical item-category tree: this is the live master catalogue edited
     // from the desktop program, including binary images stored in PostgreSQL.
     try {
-      String? activityCode;
-      if (activity != null) {
+      var resolvedActivityCode = _emptyToNull(activityCode);
+      if (activity != null && resolvedActivityCode == null) {
         final activityRow = await _requireClient
             .from('activity_types')
             .select('code,name')
             .eq('name', activity)
             .eq('is_active', true)
             .maybeSingle();
-        activityCode = activityRow?['code']?.toString();
+        resolvedActivityCode = activityRow?['code']?.toString();
+      }
+      // Never query the entire cross-activity catalogue when the selected activity
+      // cannot be resolved. That previously mixed unrelated categories in the app.
+      if (activity != null && (resolvedActivityCode == null || resolvedActivityCode.isEmpty)) {
+        return const <Map<String, dynamic>>[];
       }
       var categoriesQuery = _requireClient
           .from('erp_item_categories')
@@ -55,8 +61,8 @@ class CategoryService {
       if (activeOnly) {
         categoriesQuery = categoriesQuery.eq('is_active', true).eq('show_in_app', true);
       }
-      if (activityCode != null && activityCode.isNotEmpty) {
-        categoriesQuery = categoriesQuery.eq('activity_code', activityCode);
+      if (resolvedActivityCode != null && resolvedActivityCode.isNotEmpty) {
+        categoriesQuery = categoriesQuery.eq('activity_code', resolvedActivityCode);
       }
       final categoryRows = await categoriesQuery.order('category_name').limit(limit);
       final categories = (categoryRows as List).map((raw) {
