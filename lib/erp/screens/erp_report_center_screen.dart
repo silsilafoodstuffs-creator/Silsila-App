@@ -132,6 +132,7 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
       setState(() {
         _loading = false;
         _error = 'لا توجد شركة محددة. افتح بيانات الشركة وسجّل الدخول بحساب لديه عضوية نشطة ثم أعد المحاولة.';
+        _warning = null;
         _rows = <Map<String, dynamic>>[];
         _hasMore = false;
         _sourceTable = null;
