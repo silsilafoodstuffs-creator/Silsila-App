@@ -50,11 +50,13 @@ class _TickerBrandCircle extends StatelessWidget {
                     height: innerSize,
                     child: Image.memory(
                       bytes!,
+                      width: innerSize,
+                      height: innerSize,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(
+                      errorBuilder: (_, __, ___) => const Center(child: Icon(
                         Icons.storefront_outlined,
                         color: _tickerPurple,
-                      ),
+                      )),
                     ),
                   ),
                 ),
