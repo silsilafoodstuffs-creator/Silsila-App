@@ -537,10 +537,10 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   final co=(widget.companyId??'').trim();
   if(co.isEmpty){
    if(!mounted)return;
-   setState(()=>{_loading=false;_error='حدد الشركة أولًا.';_rows=[];});
+   setState(() {_loading=false;_error='حدد الشركة أولًا.';_rows=[];});
    return;
   }
-  setState(()=>{_loading=true;_error=null;_rows=[];});
+  setState(() {_loading=true;_error=null;_rows=[];});
   try{
    if(_report){
     final table=_reportTable;
