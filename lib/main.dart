@@ -5261,9 +5261,6 @@ class _StoriesScreenState extends State<StoriesScreen> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, updateDialog) {
           final active = group[current];
-          final mediaType = (active['media_type'] ?? 'image').toString();
-          final mediaUrl = (active['media_url'] ?? '').toString();
-          final caption = (active['caption'] ?? '').toString();
           return Dialog.fullscreen(
             backgroundColor: Colors.black,
             child: SafeArea(
@@ -5333,13 +5330,33 @@ class _StoriesScreenState extends State<StoriesScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
                     child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                       IconButton(
+                        tooltip: 'القصة السابقة',
                         onPressed: current > 0 ? () => updateDialog(() => current--) : null,
-                        icon: const Icon(Icons.chevron_left, color: Colors.white, size: 34),
+                        icon: const Icon(Icons.chevron_left, color: Colors.white, size: 30),
                       ),
-                      Text('اضغط للتنقل بين الحالات', style: const TextStyle(color: Colors.white70)),
+                      const Expanded(
+                        child: Text('اضغط للتنقل بين الحالات', textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white70, fontSize: 11)),
+                      ),
+                      if ((active['user_id'] ?? '').toString() !=
+                          (Supabase.instance.client.auth.currentUser?.id ?? ''))
+                        IconButton(
+                          tooltip: 'إرسال رد لصاحب القصة',
+                          onPressed: () => _replyToStory(active),
+                          icon: const Icon(Icons.reply_rounded, color: Colors.white),
+                        ),
                       IconButton(
+                        tooltip: 'إخفاء هذه القصة',
+                        onPressed: () async {
+                          await _hideStory((active['id'] ?? '').toString());
+                          if (dialogContext.mounted) Navigator.pop(dialogContext);
+                        },
+                        icon: const Icon(Icons.visibility_off_outlined, color: Colors.white),
+                      ),
+                      IconButton(
+                        tooltip: 'القصة التالية',
                         onPressed: current < group.length - 1 ? () => updateDialog(() => current++) : null,
-                        icon: const Icon(Icons.chevron_right, color: Colors.white, size: 34),
+                        icon: const Icon(Icons.chevron_right, color: Colors.white, size: 30),
                       ),
                     ]),
                   ),
