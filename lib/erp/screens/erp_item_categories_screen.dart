@@ -142,11 +142,12 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           .map((row) => _s(row['activity_code']).trim().toUpperCase())
           .where((code) => code.isNotEmpty)
           .toSet();
+      final sortedActualCodes = actualCodes.toList()..sort();
       final defaultActivity = actualCodes.contains('ACT001')
           ? 'ACT001'
           : actualCodes.contains('01')
               ? '01'
-              : (actualCodes.toList()..sort()).firstOrNull ?? 'ACT001';
+              : sortedActualCodes.isNotEmpty ? sortedActualCodes.first : 'ACT001';
       final displayCodes = actualCodes.isEmpty ? <String>{defaultActivity} : actualCodes;
       _activities = displayCodes.map((code) => <String, String>{
         'code': code,
