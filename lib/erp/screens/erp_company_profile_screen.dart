@@ -92,6 +92,10 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
     super.dispose();
   }
 
+  bool get _hasSavedCompany =>
+      (_activeCompanyId ?? widget.companyId ?? '').trim().isNotEmpty ||
+      _company != null;
+
   String? _nullable(String value) => value.trim().isEmpty ? null : value.trim();
 
   Future<void> _load() async {
@@ -296,8 +300,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
           'p_legal_name': legalName,
           'p_trade_name': _nullable(_tradeName.text),
           'p_tax_number': _nullable(_taxNumber.text),
-          'p_commercial_register': _nullable(_commercialRegister.text),
-          'p_phone': _nullable(_phone.text),
+          'p_commercial_register': _nullable(_commercialRegister.text),          'p_phone': _nullable(_phone.text),
           'p_email': _nullable(_email.text),
           'p_address': _nullable(_address.text),
           'p_base_currency': currency,
@@ -466,8 +469,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
     if (lower.endsWith('.webp')) return 'image/webp';
     if (lower.endsWith('.gif')) return 'image/gif';
     if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
-    if (bytes.length >= 8 && bytes[0] == 0x89 && bytes[1] == 0x50) return 'image/png';
-    if (bytes.length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) return 'image/jpeg';
+    if (bytes.length >= 8 && bytes[0] == 0x89 && bytes[1] == 0x50) return 'image/png';    if (bytes.length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) return 'image/jpeg';
     throw ArgumentError('امتداد الصورة غير مدعوم؛ استخدم JPG أو PNG أو WEBP أو GIF.');
   }
 
@@ -493,6 +495,10 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
   }
 
   Future<void> _newCompany() async {
+    if (_hasSavedCompany) {
+      if (mounted) setState(() => _message = 'تم تسجيل الشركة الوحيدة المسموح بها؛ لا يمكن إضافة شركة أخرى.');
+      return;
+    }
     final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
       title: const Text('بيانات شركة جديدة'),
       content: const Text('سيتم تفريغ الحقول الحالية لبدء إدخال بيانات جديدة. احفظ البيانات الحالية أولًا إن لزم.'),
@@ -516,6 +522,10 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
   }
 
   Future<void> _deleteCompany() async {
+    if (_hasSavedCompany) {
+      if (mounted) setState(() => _message = 'لا يمكن حذف الشركة الوحيدة المسجلة في النظام.');
+      return;
+    }
     final id = (_activeCompanyId ?? widget.companyId ?? '').trim();
     if (id.isEmpty || _db == null) {
       setState(() => _error = 'لا توجد شركة محفوظة لإيقافها.');
@@ -601,10 +611,10 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
           child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(mainAxisSize: MainAxisSize.min, children: [
             _quickTask('تحديث', Icons.refresh, _companyPurple, _loading ? null : _load),
-            _quickTask('إضافة', Icons.add_circle_outline, _companyPurple, _saving ? null : _newCompany),
+            _quickTask('إضافة', Icons.add_circle_outline, _companyPurple, _saving || _hasSavedCompany ? null : _newCompany),
             _quickTask('حفظ', Icons.save_outlined, _companyPurple, _saving || _loading || !_isEditing ? null : _save),
             _quickTask('تعديل', Icons.edit_outlined, _companyPurple, _loading || _saving ? null : _editCompany),
-            _quickTask('حذف', Icons.delete_outline, _companyPurple, _loading || _saving ? null : _deleteCompany),
+            _quickTask('حذف', Icons.delete_outline, _companyPurple, _loading || _saving || _hasSavedCompany ? null : _deleteCompany),
             _quickTask('معاينة', Icons.visibility_outlined, _companyPurple, _loading || _saving ? null : _printCompany),
             _quickTask('طباعة', Icons.print_outlined, _companyPurple, _loading || _saving ? null : _printCompany),
             _quickTask('استيراد Excel', Icons.file_upload_outlined, _companyPurple, _loading || _saving || !_isEditing ? null : _importCompanyExcel),
@@ -646,8 +656,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                       const SizedBox(width: 8),
                       Expanded(child: Text('حالة الشركة: ${_company!['is_active'] == true ? 'نشطة' : 'موقوفة'}', style: const TextStyle(fontWeight: FontWeight.w700))),
                       const SizedBox(width: 8),
-                      Flexible(child: Text('ID: ${_activeCompanyId ?? widget.companyId ?? '—'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 11))),
-                    ]),
+                      Flexible(child: Text('ID: ${_activeCompanyId ?? widget.companyId ?? '—'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 11))),                    ]),
                   ),
                 // الصف الأول: كود الشركة بعرض ثابت والاسمان بعرض أوسع.
                 Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -706,13 +715,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                   ]))),
                 ]),
                 if (_uploadingLogo) const LinearProgressIndicator(minHeight: 3),
-                const SizedBox(height: 8),
-                FilledButton.icon(
-                  onPressed: _saving || _loading || !_isEditing ? null : _save,
-                  icon: _saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.save_outlined),
-                  label: Text(_saving ? 'جارٍ الحفظ...' : ((_activeCompanyId ?? widget.companyId) == null ? 'إنشاء الشركة وحفظ البيانات' : 'حفظ بيانات الشركة')),
-                  style: FilledButton.styleFrom(backgroundColor: _companyPurple, padding: const EdgeInsets.symmetric(vertical: 14)),
-                ),
+
               ]),
             ),
           ),
