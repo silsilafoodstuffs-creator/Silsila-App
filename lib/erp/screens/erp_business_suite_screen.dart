@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_center_toast.dart';
 import '../widgets/erp_screen_frame.dart';
+import '../services/erp_excel_export_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _p=Color(0xFF3E007D);
@@ -563,6 +564,45 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
  }
  List<Map<String,dynamic>> get _display=>_rows;
  List<Map<String,dynamic>> get _filtered{final q=_search.text.trim().toLowerCase();return _display.where((r)=>(_filter=='all'||r['status']==_filter)&&(q.isEmpty||[r['record_code'],r['name'],r['counterparty'],r['details']].join(' ').toLowerCase().contains(q))).toList();}
+ Future<void> _exportCurrentRowsExcel() async {
+  if (_loading || _error != null) return;
+  final rows = _filtered;
+  if (rows.isEmpty) {
+   if (mounted) ErpCenterToast.show(context, 'لا توجد سجلات مطابقة للتصفية لتصديرها.');
+   return;
+  }
+  const sheet = 'بيانات الشاشة';
+  final exportRows = rows.map((r) => <String, dynamic>{
+   'record_code': r['record_code'] ?? r['id'],
+   'name': r['name'],
+   'record_date': r['record_date'] ?? r['created_at'],
+   'counterparty': r['counterparty'],
+   'amount': r['amount'],
+   'quantity': r['quantity'],
+   'status': _status(r['status']),
+   'details': r['details'] is Map ? (r['details'] as Map).entries.map((e) => '${e.key}: ${e.value}').join(' | ') : r['details'],
+  }).toList();
+  const columns = <String, String>{
+   'الكود': 'record_code',
+   'الاسم / الوصف': 'name',
+   'التاريخ': 'record_date',
+   'الجهة': 'counterparty',
+   'القيمة': 'amount',
+   'الكمية': 'quantity',
+   'الحالة': 'status',
+   'التفاصيل': 'details',
+  };
+  try {
+   await exportErpExcel(
+    fileName: 'silsila_${_moduleKey}_${DateTime.now().millisecondsSinceEpoch}',
+    sheets: {sheet: exportRows},
+    columns: {sheet: columns},
+   );
+   if (mounted) ErpCenterToast.show(context, 'تم تصدير ${exportRows.length} سجل من بيانات الشاشة الحالية بعد تطبيق البحث والتصفية.');
+  } catch (e) {
+   if (mounted) ErpCenterToast.show(context, 'تعذر تصدير Excel: $e', isError: true);
+  }
+ }
  Future<void> _edit({Map<String,dynamic>? row})async{
   final c=_c,old=Map<String,dynamic>.from((row?['details'] as Map?)??{});final ctrls=<String,TextEditingController>{};
   for(final f in c.fields){ctrls[f.key]=TextEditingController(text:old[f.key]?.toString()??'');}
@@ -659,6 +699,11 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     tooltip: 'تحديث',
     onPressed: _load,
     icon: const Icon(Icons.refresh, color: _p),
+   ),
+   IconButton(
+    tooltip: 'تصدير Excel للبيانات المعروضة',
+    onPressed: _loading || _error != null ? null : _exportCurrentRowsExcel,
+    icon: const Icon(Icons.file_download_outlined, color: _p),
    ),
   ];
 
