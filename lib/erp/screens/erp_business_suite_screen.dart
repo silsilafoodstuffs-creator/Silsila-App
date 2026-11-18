@@ -351,7 +351,8 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     final previous=existingId==null?[]:await _db.from('erp_service_tickets').select('first_responded_at,resolved_at,closed_at').eq('company_id',co).eq('id',existingId).limit(1);
     final prior=previous.isEmpty?null:previous.first;final normalizedStatus=_ticketStatus(status);final stamp=DateTime.now().toIso8601String();
     table='erp_service_tickets';data={'company_id':co,'ticket_code':code,'subject':name,'description':d['resolution'],'party_id':parties.isEmpty?null:parties.first['id'],'sla_policy_id':policy?['id'],'channel':(d['channel']??'other').toString(),'category':d['ticket_type']??'general','priority':_priority(d['priority']),'status':normalizedStatus,'team_name':d['team'],'resolution':d['resolution'],'satisfaction_score':_n(d['satisfaction'])>0?_n(d['satisfaction']):null,'first_response_due_at':responseMinutes>0?createdAt.add(Duration(minutes:responseMinutes)).toIso8601String():null,'resolution_due_at':resolutionMinutes>0?createdAt.add(Duration(minutes:resolutionMinutes)).toIso8601String():null,'escalation_due_at':escalationMinutes>0?createdAt.add(Duration(minutes:escalationMinutes)).toIso8601String():null,'updated_at':stamp,
-     'first_responded_at':(prior?['first_responded_at']??(normalizedStatus=='in_progress'||normalizedStatus=='resolved'||normalizedStatus=='closed'?stamp:null)),
+     // A status transition is not proof that an agent actually replied. Preserve the first-response timestamp only when an explicit reply workflow records it.
+     'first_responded_at':prior?['first_responded_at'],
      'resolved_at':normalizedStatus=='resolved'?(prior?['resolved_at']??stamp):null,
      'closed_at':normalizedStatus=='closed'?(prior?['closed_at']??stamp):null};
     break;
