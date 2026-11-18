@@ -82,36 +82,66 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       }
       if (company.isEmpty) throw StateError('لم يتم تحديد الشركة الحالية.');
       _company = company;
+      // Workspace activity codes (ACT001...) are legacy identifiers.
+      // The canonical catalog stores the matching activity as two digits (01...20).
       final activityRows = await _workspaceRecords.listPage(companyId: company, pageKey: 'أنواع الأنشطة');
-      _activities = activityRows.where((r) => (r['نشط'] ?? 'true').toLowerCase() != 'false')
-        .map((r) => <String,String>{'code': r['كود النشاط'] ?? '', 'name': r['اسم النشاط عربي'] ?? ''})
-        .where((r) => r['code']!.isNotEmpty && r['name']!.isNotEmpty).toList();
-      if (_activities.isEmpty) _activities = <Map<String,String>>[
-        {'code':'ACT001','name':'مواد غذائية'}, {'code':'ACT002','name':'لوازم بناء'},
-        {'code':'ACT003','name':'ملابس واكسسوارات'}, {'code':'ACT004','name':'أجهزة وإلكترونيات'},
-        {'code':'ACT005','name':'سيارات ومعدات'}, {'code':'ACT006','name':'خدمات شحن ونقل'},
-        {'code':'ACT007','name':'أثاث وديكورات'},
-      ];
       const catalogActivityNames = <String,String>{
-        'ACT001':'مواد غذائية','ACT002':'لوازم بناء','ACT003':'ملابس واكسسوارات',
-        'ACT004':'أجهزة وإلكترونيات','ACT005':'سيارات ومعدات','ACT006':'خدمات شحن ونقل',
-        'ACT007':'أثاث وديكورات','ACT008':'أدوات كهربائية','ACT009':'مكتبات وقرطاسية',
-        'ACT010':'مستلزمات طبية','ACT011':'مستحضرات تجميل وعناية','ACT012':'زراعة ومستلزمات زراعية',
-        'ACT013':'قطع غيار ومستلزمات صيانة','ACT014':'مستلزمات فندقية ومطاعم',
-        'ACT015':'تعبئة وتغليف','ACT016':'منظفات ومستلزمات نظافة',
-        'ACT017':'مستلزمات حيوانات وأعلاف','ACT018':'خدمات نقل وتوصيل',
-        'ACT019':'خدمات عامة ومستلزمات متنوعة','ACT020':'كتب ومطبوعات',
+        '01':'مواد غذائية','02':'لوازم بناء','03':'ملابس واكسسوارات',
+        '04':'أجهزة وإلكترونيات','05':'سيارات ومعدات','06':'خدمات شحن ونقل',
+        '07':'أثاث وديكورات','08':'أدوات كهربائية','09':'مكتبات وقرطاسية',
+        '10':'مستلزمات طبية','11':'مستحضرات تجميل وعناية','12':'زراعة ومستلزمات زراعية',
+        '13':'قطع غيار ومستلزمات صيانة','14':'مستلزمات فندقية ومطاعم',
+        '15':'تعبئة وتغليف','16':'منظفات ومستلزمات نظافة',
+        '17':'مستلزمات حيوانات وأعلاف','18':'خدمات نقل وتوصيل',
+        '19':'خدمات عامة ومستلزمات متنوعة','20':'كتب ومطبوعات',
       };
+      String canonicalActivityCode(String raw, Set<String> availableCodes) {
+        final code = raw.trim().toUpperCase();
+        final legacy = RegExp(r'^ACT(\\d{3})$').firstMatch(code);
+        if (legacy != null) {
+          final numeric = int.tryParse(legacy.group(1)!);
+          if (numeric != null) {
+            final canonical = numeric.toString().padLeft(2, '0');
+            if (availableCodes.contains(canonical)) return canonical;
+          }
+        }
+        return code;
+      }
       final categoryActivityRows = await _db!.from('erp_item_categories')
-        .select('activity_code').eq('company_id', company).not('activity_code', 'is', null);
-      final knownCodes = _activities.map((a) => a['code']).toSet();
-      for (final categoryActivity in (categoryActivityRows as List)) {
-        final code = _s(categoryActivity['activity_code']);
-        if (code.isNotEmpty && knownCodes.add(code)) {
-          _activities.add(<String,String>{'code':code,'name':catalogActivityNames[code] ?? 'نشاط $code'});
+          .select('activity_code')
+          .eq('company_id', company)
+          .not('activity_code', 'is', null);
+      final categoryCodes = (categoryActivityRows as List)
+          .map((row) => _s(row['activity_code']).trim())
+          .where((code) => code.isNotEmpty)
+          .toSet();
+      final activityNames = <String,String>{};
+      for (final row in activityRows) {
+        if ((row['نشط'] ?? 'true').toLowerCase() == 'false') continue;
+        final rawCode = row['كود النشاط'] ?? '';
+        if (rawCode.trim().isEmpty) continue;
+        final code = canonicalActivityCode(rawCode, categoryCodes);
+        final name = row['اسم النشاط عربي'] ?? '';
+        if (name.trim().isNotEmpty) activityNames[code] = name.trim();
+      }
+      for (final code in categoryCodes) {
+        activityNames.putIfAbsent(code, () => catalogActivityNames[code] ?? 'نشاط $code');
+      }
+      if (activityNames.isEmpty) {
+        for (final entry in catalogActivityNames.entries) {
+          activityNames[entry.key] = entry.value;
         }
       }
-      if (!_activities.any((a) => a['code'] == _selectedActivityCode)) _selectedActivityCode = _activities.first['code']!;
+      _activities = activityNames.entries
+          .map((entry) => <String,String>{'code':entry.key,'name':entry.value})
+          .toList()
+        ..sort((a,b) => a['code']!.compareTo(b['code']!));
+      final normalizedSelection = canonicalActivityCode(_selectedActivityCode, categoryCodes);
+      _selectedActivityCode = categoryCodes.contains(normalizedSelection)
+          ? normalizedSelection
+          : categoryCodes.isNotEmpty
+              ? (categoryCodes.toList()..sort()).first
+              : _activities.first['code']!;
       final companyCategoryRows = await _db!.from('erp_item_categories')
         .select('id,company_id,activity_code,category_code,parent_id,created_at')
         .eq('company_id', company).order('created_at').order('id').limit(3000);
