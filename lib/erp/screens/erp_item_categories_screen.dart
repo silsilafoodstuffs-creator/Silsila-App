@@ -70,93 +70,129 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     return null;
   }
   Future<void> _load() async {
-    if (_db == null) { setState(() => _error = 'Supabase غير مهيأ.'); return; }
-    setState(() { _loading = true; _error = null; _message = null; });
+    if (_db == null) {
+      if (mounted) setState(() { _error = 'Supabase غير مهيأ.'; _loading = false; });
+      return;
+    }
+    if (mounted) setState(() { _loading = true; _error = null; _message = null; });
     try {
       var company = (_company ?? '').trim();
       final uid = _db!.auth.currentUser?.id;
       if (company.isEmpty && uid != null) {
-        final m = await _db!.from('erp_company_members').select('company_id')
-          .eq('user_id', uid).eq('is_active', true).order('created_at').limit(1);
-        if ((m as List).isNotEmpty) company = _s(m.first['company_id']);
+        final memberships = await _db!.from('erp_company_members')
+            .select('company_id')
+            .eq('user_id', uid)
+            .eq('is_active', true)
+            .order('created_at')
+            .limit(1);
+        if ((memberships as List).isNotEmpty) {
+          company = _s(memberships.first['company_id']).trim();
+        }
       }
       if (company.isEmpty) throw StateError('لم يتم تحديد الشركة الحالية.');
       _company = company;
-      // Workspace activity codes (ACT001...) are legacy identifiers.
-      // The canonical catalog stores the matching activity as two digits (01...20).
-      final activityRows = await _workspaceRecords.listPage(companyId: company, pageKey: 'أنواع الأنشطة');
-      const catalogActivityNames = <String,String>{
-        '01':'مواد غذائية','02':'لوازم بناء','03':'ملابس واكسسوارات',
-        '04':'أجهزة وإلكترونيات','05':'سيارات ومعدات','06':'خدمات شحن ونقل',
-        '07':'أثاث وديكورات','08':'أدوات كهربائية','09':'مكتبات وقرطاسية',
-        '10':'مستلزمات طبية','11':'مستحضرات تجميل وعناية','12':'زراعة ومستلزمات زراعية',
-        '13':'قطع غيار ومستلزمات صيانة','14':'مستلزمات فندقية ومطاعم',
-        '15':'تعبئة وتغليف','16':'منظفات ومستلزمات نظافة',
-        '17':'مستلزمات حيوانات وأعلاف','18':'خدمات نقل وتوصيل',
-        '19':'خدمات عامة ومستلزمات متنوعة','20':'كتب ومطبوعات',
+
+      // Read the canonical catalog once. Do not make category visibility depend
+      // on the optional workspace-records activity registry being available.
+      final rawRows = await _db!.from('erp_item_categories')
+          .select('*')
+          .eq('company_id', company)
+          .order('category_code')
+          .limit(10000);
+      final catalog = (rawRows as List)
+          .whereType<Map>()
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList(growable: false);
+
+      const activityNames = <String, String>{
+        '01': 'مواد غذائية', '02': 'لوازم بناء', '03': 'ملابس واكسسوارات',
+        '04': 'أجهزة وإلكترونيات', '05': 'سيارات ومعدات', '06': 'خدمات شحن ونقل',
+        '07': 'أثاث وديكورات', '08': 'أدوات كهربائية', '09': 'مكتبات وقرطاسية',
+        '10': 'مستلزمات طبية', '11': 'مستحضرات تجميل وعناية',
+        '12': 'زراعة ومستلزمات زراعية', '13': 'قطع غيار ومستلزمات صيانة',
+        '14': 'مستلزمات فندقية ومطاعم', '15': 'تعبئة وتغليف',
+        '16': 'منظفات ومستلزمات نظافة', '17': 'مستلزمات حيوانات وأعلاف',
+        '18': 'خدمات نقل وتوصيل', '19': 'خدمات عامة ومستلزمات متنوعة',
+        '20': 'كتب ومطبوعات', 'ACT001': 'مواد غذائية',
+        'ACT002': 'لوازم بناء', 'ACT003': 'ملابس واكسسوارات',
+        'ACT004': 'أجهزة وإلكترونيات', 'ACT005': 'سيارات ومعدات',
+        'ACT006': 'خدمات شحن ونقل', 'ACT007': 'أثاث وديكورات',
       };
-      String canonicalActivityCode(String raw, Set<String> availableCodes) {
-        final code = raw.trim().toUpperCase();
-        final legacy = RegExp(r'^ACT(\d{3})$').firstMatch(code);
-        if (legacy != null) {
-          final numeric = int.tryParse(legacy.group(1)!);
-          if (numeric != null) {
-            final canonical = numeric.toString().padLeft(2, '0');
-            if (availableCodes.contains(canonical)) return canonical;
+      String normalizeActivity(String value, Set<String> available) {
+        final code = value.trim().toUpperCase();
+        if (code.isEmpty) return '';
+        final match = RegExp(r'^ACT(\\d{3})$').firstMatch(code);
+        if (match != null) {
+          final number = int.tryParse(match.group(1)!);
+          if (number != null) {
+            final shortCode = number.toString().padLeft(2, '0');
+            if (available.contains(shortCode)) return shortCode;
           }
+        }
+        if (RegExp(r'^\\d{1,2}$').hasMatch(code)) {
+          final shortCode = int.parse(code).toString().padLeft(2, '0');
+          final legacyCode = 'ACT${shortCode}';
+          if (available.contains(legacyCode)) return legacyCode;
+          return shortCode;
         }
         return code;
       }
-      final categoryActivityRows = await _db!.from('erp_item_categories')
-          .select('activity_code')
-          .eq('company_id', company)
-          .not('activity_code', 'is', null);
-      final categoryCodes = (categoryActivityRows as List)
-          .map((row) => _s(row['activity_code']).trim())
+
+      final actualCodes = catalog
+          .map((row) => _s(row['activity_code']).trim().toUpperCase())
           .where((code) => code.isNotEmpty)
           .toSet();
-      final activityNames = <String,String>{};
-      for (final row in activityRows) {
-        if ((row['نشط'] ?? 'true').toLowerCase() == 'false') continue;
-        final rawCode = row['كود النشاط'] ?? '';
-        if (rawCode.trim().isEmpty) continue;
-        final code = canonicalActivityCode(rawCode, categoryCodes);
-        final name = row['اسم النشاط عربي'] ?? '';
-        if (name.trim().isNotEmpty) activityNames[code] = name.trim();
-      }
-      for (final code in categoryCodes) {
-        activityNames.putIfAbsent(code, () => catalogActivityNames[code] ?? 'نشاط $code');
-      }
-      if (activityNames.isEmpty) {
-        for (final entry in catalogActivityNames.entries) {
-          activityNames[entry.key] = entry.value;
-        }
-      }
-      _activities = activityNames.entries
-          .map((entry) => <String,String>{'code':entry.key,'name':entry.value})
-          .toList()
-        ..sort((a,b) => a['code']!.compareTo(b['code']!));
-      final normalizedSelection = canonicalActivityCode(_selectedActivityCode, categoryCodes);
-      _selectedActivityCode = categoryCodes.contains(normalizedSelection)
-          ? normalizedSelection
-          : categoryCodes.isNotEmpty
-              ? (categoryCodes.toList()..sort()).first
-              : _activities.first['code']!;
-      final companyCategoryRows = await _db!.from('erp_item_categories')
-        .select('id,company_id,activity_code,category_code,parent_id,created_at')
-        .eq('company_id', company).order('created_at').order('id').limit(3000);
-      _companyCategories = (companyCategoryRows as List).map((e) => Map<String,dynamic>.from(e)).toList();
-      final result = await _db!.from('erp_item_categories')
-        .select('id,company_id,activity_code,category_code,category_name,category_name_en,parent_id,created_at,is_active,show_in_app,image_url,image_data,image_mime_type,image_source_url,image_attribution')
-        .eq('company_id', company).eq('activity_code', _selectedActivityCode).order('category_code').limit(3000);
-      _all = (result as List).map((e) => Map<String,dynamic>.from(e)).toList();
-      _expandedIds.addAll(_all.map((r) => _s(r['id'])));
+      final defaultActivity = actualCodes.contains('ACT001')
+          ? 'ACT001'
+          : actualCodes.contains('01')
+              ? '01'
+              : (actualCodes.toList()..sort()).firstOrNull ?? 'ACT001';
+      final displayCodes = actualCodes.isEmpty ? <String>{defaultActivity} : actualCodes;
+      _activities = displayCodes.map((code) => <String, String>{
+        'code': code,
+        'name': activityNames[code] ??
+            activityNames[normalizeActivity(code, displayCodes)] ??
+            'نشاط $code',
+      }).toList()
+        ..sort((a, b) => a['code']!.compareTo(b['code']!));
+
+      final wanted = normalizeActivity(_selectedActivityCode, displayCodes);
+      _selectedActivityCode = displayCodes.contains(wanted)
+          ? wanted
+          : defaultActivity;
+
+      _companyCategories = catalog
+          .map((row) => <String, dynamic>{
+            'id': row['id'],
+            'company_id': row['company_id'],
+            'activity_code': row['activity_code'],
+            'category_code': row['category_code'],
+            'parent_id': row['parent_id'],
+            'created_at': row['created_at'],
+          })
+          .toList(growable: false);
+
+      _all = catalog.where((row) {
+        final rawCode = _s(row['activity_code']).trim().toUpperCase();
+        // Legacy rows with no activity are kept visible under the primary
+        // activity rather than silently disappearing from every tab.
+        if (rawCode.isEmpty) return _selectedActivityCode == defaultActivity;
+        return normalizeActivity(rawCode, displayCodes) == _selectedActivityCode;
+      }).toList();
+      _expandedIds.addAll(_all.map((row) => _s(row['id'])));
       _syncControllers();
-      if (_parentFilter != null && !_all.any((r) => _s(r['id']) == _parentFilter)) _parentFilter = null;
+      if (_parentFilter != null &&
+          !_all.any((row) => _s(row['id']) == _parentFilter)) {
+        _parentFilter = null;
+      }
       if (mounted) setState(() {});
-    } catch (e) {
-      if (mounted) setState(() => _error = 'تعذر تحميل فئات الأصناف: $e');
-    } finally { if (mounted) setState(() => _loading = false); }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = 'تعذر تحميل فئات الأصناف: $error');
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   Future<void> _importRealCategoryImages() async {
