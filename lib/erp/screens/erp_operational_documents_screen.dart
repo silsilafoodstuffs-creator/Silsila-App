@@ -1644,20 +1644,28 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       if (qtyCol < 0 || (codeCol < 0 && nameCol < 0)) throw StateError('يلزم عمود كود/اسم الصنف وعمود الكمية.');
       String valueAt(List<excel.Data?> row, int col) => col >= 0 && col < row.length ? (row[col]?.value?.toString().trim() ?? '') : '';
       final added = <Map<String, dynamic>>[];
+      final seenItemIds = <String>{
+        ..._lines.map((line) => _s(line['item_id'])),
+        ..._pendingLines.map((line) => _s(line['item_id'])),
+      }..remove('');
+      var duplicates = 0, invalid = 0;
       for (final row in rows.skip(1)) {
         final code = valueAt(row, codeCol).toLowerCase();
         final name = valueAt(row, nameCol).toLowerCase();
+        if (code.isEmpty && name.isEmpty && valueAt(row, qtyCol).isEmpty) continue;
         final matches = _items.where((item) => (code.isNotEmpty && (code == _s(item['item_code']).toLowerCase() || code == _s(item['barcode']).toLowerCase())) || (name.isNotEmpty && name == _s(item['item_name']).toLowerCase()));
-        if (matches.isEmpty) continue;
+        if (matches.isEmpty) { invalid++; continue; }
         final item = matches.first;
+        final itemId = _s(item['id']);
+        if (!seenItemIds.add(itemId)) { duplicates++; continue; }
         final qty = double.tryParse(valueAt(row, qtyCol).replaceAll(',', '.')) ?? 0;
-        if (qty <= 0) continue;
+        if (qty <= 0) { invalid++; continue; }
         final basePrice = widget.kind == ErpOperationalKind.purchase ? _n(item['purchase_price']) : _n(item['sale_price']);
         final importedPrice = double.tryParse(valueAt(row, priceCol).replaceAll(',', '.')) ?? basePrice;
-        added.add({'item_id': _s(item['id']), 'item_name': _s(item['item_name']), 'quantity': qty, 'unit_id': '', 'unit_name': (_s(item['base_unit']).trim().isEmpty ? 'وحدة' : _s(item['base_unit'])), 'conversion_factor': 1.0, 'unit_price': importedPrice, 'discount': 0.0, 'tax': 0.0});
+        added.add({'item_id': itemId, 'item_code': _s(item['item_code']), 'item_name': _s(item['item_name']), 'quantity': qty, 'unit_id': '', 'unit_name': (_s(item['base_unit']).trim().isEmpty ? 'وحدة' : _s(item['base_unit'])), 'conversion_factor': 1.0, 'unit_price': importedPrice, 'discount': 0.0, 'tax': 0.0});
       }
-      if (added.isEmpty) throw StateError('لم تتطابق صفوف الملف مع الأصناف أو كانت الكميات غير صحيحة.');
-      if (mounted) setState(() { _pendingLines = [..._pendingLines, ...added]; _message = 'تم استيراد ' + added.length.toString() + ' بندًا إلى المعاينة. اضغط حفظ بعد المراجعة.'; });
+      if (added.isEmpty) throw StateError('لم تُضف بنودًا جديدة. المكرر: $duplicates، غير الصالح أو غير المطابق: $invalid.');
+      if (mounted) setState(() { _pendingLines = [..._pendingLines, ...added]; _message = 'تم استيراد ' + added.length.toString() + ' بندًا جديدًا؛ تم تجاوز ' + duplicates.toString() + ' مكررًا و' + invalid.toString() + ' صف غير صالح/غير مطابق. راجع المعاينة ثم احفظ.'; });
     } catch (e) { if (mounted) setState(() => _error = 'تعذر استيراد Excel: ' + e.toString()); }
   }
 
