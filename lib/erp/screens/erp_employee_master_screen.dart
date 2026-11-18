@@ -470,7 +470,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       ErpQuickTaskButton(label: 'إضافة', icon: Icons.add_rounded, onPressed: () { _clear(); setState(() => _message = 'أدخل بيانات الموظف الجديد ثم اضغط حفظ.'); }),
       ErpQuickTaskButton(label: 'حفظ', icon: Icons.save_outlined, onPressed: _saving ? null : _save),
       ErpQuickTaskButton(label: 'تعديل', icon: Icons.edit_outlined, onPressed: _selectedEmployeeId == null ? null : () => setState(() => _editing = true)),
-      ErpQuickTaskButton(label: 'حذف', icon: Icons.delete_outline_rounded, onPressed: _selectedEmployeeId == null ? null : _deleteEmployee),
+      ErpQuickTaskButton(label: 'حذف', icon: Icons.delete_outline_rounded, onPressed: _employees.isEmpty ? null : _chooseEmployeeDeleteScope),
       ErpQuickTaskButton(label: 'معاينة', icon: Icons.preview_outlined, onPressed: _previewEmployee),
       ErpQuickTaskButton(label: 'طباعة', icon: Icons.print_outlined, onPressed: _previewEmployee),
       ErpQuickTaskButton(label: 'تصدير Excel', icon: Icons.file_download_outlined, onPressed: _loading ? null : _exportEmployeesExcel),
@@ -484,39 +484,75 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
     return Container(height:230,margin:const EdgeInsets.only(top:8),padding:const EdgeInsets.all(8),decoration:BoxDecoration(color:Colors.white,border:Border.all(color:const Color(0xFFE9E1F1)),borderRadius:BorderRadius.circular(12)),child:Column(children:[
       Row(children:[const Expanded(child:Text('دليل الموظفين المسجلين — اختر موظفًا لعرض بياناته بالأعلى',style:TextStyle(fontWeight:FontWeight.w900,color:_purple))),Text(data.length.toString()+' / '+_employees.length.toString())]),
       Expanded(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(headingRowHeight: 40,dataRowMinHeight: 40,dataRowMaxHeight: 40,
-        columns:cols.map((col)=>DataColumn(label:SizedBox(width:col.$1=='full_name'?175:145,child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+        columns:[...cols.map((col)=>DataColumn(label:SizedBox(width:col.$1=='full_name'?175:145,child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
           Text(col.$2,style:const TextStyle(fontWeight:FontWeight.w900)),
           SizedBox(height:40,child:TextField(controller:_employeeFilters[col.$1],onChanged:(_)=>setState((){}),decoration:const InputDecoration(hintText:'بحث...',isDense:true,border:OutlineInputBorder(),prefixIcon:Icon(Icons.search,size:14),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:5))))
-        ])))).toList(),
+        ])))).toList(),DataColumn(label:Text('إجراءات'))],
         rows:data.map((e)=>DataRow(selected:_s(e['id'])==_selectedEmployeeId,onSelectChanged:(_)=>_selectEmployee(e),cells:[
-          DataCell(Text(_s(e['employee_code']))),DataCell(Text(_s(e['full_name']))),DataCell(Text(_s(e['department_name']))),DataCell(Text(_s(e['job_title']))),DataCell(Text(_s(_s(e['mobile_1']).isEmpty?e['phone']:e['mobile_1']))),DataCell(Text(e['is_active']==true?'نشط':'غير نشط'))
+          DataCell(Text(_s(e['employee_code']))),DataCell(Text(_s(e['full_name']))),DataCell(Text(_s(e['department_name']))),DataCell(Text(_s(e['job_title']))),DataCell(Text(_s(_s(e['mobile_1']).isEmpty?e['phone']:e['mobile_1']))),DataCell(Text(e['is_active']==true?'نشط':'غير نشط')),
+          DataCell(IconButton(tooltip:'حذف الموظف',onPressed:()=>_deleteEmployeeRow(e),icon:const Icon(Icons.delete_outline_rounded,color:Colors.red)))
         ])).toList()))))
     ]));
   }
 
-  Future<void> _deleteEmployee() async {
-    final id = _selectedEmployeeId;
-    if (id == null || _db == null) return;
-    final yes = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('تأكيد حذف الموظف'),
-        content: Text('هل تريد حذف ' + _ar.text + '؟'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حذف')),
-        ],
-      ),
-    );
-    if (yes != true) return;
+  Future<bool> _confirmEmployeeDeletion({required String title, required String message}) async {
+    final result = await showDialog<String>(context: context, builder: (ctx) => AlertDialog(
+      title: Text(title), content: Text(message),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, 'yes'), child: const Text('نعم، احذف')),
+        TextButton(onPressed: () => Navigator.pop(ctx, 'no'), child: const Text('لا')),
+        TextButton(onPressed: () => Navigator.pop(ctx, 'cancel'), child: const Text('إلغاء الأمر')),
+      ],
+    ));
+    return result == 'yes';
+  }
+
+  Future<void> _chooseEmployeeDeleteScope() async {
+    final scope = await showDialog<String>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('نطاق الحذف'),
+      content: const Text('اختر حذف الموظف المحدد أو حذف دليل الموظفين بالكامل.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, 'all'), child: const Text('حذف الجريد بالكامل')),
+        TextButton(onPressed: _selectedEmployeeId == null ? null : () => Navigator.pop(ctx, 'one'), child: const Text('حذف الموظف المحدد')),
+        TextButton(onPressed: () => Navigator.pop(ctx, 'cancel'), child: const Text('إلغاء الأمر')),
+      ],
+    ));
+    if (scope == 'one') {
+      final row = _employees.where((e) => _s(e['id']) == _selectedEmployeeId).firstOrNull;
+      if (row != null) await _deleteEmployeeRow(row);
+    } else if (scope == 'all') {
+      final ok = await _confirmEmployeeDeletion(title: 'حذف دليل الموظفين بالكامل',
+        message: 'سيتم حذف جميع الموظفين المسجلين لهذه الشركة وعددهم ${_employees.length}. لا يمكن التراجع. إذا كانت هناك مرفقات أو سجلات موارد بشرية مرتبطة فستمنع قاعدة البيانات الحذف.');
+      if (!ok || _db == null || _cid.isEmpty) return;
+      try {
+        await _db!.from('erp_employees').delete().eq('company_id', _cid);
+        _clear(); await _load();
+        if (mounted) setState(() => _message = 'تم حذف دليل الموظفين بالكامل.');
+      } catch (e) {
+        if (mounted) setState(() => _error = 'رفضت قاعدة البيانات حذف الدليل لوجود سجلات مرتبطة أو لعدم كفاية الصلاحيات: $e');
+      }
+    }
+  }
+
+  Future<void> _deleteEmployeeRow(Map<String, dynamic> employee) async {
+    final id = _s(employee['id']);
+    if (id.isEmpty || _db == null || _cid.isEmpty) return;
+    final ok = await _confirmEmployeeDeletion(title: 'تأكيد حذف الموظف',
+      message: 'حذف الموظف «${_s(employee['full_name'])}»؟ إذا كان مرتبطًا بحضور أو رواتب أو مستندات فستمنع قاعدة البيانات الحذف.');
+    if (!ok) return;
     try {
       await _db!.from('erp_employees').delete().eq('id', id).eq('company_id', _cid);
-      _clear();
+      if (_selectedEmployeeId == id) _clear();
       await _load();
       if (mounted) setState(() => _message = 'تم حذف الموظف.');
     } catch (e) {
-      if (mounted) setState(() => _error = 'تعذر حذف الموظف: ' + e.toString());
+      if (mounted) setState(() => _error = 'تعذر حذف الموظف بسبب ارتباطات بيانات أو صلاحيات قاعدة البيانات: $e');
     }
+  }
+
+  Future<void> _deleteEmployee() async {
+    final row = _employees.where((e) => _s(e['id']) == _selectedEmployeeId).firstOrNull;
+    if (row != null) await _deleteEmployeeRow(row);
   }
 
   Future<void> _previewEmployee() async {
