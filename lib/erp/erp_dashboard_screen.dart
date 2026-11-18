@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'services/erp_screen_layout_profiles.dart';
 import 'services/erp_print_support.dart';
@@ -10,6 +11,7 @@ import '../widgets/silsila_white_logo.dart';
 import 'widgets/erp_keyboard_navigation.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:file_saver/file_saver.dart';
 import 'package:excel/excel.dart' as excel;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -1165,11 +1167,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       for (final row in rows.skip(1)) {
         final record = <String, String>{};
         for (var i = 0; i < headers.length && i < row.length; i++) {
-          if (headers[i].isNotEmpty && headers[i] != '_مرجع داخلي') {
-            record[headers[i]] = row[i]?.value?.toString() ?? '';
+          final header = headers[i];
+          if (header.isEmpty) continue;
+          final value = row[i]?.value?.toString() ?? '';
+          if (header == 'معرف الاستيراد' || header == '_مرجع داخلي') {
+            if (value.trim().isNotEmpty) record['_مرجع داخلي'] = value.trim();
+          } else {
+            record[header] = value;
           }
         }
-        if (record.values.any((value) => value.trim().isNotEmpty)) imported.add(record);
+        if (record.entries.any((entry) => entry.key != '_مرجع داخلي' && entry.value.trim().isNotEmpty)) imported.add(record);
       }
       if (imported.isEmpty) {
         _showActionMessage('لم يتم العثور على سجلات بعد صف العناوين.');
@@ -1179,7 +1186,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: Text(silsilaText('تأكيد استيراد Excel')),
-          content: Text('سيتم استيراد ${imported.length} سجلًا إلى شاشة «$_page». ستُحدّث السجلات التي تتطابق مفاتيحها. هل تريد المتابعة؟'),
+          content: Text('سيتم فحص ${imported.length} صفًا في شاشة «$_page». ستُحدّث السجلات التي تحمل معرف الاستيراد نفسه، وتُضاف السجلات الجديدة دون تكرار المعرفات. هل تريد المتابعة؟'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(silsilaText('إلغاء'))),
             FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(silsilaText('استيراد'))),
@@ -1188,17 +1195,79 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       );
       if (confirm != true) return;
       var savedCount = 0;
-      for (final record in imported) {
-        await _workspaceRecordsService.saveRecord(companyId: companyId, pageKey: _page, record: record);
-        savedCount++;
+      var duplicateCount = 0;
+      final seen = <String>{};
+      final failedRows = <Map<String, String>>[];
+      for (var index = 0; index < imported.length; index++) {
+        final record = imported[index];
+        final identity = (record['_مرجع داخلي'] ?? record['الكود'] ?? record['كود الصنف'] ?? record['كود العميل'] ?? record['كود المورد'] ?? record['رقم المستند'] ?? record['الاسم'] ?? record['اسم الحساب'] ?? record.values.where((v) => v.trim().isNotEmpty).join('|')).trim().toLowerCase();
+        if (identity.isEmpty || !seen.add(identity)) {
+          duplicateCount++;
+          continue;
+        }
+        try {
+          await _workspaceRecordsService.saveRecord(companyId: companyId, pageKey: _page, record: record);
+          savedCount++;
+        } catch (error) {
+          failedRows.add({...record, 'سبب الفشل': error.toString(), 'رقم الصف في الملف': (index + 2).toString()});
+        }
       }
       await _loadWorkspacePage(_page);
-      if (mounted) _showActionMessage('تم استيراد $savedCount سجلًا من ملف Excel إلى شاشة «$_page».');
+      if (failedRows.isNotEmpty) {
+        await _saveWorkspaceExcelFile('silsila_failed_import_${DateTime.now().millisecondsSinceEpoch}', failedRows, sheetName: 'الصفوف الفاشلة');
+      }
+      if (mounted) {
+        final pending = failedRows.length;
+        showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('نتيجة استيراد Excel'),
+            content: Text('الشاشة: $_page\\nإجمالي الصفوف: ${imported.length}\\nتم الحفظ أو التحديث بنجاح: $savedCount\\nصفوف مكررة تم تجاوزها: $duplicateCount\\nفشل: $pending\\nالمتبقي للمراجعة: $pending${pending > 0 ? '\\nتم إنشاء ملف Excel مستقل بالصفوف الفاشلة على جهازك.' : ''}'),
+            actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
+          ),
+        );
+      }
     } catch (error) {
       if (mounted) _showActionMessage('تعذر استيراد ملف Excel: $error');
     }
   }
 
+
+  Future<void> _saveWorkspaceExcelFile(String fileName, List<Map<String, String>> rows, {String sheetName = 'بيانات الشاشة'}) async {
+    final workbook = excel.Excel.createExcel();
+    final sheet = workbook[sheetName];
+    final columns = <String>[];
+    for (final row in rows) {
+      for (final key in row.keys) {
+        if (!columns.contains(key)) columns.add(key);
+      }
+    }
+    sheet.appendRow(columns.map((key) => excel.TextCellValue(key)).toList());
+    for (final row in rows) {
+      sheet.appendRow(columns.map((key) => excel.TextCellValue(row[key] ?? '')).toList());
+    }
+    final encoded = workbook.encode();
+    if (encoded == null || encoded.isEmpty) throw StateError('تعذر إنشاء ملف Excel.');
+    await FileSaver.instance.saveFile(name: fileName, bytes: Uint8List.fromList(encoded), fileExtension: 'xlsx', mimeType: MimeType.microsoftExcel);
+  }
+
+  Future<void> _exportExcel() async {
+    final rows = _rows;
+    if (rows.isEmpty) {
+      _showActionMessage('لا توجد بيانات فعلية ظاهرة في شاشة «$_page» لتصديرها.');
+      return;
+    }
+    try {
+      final exportRows = rows.map((row) => <String, String>{
+        for (final entry in row.entries.where((entry) => entry.key != '_مرجع داخلي')) entry.key: entry.value,
+        'معرف الاستيراد': row['_مرجع داخلي'] ?? '',
+      }).toList();
+      await _saveWorkspaceExcelFile('silsila_${_page.replaceAll(RegExp(r'[^a-zA-Z0-9ء-ي]+'), '_')}_${DateTime.now().millisecondsSinceEpoch}', exportRows);
+      if (mounted) _showActionMessage('تم تصدير ${rows.length} سجلًا من شاشة «$_page». يحتوي الملف على معرف استيراد ثابت لإعادة التحديث دون تكرار.');
+    } catch (error) {
+      if (mounted) _showActionMessage('تعذر تصدير بيانات الشاشة إلى Excel: $error');
+    }
+  }
 
   Future<void> _printCurrentPagePdf() async {
     if (_rows.isEmpty) {
@@ -1265,6 +1334,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _recordAction('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), () => _showPrintPreview(pdf: false)),
         _recordAction('طباعة', Icons.print_outlined, _pink, _printCurrentPagePdf),
         _recordAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importExcel),
+        _recordAction('تصدير Excel', Icons.file_download_outlined, const Color(0xFF16834A), _exportExcel),
         _recordAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printCurrentPagePdf),
         if (reports) _recordAction('إلغاء التحديد', Icons.clear_all_rounded, _purple, () => setState(() => _selectedRecord = null)),
       ]),
