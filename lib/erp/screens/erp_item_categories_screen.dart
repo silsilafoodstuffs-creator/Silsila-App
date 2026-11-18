@@ -25,7 +25,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   final _picker = ImagePicker();
   final _workspaceRecords = ErpWorkspaceRecordsService();
   List<Map<String,String>> _activities = <Map<String,String>>[];
-  String _selectedActivityCode = 'ACT001';
+  String _selectedActivityCode = '01';
   String? _company, _error, _message, _selectedId;
   bool _loading = false, _saving = false, _editing = false;
   int _level = 0;
