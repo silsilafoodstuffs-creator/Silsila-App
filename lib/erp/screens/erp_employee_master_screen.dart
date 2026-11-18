@@ -5,6 +5,7 @@ import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../widgets/erp_quick_task_button.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
@@ -462,20 +463,20 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
     }catch(e){if(mounted)setState(()=>_error='تعذر فتح بيانات الموظف: '+e.toString());}
   }
 
-  Widget _employeeToolbar() {
-    Widget a(String label,IconData icon,Color color,VoidCallback? fn)=>Padding(padding:const EdgeInsetsDirectional.only(end:5),child:FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:color,foregroundColor:Colors.white,visualDensity:VisualDensity.compact,padding:const EdgeInsets.symmetric(horizontal:10,vertical:10)),onPressed:fn,icon:Icon(icon,size:17),label:Text(label,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w800))));
-    return SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-      a('تحديث',Icons.refresh_rounded,const Color(0xFF2475B8),_load),
-      a('إضافة',Icons.add_rounded,const Color(0xFF18865A),(){_clear();setState(()=>_message='أدخل بيانات الموظف الجديد ثم اضغط حفظ.');}),
-      a('حفظ',Icons.save_outlined,_purple,_saving?null:_save),
-      a('تعديل',Icons.edit_outlined,_orange,_selectedEmployeeId==null?null:()=>setState(()=>_editing=true)),
-      a('حذف',Icons.delete_outline_rounded,const Color(0xFFB42318),_selectedEmployeeId==null?null:_deleteEmployee),
-      a('معاينة',Icons.preview_outlined,const Color(0xFF6E2BA6),_previewEmployee),
-      a('طباعة',Icons.print_outlined,const Color(0xFFDB2777),_previewEmployee),
-      a('Excel',Icons.file_download_outlined,const Color(0xFF16834A),_loading?null:_exportEmployeesExcel),
-      a('PDF',Icons.picture_as_pdf_outlined,const Color(0xFFD32F2F),_previewEmployee),
-    ]));
-  }
+  Widget _employeeToolbar() => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Row(children: [
+      ErpQuickTaskButton(label: 'تحديث', icon: Icons.refresh_rounded, onPressed: _loading ? null : _load),
+      ErpQuickTaskButton(label: 'إضافة', icon: Icons.add_rounded, onPressed: () { _clear(); setState(() => _message = 'أدخل بيانات الموظف الجديد ثم اضغط حفظ.'); }),
+      ErpQuickTaskButton(label: 'حفظ', icon: Icons.save_outlined, onPressed: _saving ? null : _save),
+      ErpQuickTaskButton(label: 'تعديل', icon: Icons.edit_outlined, onPressed: _selectedEmployeeId == null ? null : () => setState(() => _editing = true)),
+      ErpQuickTaskButton(label: 'حذف', icon: Icons.delete_outline_rounded, onPressed: _selectedEmployeeId == null ? null : _deleteEmployee),
+      ErpQuickTaskButton(label: 'معاينة', icon: Icons.preview_outlined, onPressed: _previewEmployee),
+      ErpQuickTaskButton(label: 'طباعة', icon: Icons.print_outlined, onPressed: _previewEmployee),
+      ErpQuickTaskButton(label: 'تصدير Excel', icon: Icons.file_download_outlined, onPressed: _loading ? null : _exportEmployeesExcel),
+      ErpQuickTaskButton(label: 'طباعة PDF', icon: Icons.picture_as_pdf_outlined, onPressed: _previewEmployee),
+    ]),
+  );
 
   Widget _employeeGrid() {
     const cols=< (String,String) >[('employee_code','الكود'),('full_name','اسم الموظف'),('department_name','الإدارة / القسم'),('job_title','الوظيفة'),('mobile_1','الموبايل'),('is_active','الحالة')];
