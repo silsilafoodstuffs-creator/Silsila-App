@@ -16,8 +16,8 @@ import 'erp_user_classifications_screen.dart';
 
 const _userAdminPurple = Color(0xFF3E007D);
 const _userAdminCanvas = Color(0xFFF7F5FA);
-const _userAdminActions = <String>['مسموح','تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','استيراد Excel','طباعة PDF','الوصول السريع'];
-const _userAdminActionFields = <String,String>{'مسموح':'can_access','تحديث':'can_refresh','إضافة':'can_add','حفظ':'can_save','تعديل':'can_edit','حذف':'can_delete','معاينة':'can_preview','طباعة':'can_print','استيراد Excel':'can_import_excel','طباعة PDF':'can_print_pdf','الوصول السريع':'show_in_quick_tasks'};
+const _userAdminActions = <String>['مسموح','تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','استيراد Excel','تصدير Excel','طباعة PDF','الوصول السريع'];
+const _userAdminActionFields = <String,String>{'مسموح':'can_access','تحديث':'can_refresh','إضافة':'can_add','حفظ':'can_save','تعديل':'can_edit','حذف':'can_delete','معاينة':'can_preview','طباعة':'can_print','استيراد Excel':'can_import_excel','تصدير Excel':'can_export_excel','طباعة PDF':'can_print_pdf','الوصول السريع':'show_in_quick_tasks'};
 const _permissionActions = <String>['مسموح','تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','Excel','PDF'];
 const _permissionActionFields = <String,String>{'مسموح':'can_access','تحديث':'can_refresh','إضافة':'can_add','حفظ':'can_save','تعديل':'can_edit','حذف':'can_delete','معاينة':'can_preview','طباعة':'can_print','Excel':'can_import_excel','PDF':'can_print_pdf'};
 const _userAdminTree = <String,Map<String,List<String>>>{
