@@ -193,6 +193,72 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
     }
   }
 
+  Future<bool> _confirmPaymentDelete(String title, String message) async {
+    final answer = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      title: Text(title), content: Text(message),
+      actions: [
+        FilledButton(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318)),
+          onPressed: () => Navigator.pop(ctx, true), child: const Text('نعم، احذف')),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('لا')),
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء الأمر')),
+      ],
+    ));
+    return answer == true;
+  }
+
+  Future<void> _deletePaymentRow(Map<String, dynamic> row) async {
+    final company = (widget.companyId ?? '').trim();
+    final id = _s(row['id']);
+    if (company.isEmpty || id.isEmpty || _db == null) return;
+    final name = _s(row['name_ar']);
+    final yes = await _confirmPaymentDelete('تأكيد حذف طريقة الدفع',
+      'هل ترغب في حذف «$name» فقط؟ قد تمنع قاعدة البيانات الحذف إذا كانت الطريقة مستخدمة في مستندات سابقة.');
+    if (!yes || !mounted) return;
+    setState(() => _saving = true);
+    try {
+      await _db!.from('erp_payment_methods').delete().eq('id', id).eq('company_id', company);
+      if (mounted) setState(() { _selectedId = null; _message = 'تم حذف طريقة الدفع «$name».'; });
+      await _load();
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر حذف طريقة الدفع؛ تحقق من ارتباطاتها بالمستندات. $e');
+    } finally { if (mounted) setState(() => _saving = false); }
+  }
+
+  Future<void> _deleteAllPaymentMethods() async {
+    final company = (widget.companyId ?? '').trim();
+    if (company.isEmpty || _db == null || _rows.isEmpty) return;
+    final yes = await _confirmPaymentDelete('تحذير: حذف دليل طرق الدفع بالكامل',
+      'هل ترغب في حذف جميع طرق الدفع وعددها ${_rows.length} للشركة الحالية؟ قد ترفض قاعدة البيانات الحذف إذا كانت هناك مستندات مرتبطة. لن نحذف أي مستندات مالية.');
+    if (!yes || !mounted) return;
+    setState(() => _saving = true);
+    try {
+      await _db!.from('erp_payment_methods').delete().eq('company_id', company);
+      if (mounted) setState(() { _selectedId = null; _editing = false; _clear(); _message = 'تم حذف دليل طرق الدفع بالكامل.'; });
+      await _load();
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر حذف الدليل بالكامل؛ قد توجد مستندات مرتبطة بطرق الدفع. لم نحذف المستندات. $e');
+    } finally { if (mounted) setState(() => _saving = false); }
+  }
+
+  Future<void> _choosePaymentDeleteScope() async {
+    final scope = await showDialog<String>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('اختر نطاق الحذف'),
+      content: const Text('اختر حذف طريقة الدفع المحددة أو دليل طرق الدفع بالكامل.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, 'row'), child: const Text('حذف الصف المحدد')),
+        FilledButton(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318)),
+          onPressed: () => Navigator.pop(ctx, 'grid'), child: const Text('حذف الدليل بالكامل')),
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء الأمر')),
+      ],
+    ));
+    if (scope == 'row') {
+      final row = _rowById(_selectedId);
+      if (row != null) await _deletePaymentRow(row);
+    } else if (scope == 'grid') {
+      await _deleteAllPaymentMethods();
+    }
+  }
+
   Map<String, dynamic>? _rowById(String? id) {
     if (id == null) return null;
     for (final row in _rows) {
@@ -323,6 +389,7 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
                 _task('طباعة', Icons.print, const Color(0xFFFF27C3), _filtered.isEmpty ? null : () => _exportPdf(print: true)),
                 _task('Excel', Icons.file_download, const Color(0xFF16834A), _filtered.isEmpty ? null : _exportExcel),
                 _task('PDF', Icons.picture_as_pdf, const Color(0xFFD32F2F), _filtered.isEmpty ? null : () => _exportPdf(print: false)),
+                _task('حذف', Icons.delete_outline, const Color(0xFFB42318), _saving || _rows.isEmpty ? null : _choosePaymentDeleteScope),
               ])),
             ]),
           )),
@@ -412,6 +479,7 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
                     DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
                       IconButton(tooltip: 'تعديل', onPressed: () => _edit(_filtered[i]), icon: const Icon(Icons.edit_outlined, color: _paymentPurple)),
                       IconButton(tooltip: 'تفعيل/إيقاف', onPressed: () => _toggle(_filtered[i]), icon: Icon(_filtered[i]['is_active'] == true ? Icons.toggle_on : Icons.toggle_off, color: _paymentOrange)),
+                      IconButton(tooltip: 'حذف هذا الصف فقط', onPressed: _saving ? null : () => _deletePaymentRow(_filtered[i]), icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFB42318))),
                     ])),
                   ]),
               ],
