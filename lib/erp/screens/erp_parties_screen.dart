@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/erp_excel_export_service.dart';
+import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_center_toast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -333,6 +335,34 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
       if (!mounted) return; setState(() { saving = false; editing = false; message = 'تم حفظ بيانات ${kind == 'customer' ? 'العميل' : 'المورد'} بنجاح.'; }); await _loadAll();
     } catch(e) { if (mounted) setState(() { saving = false; error = 'فشل الحفظ: $e'; }); }
   }
+  Future<void> _exportParties() async {
+    try {
+      await exportErpExcel(
+        fileName: kind == 'customer' ? 'silsila_customers' : 'silsila_suppliers',
+        sheets: {'العملاء والموردون': rows},
+        columns: {'العملاء والموردون': {
+          'معرف السجل (لا تعدله)': 'id',
+          'الكود': 'party_code',
+          'الاسم بالعربية': 'party_name',
+          'الاسم بالإنجليزية': 'party_name_en',
+          'النوع': 'party_kind',
+          'التصنيف': 'customer_type',
+          'نوع التعامل': 'transaction_type',
+          'الدولة': 'country',
+          'المحافظة': 'governorate',
+          'المركز / الحي': 'district',
+          'المنطقة': 'area',
+          'العنوان': 'address',
+          'معرف مندوب المبيعات': 'sales_rep_employee_id',
+          'نشط': 'is_active',
+        }},
+      );
+      if (mounted) ErpCenterToast.show(context, 'تم تصدير ${rows.length} سجلًا من بيانات ${kind == 'customer' ? 'العملاء' : 'الموردين'} الفعلية.');
+    } catch (e) {
+      if (mounted) ErpCenterToast.show(context, 'تعذر تصدير البيانات: $e', isError: true, duration: const Duration(seconds: 3));
+    }
+  }
+
   Future<void> _manageClassifications() async {
     final controller = TextEditingController();
     await showDialog<void>(
@@ -458,7 +488,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   Widget build(BuildContext context){
     final title=kind=='customer'?'بيانات العملاء':'بيانات الموردين';
     return Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:purple,borderRadius:BorderRadius.circular(12)),child:Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),const Text('بطاقات منظمة في جدول بثلاثة صفوف لكل سجل',style:TextStyle(color:Colors.white70))])),Wrap(spacing:6,children:[OutlinedButton.icon(onPressed:loading?null:_loadAll,icon:const Icon(Icons.refresh,color:Colors.white),label:const Text('تحديث',style:TextStyle(color:Colors.white))),FilledButton.icon(onPressed:editing?null:_new,icon:const Icon(Icons.add),label:const Text('إضافة')),FilledButton.icon(onPressed:!editing||saving?null:_save,icon:const Icon(Icons.save),label:const Text('حفظ')),OutlinedButton.icon(onPressed:selectedPartyId==null||editing?null:()=>setState(()=>editing=true),icon:const Icon(Icons.edit_outlined,color:Colors.white),label:const Text('تعديل',style:TextStyle(color:Colors.white))),OutlinedButton.icon(onPressed:_manageClassifications,icon:const Icon(Icons.category_outlined,color:Colors.white),label:const Text('تصنيفات',style:TextStyle(color:Colors.white)))]) ])),
+      Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:purple,borderRadius:BorderRadius.circular(12)),child:Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),const Text('بطاقات منظمة في جدول بثلاثة صفوف لكل سجل',style:TextStyle(color:Colors.white70))])),Wrap(spacing:6,children:[OutlinedButton.icon(onPressed:loading?null:_loadAll,icon:const Icon(Icons.refresh,color:Colors.white),label:const Text('تحديث',style:TextStyle(color:Colors.white))),FilledButton.icon(onPressed:editing?null:_new,icon:const Icon(Icons.add),label:const Text('إضافة')),FilledButton.icon(onPressed:!editing||saving?null:_save,icon:const Icon(Icons.save),label:const Text('حفظ')),OutlinedButton.icon(onPressed:selectedPartyId==null||editing?null:()=>setState(()=>editing=true),icon:const Icon(Icons.edit_outlined,color:Colors.white),label:const Text('تعديل',style:TextStyle(color:Colors.white))),OutlinedButton.icon(onPressed:_manageClassifications,icon:const Icon(Icons.category_outlined,color:Colors.white),label:const Text('تصنيفات',style:TextStyle(color:Colors.white))),ErpQuickTaskButton(label:'تصدير Excel',icon:Icons.file_download_outlined,onPressed:loading||editing?null:_exportParties)]) ])),
       if(error!=null)Padding(padding:const EdgeInsets.all(8),child:Text(error!,style:const TextStyle(color:Colors.red))),
       if(message!=null)Padding(padding:const EdgeInsets.all(8),child:Text(message!,style:const TextStyle(color:Colors.green))),
       if(loading||saving)const LinearProgressIndicator(),
