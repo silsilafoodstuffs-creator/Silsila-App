@@ -375,7 +375,11 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
         final code = value(row, 'الكود');
         final id = value(row, 'معرف السجل (لا تعدله)');
         if (name.isEmpty && code.isEmpty && id.isEmpty) continue;
-        final identity = id.isNotEmpty ? 'id:$id' : code.isNotEmpty ? 'code:$code' : 'name:${name.toLowerCase()}';
+        if (id.isEmpty && code.isEmpty) {
+          failed.add({'row': rowNumber, 'party_code': code, 'party_name': name, 'reason': 'معرف السجل أو الكود مطلوب لمنع تكرار البيانات'});
+          continue;
+        }
+        final identity = id.isNotEmpty ? 'id:$id' : 'code:$code';
         if (!seen.add(identity)) { duplicates++; continue; }
         if (name.isEmpty) {
           failed.add({'row': rowNumber, 'party_code': code, 'party_name': name, 'reason': 'الاسم بالعربية مطلوب'});
