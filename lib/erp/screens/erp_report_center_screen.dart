@@ -1,4 +1,7 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:excel/excel.dart' as excel;
+import 'package:file_saver/file_saver.dart';
 import '../widgets/erp_center_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -278,6 +281,34 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     return '"$text"';
   }
 
+  Future<void> _exportExcel() async {
+    final rows = _visibleRows;
+    final columns = _columns;
+    if (rows.isEmpty || columns.isEmpty) {
+      ErpCenterToast.show(context, 'لا توجد بيانات تقرير فعلية للتصدير.');
+      return;
+    }
+    try {
+      final workbook = excel.Excel.createExcel();
+      final sheet = workbook['بيانات التقرير'];
+      sheet.appendRow(columns.map((key) => excel.TextCellValue(key)).toList());
+      for (final row in rows) {
+        sheet.appendRow(columns.map((key) => excel.TextCellValue((row[key] ?? '').toString())).toList());
+      }
+      final bytes = workbook.encode();
+      if (bytes == null || bytes.isEmpty) throw StateError('تعذر إنشاء ملف Excel.');
+      await FileSaver.instance.saveFile(
+        name: 'silsila_report_${DateTime.now().millisecondsSinceEpoch}',
+        bytes: Uint8List.fromList(bytes),
+        fileExtension: 'xlsx',
+        mimeType: MimeType.microsoftExcel,
+      );
+      if (mounted) ErpCenterToast.show(context, 'تم تصدير ${rows.length} سجلًا من التقرير إلى Excel.');
+    } catch (error) {
+      if (mounted) ErpCenterToast.show(context, 'تعذر تصدير التقرير: $error', isError: true);
+    }
+  }
+
   Future<void> _copyCsv() async {
     final rows = _visibleRows;
     final cols = _columns;
@@ -310,7 +341,8 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
                   Expanded(child: Text(widget.reportName,
                       style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Color(0xFF3E007D)))),
                   IconButton(tooltip: 'تحديث', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
-                  IconButton(tooltip: 'نسخ CSV إلى Excel', onPressed: rows.isEmpty ? null : _copyCsv, icon: const Icon(Icons.file_download_outlined)),
+                  IconButton(tooltip: 'نسخ CSV إلى Excel', onPressed: rows.isEmpty ? null : _copyCsv, icon: const Icon(Icons.content_copy_outlined)),
+                  FilledButton.icon(onPressed: _loading || rows.isEmpty ? null : _exportExcel, icon: const Icon(Icons.file_download_outlined, size: 17), label: const Text('تصدير Excel')),
                 ]),
                 const SizedBox(height: 6),
                 Text(_sourceTable == null ? 'تقرير مرتبط ببيانات قاعدة البيانات' : 'مصدر البيانات: $_sourceTable • المحمّل: ${_rows.length}${_hasMore ? ' • توجد دفعات أخرى' : ''}',
