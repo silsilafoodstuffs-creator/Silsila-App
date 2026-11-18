@@ -67,14 +67,30 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         .eq('company_id', widget.companyId.trim())
         .order('brand_code');
       final groups = await _db.from('erp_brand_groups').select('id,group_code,group_name,is_active').eq('company_id', widget.companyId.trim()).order('group_code');
-      final activities = await _db.from('activity_types')
-          .select('code,name')
-          .eq('is_active', true)
-          .order('sort_order')
-          .order('code');
+      // The activity directory is auxiliary metadata. A missing or restricted
+      // activity_types table must never hide the brands/groups catalog.
+      List<Map<String,dynamic>> activities = <Map<String,dynamic>>[];
+      try {
+        final activityRows = await _db.from('activity_types')
+            .select('code,name')
+            .eq('is_active', true)
+            .order('sort_order')
+            .order('code');
+        activities = List<Map<String,dynamic>>.from(activityRows);
+      } catch (_) {
+        activities = const [
+          {'code':'ACT001','name':'مواد غذائية'},
+          {'code':'ACT002','name':'لوازم بناء'},
+          {'code':'ACT003','name':'ملابس واكسسوارات'},
+          {'code':'ACT004','name':'أجهزة وإلكترونيات'},
+          {'code':'ACT005','name':'سيارات ومعدات'},
+          {'code':'ACT006','name':'خدمات شحن ونقل'},
+          {'code':'ACT007','name':'أثاث وديكورات'},
+        ];
+      }
       if (!mounted) return;
       setState(() {
-        _activities = List<Map<String,dynamic>>.from(activities);
+        _activities = activities;
         _groups = List<Map<String,dynamic>>.from(groups);
         _rows = List<Map<String,dynamic>>.from(rows);
         _syncGridNameControllers();
