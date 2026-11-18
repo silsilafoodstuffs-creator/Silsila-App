@@ -97,7 +97,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       };
       String canonicalActivityCode(String raw, Set<String> availableCodes) {
         final code = raw.trim().toUpperCase();
-        final legacy = RegExp(r'^ACT(\d{3}).firstMatch(code);
+        final legacy = RegExp(r'^ACT(\d{3})$').firstMatch(code);
         if (legacy != null) {
           final numeric = int.tryParse(legacy.group(1)!);
           if (numeric != null) {
