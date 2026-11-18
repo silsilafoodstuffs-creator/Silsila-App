@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/erp_excel_export_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
@@ -234,6 +235,44 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
   Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) =>
       ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
+  Future<void> _exportPayroll() async {
+    try {
+      await exportErpExcel(
+        fileName: 'silsila_payroll',
+        sheets: {'مسيرات الرواتب': _runs, 'تفاصيل المسير المحدد': _lines},
+        columns: {
+          'مسيرات الرواتب': {
+            'معرف المسير': 'id',
+            'كود المسير': 'run_code',
+            'بداية الفترة': 'period_start',
+            'نهاية الفترة': 'period_end',
+            'الحالة': 'status',
+            'عدد الموظفين': 'employee_count',
+            'إجمالي المستحقات': 'gross_total',
+            'إجمالي الاستقطاعات': 'deduction_total',
+            'صافي الرواتب': 'net_total',
+            'معرف القيد المحاسبي': 'journal_entry_id',
+          },
+          'تفاصيل المسير المحدد': {
+            'معرف السطر': 'id',
+            'معرف المسير': 'payroll_run_id',
+            'معرف الموظف': 'employee_id',
+            'الراتب الأساسي': 'basic_salary',
+            'البدلات': 'allowances',
+            'العمولات': 'commissions',
+            'الإضافي': 'overtime',
+            'الاستقطاعات': 'deductions',
+            'إجمالي المستحقات': 'gross_total',
+            'صافي المستحق': 'net_total',
+          },
+        },
+      );
+      if (mounted) setState(() => _message = 'تم تصدير ${_runs.length} مسيرًا و${_lines.length} تفصيلًا محمّلًا للمسير المحدد.');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر تصدير مسيرات الرواتب: $e');
+    }
+  }
+
   Future<void> _previewRuns() async {
     await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('معاينة مسيرات الرواتب'),
@@ -267,6 +306,7 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
               _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _createRun),
               _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewRuns),
               _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _previewRuns),
+              _quickTask('تصدير Excel', Icons.file_download_outlined, const Color(0xFF16834A), _loading ? null : _exportPayroll),
             ])),
           ]),
         )),
