@@ -1150,6 +1150,30 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     }
   }
 
+  Future<void> _chooseWorkspaceDeleteScope() async {
+    final scope = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(silsilaText('اختر نطاق الحذف')),
+        content: Text('هل تريد حذف صف واحد أم جميع بيانات شاشة «$_page»؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, 'row'), child: Text(silsilaText('حذف الصف المحدد'))),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318)),
+            onPressed: () => Navigator.pop(ctx, 'grid'),
+            child: Text(silsilaText('حذف الجريد بالكامل')),
+          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(silsilaText('إلغاء الأمر'))),
+        ],
+      ),
+    );
+    if (scope == 'row') {
+      await _deleteCurrentRecord();
+    } else if (scope == 'grid') {
+      await _deleteEntireWorkspaceGrid();
+    }
+  }
+
   Future<void> _deleteCurrentRecord() async {
     final selected = _selectedRecord;
     if (selected == null) {
@@ -1166,9 +1190,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       return;
     }
     while (_workspaceHasMore[_page] == true && mounted) {
+      final previousOffset = _workspaceOffsets[_page] ?? 0;
       await _loadWorkspacePage(_page, loadMore: true);
       while (_workspacePageLoadsInProgress.contains(_page) && mounted) {
         await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+      if ((_workspaceOffsets[_page] ?? 0) <= previousOffset) {
+        _showActionMessage('تعذر تحميل بقية السجلات؛ أوقفنا الحذف حتى لا نحذف جزءًا من الجريد فقط.');
+        return;
       }
     }
     if (!mounted) return;
@@ -1408,8 +1437,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         if (!reports && includeAdd) _recordAction('إضافة', Icons.add_rounded, const Color(0xFF18865A), _openAddDialog),
         if (!reports) _recordAction('حفظ', Icons.save_outlined, _purple, _saveCurrentPage),
         if (!reports) _recordAction('تعديل', Icons.edit_outlined, _orange, _editCurrentRecord),
-        if (!reports) _recordAction('حذف الصف', Icons.delete_outline_rounded, const Color(0xFFB42318), _deleteCurrentRecord),
-        _recordAction('حذف الجريد بالكامل', Icons.delete_sweep_outlined, const Color(0xFFB42318), _deleteEntireWorkspaceGrid),
+        if (!reports) _recordAction('حذف', Icons.delete_outline_rounded, const Color(0xFFB42318), _chooseWorkspaceDeleteScope),
         _recordAction('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), () => _showPrintPreview(pdf: false)),
         _recordAction('طباعة', Icons.print_outlined, _pink, _printCurrentPagePdf),
         _recordAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importExcel),
