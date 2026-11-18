@@ -94,7 +94,7 @@ class ErpQuickTaskButton extends StatelessWidget {
               BoxShadow(color: Colors.white.withValues(alpha: .20), blurRadius: 3, offset: const Offset(0, -1)),
             ],
           ),
-          child: FilledButton.icon(
+          child: FilledButton(
         onPressed: onPressed == null ? null : () async {
           final action = label.trim();
           final isSave = action.contains('حفظ');
@@ -106,14 +106,8 @@ class ErpQuickTaskButton extends StatelessWidget {
                 title: Text(isSave ? 'تأكيد الحفظ' : 'تأكيد الحذف'),
                 content: Text(isSave ? 'هل ترغب في الحفظ؟' : 'هل ترغب في الحذف؟'),
                 actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(dialogContext, false),
-                    child: const Text('إلغاء'),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(dialogContext, true),
-                    child: Text(isSave ? 'حفظ' : 'حذف'),
-                  ),
+                  TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+                  FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(isSave ? 'حفظ' : 'حذف')),
                 ],
               ),
             );
@@ -122,31 +116,17 @@ class ErpQuickTaskButton extends StatelessWidget {
           try {
             await Future<void>.sync(onPressed!);
             if (!context.mounted) return;
-            final successMessage = isSave
-                ? 'تم الحفظ'
-                : isDelete
-                    ? 'تم الحذف'
-                    : action.contains('تحديث')
-                        ? 'تم التحديث'
-                        : null;
-            if (successMessage != null) {
-              ErpCenterToast.show(context, successMessage);
-            }
+            final successMessage = isSave ? 'تم الحفظ' : isDelete ? 'تم الحذف' : action.contains('تحديث') ? 'تم التحديث' : null;
+            if (successMessage != null) ErpCenterToast.show(context, successMessage);
           } catch (error) {
             if (!context.mounted) return;
             ErpCenterToast.show(context, 'تعذر تنفيذ العملية: $error', isError: true, duration: const Duration(seconds: 3));
           }
         },
-        icon: Icon(_icon, size: compact ? 16 : 17),
-        label: Text(
-          label,
-          softWrap: false,
-          style: TextStyle(
-            fontSize: compact ? 11 : 12,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
         style: FilledButton.styleFrom(
+          fixedSize: Size(compact ? 56 : 60, compact ? 56 : 60),
+          minimumSize: Size(compact ? 56 : 60, compact ? 56 : 60),
+          maximumSize: Size(compact ? 56 : 60, compact ? 56 : 60),
           backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
           disabledBackgroundColor: Colors.transparent,
@@ -156,12 +136,19 @@ class ErpQuickTaskButton extends StatelessWidget {
           animationDuration: const Duration(milliseconds: 160),
           overlayColor: Colors.white.withValues(alpha: .16),
           side: BorderSide.none,
-          padding: EdgeInsets.symmetric(
-            horizontal: compact ? 9 : 11,
-            vertical: compact ? 8 : 10,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
           visualDensity: VisualDensity.compact,
-          shape: RoundedRectangleBorder(borderRadius: radius),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(_icon, size: compact ? 17 : 18),
+            const SizedBox(height: 2),
+            Flexible(child: Text(label, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: compact ? 8.5 : 9, height: 1.0, fontWeight: FontWeight.w800))),
+          ],
         ),
           ),
         ),
