@@ -191,16 +191,54 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     }
   }
 
+  Future<bool> _confirmActivityDelete({required String title, required String message}) async {
+    final answer = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      title: Text(title), content: Text(message),
+      actions: [
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318)),
+          onPressed: () => Navigator.pop(ctx, true), child: const Text('نعم، احذف'),
+        ),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('لا')),
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء الأمر')),
+      ],
+    ));
+    return answer == true;
+  }
+
+  Future<void> _deleteActivityRow(Map<String, String> row) async {
+    if (!_editing) { setState(() => _message = 'اضغط «تعديل» أولًا، وتأكد من صلاحية الحذف.'); return; }
+    final code = (row['كود النشاط'] ?? '').trim();
+    final name = (row['اسم النشاط عربي'] ?? code).trim();
+    if (code.isEmpty || (_companyId ?? '').isEmpty) {
+      setState(() => _message = 'لا يمكن حذف هذا الصف لعدم اكتمال مرجعه أو الشركة النشطة.');
+      return;
+    }
+    final yes = await _confirmActivityDelete(
+      title: 'تأكيد حذف صف نشاط',
+      message: 'هل ترغب في حذف النشاط «$name» ( $code ) فقط؟ ستظل بقية الصفوف كما هي.',
+    );
+    if (!yes || !mounted) return;
+    setState(() => _saving = true);
+    try {
+      await _service.deleteRecord(companyId: _companyId!, pageKey: _pageKey, recordKey: row['_مرجع داخلي'] ?? code);
+      await Supabase.instance.client.from('activity_types').delete().eq('code', code);
+      await _load();
+      if (mounted) setState(() => _message = 'تم حذف النشاط «$name» فقط.');
+    } catch (e) {
+      if (mounted) setState(() => _message = 'تعذر حذف النشاط: $e');
+    } finally { if (mounted) setState(() => _saving = false); }
+  }
+
   Future<void> _delete() async {
-    if (!_editing) { setState(() => _message = 'اضغط «تعديل» أولًا قبل حذف البيانات.'); return; }
+    if (!_editing) { setState(() => _message = 'اضغط «تعديل» أولًا، وتأكد من صلاحية الحذف.'); return; }
     if (_rows.isEmpty || (_companyId ?? '').isEmpty) { setState(() => _message = 'لا توجد بيانات قابلة للحذف.'); return; }
     final count = _rows.length;
-    final yes = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
-      title: const Text('تأكيد حذف بيانات الجريد بالكامل'),
-      content: Text('سيتم حذف جميع أنواع الأنشطة الظاهرة وعددها $count من بيانات الشركة ومن قائمة الأنشطة بالتطبيق. لا يمكن التراجع عن هذه العملية. هل تريد المتابعة؟'),
-      actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('حذف الكل'))],
-    ));
-    if (yes != true) return;
+    final yes = await _confirmActivityDelete(
+      title: 'تحذير: حذف الجريد بالكامل',
+      message: 'هل ترغب في حذف جميع أنواع الأنشطة بالكامل؟ عدد الصفوف: $count. سيؤثر ذلك على قائمة الأنشطة المرتبطة بالتطبيق، ولا يمكن التراجع عن العملية.',
+    );
+    if (!yes || !mounted) return;
     setState(() => _saving = true);
     try {
       for (final row in List<Map<String,String>>.from(_rows)) {
@@ -350,14 +388,15 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       ]))),
       if (_message != null) Container(color: const Color(0xFFF7F2FC), padding: const EdgeInsets.all(7), child: Text(_message!, style: const TextStyle(fontSize: 11, color: Color(0xFF3E007D)))),
       const SizedBox(height: 8),
-      Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40, horizontalMargin: 5, columnSpacing: 5, headingRowColor: WidgetStateProperty.all(const Color(0xFFF1EAF9)), columns: const [DataColumn(label: Text('م')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط عربي')), DataColumn(label: Text('اسم النشاط إنجليزي')), DataColumn(label: Text('نشط')), DataColumn(label: Text('يظهر في التطبيق'))], rows: [
+      Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40, horizontalMargin: 5, columnSpacing: 5, headingRowColor: WidgetStateProperty.all(const Color(0xFFF1EAF9)), columns: const [DataColumn(label: Text('م')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط عربي')), DataColumn(label: Text('اسم النشاط إنجليزي')), DataColumn(label: Text('نشط')), DataColumn(label: Text('يظهر في التطبيق')), DataColumn(label: Text('إجراءات'))], rows: [
         for (var i = 0; i < _rows.length; i++) DataRow(cells: [
           DataCell(SizedBox(width: 38, child: Text('${i + 1}', textAlign: TextAlign.center))),
           DataCell(SizedBox(width: 82, child: Align(alignment: AlignmentDirectional.centerStart, child: Text(_rows[i]['كود النشاط'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6F42C1)))))),
           DataCell(SizedBox(width: 220, child: TextFormField(initialValue: _rows[i]['اسم النشاط عربي'] ?? '', key: ValueKey('activity-ar-$i-${_rows[i]['كود النشاط']}'), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4)), onChanged: (v) => _rows[i]['اسم النشاط عربي'] = v))),
-          DataCell(SizedBox(width: 220, child: TextFormField(initialValue: _rows[i]['اسم النشاط إنجليزي'] ?? '', key: ValueKey('activity-en-$i-${_rows[i]['كود النشاط']}'), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4)), onTap: () => setState(() => _selected = _rows[i]['كود النشاط']), onChanged: (v) => _rows[i]['اسم النشاط إنجليزي'] = v))),
+          DataCell(SizedBox(width: 220, child: TextFormField(initialValue: _rows[i]['اسم النشاط إنجليزي'] ?? '', key: ValueKey('activity-en-$i-${_rows[i]['كود النشاط']}'), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4)), onChanged: (v) => _rows[i]['اسم النشاط إنجليزي'] = v))),
           DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: (_rows[i]['نشط'] ?? 'true') == 'true', onChanged: _editing ? (v) => setState(() { final active = v ?? false; _rows[i]['نشط'] = active.toString(); if (!active) _rows[i]['يظهر في التطبيق'] = 'false'; }) : null)),
           DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: (_rows[i]['يظهر في التطبيق'] ?? 'true') == 'true' && (_rows[i]['نشط'] ?? 'true') == 'true', onChanged: _editing && (_rows[i]['نشط'] ?? 'true') == 'true' ? (v) => setState(() => _rows[i]['يظهر في التطبيق'] = (v ?? false).toString()) : null)),
+          DataCell(IconButton(tooltip: 'حذف هذا النشاط فقط', onPressed: _saving || !_editing ? null : () => _deleteActivityRow(_rows[i]), icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFB42318)))),
         ]),
       ]))),
       if (_loading) const LinearProgressIndicator(minHeight: 2),
