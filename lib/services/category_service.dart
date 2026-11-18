@@ -40,7 +40,7 @@ class CategoryService {
     // Prefer the ERP's canonical item-category tree: this is the live master catalogue edited
     // from the desktop program, including binary images stored in PostgreSQL.
     try {
-      var resolvedActivityCode = _emptyToNull(activityCode);
+      var resolvedActivityCode = _normalizeActivityCode(activityCode);
       if (activity != null && resolvedActivityCode == null) {
         final activityRow = await _requireClient
             .from('activity_types')
@@ -48,7 +48,11 @@ class CategoryService {
             .eq('name', activity)
             .eq('is_active', true)
             .maybeSingle();
-        resolvedActivityCode = activityRow?['code']?.toString();
+        resolvedActivityCode = _normalizeActivityCode(
+          activityRow?['code']?.toString() ?? activity,
+        );
+      } else if (activity != null && resolvedActivityCode == null) {
+        resolvedActivityCode = _normalizeActivityCode(activity);
       }
       // Never query the entire cross-activity catalogue when the selected activity
       // cannot be resolved. That previously mixed unrelated categories in the app.
@@ -333,6 +337,67 @@ class CategoryService {
     }
 
     return cleaned;
+  }
+
+  /// The ERP category catalogue stores activity codes as 01..20.
+  /// Older account flows and records may still send ACT001 or numeric 1.
+  String? _normalizeActivityCode(String? value) {
+    final clean = _emptyToNull(value)?.toUpperCase();
+    if (clean == null) return null;
+    final legacy = RegExp(r'^ACT(\\d{3})
+
+  String _toPostgresBytea(Uint8List bytes) {
+    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    return r'\x' + hex;
+  }
+
+  void _validateImageUrl(String value) {
+    final uri = Uri.tryParse(value);
+
+    if (uri == null ||
+        !uri.hasScheme ||
+        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        uri.host.isEmpty) {
+      throw ArgumentError('رابط صورة القسم غير صالح.');
+    }
+  }
+}
+).firstMatch(clean);
+    if (legacy != null) {
+      final number = int.tryParse(legacy.group(1)!);
+      return number == null ? clean : number.toString().padLeft(2, '0');
+    }
+    if (RegExp(r'^\\d{1,2}
+
+  String _toPostgresBytea(Uint8List bytes) {
+    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    return r'\x' + hex;
+  }
+
+  void _validateImageUrl(String value) {
+    final uri = Uri.tryParse(value);
+
+    if (uri == null ||
+        !uri.hasScheme ||
+        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        uri.host.isEmpty) {
+      throw ArgumentError('رابط صورة القسم غير صالح.');
+    }
+  }
+}
+).hasMatch(clean)) {
+      return int.parse(clean).toString().padLeft(2, '0');
+    }
+    const aliases = <String, String>{
+      'FOOD': '01', 'مواد غذائية': '01', 'FOODSTUFFS': '01',
+      'BUILDING': '02', 'لوازم بناء': '02',
+      'CLOTHING': '03', 'ملابس واكسسوارات': '03',
+      'ELECTRONICS': '04', 'أجهزة وإلكترونيات': '04',
+      'VEHICLES': '05', 'سيارات ومعدات': '05',
+      'SHIPPING': '06', 'خدمات شحن ونقل': '06',
+      'FURNITURE': '07', 'أثاث وديكورات': '07',
+    };
+    return aliases[clean] ?? clean;
   }
 
   String? _emptyToNull(String? value) {
