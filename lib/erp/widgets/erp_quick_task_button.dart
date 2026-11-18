@@ -124,9 +124,9 @@ class ErpQuickTaskButton extends StatelessWidget {
           }
         },
         style: FilledButton.styleFrom(
-          fixedSize: Size(compact ? 46 : 50, compact ? 46 : 50),
-          minimumSize: Size(compact ? 46 : 50, compact ? 46 : 50),
-          maximumSize: Size(compact ? 46 : 50, compact ? 46 : 50),
+          fixedSize: const Size(46, 46),
+          minimumSize: const Size(46, 46),
+          maximumSize: const Size(46, 46),
           backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
           disabledBackgroundColor: Colors.transparent,
@@ -144,10 +144,10 @@ class ErpQuickTaskButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(_icon, size: compact ? 15 : 16),
+            Icon(_icon, size: compact ? 14 : 15),
             const SizedBox(height: 2),
             Flexible(child: Text(label, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: compact ? 7.5 : 8, height: 1.0, fontWeight: FontWeight.w800))),
+              style: TextStyle(fontSize: 7.5, height: 1.0, fontWeight: FontWeight.w800))),
           ],
         ),
           ),
