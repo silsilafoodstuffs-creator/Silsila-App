@@ -51,8 +51,6 @@ class CategoryService {
         resolvedActivityCode = _normalizeActivityCode(
           activityRow?['code']?.toString() ?? activity,
         );
-      } else if (activity != null && resolvedActivityCode == null) {
-        resolvedActivityCode = _normalizeActivityCode(activity);
       }
       // Never query the entire cross-activity catalogue when the selected activity
       // cannot be resolved. That previously mixed unrelated categories in the app.
