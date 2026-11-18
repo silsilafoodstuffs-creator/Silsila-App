@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../services/erp_workspace_records_service.dart';
+import '../services/erp_excel_export_service.dart';
 import 'erp_brands_tab.dart';
 
 const _catPurple = Color(0xFF3E007D);
@@ -450,6 +451,19 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       if (selectedRow['_draft'] != true) await _db!.from('erp_item_categories').delete().eq('id',id).eq('company_id',_company!);
       setState(() { _all.removeWhere((r)=>_s(r['id'])==id); _selectedId=null; _syncControllers(); _message='تم حذف الفئة.'; });
     } catch(e) { setState(()=>_error='تعذر حذف الفئة: $e'); }
+  }
+
+  Future<void> _exportCategoriesExcel() async {
+    try {
+      final rows = _all.where((r) => r['_draft'] != true).map((r) => <String, dynamic>{
+        'كود الفئة': r['category_code'], 'اسم الفئة': r['category_name'],
+        'الاسم بالإنجليزية': r['category_name_en'], 'معرف الفئة الأب': r['parent_id'],
+        'كود النشاط': r['activity_code'], 'نشطة': r['is_active'] == true ? 'نعم' : 'لا',
+        'تظهر بالتطبيق': r['show_in_app'] == true ? 'نعم' : 'لا',
+      }).toList();
+      await exportErpExcel(fileName: 'silsila_item_categories', sheets: {'فئات الأصناف': rows}, columns: {'فئات الأصناف': {for (final key in ['كود الفئة','اسم الفئة','الاسم بالإنجليزية','معرف الفئة الأب','كود النشاط','نشطة','تظهر بالتطبيق']) key: key}});
+      if (mounted) setState(() => _message = 'تم تصدير ${rows.length} فئة من النشاط المحدد.');
+    } catch (e) { if (mounted) setState(() => _error = 'تعذر تصدير فئات الأصناف: $e'); }
   }
 
   Widget _task(String label, IconData icon, VoidCallback? action) =>

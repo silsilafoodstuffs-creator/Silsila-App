@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_center_toast.dart';
+import '../services/erp_excel_export_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _purple = Color(0xFF3E007D);
@@ -297,6 +298,22 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
     if(yes!=true)return;
     try{await _db.from(_config.table).delete().eq('id',row['id']).eq('company_id',widget.companyId!);await _load();}
     catch(e){if(mounted)ErpCenterToast.show(context, 'تعذر الحذف: '+e.toString(), isError: true, duration: const Duration(seconds: 3));}
+  }
+
+  Future<void> _exportHrRecordsExcel() async {
+    try {
+      final fields = _config.fields;
+      final exportRows = _rows.map((row) => <String, dynamic>{
+        for (final field in fields) field.label: _value(field, row),
+      }).toList();
+      final labels = fields.map((field) => field.label).toList();
+      await exportErpExcel(
+        fileName: 'silsila_hr_${_config.table}',
+        sheets: {_config.title: exportRows},
+        columns: {_config.title: {for (final label in labels) label: label}},
+      );
+      if (mounted) ErpCenterToast.show(context, 'تم تصدير ${exportRows.length} سجلًا من ${_config.title}.');
+    } catch (e) { if (mounted) ErpCenterToast.show(context, 'تعذر تصدير سجلات الموارد البشرية: $e', isError: true, duration: const Duration(seconds: 4)); }
   }
 
   @override Widget build(BuildContext context){

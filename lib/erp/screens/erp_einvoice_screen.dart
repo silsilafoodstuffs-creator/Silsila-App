@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/erp_center_toast.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
+import '../services/erp_excel_export_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _taxPurple = Color(0xFF3E007D);
@@ -138,6 +139,20 @@ class _ErpEinvoiceScreenState extends State<ErpEinvoiceScreen> {
   Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) =>
       ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
+  Future<void> _exportTaxOperationsExcel() async {
+    try {
+      final rows = _operations.map((r) => <String, dynamic>{
+        'معرف العملية': r['id'], 'نوع العملية': r['operation'],
+        'معرف المستند': r['document_uuid'], 'معرف الإرسال': r['submission_uuid'],
+        'الحالة': r['status'] ?? r['state'], 'تاريخ الإنشاء': r['created_at'],
+        'تاريخ التحديث': r['updated_at'], 'رسالة الخطأ': r['error_message'],
+      }).toList();
+      const keys = ['معرف العملية','نوع العملية','معرف المستند','معرف الإرسال','الحالة','تاريخ الإنشاء','تاريخ التحديث','رسالة الخطأ'];
+      await exportErpExcel(fileName: 'silsila_einvoice_operations', sheets: {'سجل التكامل الضريبي': rows}, columns: {'سجل التكامل الضريبي': {for (final key in keys) key: key}});
+      if (mounted) _msg('تم تصدير ${rows.length} عملية من سجل الشركة الحالي.');
+    } catch (e) { if (mounted) setState(() => _error = 'تعذر تصدير سجل الفاتورة الإلكترونية: $e'); }
+  }
+
   Future<void> _previewTaxOperations() async {
     await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('معاينة سجل التكامل الضريبي'),
@@ -167,6 +182,7 @@ class _ErpEinvoiceScreenState extends State<ErpEinvoiceScreen> {
           _quickTask('تحديث', Icons.refresh, Colors.blue, config ? _loadSettings : _loadOperations),
           _quickTask('حفظ الإعدادات', Icons.save_outlined, const Color(0xFF168447), config ? _saveSettings : null),
           _quickTask('معاينة السجل', Icons.visibility_outlined, const Color(0xFF6841A5), _previewTaxOperations),
+           if (logs) _quickTask('تصدير Excel', Icons.file_download_outlined, const Color(0xFF168447), _loading ? null : _exportTaxOperationsExcel),
         ])),
       ])),
       const SizedBox(height: 10),

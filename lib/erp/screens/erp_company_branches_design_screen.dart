@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../services/erp_excel_export_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -509,6 +510,23 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
     ]),
   );
 
+  Future<void> _exportBranchesExcel() async {
+    try {
+      final rows = _rows.map((r) => <String, dynamic>{
+        'كود الفرع': r['branch_code'], 'اسم الفرع': r['branch_name'],
+        'الاسم بالإنجليزية': r['branch_name_en'], 'البريد الإلكتروني': r['email'],
+        'الهاتف': r['phone'], 'هاتف إضافي': r['phone2'], 'العنوان': r['address'],
+        'الموقع': r['location'], 'المحافظة': _geoName(r['governorate_id']),
+        'المركز': _geoName(r['district_id']), 'المنطقة': _geoName(r['area_id']),
+        'فرع رئيسي': r['is_main'] == true ? 'نعم' : 'لا', 'نشط': r['is_active'] == true ? 'نعم' : 'لا',
+        'خط العرض': r['latitude'], 'خط الطول': r['longitude'],
+      }).toList();
+      const keys = ['كود الفرع','اسم الفرع','الاسم بالإنجليزية','البريد الإلكتروني','الهاتف','هاتف إضافي','العنوان','الموقع','المحافظة','المركز','المنطقة','فرع رئيسي','نشط','خط العرض','خط الطول'];
+      await exportErpExcel(fileName: 'silsila_company_branches', sheets: {'فروع الشركة': rows}, columns: {'فروع الشركة': {for (final key in keys) key: key}});
+      if (mounted) setState(() => _message = 'تم تصدير ${rows.length} فرعًا من الشركة الحالية.');
+    } catch (e) { if (mounted) setState(() => _error = 'تعذر تصدير الفروع: $e'); }
+  }
+
   Widget _branchActions() => SingleChildScrollView(
     scrollDirection: Axis.horizontal,
     child: Row(children: [
@@ -519,7 +537,7 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
       _quickTask('حذف', Icons.delete_outline, Colors.red, _singleSelectedBranch == null ? null : () => _delete(_singleSelectedBranch!)),
       _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewDirectory),
       _quickTask('طباعة', Icons.print_outlined, const Color(0xFFFF27C3), _previewDirectory),
-      _quickTask('Excel', Icons.file_download_outlined, const Color(0xFF16834A), _previewDirectory),
+      _quickTask('Excel', Icons.file_download_outlined, const Color(0xFF16834A), _loading ? null : _exportBranchesExcel),
       _quickTask('PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _previewDirectory),
     ]),
   );
