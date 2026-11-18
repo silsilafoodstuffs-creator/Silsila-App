@@ -40,3 +40,16 @@ Future<void> exportErpExcel({
     fileExtension: 'xlsx',
   );
 }
+
+/// Screen-scoped raw export: keeps each sheet tied to the exact records loaded by that screen.
+Future<void> exportErpRawRowsExcel({required String fileName, required Map<String, List<Map<String, dynamic>>> sheets}) async {
+  final columns = <String, Map<String, String>>{};
+  for (final entry in sheets.entries) {
+    final keys = <String>[];
+    for (final row in entry.value) {
+      for (final key in row.keys) { if (!keys.contains(key)) keys.add(key); }
+    }
+    columns[entry.key] = {for (final key in keys) key: key};
+  }
+  await exportErpExcel(fileName: fileName, sheets: sheets, columns: columns);
+}

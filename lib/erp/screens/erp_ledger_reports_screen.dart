@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/erp_excel_export_service.dart';
 import '../services/erp_print_support.dart';
 import '../widgets/erp_quick_task_button.dart';
 import 'package:flutter/services.dart';
@@ -65,6 +66,8 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
   double _num(dynamic value) => value is num
       ? value.toDouble()
       : double.tryParse((value ?? '0').toString()) ?? 0;
+
+  Future<void> _exportExcel() async { try { await exportErpRawRowsExcel(fileName: 'silsila_${widget.kind.name}_report', sheets: {_title: _rows}); if (mounted) setState(() => _message = 'تم تصدير ${_rows.length} صفًا من التقرير الحالي بنفس فلاتر الشركة والفترة والحساب.'); } catch (e) { if (mounted) setState(() => _error = 'تعذر تصدير التقرير: $e'); } }
 
   Future<void> _pickDate(bool start) async {
     final initial = (start ? _start : _end) ?? DateTime.now();
@@ -201,6 +204,7 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
               _reportAction('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), _previewReport),
               _reportAction('طباعة', Icons.print_outlined, const Color(0xFFFF27C3), _printReportPdf),
               _reportAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importReportExcel),
+              _reportAction('تصدير Excel', Icons.file_download_outlined, const Color(0xFF16834A), _loading ? null : _exportExcel),
               _reportAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printReportPdf),
               _reportAction('كل الفترات', Icons.date_range_outlined, const Color(0xFF6E2BA6), () => setState(() { _start = null; _end = null; })),
             ]),

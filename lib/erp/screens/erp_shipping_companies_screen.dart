@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/erp_excel_export_service.dart';
 import '../widgets/erp_quick_task_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -46,6 +47,8 @@ class _ErpShippingCompaniesScreenState extends State<ErpShippingCompaniesScreen>
       });
     }
   }
+
+  Future<void> _exportExcel() async { try { await exportErpRawRowsExcel(fileName: 'silsila_shipping_companies', sheets: {'شركات الشحن': _rows}); if (mounted) setState(() => _message = 'تم تصدير ${_rows.length} شركة شحن من نتيجة الصلاحية الفعلية.'); } catch (e) { if (mounted) setState(() => _error = 'تعذر تصدير شركات الشحن: $e'); } }
 
   Future<void> _edit([Map<String, dynamic>? row]) async {
     final name = TextEditingController(text: _s(row?['name']));
@@ -138,6 +141,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
             _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), () => _edit()),
             _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewShippingCompanies),
+            _quickTask('تصدير Excel', Icons.file_download_outlined, const Color(0xFF16834A), _loading ? null : _exportExcel),
           ])),
         ]),
       )),

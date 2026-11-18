@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/erp_excel_export_service.dart';
 import '../widgets/erp_center_toast.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
@@ -41,6 +42,8 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
   String _str(Map<String, dynamic> row, String key) =>
       (row[key] ?? '').toString();
   String _entryNumber(Map<String, dynamic> row) => _str(row, 'entry_number_display').isNotEmpty ? _str(row, 'entry_number_display') : _str(row, 'entry_number');
+
+  Future<void> _exportExcel() async { try { await exportErpRawRowsExcel(fileName: 'silsila_journal_entries', sheets: {'قيود اليومية': _entries}); if (mounted) setState(() => _error = 'تم تصدير ${_entries.length} قيدًا من بيانات القيود المحمّلة.'); } catch (e) { if (mounted) setState(() => _error = 'تعذر تصدير القيود: $e'); } }
 
   Future<void> _load() async {
     if (_company.text.trim().isEmpty) {
@@ -576,6 +579,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
                 _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewEntries),
                 _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _previewEntries),
                 _quickTask('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF137C8B), () => setState(() => _error = 'استيراد قيود اليومية من Excel غير مفعّل؛ أنشئ المسودة من شاشة القيد للتحقق من التوازن.')),
+                _quickTask('تصدير Excel', Icons.file_download_outlined, const Color(0xFF16834A), _loading ? null : _exportExcel),
                 _quickTask('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFB3261E), _previewEntries),
               ])),
             ]),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/erp_excel_export_service.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_cash_vouchers_repository.dart';
@@ -49,6 +50,8 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
   String _money(dynamic v) => _n(v).toStringAsFixed(2);
   String _typeLabel(String v) => v == 'receipt' ? 'قبض' : v == 'payment' ? 'صرف' : 'تحويل';
+
+  Future<void> _exportExcel() async { try { await exportErpRawRowsExcel(fileName: 'silsila_cash_vouchers', sheets: {'السندات': _vouchers}); if (mounted) setState(() => _message = 'تم تصدير ${_vouchers.length} سندًا من سجل السندات الفعلي.'); } catch (e) { if (mounted) setState(() => _error = 'تعذر تصدير السندات: $e'); } }
 
   Future<void> _load() async {
     if (_company.text.trim().isEmpty) { setState(() => _error = 'أدخل معرّف الشركة أولًا.'); return; }
@@ -189,6 +192,7 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
             _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewVouchers),
             _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _previewVouchers),
             _quickTask('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF137C8B), () => setState(() => _message = 'استيراد سندات Excel غير مفعّل؛ أنشئ المسودة من النموذج لضمان التحقق المحاسبي.')),
+            _quickTask('تصدير Excel', Icons.file_download_outlined, const Color(0xFF16834A), _loading || _saving ? null : _exportExcel),
             _quickTask('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFB3261E), _previewVouchers),
           ])),
         ]),

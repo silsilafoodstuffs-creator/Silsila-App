@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/erp_excel_export_service.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -40,6 +41,8 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
       setState(() { _rows = List<Map<String,dynamic>>.from(data); _loading = false; });
     } catch (e) { if (!mounted) return; setState(() { _loading = false; _error = 'تعذر تحميل العملات. تأكد من تطبيق ملف SQL الخاص بالعملات. $e'; }); }
   }
+
+  Future<void> _exportExcel() async { try { await exportErpRawRowsExcel(fileName: 'silsila_currencies', sheets: {'العملات': _rows}); if (mounted) setState(() => _error = 'تم تصدير ${_rows.length} عملة من جدول العملات الفعلي.'); } catch (e) { if (mounted) setState(() => _error = 'تعذر تصدير العملات: $e'); } }
 
   void _clear() { _editingId = null; _editing = false; _code.clear(); _name.clear(); _symbol.clear(); }
   void _startNew() {
@@ -112,6 +115,7 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
         _quickTask('معاينة',Icons.visibility_outlined,const Color(0xFF6841A5),_previewCurrencies),
         _quickTask('طباعة',Icons.print_outlined,const Color(0xFF4056A1),_previewCurrencies),
         _quickTask('استيراد Excel',Icons.file_upload_outlined,const Color(0xFF137C8B),()=>setState(()=>_error='استيراد العملات من Excel غير مفعّل بعد؛ يمكنك إضافة العملات من النموذج.')),
+        _quickTask('تصدير Excel',Icons.file_download_outlined,const Color(0xFF16834A),_loading || _saving ? null : _exportExcel),
         _quickTask('طباعة PDF',Icons.picture_as_pdf_outlined,const Color(0xFFB3261E),_previewCurrencies),
       ])),
     ]))),

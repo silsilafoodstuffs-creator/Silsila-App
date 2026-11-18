@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/erp_excel_export_service.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
@@ -46,6 +47,8 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.companyId != widget.companyId) { _selectedIds.clear(); _load(); }
   }
+
+  Future<void> _exportExcel() async { try { await exportErpRawRowsExcel(fileName: 'silsila_cost_centers', sheets: {'مراكز التكلفة': _centers, 'الفروع المرتبطة': _branches}); if (mounted) setState(() => _message = 'تم تصدير ${_centers.length} مركز تكلفة و${_branches.length} فرعًا من بيانات الشركة النشطة.'); } catch (e) { if (mounted) setState(() => _error = 'تعذر تصدير مراكز التكلفة: $e'); } }
 
   Future<void> _load() async {
     final generation = ++_loadGeneration;
@@ -381,7 +384,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
             _task('حذف', Icons.delete_outline, Colors.red, _selected == null ? null : () => _delete(_selected!)),
             _task('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _preview),
             _task('طباعة', Icons.print_outlined, const Color(0xFFFF27C3), _preview),
-            _task('Excel', Icons.table_view_outlined, const Color(0xFF16834A), () => _copyReport('Excel/TSV')),
+            _task('تصدير Excel', Icons.file_download_outlined, const Color(0xFF16834A), _loading || _saving ? null : _exportExcel),
             _task('PDF', Icons.picture_as_pdf_outlined, Colors.red, () => _copyReport('PDF')),
           ])),
         ]),

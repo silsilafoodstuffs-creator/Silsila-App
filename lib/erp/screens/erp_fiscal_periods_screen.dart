@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/erp_excel_export_service.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_fiscal_period_repository.dart';
@@ -47,6 +48,8 @@ class _ErpFiscalPeriodsScreenState extends State<ErpFiscalPeriodsScreen> {
       setState(() { _loading = false; _error = 'تعذر تحميل الفترات المالية: $e'; });
     }
   }
+
+  Future<void> _exportExcel() async { try { await exportErpRawRowsExcel(fileName: 'silsila_fiscal_periods', sheets: {'الفترات المالية': _rows}); if (mounted) setState(() => _message = 'تم تصدير ${_rows.length} فترة مالية من بيانات الشركة المحددة.'); } catch (e) { if (mounted) setState(() => _error = 'تعذر تصدير الفترات: $e'); } }
 
   Future<void> _pickDate(bool start) async {
     final selected = await showDatePicker(context: context, initialDate: start ? _start : _end,
@@ -138,6 +141,7 @@ class _ErpFiscalPeriodsScreenState extends State<ErpFiscalPeriodsScreen> {
             _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewPeriods),
             _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _previewPeriods),
             _quickTask('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF137C8B), () => setState(() => _message = 'استيراد الفترات من Excel غير مفعّل؛ أنشئ الفترات للتحقق من عدم التداخل.')),
+            _quickTask('تصدير Excel', Icons.file_download_outlined, const Color(0xFF16834A), _loading || _saving ? null : _exportExcel),
             _quickTask('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFB3261E), _previewPeriods),
           ])),
         ]),
