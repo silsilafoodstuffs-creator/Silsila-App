@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:excel/excel.dart' as excel;
 import '../services/erp_excel_export_service.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_center_toast.dart';
@@ -335,6 +337,103 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
       if (!mounted) return; setState(() { saving = false; editing = false; message = 'تم حفظ بيانات ${kind == 'customer' ? 'العميل' : 'المورد'} بنجاح.'; }); await _loadAll();
     } catch(e) { if (mounted) setState(() { saving = false; error = 'فشل الحفظ: $e'; }); }
   }
+  Future<void> _importPartiesExcel() async {
+    final client = db;
+    final cid = companyId;
+    if (client == null || cid == null || cid.trim().isEmpty) {
+      setState(() => error = 'اختر الشركة النشطة أولًا قبل الاستيراد.');
+      return;
+    }
+    if (editing || saving || loading) {
+      setState(() => error = 'احفظ التعديلات الحالية وانتظر انتهاء التحميل قبل الاستيراد.');
+      return;
+    }
+    try {
+      final picked = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: const ['xlsx'], withData: true);
+      if (picked == null || picked.files.isEmpty) return;
+      final bytes = picked.files.single.bytes;
+      if (bytes == null || bytes.isEmpty) throw StateError('تعذر قراءة ملف Excel.');
+      final book = excel.Excel.decodeBytes(bytes);
+      final sheet = book.tables.values.firstWhere((s) => s.rows.isNotEmpty, orElse: () => throw StateError('ملف Excel فارغ.'));
+      final rawHeaders = sheet.rows.first.map((cell) => (cell?.value?.toString() ?? '').trim()).toList();
+      final headerIndex = <String, int>{for (var i = 0; i < rawHeaders.length; i++) rawHeaders[i]: i};
+      int col(String label) => headerIndex[label] ?? -1;
+      String value(List<excel.Data?> row, String label) {
+        final index = col(label);
+        return index >= 0 && index < row.length ? (row[index]?.value?.toString().trim() ?? '') : '';
+      }
+      if (col('الاسم بالعربية') < 0 || (col('الكود') < 0 && col('معرف السجل (لا تعدله)') < 0)) {
+        throw StateError('استخدم قالب تصدير العملاء أو الموردين نفسه؛ يلزم الاسم والكود أو معرف السجل.');
+      }
+      final seen = <String>{};
+      final failed = <Map<String, dynamic>>[];
+      var inserted = 0, updated = 0, duplicates = 0;
+      var rowNumber = 1;
+      for (final row in sheet.rows.skip(1)) {
+        rowNumber++;
+        final name = value(row, 'الاسم بالعربية');
+        final code = value(row, 'الكود');
+        final id = value(row, 'معرف السجل (لا تعدله)');
+        if (name.isEmpty && code.isEmpty && id.isEmpty) continue;
+        final identity = id.isNotEmpty ? 'id:$id' : 'code:$code';
+        if (!seen.add(identity)) { duplicates++; continue; }
+        if (name.isEmpty) {
+          failed.add({'row': rowNumber, 'party_code': code, 'party_name': name, 'reason': 'الاسم بالعربية مطلوب'});
+          continue;
+        }
+        try {
+          final payload = <String, dynamic>{
+            'company_id': cid,
+            'party_kind': kind,
+            'party_code': code,
+            'party_name': name,
+            'party_name_en': value(row, 'الاسم بالإنجليزية'),
+            'customer_type': value(row, 'التصنيف'),
+            'transaction_type': value(row, 'نوع التعامل').isEmpty ? 'نقدي' : value(row, 'نوع التعامل'),
+            'country': value(row, 'الدولة').isEmpty ? 'مصر' : value(row, 'الدولة'),
+            'governorate': value(row, 'المحافظة'),
+            'district': value(row, 'المركز / الحي'),
+            'area': value(row, 'المنطقة'),
+            'address': value(row, 'العنوان'),
+            'sales_rep_employee_id': value(row, 'معرف مندوب المبيعات').isEmpty ? null : value(row, 'معرف مندوب المبيعات'),
+            'is_active': !['false', '0', 'غير نشط'].contains(value(row, 'نشط').toLowerCase()),
+          };
+          dynamic existing;
+          if (id.isNotEmpty) {
+            final matches = await client.from('erp_parties').select('id').eq('company_id', cid).eq('party_kind', kind).eq('id', id).limit(1);
+            if ((matches as List).isNotEmpty) existing = matches.first;
+          }
+          if (existing == null && code.isNotEmpty) {
+            final matches = await client.from('erp_parties').select('id').eq('company_id', cid).eq('party_kind', kind).eq('party_code', code).limit(1);
+            if ((matches as List).isNotEmpty) existing = matches.first;
+          }
+          if (existing != null) {
+            await client.from('erp_parties').update(payload..remove('party_code')).eq('company_id', cid).eq('party_kind', kind).eq('id', existing['id']);
+            updated++;
+          } else {
+            if (code.isNotEmpty) payload['party_code'] = code;
+            else payload.remove('party_code');
+            await client.from('erp_parties').insert(payload);
+            inserted++;
+          }
+        } catch (e) {
+          failed.add({'row': rowNumber, 'party_code': code, 'party_name': name, 'reason': e.toString()});
+        }
+      }
+      if (failed.isNotEmpty) {
+        await exportErpExcel(
+          fileName: kind == 'customer' ? 'silsila_failed_customers' : 'silsila_failed_suppliers',
+          sheets: {'الصفوف الفاشلة': failed},
+          columns: {'الصفوف الفاشلة': {'رقم الصف': 'row', 'الكود': 'party_code', 'الاسم': 'party_name', 'سبب الفشل': 'reason'}},
+        );
+      }
+      await _loadAll();
+      if (mounted) setState(() => message = 'اكتمل الاستيراد: أضيف ${inserted}، حُدّث ${updated}، تكرر وتُجاوز ${duplicates}، فشل ${failed.length}. تم تنزيل ملف منفصل بالأخطاء إن وجدت.');
+    } catch (e) {
+      if (mounted) setState(() => error = 'تعذر استيراد بيانات ${kind == 'customer' ? 'العملاء' : 'الموردين'}: $e');
+    }
+  }
+
   Future<void> _exportParties() async {
     try {
       await exportErpExcel(
@@ -488,7 +587,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   Widget build(BuildContext context){
     final title=kind=='customer'?'بيانات العملاء':'بيانات الموردين';
     return Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:purple,borderRadius:BorderRadius.circular(12)),child:Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),const Text('بطاقات منظمة في جدول بثلاثة صفوف لكل سجل',style:TextStyle(color:Colors.white70))])),Wrap(spacing:6,children:[OutlinedButton.icon(onPressed:loading?null:_loadAll,icon:const Icon(Icons.refresh,color:Colors.white),label:const Text('تحديث',style:TextStyle(color:Colors.white))),FilledButton.icon(onPressed:editing?null:_new,icon:const Icon(Icons.add),label:const Text('إضافة')),FilledButton.icon(onPressed:!editing||saving?null:_save,icon:const Icon(Icons.save),label:const Text('حفظ')),OutlinedButton.icon(onPressed:selectedPartyId==null||editing?null:()=>setState(()=>editing=true),icon:const Icon(Icons.edit_outlined,color:Colors.white),label:const Text('تعديل',style:TextStyle(color:Colors.white))),OutlinedButton.icon(onPressed:_manageClassifications,icon:const Icon(Icons.category_outlined,color:Colors.white),label:const Text('تصنيفات',style:TextStyle(color:Colors.white))),ErpQuickTaskButton(label:'تصدير Excel',icon:Icons.file_download_outlined,onPressed:loading||editing?null:_exportParties)]) ])),
+      Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:purple,borderRadius:BorderRadius.circular(12)),child:Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),const Text('بطاقات منظمة في جدول بثلاثة صفوف لكل سجل',style:TextStyle(color:Colors.white70))])),Wrap(spacing:6,children:[OutlinedButton.icon(onPressed:loading?null:_loadAll,icon:const Icon(Icons.refresh,color:Colors.white),label:const Text('تحديث',style:TextStyle(color:Colors.white))),FilledButton.icon(onPressed:editing?null:_new,icon:const Icon(Icons.add),label:const Text('إضافة')),FilledButton.icon(onPressed:!editing||saving?null:_save,icon:const Icon(Icons.save),label:const Text('حفظ')),OutlinedButton.icon(onPressed:selectedPartyId==null||editing?null:()=>setState(()=>editing=true),icon:const Icon(Icons.edit_outlined,color:Colors.white),label:const Text('تعديل',style:TextStyle(color:Colors.white))),OutlinedButton.icon(onPressed:_manageClassifications,icon:const Icon(Icons.category_outlined,color:Colors.white),label:const Text('تصنيفات',style:TextStyle(color:Colors.white))),ErpQuickTaskButton(label:'استيراد Excel',icon:Icons.file_upload_outlined,onPressed:loading||saving||editing?null:_importPartiesExcel),ErpQuickTaskButton(label:'تصدير Excel',icon:Icons.file_download_outlined,onPressed:loading||editing?null:_exportParties)]) ])),
       if(error!=null)Padding(padding:const EdgeInsets.all(8),child:Text(error!,style:const TextStyle(color:Colors.red))),
       if(message!=null)Padding(padding:const EdgeInsets.all(8),child:Text(message!,style:const TextStyle(color:Colors.green))),
       if(loading||saving)const LinearProgressIndicator(),
