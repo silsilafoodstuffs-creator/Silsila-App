@@ -34,8 +34,10 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   List<Map<String,dynamic>> _all = [];
   List<Map<String,dynamic>> _companyCategories = [];
   List<Map<String,dynamic>> get _codingCategories => <Map<String,dynamic>>[
-    ..._companyCategories,
-    ..._all.where((r) => r['_draft'] == true),
+    ..._companyCategories.where((row) =>
+      _s(row['activity_code']).trim().toUpperCase() ==
+      _selectedActivityCode.trim().toUpperCase()),
+    ..._all.where((row) => row['_draft'] == true),
   ];
   final Map<String,TextEditingController> _ar = {};
   final Map<String,TextEditingController> _en = {};
