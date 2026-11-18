@@ -848,3 +848,4 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       ),
     );
   }
+}
