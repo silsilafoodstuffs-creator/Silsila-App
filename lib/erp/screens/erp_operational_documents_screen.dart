@@ -1663,14 +1663,32 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
 
   Future<void> _exportOperationalDocuments() async {
     try {
+      final sourceLines = _pendingLines.isNotEmpty ? _pendingLines : _lines;
+      final importTemplateRows = sourceLines.map((line) {
+        final item = _items.firstWhere((candidate) => _s(candidate['id']) == _s(line['item_id']), orElse: () => <String, dynamic>{});
+        return <String, dynamic>{
+          'item_code': _s(item['item_code']).isNotEmpty ? _s(item['item_code']) : _s(line['item_code']),
+          'item_name': _s(item['item_name']).isNotEmpty ? _s(item['item_name']) : _s(line['item_name']),
+          'quantity': line['quantity'],
+          'unit_price': line['unit_price'],
+        };
+      }).toList();
       await exportErpExcel(
         fileName: widget.kind == ErpOperationalKind.sales ? 'silsila_sales_documents' : 'silsila_purchase_documents',
         sheets: {
+          // First non-empty sheet matches the exact headers consumed by the invoice item importer.
+          'قالب استيراد البنود': importTemplateRows,
           'المستندات': _rows,
           'بنود المستند المحدد': _lines,
           'بنود المعاينة غير المحفوظة': _pendingLines,
         },
         columns: {
+          'قالب استيراد البنود': {
+            'كود الصنف': 'item_code',
+            'اسم الصنف': 'item_name',
+            'الكمية': 'quantity',
+            'سعر الوحدة': 'unit_price',
+          },
           'المستندات': {
             'معرف المستند': 'id',
             'رقم المستند': 'document_number',
