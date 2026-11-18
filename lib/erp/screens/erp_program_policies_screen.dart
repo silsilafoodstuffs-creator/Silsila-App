@@ -67,6 +67,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'ui_dropdown_item_height','category':'برمجية','ar':'الارتفاع القياسي لكل اختيار داخل القوائم المنسدلة','en':'Standard dropdown option height','value':'40 بكسل','all':true},
     {'key':'ui_field_label_alignment','category':'برمجية','ar':'موضع اسم الخانة بالنسبة إلى القيمة أو الاختيار','en':'Field label alignment','value':'اسم الخانة على يمين القيمة أو الاختيار في صف واحد متناسق','all':true},
     {'key':'ui_mobile_header_compact','category':'برمجية','ar':'ارتفاع الهيدر في شاشات الموبايل','en':'Compact mobile screen headers','value':'هيدر مدمج بارتفاع مناسب دون فراغات أو ارتفاع مبالغ فيه','all':true},
+    {'key':'data_integrity.prevent_delete_with_references','category':'برمجية','ar':'منع حذف أي بيانات لها سجلات مرتبطة تمنع الحذف','en':'Block deletion when dependent records prevent it','value':'إلزامي ومفعل على جميع المستخدمين والشاشات؛ ترفض قاعدة البيانات حذف السجل عند وجود سجلات تابعة مرتبطة بعلاقات NO ACTION أو RESTRICT.','mandatory':true,'all':true},
     {'key':'fiscal_year','category':'محاسبية','ar':'فترة السنة المالية','en':'Fiscal year','mandatory':true,'value':'01/01 - 12/31'},
     {'key':'inventory_valuation','category':'محاسبية','ar':'طريقة تقييم المخزون','en':'Inventory valuation method','mandatory':true,'value':'المتوسط المرجح','options':['المتوسط المرجح','الوارد أولاً صادر أولاً (FIFO)','التحديد المحدد']},
     {'key':'inventory_count','category':'محاسبية','ar':'طريقة الجرد','en':'Inventory counting method','mandatory':true,'value':'الجرد المستمر','options':['الجرد المستمر','الجرد الدوري']},
@@ -267,6 +268,13 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         };
       }
       for(final row in (rows as List).whereType<Map<String,dynamic>>()) { final key=(row['policy_key']??'').toString(); if(!values.containsKey(key))continue; final p=values[key]!; p['enabled']=row['is_enabled']==true; p['all']=row['apply_to_all']==true || p['mandatory']==true; p['value']=(row['policy_value']??p['value']??'').toString(); p['user_ids']=List<String>.from((row['user_ids'] as List?)??const []); }
+      final referenceDeletePolicy = values['data_integrity.prevent_delete_with_references'];
+      if (referenceDeletePolicy != null) {
+        referenceDeletePolicy['mandatory'] = true;
+        referenceDeletePolicy['enabled'] = true;
+        referenceDeletePolicy['all'] = true;
+        referenceDeletePolicy['user_ids'] = <String>[];
+      }
       for (final definition in _codePolicyTypeDefinitions) {
         final key = 'code_type.${definition['key']}';
         final matches = (rows as List).whereType<Map<String,dynamic>>().where((item) => item['policy_key'] == key).toList();
@@ -485,7 +493,14 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       registryPayload['version'] ??= 4;
       registryPayload['types'] = registryTypes;
       if (values.containsKey('code_generation_registry')) values['code_generation_registry']!['value'] = jsonEncode(registryPayload);
-      final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??'','policy_code':_policyCodes[p['key']] }).toList();
+      final referenceDeletePolicy = values['data_integrity.prevent_delete_with_references'];
+     if (referenceDeletePolicy != null) {
+       referenceDeletePolicy['mandatory'] = true;
+       referenceDeletePolicy['enabled'] = true;
+       referenceDeletePolicy['all'] = true;
+       referenceDeletePolicy['user_ids'] = <String>[];
+     }
+     final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??'','policy_code':_policyCodes[p['key']] }).toList();
       await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key');
       final settings = await db.from('erp_program_settings').select().eq('company_id',company).maybeSingle();
       await db.from('erp_program_settings').upsert({...?settings,'company_id':company,'program_name':_programNameController.text.trim().isEmpty?'سلسلة':_programNameController.text.trim(),'logo_base64':_programLogoBase64,'logo_mime_type':_programLogoMime,'updated_at':DateTime.now().toUtc().toIso8601String(),'updated_by':db.auth.currentUser?.id},onConflict:'company_id');
