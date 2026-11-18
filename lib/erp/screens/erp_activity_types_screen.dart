@@ -75,6 +75,45 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       _resolvedCompanyId = companyId;
       var data = await _service.listPage(companyId: companyId, pageKey: _pageKey);
       _normalizeActivityCodes(data);
+      // The shared activity master is the authoritative display source. Workspace
+      // rows remain the editable company-specific overlay, but an empty or
+      // restricted workspace query must not hide globally active activities.
+      final masterRows = await db
+          .from('activity_types')
+          .select('code,name,name_en,sort_order,is_active,show_in_app')
+          .eq('is_active', true)
+          .eq('show_in_app', true)
+          .order('sort_order');
+      final workspaceByCode = <String, Map<String, String>>{
+        for (final row in data)
+          if ((row['كود النشاط'] ?? '').trim().isNotEmpty)
+            row['كود النشاط']!.trim().toUpperCase(): row,
+      };
+      final mergedByCode = <String, Map<String, String>>{};
+      for (final raw in (masterRows as List)) {
+        final master = Map<String, dynamic>.from(raw as Map);
+        final code = (master['code'] ?? '').toString().trim().toUpperCase();
+        if (code.isEmpty) continue;
+        final workspace = workspaceByCode[code];
+        mergedByCode[code] = <String, String>{
+          'ترتيب السطر': workspace?['ترتيب السطر'] ?? (master['sort_order'] ?? '').toString(),
+          'كود النشاط': code,
+          'اسم النشاط عربي': (workspace?['اسم النشاط عربي']?.trim().isNotEmpty == true)
+              ? workspace!['اسم النشاط عربي']!
+              : (master['name'] ?? '').toString(),
+          'اسم النشاط إنجليزي': (workspace?['اسم النشاط إنجليزي']?.trim().isNotEmpty == true)
+              ? workspace!['اسم النشاط إنجليزي']!
+              : (master['name_en'] ?? '').toString(),
+          'نشط': 'true',
+          'يظهر في التطبيق': 'true',
+          '_مرجع داخلي': workspace?['_مرجع داخلي'] ?? code,
+        };
+      }
+      for (final entry in workspaceByCode.entries) {
+        mergedByCode.putIfAbsent(entry.key, () => entry.value);
+      }
+      data = mergedByCode.values.toList();
+      _normalizeActivityCodes(data);
       // Keep the activity master on the same canonical 01..20 codes as the
       // ERP item-category tree; retain any existing customized labels.
       const defaults = <Map<String, String>>[
