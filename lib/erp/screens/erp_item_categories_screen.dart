@@ -163,7 +163,20 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       }
       final canonicalCodes = actualCodes.map((rawCode) {
         final code = rawCode.trim().toUpperCase();
-        final legacy = RegExp(r'^ACT([0-9]{3})
+        final legacy = RegExp(r'^ACT([0-9]{3})$').firstMatch(code);
+        if (legacy != null) {
+          final number = int.tryParse(legacy.group(1)!);
+          if (number != null) return number.toString().padLeft(2, '0');
+        }
+        if (RegExp(r'^[0-9]{1,2}$').hasMatch(code)) {
+          return int.parse(code).toString().padLeft(2, '0');
+        }
+        return code;
+      }).toSet();
+      actualCodes
+        ..clear()
+        ..addAll(canonicalCodes);
+      final sortedActualCodes = actualCodes.toList()..sort();
       final defaultActivity = actualCodes.contains('ACT001')
           ? 'ACT001'
           : actualCodes.contains('01')
