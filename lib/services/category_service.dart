@@ -337,53 +337,17 @@ class CategoryService {
     return cleaned;
   }
 
-  /// The ERP category catalogue stores activity codes as 01..20.
-  /// Older account flows and records may still send ACT001 or numeric 1.
+  /// Normalize old ACTnnn and numeric activity identifiers to the
+  /// canonical 01..20 codes used by erp_item_categories.
   String? _normalizeActivityCode(String? value) {
     final clean = _emptyToNull(value)?.toUpperCase();
     if (clean == null) return null;
-    final legacy = RegExp(r'^ACT(\\d{3})
-
-  String _toPostgresBytea(Uint8List bytes) {
-    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    return r'\x' + hex;
-  }
-
-  void _validateImageUrl(String value) {
-    final uri = Uri.tryParse(value);
-
-    if (uri == null ||
-        !uri.hasScheme ||
-        (uri.scheme != 'https' && uri.scheme != 'http') ||
-        uri.host.isEmpty) {
-      throw ArgumentError('رابط صورة القسم غير صالح.');
-    }
-  }
-}
-).firstMatch(clean);
+    final legacy = RegExp(r'^ACT([0-9]{3})$').firstMatch(clean);
     if (legacy != null) {
       final number = int.tryParse(legacy.group(1)!);
       return number == null ? clean : number.toString().padLeft(2, '0');
     }
-    if (RegExp(r'^\\d{1,2}
-
-  String _toPostgresBytea(Uint8List bytes) {
-    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    return r'\x' + hex;
-  }
-
-  void _validateImageUrl(String value) {
-    final uri = Uri.tryParse(value);
-
-    if (uri == null ||
-        !uri.hasScheme ||
-        (uri.scheme != 'https' && uri.scheme != 'http') ||
-        uri.host.isEmpty) {
-      throw ArgumentError('رابط صورة القسم غير صالح.');
-    }
-  }
-}
-).hasMatch(clean)) {
+    if (RegExp(r'^[0-9]{1,2}$').hasMatch(clean)) {
       return int.parse(clean).toString().padLeft(2, '0');
     }
     const aliases = <String, String>{
