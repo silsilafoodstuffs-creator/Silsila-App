@@ -307,10 +307,11 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
         for (final field in fields) field.label: _value(field, row),
       }).toList();
       final labels = fields.map((field) => field.label).toList();
+      final sheetName = _config.title.length > 31 ? _config.title.substring(0, 31) : _config.title;
       await exportErpExcel(
         fileName: 'silsila_hr_${_config.table}',
-        sheets: {_config.title: exportRows},
-        columns: {_config.title: {for (final label in labels) label: label}},
+        sheets: {sheetName: exportRows},
+        columns: {sheetName: {for (final label in labels) label: label}},
       );
       if (mounted) ErpCenterToast.show(context, 'تم تصدير ${exportRows.length} سجلًا من ${_config.title}.');
     } catch (e) { if (mounted) ErpCenterToast.show(context, 'تعذر تصدير سجلات الموارد البشرية: $e', isError: true, duration: const Duration(seconds: 4)); }
