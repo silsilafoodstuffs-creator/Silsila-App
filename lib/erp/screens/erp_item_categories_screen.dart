@@ -144,6 +144,23 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           .map((row) => _s(row['activity_code']).trim().toUpperCase())
           .where((code) => code.isNotEmpty)
           .toSet();
+      // Always load the activity selector from the shared activity master too;
+      // categories and activities are separate master records and either side
+      // being empty must not make the other disappear from the screen.
+      try {
+        final masterActivities = await _db!.from('activity_types')
+            .select('code,name,is_active,show_in_app')
+            .eq('is_active', true)
+            .eq('show_in_app', true)
+            .order('code');
+        for (final raw in (masterActivities as List)) {
+          final code = _s(raw['code']).trim().toUpperCase();
+          if (code.isNotEmpty) actualCodes.add(code);
+        }
+      } catch (_) {
+        // Existing category activity codes remain available if master metadata
+        // cannot be read due to a temporary policy or network issue.
+      }
       final sortedActualCodes = actualCodes.toList()..sort();
       final defaultActivity = actualCodes.contains('ACT001')
           ? 'ACT001'
