@@ -1,5 +1,6 @@
 import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_print_support.dart';
+import '../services/erp_excel_export_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1660,6 +1661,60 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     } catch (e) { if (mounted) setState(() => _error = 'تعذر استيراد Excel: ' + e.toString()); }
   }
 
+  Future<void> _exportOperationalDocuments() async {
+    try {
+      await exportErpExcel(
+        fileName: widget.kind == ErpOperationalKind.sales ? 'silsila_sales_documents' : 'silsila_purchase_documents',
+        sheets: {
+          'المستندات': _rows,
+          'بنود المستند المحدد': _lines,
+          'بنود المعاينة غير المحفوظة': _pendingLines,
+        },
+        columns: {
+          'المستندات': {
+            'معرف المستند': 'id',
+            'رقم المستند': 'document_number',
+            'المسلسل الآلي': 'auto_number',
+            'نوع المستند': 'document_type',
+            'التاريخ': 'document_date',
+            'معرف العميل': 'customer_id',
+            'معرف المورد': 'supplier_id',
+            'معرف المخزن': 'warehouse_id',
+            'الحالة': 'status',
+            'الإجمالي': 'grand_total',
+            'المدفوع': 'paid_total',
+            'المتبقي': 'remaining_total',
+            'ملاحظات': 'notes',
+          },
+          'بنود المستند المحدد': {
+            'معرف البند': 'id',
+            'معرف المستند': 'document_id',
+            'معرف الصنف': 'item_id',
+            'الكمية': 'quantity',
+            'معرف الوحدة': 'unit_id',
+            'سعر الوحدة': 'unit_price',
+            'الخصم': 'discount_amount',
+            'الضريبة': 'tax_amount',
+            'الإجمالي': 'line_total',
+          },
+          'بنود المعاينة غير المحفوظة': {
+            'معرف الصنف': 'item_id',
+            'كود الصنف': 'item_code',
+            'اسم الصنف': 'item_name',
+            'الكمية': 'quantity',
+            'معرف الوحدة': 'unit_id',
+            'السعر': 'unit_price',
+            'الخصم': 'discount',
+            'الضريبة': 'tax',
+          },
+        },
+      );
+      if (mounted) setState(() => _message = 'تم تصدير ${_rows.length} مستندًا و${_lines.length} بندًا محفوظًا و${_pendingLines.length} بند معاينة من بيانات الشاشة الفعلية.');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر تصدير المستندات: $e');
+    }
+  }
+
   Future<void> _deleteSelectedSalesDraft() async {
     final id = _selectedDocumentId;
     if (id == null) { setState(() => _error = 'اختر مسودة أولًا.'); return; }
@@ -1945,6 +2000,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   FilledButton.icon(onPressed: _printSalesQuickPdf, icon: const Icon(Icons.print_outlined, size: 16), label: const Text('طباعة'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF27C3), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
                   const SizedBox(width: 6),
                   FilledButton.icon(onPressed: _importSalesQuickExcel, icon: const Icon(Icons.file_upload_outlined, size: 16), label: const Text('استيراد Excel'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16834A), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                  const SizedBox(width: 6),
+                  FilledButton.icon(onPressed: _loading ? null : _exportOperationalDocuments, icon: const Icon(Icons.file_download_outlined, size: 16), label: const Text('تصدير Excel'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16834A), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
                   const SizedBox(width: 6),
                   FilledButton.icon(onPressed: _printSalesQuickPdf, icon: const Icon(Icons.picture_as_pdf_outlined, size: 16), label: const Text('طباعة PDF'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
                 ]),
