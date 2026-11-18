@@ -1088,46 +1088,124 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     )).then((_) { for (final controller in controllers.values) { controller.dispose(); } });
   }
 
-  Future<void> _deleteCurrentRecord() async {
-    final selected = _selectedRecord;
-    if (selected == null) {
-      _showActionMessage('حدد سجلًا من الجدول أولًا ثم اضغط حذف.');
-      return;
-    }
-    final visibleCode = selected['الكود'] ?? selected['الاسم'] ?? selected['اسم الحساب'] ?? '';
-    if (!selected.containsKey('_مرجع داخلي') || visibleCode.startsWith('DEMO-') || visibleCode.contains('تجريبي') || visibleCode.contains('توضيحي')) {
-      _showActionMessage('هذا السجل غير مرتبط بقاعدة البيانات؛ لن يتم حذفه منها.');
-      return;
-    }
-    final approved = await showDialog<bool>(
+  Future<bool> _confirmGridDeletion({required String title, required String message}) async {
+    final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(silsilaText('تأكيد حذف السجل')),
-        content: Text('هل تريد حذف السجل «$visibleCode» من شاشة «$_page»؟'),
+        title: Text(silsilaText(title)),
+        content: Text(message),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(silsilaText('No / لا'))),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(silsilaText('Yes / نعم، احذف'))),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318)),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(silsilaText('نعم، احذف')),
+          ),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(silsilaText('لا'))),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(silsilaText('إلغاء الأمر'))),
         ],
       ),
     );
-    if (approved != true || !mounted) return;
+    return result == true;
+  }
+
+  String _workspaceRecordLabel(Map<String, String> row) =>
+      row['الكود'] ?? row['الاسم'] ?? row['اسم الحساب'] ?? row['رقم المستند'] ?? 'السجل';
+
+  bool _isPersistedWorkspaceRecord(Map<String, String> row) {
+    final label = _workspaceRecordLabel(row);
+    return (row['_مرجع داخلي'] ?? '').trim().isNotEmpty &&
+        !label.startsWith('DEMO-') && !label.contains('تجريبي') && !label.contains('توضيحي');
+  }
+
+  Future<void> _deleteWorkspaceRow(Map<String, String> selected) async {
+    if (!_isPersistedWorkspaceRecord(selected)) {
+      _showActionMessage('هذا الصف غير مرتبط بسجل دائم في قاعدة البيانات؛ لم يتم حذفه.');
+      return;
+    }
+    final label = _workspaceRecordLabel(selected);
+    final approved = await _confirmGridDeletion(
+      title: 'تأكيد حذف الصف',
+      message: 'هل ترغب في حذف «$label» من شاشة «$_page» فقط؟',
+    );
+    if (!approved || !mounted) return;
     final companyId = _appManagementCompanyId;
-    final recordKey = selected['_مرجع داخلي'] ?? visibleCode;
+    if (companyId == null || companyId.trim().isEmpty) {
+      _showActionMessage('لا توجد شركة نشطة؛ تعذر تنفيذ الحذف الدائم.');
+      return;
+    }
     try {
-      if (companyId != null && companyId.trim().isNotEmpty) {
-        await _workspaceRecordsService.deleteRecord(companyId: companyId, pageKey: _page, recordKey: recordKey);
-      }
+      await _workspaceRecordsService.deleteRecord(
+        companyId: companyId, pageKey: _page,
+        recordKey: selected['_مرجع داخلي']!,
+      );
       final rows = List<Map<String, String>>.from(_saved[_page] ?? <Map<String, String>>[]);
       rows.removeWhere((row) => _sameRecord(row, selected));
       setState(() {
         _saved[_page] = rows;
+        if (_selectedRecord != null && _sameRecord(_selectedRecord!, selected)) _selectedRecord = null;
+      });
+      _showActionMessage('تم حذف الصف «$label» فقط.');
+    } catch (error) {
+      _showActionMessage('تعذر حذف الصف من قاعدة البيانات: $error');
+    }
+  }
+
+  Future<void> _deleteCurrentRecord() async {
+    final selected = _selectedRecord;
+    if (selected == null) {
+      _showActionMessage('اختر صفًا إذا أردت حذفه منفردًا، أو استخدم حذف الجريد بالكامل.');
+      return;
+    }
+    await _deleteWorkspaceRow(selected);
+  }
+
+  Future<void> _deleteEntireWorkspaceGrid() async {
+    final companyId = _appManagementCompanyId;
+    if (companyId == null || companyId.trim().isEmpty) {
+      _showActionMessage('لا توجد شركة نشطة مرتبطة؛ تعذر حذف الجريد.');
+      return;
+    }
+    while (_workspaceHasMore[_page] == true && mounted) {
+      await _loadWorkspacePage(_page, loadMore: true);
+      while (_workspacePageLoadsInProgress.contains(_page) && mounted) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+    }
+    if (!mounted) return;
+    final allRows = List<Map<String, String>>.from(_saved[_page] ?? <Map<String, String>>[]);
+    if (allRows.isEmpty) {
+      _showActionMessage('الجريد فارغ؛ لا توجد بيانات لحذفها.');
+      return;
+    }
+    final invalid = allRows.where((row) => !_isPersistedWorkspaceRecord(row)).length;
+    if (invalid > 0) {
+      _showActionMessage('توقف الحذف الآمن: يوجد $invalid صف غير مرتبط بسجل دائم. لم يُحذف أي صف.');
+      return;
+    }
+    final approved = await _confirmGridDeletion(
+      title: 'تحذير: حذف الجريد بالكامل',
+      message: 'هل ترغب في حذف جميع بيانات شاشة «$_page» بالكامل؟ عدد السجلات: ${allRows.length}. لن تتأثر شاشات أخرى، ولا يمكن التراجع عن الحذف.',
+    );
+    if (!approved || !mounted) return;
+    try {
+      for (final row in allRows) {
+        await _workspaceRecordsService.deleteRecord(
+          companyId: companyId, pageKey: _page,
+          recordKey: row['_مرجع داخلي']!,
+        );
+      }
+      if (!mounted) return;
+      setState(() {
+        _saved[_page] = <Map<String, String>>[];
+        _workspaceOffsets[_page] = 0;
+        _workspaceHasMore[_page] = false;
+        _cloudLoadedWorkspacePages.add(_page);
         _selectedRecord = null;
       });
-      _showActionMessage(companyId == null
-          ? 'تم حذف السجل من الجلسة الحالية فقط؛ لا توجد شركة مرتبطة للحذف الدائم.'
-          : 'تم حذف السجل من قاعدة البيانات.');
+      _showActionMessage('تم حذف الجريد بالكامل (${allRows.length} سجلًا).');
     } catch (error) {
-      _showActionMessage('تعذر حذف السجل من قاعدة البيانات: $error');
+      await _loadWorkspacePage(_page);
+      _showActionMessage('توقف حذف الجريد بسبب خطأ: $error. تم تحديث البيانات لعرض ما بقي.');
     }
   }
 
@@ -1330,7 +1408,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         if (!reports && includeAdd) _recordAction('إضافة', Icons.add_rounded, const Color(0xFF18865A), _openAddDialog),
         if (!reports) _recordAction('حفظ', Icons.save_outlined, _purple, _saveCurrentPage),
         if (!reports) _recordAction('تعديل', Icons.edit_outlined, _orange, _editCurrentRecord),
-        if (!reports) _recordAction('حذف', Icons.delete_outline_rounded, const Color(0xFFB42318), _deleteCurrentRecord),
+        if (!reports) _recordAction('حذف الصف', Icons.delete_outline_rounded, const Color(0xFFB42318), _deleteCurrentRecord),
+        _recordAction('حذف الجريد بالكامل', Icons.delete_sweep_outlined, const Color(0xFFB42318), _deleteEntireWorkspaceGrid),
         _recordAction('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), () => _showPrintPreview(pdf: false)),
         _recordAction('طباعة', Icons.print_outlined, _pink, _printCurrentPagePdf),
         _recordAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importExcel),
@@ -3474,13 +3553,23 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F0FA)),
-                showCheckboxColumn: true,
-                columns: _gridKeys.map((k) => DataColumn(label: Text(k, style: const TextStyle(color: _purple, fontWeight: FontWeight.w800)))).toList(),
+                showCheckboxColumn: false,
+                columns: [
+                  ..._gridKeys.map((k) => DataColumn(label: Text(k, style: const TextStyle(color: _purple, fontWeight: FontWeight.w800)))),
+                  const DataColumn(label: Text('إجراءات')),
+                ],
                 rows: rows.map((r) => DataRow(
                   selected: _selectedRecord != null && _sameRecord(r, _selectedRecord!),
                   onSelectChanged: (selected) => setState(() => _selectedRecord = selected == true ? Map<String, String>.from(r) : null),
-                  cells: _gridKeys.map((k) => DataCell(Text(r[k] ?? '—'),
-                    onTap: () => setState(() => _selectedRecord = Map<String, String>.from(r)))).toList(),
+                  cells: [
+                    ..._gridKeys.map((k) => DataCell(Text(r[k] ?? '—'),
+                      onTap: () => setState(() => _selectedRecord = Map<String, String>.from(r)))),
+                    DataCell(IconButton(
+                      tooltip: 'حذف هذا الصف فقط',
+                      onPressed: _isPersistedWorkspaceRecord(r) ? () => _deleteWorkspaceRow(Map<String, String>.from(r)) : null,
+                      icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFB42318)),
+                    )),
+                  ],
                 )).toList(),
               ),
             ),
