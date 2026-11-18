@@ -53,6 +53,7 @@ class ErpAppPermissionCatalog {
       'app.assets.read',
       'app.assets.upload',
       'app.assets.delete',
+      'data.export.excel',
       'app.permissions.read',
       'app.permissions.manage',
       'app.activity.read',
@@ -67,10 +68,10 @@ class ErpAppPermissionCatalog {
       'app.permissions.read',
       'app.activity.read',
     },
-    'accountant': {'app.settings.read', 'app.activity.read'},
-    'warehouse': {'app.settings.read', 'app.assets.read'},
-    'sales': {'app.settings.read', 'app.assets.read'},
-    'purchasing': {'app.settings.read', 'app.assets.read'},
+    'accountant': {'app.settings.read', 'data.export.excel', 'app.activity.read'},
+    'warehouse': {'app.settings.read', 'app.assets.read', 'data.export.excel'},
+    'sales': {'app.settings.read', 'app.assets.read', 'data.export.excel'},
+    'purchasing': {'app.settings.read', 'app.assets.read', 'data.export.excel'},
     'viewer': {'app.settings.read', 'app.assets.read', 'app.activity.read'},
   };
 
