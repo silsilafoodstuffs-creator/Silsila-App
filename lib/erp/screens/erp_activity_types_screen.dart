@@ -142,11 +142,9 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     });
   }
 
-  void _edit(Map<String,String> r) {
-    setState(() {
-        _editing = true;
-        _selected = r['كود النشاط'];
-    });
+  void _editAll() {
+    if (_rows.isEmpty) { setState(() => _message = 'لا توجد صفوف لتعديلها.'); return; }
+    setState(() { _editing = true; _message = 'وضع تعديل الجريد بالكامل مفعل؛ عدّل أي صف مسموح لك به ثم اضغط حفظ.'; });
   }
 
 
@@ -195,21 +193,26 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
 
   Future<void> _delete() async {
     if (!_editing) { setState(() => _message = 'اضغط «تعديل» أولًا قبل حذف البيانات.'); return; }
-    final row = _rows.where((r) => r['كود النشاط'] == _selected).firstOrNull;
-    if (row == null) { setState(() => _message = 'حدد النشاط المطلوب حذفه أولاً.'); return; }
-    final yes = await showDialog<bool>(context: context, builder: (c) => AlertDialog(title: const Text('تأكيد الحذف'), content: Text('حذف النشاط: ' + (row['اسم النشاط عربي'] ?? '')), actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('No / لا')), FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Yes / نعم، احذف'))]));
+    if (_rows.isEmpty || (_companyId ?? '').isEmpty) { setState(() => _message = 'لا توجد بيانات قابلة للحذف.'); return; }
+    final count = _rows.length;
+    final yes = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
+      title: const Text('تأكيد حذف بيانات الجريد بالكامل'),
+      content: Text('سيتم حذف جميع أنواع الأنشطة الظاهرة وعددها $count من بيانات الشركة ومن قائمة الأنشطة بالتطبيق. لا يمكن التراجع عن هذه العملية. هل تريد المتابعة؟'),
+      actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('حذف الكل'))],
+    ));
     if (yes != true) return;
+    setState(() => _saving = true);
     try {
-      final code = (row['كود النشاط'] ?? '').trim();
-      await _service.deleteRecord(companyId: _companyId!, pageKey: _pageKey, recordKey: row['_مرجع داخلي'] ?? code);
-      if (code.isNotEmpty) {
-        await Supabase.instance.client.from('activity_types').delete().eq('code', code);
+      for (final row in List<Map<String,String>>.from(_rows)) {
+        final code = (row['كود النشاط'] ?? '').trim();
+        await _service.deleteRecord(companyId: _companyId!, pageKey: _pageKey, recordKey: row['_مرجع داخلي'] ?? code);
+        if (code.isNotEmpty) await Supabase.instance.client.from('activity_types').delete().eq('code', code);
       }
       await _load();
-      if (mounted) setState(() { _editing = false; _selected = null; _message = 'تم حذف النشاط وتحديث القائمة.'; });
+      if (mounted) setState(() { _editing = false; _message = 'تم حذف جميع صفوف الجريد بنجاح.'; });
     } catch (e) {
-      if (mounted) setState(() => _message = 'تعذر الحذف: ' + e.toString());
-    }
+      if (mounted) setState(() => _message = 'تعذر إكمال حذف الجريد: $e');
+    } finally { if (mounted) setState(() => _saving = false); }
   }
 
   Widget _task(String text, IconData icon, Color color, VoidCallback? action) =>
@@ -312,8 +315,8 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
         _task('تحديث', Icons.refresh_rounded, const Color(0xFF2475B8), _loading || _saving ? null : _load),
         _task('إضافة', Icons.add_circle_outline_rounded, const Color(0xFF18865A), _saving ? null : _new),
         _task('حفظ', Icons.save_outlined, const Color(0xFF6F42C1), _saving || !_editing ? null : _save),
-        _task('تعديل', Icons.edit_outlined, const Color(0xFFFFA015), _saving || _selected == null || _editing ? null : () { final r = _rows.where((x) => x['كود النشاط'] == _selected).firstOrNull; if (r != null) _edit(r); }),
-        _task('حذف', Icons.delete_outline_rounded, const Color(0xFFB42318), _saving || !_editing || _selected == null ? null : _delete),
+        _task('تعديل', Icons.edit_outlined, const Color(0xFFFFA015), _saving || _rows.isEmpty || _editing ? null : _editAll),
+        _task('حذف', Icons.delete_outline_rounded, const Color(0xFFB42318), _saving || !_editing || _rows.isEmpty ? null : _delete),
         _task('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), _preview),
         _task('طباعة', Icons.print_outlined, const Color(0xFFFF27C3), _printPdf),
         _task('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _saving ? null : _importExcel),
@@ -322,10 +325,10 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       if (_message != null) Container(color: const Color(0xFFF7F2FC), padding: const EdgeInsets.all(7), child: Text(_message!, style: const TextStyle(fontSize: 11, color: Color(0xFF3E007D)))),
       const SizedBox(height: 8),
       Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40, horizontalMargin: 5, columnSpacing: 5, headingRowColor: WidgetStateProperty.all(const Color(0xFFF1EAF9)), columns: const [DataColumn(label: Text('م')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط عربي')), DataColumn(label: Text('اسم النشاط إنجليزي')), DataColumn(label: Text('نشط')), DataColumn(label: Text('يظهر في التطبيق'))], rows: [
-        for (var i = 0; i < _rows.length; i++) DataRow(selected: _rows[i]['كود النشاط'] == _selected, onSelectChanged: (_) => setState(() => _selected = _rows[i]['كود النشاط']), cells: [
+        for (var i = 0; i < _rows.length; i++) DataRow(cells: [
           DataCell(SizedBox(width: 38, child: Text('${i + 1}', textAlign: TextAlign.center))),
-          DataCell(SizedBox(width: 130, child: Align(alignment: AlignmentDirectional.centerStart, child: Text(_rows[i]['كود النشاط'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6F42C1)))))),
-          DataCell(SizedBox(width: 220, child: TextFormField(initialValue: _rows[i]['اسم النشاط عربي'] ?? '', key: ValueKey('activity-ar-$i-${_rows[i]['كود النشاط']}'), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4)), onTap: () => setState(() => _selected = _rows[i]['كود النشاط']), onChanged: (v) => _rows[i]['اسم النشاط عربي'] = v))),
+          DataCell(SizedBox(width: 82, child: Align(alignment: AlignmentDirectional.centerStart, child: Text(_rows[i]['كود النشاط'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6F42C1)))))),
+          DataCell(SizedBox(width: 220, child: TextFormField(initialValue: _rows[i]['اسم النشاط عربي'] ?? '', key: ValueKey('activity-ar-$i-${_rows[i]['كود النشاط']}'), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4)), onChanged: (v) => _rows[i]['اسم النشاط عربي'] = v))),
           DataCell(SizedBox(width: 220, child: TextFormField(initialValue: _rows[i]['اسم النشاط إنجليزي'] ?? '', key: ValueKey('activity-en-$i-${_rows[i]['كود النشاط']}'), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4)), onTap: () => setState(() => _selected = _rows[i]['كود النشاط']), onChanged: (v) => _rows[i]['اسم النشاط إنجليزي'] = v))),
           DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: (_rows[i]['نشط'] ?? 'true') == 'true', onChanged: _editing ? (v) => setState(() { final active = v ?? false; _rows[i]['نشط'] = active.toString(); if (!active) _rows[i]['يظهر في التطبيق'] = 'false'; }) : null)),
           DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: (_rows[i]['يظهر في التطبيق'] ?? 'true') == 'true' && (_rows[i]['نشط'] ?? 'true') == 'true', onChanged: _editing && (_rows[i]['نشط'] ?? 'true') == 'true' ? (v) => setState(() => _rows[i]['يظهر في التطبيق'] = (v ?? false).toString()) : null)),
