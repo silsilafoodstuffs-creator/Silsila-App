@@ -268,6 +268,31 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     } catch (e) { if (mounted) setState(() => _message = 'تعذر استيراد Excel: $e'); }
   }
 
+  Future<void> _exportExcel() async {
+    if (_rows.isEmpty) { setState(() => _message = 'لا توجد بيانات لتصديرها.'); return; }
+    try {
+      final workbook = excel.Excel.createExcel();
+      final sheet = workbook['أنواع الأنشطة'];
+      const keys = ['ترتيب السطر', 'كود النشاط', 'اسم النشاط عربي', 'اسم النشاط إنجليزي', 'نشط', 'يظهر في التطبيق'];
+      sheet.appendRow(keys.map((key) => excel.TextCellValue(key)).toList());
+      for (final row in _rows) {
+        sheet.appendRow(keys.map((key) => excel.TextCellValue(row[key] ?? '')).toList());
+      }
+      final bytes = workbook.encode();
+      if (bytes == null) throw StateError('تعذر إنشاء ملف Excel.');
+      final saved = await FilePicker.platform.saveFile(
+        dialogTitle: 'تصدير أنواع الأنشطة',
+        fileName: 'silsila_activity_types.xlsx',
+        type: FileType.custom,
+        allowedExtensions: ['xlsx'],
+        bytes: Uint8List.fromList(bytes),
+      );
+      if (mounted) setState(() => _message = saved == null ? 'تم إلغاء تصدير Excel.' : 'تم تصدير بيانات الجريد بالكامل إلى Excel.');
+    } catch (e) {
+      if (mounted) setState(() => _message = 'تعذر تصدير Excel: $e');
+    }
+  }
+
   Future<void> _printPdf() async {
     if (_rows.isEmpty) { setState(() => _message = 'لا توجد بيانات للطباعة.'); return; }
     try {
@@ -320,6 +345,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
         _task('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), _preview),
         _task('طباعة', Icons.print_outlined, const Color(0xFFFF27C3), _printPdf),
         _task('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _saving ? null : _importExcel),
+        _task('تصدير Excel', Icons.file_download_outlined, const Color(0xFF16834A), _saving ? null : _exportExcel),
         _task('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printPdf),
       ]))),
       if (_message != null) Container(color: const Color(0xFFF7F2FC), padding: const EdgeInsets.all(7), child: Text(_message!, style: const TextStyle(fontSize: 11, color: Color(0xFF3E007D)))),
