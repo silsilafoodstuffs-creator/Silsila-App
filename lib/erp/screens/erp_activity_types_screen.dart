@@ -120,40 +120,8 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       }
       data = mergedByCode.values.toList();
       _normalizeActivityCodes(data);
-      // Keep the activity master on the same canonical 01..20 codes as the
-      // ERP item-category tree; retain any existing customized labels.
-      const defaults = <Map<String, String>>[
-        {'ترتيب السطر':'1','كود النشاط':'01','اسم النشاط عربي':'مواد غذائية','اسم النشاط إنجليزي':'Foodstuffs','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'2','كود النشاط':'02','اسم النشاط عربي':'لوازم بناء','اسم النشاط إنجليزي':'Building Supplies','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'3','كود النشاط':'03','اسم النشاط عربي':'ملابس واكسسوارات','اسم النشاط إنجليزي':'Clothing & Accessories','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'4','كود النشاط':'04','اسم النشاط عربي':'أجهزة وإلكترونيات','اسم النشاط إنجليزي':'Electronics','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'5','كود النشاط':'05','اسم النشاط عربي':'سيارات ومعدات','اسم النشاط إنجليزي':'Vehicles & Equipment','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'6','كود النشاط':'06','اسم النشاط عربي':'خدمات شحن ونقل','اسم النشاط إنجليزي':'Shipping & Transport Services','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'7','كود النشاط':'07','اسم النشاط عربي':'أثاث وديكورات','اسم النشاط إنجليزي':'Furniture & Decor','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'8','كود النشاط':'08','اسم النشاط عربي':'أدوات كهربائية','اسم النشاط إنجليزي':'Electrical Tools','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'9','كود النشاط':'09','اسم النشاط عربي':'مكتبات وقرطاسية','اسم النشاط إنجليزي':'Stationery & Office Supplies','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'10','كود النشاط':'10','اسم النشاط عربي':'مستلزمات طبية','اسم النشاط إنجليزي':'Medical Supplies','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'11','كود النشاط':'11','اسم النشاط عربي':'مستحضرات تجميل وعناية','اسم النشاط إنجليزي':'Beauty & Personal Care','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'12','كود النشاط':'12','اسم النشاط عربي':'زراعة ومستلزمات زراعية','اسم النشاط إنجليزي':'Agriculture Supplies','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'13','كود النشاط':'13','اسم النشاط عربي':'قطع غيار ومستلزمات صيانة','اسم النشاط إنجليزي':'Spare Parts & Maintenance','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'14','كود النشاط':'14','اسم النشاط عربي':'مستلزمات فندقية ومطاعم','اسم النشاط إنجليزي':'Hospitality & Restaurant Supplies','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'15','كود النشاط':'15','اسم النشاط عربي':'تعبئة وتغليف','اسم النشاط إنجليزي':'Packaging Supplies','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'16','كود النشاط':'16','اسم النشاط عربي':'منظفات ومستلزمات نظافة','اسم النشاط إنجليزي':'Cleaning Supplies','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'17','كود النشاط':'17','اسم النشاط عربي':'مستلزمات حيوانات وأعلاف','اسم النشاط إنجليزي':'Pet Supplies & Feed','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'18','كود النشاط':'18','اسم النشاط عربي':'خدمات نقل وتوصيل','اسم النشاط إنجليزي':'Transport & Delivery Services','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'19','كود النشاط':'19','اسم النشاط عربي':'أنشطة أخرى','اسم النشاط إنجليزي':'Other Activities','نشط':'true','يظهر في التطبيق':'true'},
-        {'ترتيب السطر':'20','كود النشاط':'20','اسم النشاط عربي':'كتب ومطبوعات','اسم النشاط إنجليزي':'Books & Publications','نشط':'true','يظهر في التطبيق':'true'},
-      ];
-      final existingCodes = data.map((r) => r['كود النشاط']).toSet();
-      for (final starter in defaults) {
-        if (!existingCodes.contains(starter['كود النشاط'])) {
-          await _service.saveRecord(companyId: companyId, pageKey: _pageKey, record: starter);
-        }
-      }
-      if (defaults.any((r) => !existingCodes.contains(r['كود النشاط']))) {
-        data = await _service.listPage(companyId: companyId, pageKey: _pageKey);
-        _normalizeActivityCodes(data);
-      }
+      // Render the authoritative master rows immediately. Do not make screen
+      // visibility depend on optional workspace writes or reseeding defaults.
       if (!mounted) return;
       setState(() {
         _rows
