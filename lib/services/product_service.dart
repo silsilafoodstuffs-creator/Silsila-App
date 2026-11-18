@@ -120,7 +120,9 @@ class ProductService {
           .eq('name', activityType)
           .eq('is_active', true)
           .maybeSingle();
-      activityCode = activityRow?['code']?.toString();
+      activityCode = _normalizeActivityCode(
+        activityRow?['code']?.toString() ?? activityType,
+      );
     }
 
     var categoryQuery = db.from('erp_item_categories')
@@ -303,6 +305,29 @@ class ProductService {
         .replaceAll('\\', '\\\\')
         .replaceAll('%', '\\%')
         .replaceAll('_', '\\_');
+  }
+
+  String? _normalizeActivityCode(String? value) {
+    final clean = value?.trim().toUpperCase();
+    if (clean == null || clean.isEmpty) return null;
+    final legacy = RegExp(r'^ACT([0-9]{3})$').firstMatch(clean);
+    if (legacy != null) {
+      final number = int.tryParse(legacy.group(1)!);
+      return number == null ? clean : number.toString().padLeft(2, '0');
+    }
+    if (RegExp(r'^[0-9]{1,2}$').hasMatch(clean)) {
+      return int.parse(clean).toString().padLeft(2, '0');
+    }
+    const aliases = <String, String>{
+      'FOOD': '01', 'مواد غذائية': '01', 'FOODSTUFFS': '01',
+      'BUILDING': '02', 'لوازم بناء': '02',
+      'CLOTHING': '03', 'ملابس واكسسوارات': '03',
+      'ELECTRONICS': '04', 'أجهزة وإلكترونيات': '04',
+      'VEHICLES': '05', 'سيارات ومعدات': '05',
+      'SHIPPING': '06', 'خدمات شحن ونقل': '06',
+      'FURNITURE': '07', 'أثاث وديكورات': '07',
+    };
+    return aliases[clean] ?? clean;
   }
 
   String? _clean(String? value) {
