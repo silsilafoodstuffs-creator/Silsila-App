@@ -121,7 +121,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       String normalizeActivity(String value, Set<String> available) {
         final code = value.trim().toUpperCase();
         if (code.isEmpty) return '';
-        final match = RegExp(r'^ACT(\d{3})).firstMatch(code);
+        final match = RegExp(r'^ACT(\d{3})$').firstMatch(code);
         if (match != null) {
           final number = int.tryParse(match.group(1)!);
           if (number != null) {
@@ -129,7 +129,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
             if (available.contains(shortCode)) return shortCode;
           }
         }
-        if (RegExp(r'^\d{1,2}).hasMatch(code)) {
+        if (RegExp(r'^\d{1,2}$').hasMatch(code)) {
           final shortCode = int.parse(code).toString().padLeft(2, '0');
           final legacyCode = 'ACT${shortCode}';
           if (available.contains(legacyCode)) return legacyCode;
