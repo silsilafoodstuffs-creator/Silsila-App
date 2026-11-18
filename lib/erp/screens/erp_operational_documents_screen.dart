@@ -1657,9 +1657,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         if (matches.isEmpty) { invalid++; continue; }
         final item = matches.first;
         final itemId = _s(item['id']);
-        if (!seenItemIds.add(itemId)) { duplicates++; continue; }
         final qty = double.tryParse(valueAt(row, qtyCol).replaceAll(',', '.')) ?? 0;
         if (qty <= 0) { invalid++; continue; }
+        if (!seenItemIds.add(itemId)) { duplicates++; continue; }
         final basePrice = widget.kind == ErpOperationalKind.purchase ? _n(item['purchase_price']) : _n(item['sale_price']);
         final importedPrice = double.tryParse(valueAt(row, priceCol).replaceAll(',', '.')) ?? basePrice;
         added.add({'item_id': itemId, 'item_code': _s(item['item_code']), 'item_name': _s(item['item_name']), 'quantity': qty, 'unit_id': '', 'unit_name': (_s(item['base_unit']).trim().isEmpty ? 'وحدة' : _s(item['base_unit'])), 'conversion_factor': 1.0, 'unit_price': importedPrice, 'discount': 0.0, 'tax': 0.0});
