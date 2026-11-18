@@ -455,7 +455,10 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       ]))),
       if (_message != null) Container(color: const Color(0xFFF7F2FC), padding: const EdgeInsets.all(7), child: Text(_message!, style: const TextStyle(fontSize: 11, color: Color(0xFF3E007D)))),
       const SizedBox(height: 8),
-      Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40, horizontalMargin: 5, columnSpacing: 5, headingRowColor: WidgetStateProperty.all(const Color(0xFFF1EAF9)), columns: const [DataColumn(label: Text('م')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط عربي')), DataColumn(label: Text('اسم النشاط إنجليزي')), DataColumn(label: Text('نشط')), DataColumn(label: Text('يظهر في التطبيق')), DataColumn(label: Text('إجراءات'))], rows: [
+      if (_loading) const LinearProgressIndicator(minHeight: 2),
+      Expanded(
+        child: SingleChildScrollView(
+          child: Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40, horizontalMargin: 5, columnSpacing: 5, headingRowColor: WidgetStateProperty.all(const Color(0xFFF1EAF9)), columns: const [DataColumn(label: Text('م')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط عربي')), DataColumn(label: Text('اسم النشاط إنجليزي')), DataColumn(label: Text('نشط')), DataColumn(label: Text('يظهر في التطبيق')), DataColumn(label: Text('إجراءات'))], rows: [
         for (var i = 0; i < _rows.length; i++) DataRow(cells: [
           DataCell(SizedBox(width: 38, child: Text('${i + 1}', textAlign: TextAlign.center))),
           DataCell(SizedBox(width: 82, child: Align(alignment: AlignmentDirectional.centerStart, child: Text(_rows[i]['كود النشاط'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6F42C1)))))),
@@ -466,7 +469,9 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
           DataCell(IconButton(tooltip: 'حذف هذا النشاط فقط', onPressed: _saving || !_editing ? null : () => _deleteActivityRow(_rows[i]), icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFB42318)))),
         ]),
       ]))),
-      if (_loading) const LinearProgressIndicator(minHeight: 2),
+
+        ),
+      ),
       if (_rows.isEmpty && !_loading) const Padding(padding: EdgeInsets.all(18), child: Text('لا توجد أنواع أنشطة محفوظة بعد. استخدم «إضافة» لإدخال أول نشاط.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54))),
     ]));
   }
