@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/erp_excel_export_service.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_inventory_repository.dart';
@@ -212,6 +213,40 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
   Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) =>
       ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
+  Future<void> _exportInventory() async {
+    try {
+      await exportErpExcel(
+        fileName: 'silsila_inventory',
+        sheets: {'أرصدة المخزون': _visibleBalances, 'حركات المخزون': _movements},
+        columns: {
+          'أرصدة المخزون': {
+            'معرف الصنف': 'item_id',
+            'معرف المخزن': 'warehouse_id',
+            'الكمية المتاحة': 'quantity_on_hand',
+            'متوسط تكلفة الوحدة': 'average_unit_cost',
+            'قيمة المخزون': 'inventory_value',
+            'قيمة العرض': '_display_value',
+          },
+          'حركات المخزون': {
+            'معرف الحركة': 'id',
+            'نوع الحركة': 'movement_type',
+            'معرف الصنف': 'item_id',
+            'معرف المخزن': 'warehouse_id',
+            'وارد': 'quantity_in',
+            'منصرف': 'quantity_out',
+            'تكلفة الوحدة': 'unit_cost',
+            'التاريخ': 'movement_date',
+            'رقم التشغيلة': 'batch_number',
+            'ملاحظات': 'notes',
+          },
+        },
+      );
+      if (mounted) setState(() => _success = 'تم تصدير ${_visibleBalances.length} رصيدًا و${_movements.length} حركة من بيانات المخزون الفعلية.');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر تصدير بيانات المخزون: $e');
+    }
+  }
+
   void _newMovement() {
     if ([_quantity.text, _notes.text, _batch.text].any((value) => value.trim().isNotEmpty) ||
         (_cost.text.trim().isNotEmpty && _cost.text.trim() != '0' && _cost.text.trim() != '0.0' && _cost.text.trim() != '0.00')) {
@@ -266,6 +301,7 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
                 _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _newMovement),
                 _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _save),
                 _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewMovements),
+                _quickTask('تصدير Excel', Icons.file_download_outlined, const Color(0xFF16834A), _loading ? null : _exportInventory),
               ])),
             ]),
           )),
