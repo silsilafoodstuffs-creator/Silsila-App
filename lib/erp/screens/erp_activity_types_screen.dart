@@ -73,8 +73,14 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
         return;
       }
       _resolvedCompanyId = companyId;
-      var data = await _service.listPage(companyId: companyId, pageKey: _pageKey);
-      _normalizeActivityCodes(data);
+      var data = <Map<String, String>>[];
+      try {
+        data = await _service.listPage(companyId: companyId, pageKey: _pageKey);
+        _normalizeActivityCodes(data);
+      } catch (_) {
+        // Workspace customization is optional; the shared activity master below
+        // remains sufficient to render the activity list in read-only mode.
+      }
       // The shared activity master is the authoritative display source. Workspace
       // rows remain the editable company-specific overlay, but an empty or
       // restricted workspace query must not hide globally active activities.
