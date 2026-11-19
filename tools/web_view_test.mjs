@@ -96,7 +96,7 @@ try {
       throw error;
     }
 
-    const result = await page.evaluate(() => {
+    const result = await page.evaluate(async () => {
       const findInRoot = root => {
         const direct = root.querySelector?.('canvas');
         if (direct && direct.width > 0 && direct.height > 0) return direct;
@@ -118,11 +118,24 @@ try {
         visibleHeight: rect?.height ?? 0,
         direction: document.documentElement.dir,
         language: document.documentElement.lang,
+        bootstrapSrc: [...document.scripts].map(script => script.src).find(src => src.includes('flutter_bootstrap.js')) ?? '',
+        serviceWorkerControlled: !!navigator.serviceWorker?.controller,
+        serviceWorkerRegistrations: navigator.serviceWorker
+          ? undefined
+          : 0,
       };
     });
+    result.serviceWorkerRegistrations = await page.evaluate(async () =>
+      'serviceWorker' in navigator
+        ? (await navigator.serviceWorker.getRegistrations()).length
+        : 0);
 
     if (!result.title.includes('Silsila')) failures.push(`[${viewport.name}] Unexpected page title: ${result.title}`);
     if (result.visibleWidth <= 0 || result.visibleHeight <= 0) failures.push(`[${viewport.name}] Flutter canvas is not visible`);
+    if (!result.bootstrapSrc.includes('?v=')) failures.push(`[${viewport.name}] Flutter bootstrap is not commit-versioned: ${result.bootstrapSrc}`);
+    if (result.serviceWorkerControlled || result.serviceWorkerRegistrations !== 0) {
+      failures.push(`[${viewport.name}] A stale/offline service worker can override the deployed app: ${JSON.stringify({ controlled: result.serviceWorkerControlled, registrations: result.serviceWorkerRegistrations })}`);
+    }
     console.log(`PASS WebView ${viewport.name}: ${JSON.stringify(result)}`);
     await page.close();
   }
