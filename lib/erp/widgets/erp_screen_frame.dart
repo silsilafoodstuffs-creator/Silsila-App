@@ -257,7 +257,7 @@ class ErpScreenFrame extends StatelessWidget {
                           heading,
                         ]);
                       }
-                      if (constraints.maxWidth >= 820 && tabsPosition != 'bottom' && tabsPosition != 'above_content') {
+                      if (constraints.maxWidth >= 820 && (tabsPosition == 'left' || tabsPosition == 'right')) {
                         final tabsWidget = Flexible(flex: 6, child: Align(alignment: Alignment.centerLeft, child: tabStrip));
                         final titleWidget = Flexible(flex: 4, child: heading);
                         return Row(
