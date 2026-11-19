@@ -21,7 +21,7 @@ Saved profiles are applied through `ErpScreenLayoutRuntime` to the ERP subtree:
 - ExpansionTile and ListTile receive the selected tree/list density, indentation and shape.
 - Cards and input decorations receive the selected surface, border, radius and color tokens.
 - App bars receive the selected light/dark header color treatment.
-- Screens using `ErpScreenFrame` additionally receive the configurable glossy/glass/neon/minimal header, tab treatment, taskbar layout and per-screen frame placement controls.
+- Screens using `ErpScreenFrame` additionally receive the configurable glossy/glass/neon/minimal header, tab treatment, live tab placement (top/left/right/bottom/hidden), live taskbar placement (top/below-title/bottom/hidden), and per-screen frame visibility/content-width controls. The active dashboard screen profile is passed through an inherited scope so nested frames use the selected menu screen's profile even when their internal title differs.
 
 ## Safety and compatibility
 
@@ -33,6 +33,8 @@ Saved profiles are applied through `ErpScreenLayoutRuntime` to the ERP subtree:
 ## Known boundaries — not a 100% acceptance claim
 
 - A custom widget that hardcodes its own colors, decoration or button style can override inherited theme tokens.
+- Generic saved metadata such as view mode (table/grid/tree/split), date/image/scroll placement and sidebar visibility cannot safely rearrange arbitrary screen-specific widget trees. Those settings require explicit adapters in each target screen; the Studio UI now explains this boundary rather than implying a universal automatic transformation.
+- Alternating striped rows are not offered as a generic DataTable preset because Flutter's inherited DataTable theme cannot reliably alternate arbitrary row colors without a row-aware adapter.
 - Header/task/date/image placement is effective only where the screen exposes those regions through `ErpScreenFrame`; the frame does not discover arbitrary private widget trees.
 - The tree presets style standard ExpansionTile/ListTile controls. Bespoke tree renderers require an explicit adapter.
 - A complete acceptance pass still needs the full validation workflow and visual review of representative desktop/mobile screens, including screens with custom widgets.
