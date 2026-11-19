@@ -75,6 +75,15 @@ jobs:
           test -s build/web/index.html
           sed -i "s/__SILSILA_BUILD_VERSION__/${GITHUB_SHA}/g" build/web/index.html
           grep -q "flutter_bootstrap.js?v=${GITHUB_SHA}" build/web/index.html
+          # The loader references the compiled Dart entrypoint by a stable
+          # filename; add the same release key so mobile browsers cannot reuse
+          # a previous main.dart.js from their HTTP cache.
+          if grep -q "main.dart.js" build/web/flutter_bootstrap.js; then
+            sed -i "s/main.dart.js/main.dart.js?v=${GITHUB_SHA}/g" build/web/flutter_bootstrap.js
+          else
+            echo "ERROR: Flutter bootstrap does not reference main.dart.js as expected."
+            exit 1
+          fi
 
       - name: Verify Web build output
         run: |
