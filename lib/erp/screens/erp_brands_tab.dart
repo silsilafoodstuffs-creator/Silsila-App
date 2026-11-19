@@ -872,8 +872,15 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
               FilledButton.icon(onPressed: _saving ? null : _addGroup,
                 icon: const Icon(Icons.add), label: const Text('إضافة مجموعة جديدة')),
             ])),
+            if (_error != null)
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 12))),
             Expanded(child: _loading ? const Center(child: CircularProgressIndicator())
-              : DataTable2(
+              : SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: 1320,
+                  child: DataTable2(
                   minWidth: 1320, columnSpacing: 10, horizontalMargin: 8,
                   headingRowHeight: 44, dataRowHeight: 54, showCheckboxColumn: false,
                   headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
@@ -892,8 +899,10 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       const DataCell(Text('1', style: TextStyle(fontWeight: FontWeight.w900))),
                       const DataCell(Text('—', style: TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
                       const DataCell(Text('بدون مجموعة', style: TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
+                      const DataCell(Text('—')),
                       DataCell(Text('${_rows.where((row) => _s(row['brand_group_id']).isEmpty).length}')),
-                      const DataCell(Text('—')), const DataCell(Text('—')),
+                      const DataCell(Text('—')),
+                      const DataCell(Text('—')),
                       DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
                         IconButton(tooltip: 'إعادة براندات إلى بدون مجموعة',
                           onPressed: _saving ? null : () => _openGroupBrandPicker(const {'id': '', 'group_name': 'بدون مجموعة'}),
@@ -935,7 +944,9 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       }).toList();
                     })(),
                   ],
-                )),
+                ),
+                ),
+              )),
           ] else ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(12,7,12,3),
