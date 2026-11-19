@@ -66,7 +66,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         .select('id,brand_code,brand_name,brand_name_en,brand_group,brand_group_id,display_order,is_active,is_system,logo_data,logo_mime_type,activity_code')
         .eq('company_id', widget.companyId.trim())
         .order('brand_code');
-      final groups = await _db.from('erp_brand_groups').select('id,group_code,group_name,is_active').eq('company_id', widget.companyId.trim()).order('group_code');
+      final groups = await _db.from('erp_brand_groups').select('id,group_code,group_name,is_active,show_in_app').eq('company_id', widget.companyId.trim()).order('group_code');
       // The activity directory is auxiliary metadata. A missing or restricted
       // activity_types table must never hide the brands/groups catalog.
       List<Map<String,dynamic>> activities = <Map<String,dynamic>>[];
