@@ -67,7 +67,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         .select('id,brand_code,brand_name,brand_name_en,brand_group,brand_group_id,display_order,is_active,is_system,logo_data,logo_mime_type,activity_code')
         .eq('company_id', widget.companyId.trim())
         .order('brand_code');
-      final groups = await _db.from('erp_brand_groups').select('id,group_code,group_name,group_name_en,is_active,show_in_app').eq('company_id', widget.companyId.trim()).order('group_code');
+      final groups = await _db.from('erp_brand_groups').select('id,group_code,group_name,group_name_en,activity_code,is_active,show_in_app').eq('company_id', widget.companyId.trim()).order('group_code');
       // The activity directory is auxiliary metadata. A missing or restricted
       // activity_types table must never hide the brands/groups catalog.
       List<Map<String,dynamic>> activities = <Map<String,dynamic>>[];
@@ -80,13 +80,13 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         activities = List<Map<String,dynamic>>.from(activityRows);
       } catch (_) {
         activities = const [
-          {'code':'ACT001','name':'مواد غذائية'},
-          {'code':'ACT002','name':'لوازم بناء'},
-          {'code':'ACT003','name':'ملابس واكسسوارات'},
-          {'code':'ACT004','name':'أجهزة وإلكترونيات'},
-          {'code':'ACT005','name':'سيارات ومعدات'},
-          {'code':'ACT006','name':'خدمات شحن ونقل'},
-          {'code':'ACT007','name':'أثاث وديكورات'},
+          {'code':'01','name':'مواد غذائية'},
+          {'code':'02','name':'لوازم بناء'},
+          {'code':'03','name':'ملابس واكسسوارات'},
+          {'code':'04','name':'أجهزة وإلكترونيات'},
+          {'code':'05','name':'سيارات ومعدات'},
+          {'code':'06','name':'خدمات شحن ونقل'},
+          {'code':'07','name':'أثاث وديكورات'},
         ];
       }
       if (!mounted) return;
@@ -476,6 +476,20 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
 
 
+  String _activityName(String code) {
+    for (final activity in _activities) {
+      if (_s(activity['code']) == code) return _s(activity['name']);
+    }
+    return code;
+  }
+
+  String? get _defaultGroupId {
+    for (final group in _groups) {
+      if (_s(group['group_code']) == 'Brg01') return _s(group['id']);
+    }
+    return null;
+  }
+
   String _groupKey(Map<String,dynamic> row) {
     final id = _s(row['brand_group_id']);
     final matches = _groups.where((g) => _s(g['id']) == id);
@@ -487,30 +501,44 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   Future<void> _addGroup() async {
     final name = TextEditingController();
     final english = TextEditingController();
+    var activityCode = '01';
+    final formKey = GlobalKey<FormState>();
     final ok = await showDialog<bool>(context: context, builder: (ctx) => Directionality(
       textDirection: TextDirection.rtl,
       child: AlertDialog(title: const Text('إضافة مجموعة براندات'),
-        content: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: name, autofocus: true, decoration: const InputDecoration(labelText: 'اسم البراند عربي *')),
+        content: SizedBox(width: 420, child: Form(key: formKey, child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextFormField(controller: name, autofocus: true, decoration: const InputDecoration(labelText: 'اسم المجموعة عربي *'),
+            validator: (value) => value == null || value.trim().isEmpty ? 'اكتب اسم المجموعة.' : null),
           const SizedBox(height: 8),
-          TextField(controller: english, textDirection: TextDirection.ltr,
-            decoration: const InputDecoration(labelText: 'اسم انجليزي')),
-        ])),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx,false), child: const Text('إلغاء')),
-          FilledButton(onPressed: () => Navigator.pop(ctx,name.text.trim().isNotEmpty), child: const Text('حفظ'))])));
+          TextFormField(controller: english, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'اسم انجليزي')),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: activityCode, isExpanded: true,
+            decoration: const InputDecoration(labelText: 'النشاط التابع له المجموعة *'),
+            items: _activities.map((activity) => DropdownMenuItem<String>(
+              value: _s(activity['code']), child: Text('${_s(activity['name'])} — ${_s(activity['code'])}'),
+            )).toList(),
+            onChanged: (value) { if (value != null) activityCode = value; },
+            validator: (value) => value == null || value.isEmpty ? 'اختر النشاط.' : null,
+          ),
+        ]))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () { if (formKey.currentState?.validate() == true) Navigator.pop(ctx, true); }, child: const Text('حفظ')),
+        ])));
     if (ok != true) { name.dispose(); english.dispose(); return; }
     setState(() => _saving = true);
     try {
       final inserted = await _db.from('erp_brand_groups').insert({
-        'company_id':widget.companyId.trim(), 'group_name':name.text.trim(),
-        'group_name_en':english.text.trim().isEmpty ? null : english.text.trim(),
-      }).select('id,group_code,group_name,group_name_en,is_active,show_in_app').single();
+        'company_id': widget.companyId.trim(), 'group_name': name.text.trim(),
+        'group_name_en': english.text.trim().isEmpty ? null : english.text.trim(),
+        'activity_code': activityCode,
+      }).select('id,group_code,group_name,group_name_en,activity_code,is_active,show_in_app').single();
       await _load(showLoading: false);
-      if (mounted) ErpCenterToast.show(context, 'تم إنشاء المجموعة بالكود ${_s(inserted['group_code'])}.');
+      if (mounted) ErpCenterToast.show(context, 'تم إنشاء المجموعة بالكود ${_s(inserted['group_code'])} وربطها بالنشاط المحدد.');
     } catch (e) { if (mounted) ErpCenterToast.show(context, 'تعذر إنشاء المجموعة: $e', isError: true); }
     finally { name.dispose(); english.dispose(); if (mounted) setState(() => _saving = false); }
   }
-
 
   Future<void> _openGroupBrandPicker(Map<String,dynamic> group) async {
     if (_saving) return;
@@ -598,7 +626,12 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   Future<void> _deleteGroup(Map<String,dynamic> group) async {
     final id = _s(group['id']);
     if (id.isEmpty || _saving) return;
+    if (_s(group['group_code']) == 'Brg01' || _s(group['group_name']) == 'بدون مجموعة') {
+      ErpCenterToast.show(context, 'مجموعة «بدون مجموعة» أساسية ومحمية من الحذف.', isError: true);
+      return;
+    }
     final count = _rows.where((row) => _s(row['brand_group_id']) == id).length;
+                        final isDefault = _s(group['group_code']) == 'Brg01';
     final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) =>
       Directionality(textDirection: TextDirection.rtl, child: AlertDialog(
         title: const Text('حذف مجموعة البراندات'),
@@ -640,27 +673,46 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   }
 
   Future<void> _editGroup(Map<String,dynamic> group) async {
-    final name = TextEditingController(text:_s(group['group_name']));
-    final english = TextEditingController(text:_s(group['group_name_en']));
-    final ok = await showDialog<bool>(context:context,builder:(ctx)=>Directionality(
-      textDirection:TextDirection.rtl, child:AlertDialog(title:const Text('تعديل مجموعة البراندات'),
-        content:SizedBox(width:420,child:Column(mainAxisSize:MainAxisSize.min,children:[
-          TextField(controller:name,decoration:const InputDecoration(labelText:'اسم البراند عربي *')),
-          const SizedBox(height:8),
-          TextField(controller:english,textDirection:TextDirection.ltr,decoration:const InputDecoration(labelText:'اسم انجليزي')),
-        ])),
-        actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),
-          FilledButton(onPressed:()=>Navigator.pop(ctx,name.text.trim().isNotEmpty),child:const Text('حفظ'))])));
-    if(ok!=true){name.dispose();english.dispose();return;}
+    final isDefault = _s(group['group_code']) == 'Brg01';
+    final name = TextEditingController(text: _s(group['group_name']));
+    final english = TextEditingController(text: _s(group['group_name_en']));
+    var activityCode = _s(group['activity_code']).isEmpty ? '01' : _s(group['activity_code']);
+    final formKey = GlobalKey<FormState>();
+    final ok = await showDialog<bool>(context: context, builder: (ctx) => Directionality(
+      textDirection: TextDirection.rtl,
+      child: AlertDialog(title: const Text('تعديل مجموعة البراندات'),
+        content: SizedBox(width: 420, child: Form(key: formKey, child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextFormField(controller: name, readOnly: isDefault,
+            decoration: const InputDecoration(labelText: 'اسم البراند عربي *'),
+            validator: (value) => value == null || value.trim().isEmpty ? 'اكتب اسم المجموعة.' : null),
+          const SizedBox(height: 8),
+          TextFormField(controller: english, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'اسم انجليزي')),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: activityCode, isExpanded: true,
+            decoration: const InputDecoration(labelText: 'النشاط التابع له المجموعة *'),
+            items: _activities.map((activity) => DropdownMenuItem<String>(
+              value: _s(activity['code']), child: Text('${_s(activity['name'])} — ${_s(activity['code'])}'),
+            )).toList(),
+            onChanged: (value) { if (value != null) activityCode = value; },
+            validator: (value) => value == null || value.isEmpty ? 'اختر النشاط.' : null,
+          ),
+        ]))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () { if (formKey.currentState?.validate() == true) Navigator.pop(ctx, true); }, child: const Text('حفظ')),
+        ])));
+    if (ok != true) { name.dispose(); english.dispose(); return; }
     try {
       await _db.from('erp_brand_groups').update({
-        'group_name':name.text.trim(),
-        'group_name_en':english.text.trim().isEmpty ? null : english.text.trim(),
-      }).eq('id',_s(group['id'])).eq('company_id',widget.companyId.trim()).select('id').single();
+        'group_name': isDefault ? 'بدون مجموعة' : name.text.trim(),
+        'group_name_en': english.text.trim().isEmpty ? null : english.text.trim(),
+        'activity_code': activityCode,
+      }).eq('id', _s(group['id'])).eq('company_id', widget.companyId.trim()).select('id').single();
       await _load(showLoading: false);
-      if(mounted) ErpCenterToast.show(context,'تم تعديل بيانات المجموعة.');
-    } catch(e){if(mounted) ErpCenterToast.show(context,'تعذر تعديل المجموعة: $e',isError:true);}
-    finally{name.dispose();english.dispose();}
+      if (mounted) ErpCenterToast.show(context, 'تم تعديل بيانات المجموعة والنشاط التابع لها.');
+    } catch (e) { if (mounted) ErpCenterToast.show(context, 'تعذر تعديل المجموعة: $e', isError: true); }
+    finally { name.dispose(); english.dispose(); }
   }
 
   Future<void> _toggleGroup(Map<String,dynamic> group) async {
@@ -682,8 +734,8 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   List<String> get _groupNames {
     final names = _rows.map(_groupKey).toSet().toList();
     names.sort((a,b) {
-      if (a == 'بدون مجموعة') return 1;
-      if (b == 'بدون مجموعة') return -1;
+      if (a == 'بدون مجموعة') return -1;
+      if (b == 'بدون مجموعة') return 1;
       return a.compareTo(b);
     });
     return names;
@@ -862,8 +914,8 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     final selected = _selectedRow();
     final visibleGroups = rows.map(_groupKey).toSet().toList()
       ..sort((a,b) {
-        if (a == 'بدون مجموعة') return 1;
-        if (b == 'بدون مجموعة') return -1;
+        if (a == 'بدون مجموعة') return -1;
+        if (b == 'بدون مجموعة') return 1;
         return a.compareTo(b);
       });
     return Directionality(
@@ -919,9 +971,9 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
               : SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SizedBox(
-                  width: 1320,
+                  width: 1480,
                   child: DataTable2(
-                  minWidth: 1320, columnSpacing: 10, horizontalMargin: 8,
+                  minWidth: 1480, columnSpacing: 10, horizontalMargin: 8,
                   headingRowHeight: 44, dataRowHeight: 54, showCheckboxColumn: false,
                   headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                   columns: const [
@@ -929,28 +981,13 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                     DataColumn2(label: Text('كود مجموعة البراند'), size: ColumnSize.M, fixedWidth: 175),
                     DataColumn2(label: Text('اسم البراند عربي'), size: ColumnSize.L, fixedWidth: 220),
                     DataColumn2(label: Text('اسم انجليزي'), size: ColumnSize.L, fixedWidth: 190),
+                    DataColumn2(label: Text('النشاط'), size: ColumnSize.M, fixedWidth: 160),
                     DataColumn2(label: Text('عدد البراندات'), size: ColumnSize.S, fixedWidth: 115),
                     DataColumn2(label: Text('نشط أو لا'), size: ColumnSize.S, fixedWidth: 95),
                     DataColumn2(label: Text('يظهر في التطبيق أو لا'), size: ColumnSize.M, fixedWidth: 165),
                     DataColumn2(label: Text('إضافة / حذف'), size: ColumnSize.S, fixedWidth: 130),
                   ],
                   rows: [
-                    DataRow(color: WidgetStateProperty.all(const Color(0xFFEDE1F8)), cells: [
-                      const DataCell(Text('1', style: TextStyle(fontWeight: FontWeight.w900))),
-                      const DataCell(Text('—', style: TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
-                      const DataCell(Text('بدون مجموعة', style: TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
-                      const DataCell(Text('—')),
-                      DataCell(Text('${_rows.where((row) => _s(row['brand_group_id']).isEmpty).length}')),
-                      const DataCell(Text('—')),
-                      const DataCell(Text('—')),
-                      DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
-                        IconButton(tooltip: 'إعادة براندات إلى بدون مجموعة',
-                          onPressed: _saving ? null : () => _openGroupBrandPicker(const {'id': '', 'group_name': 'بدون مجموعة'}),
-                          icon: const Icon(Icons.add_circle, color: _brandPurple)),
-                        IconButton(tooltip: 'المجموعة الافتراضية لا تُحذف', onPressed: null,
-                          icon: const Icon(Icons.delete, color: Colors.redAccent)),
-                      ])),
-                    ]),
                     ...(() {
                       final ordered = _groups.toList()..sort((a, b) {
                         final an = int.tryParse(_s(a['group_code']).replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
@@ -958,7 +995,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                         return an.compareTo(bn);
                       });
                       return ordered.asMap().entries.map((entry) {
-                        final index = entry.key + 2;
+                        final index = entry.key + 1;
                         final group = entry.value;
                         final id = _s(group['id']);
                         final count = _rows.where((row) => _s(row['brand_group_id']) == id).length;
@@ -966,18 +1003,19 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                           cells: [
                             DataCell(Text('$index')),
                             DataCell(Text(_s(group['group_code']), style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
-                            DataCell(Text(_s(group['group_name']), style: const TextStyle(fontWeight: FontWeight.w700)), onTap: () => _editGroup(group)),
-                            DataCell(Text(_s(group['group_name_en']), textDirection: TextDirection.ltr), onTap: () => _editGroup(group)),
+                            DataCell(Text(_s(group['group_name']), style: const TextStyle(fontWeight: FontWeight.w700)), onTap: isDefault ? null : () => _editGroup(group)),
+                            DataCell(Text(_s(group['group_name_en']), textDirection: TextDirection.ltr), onTap: isDefault ? null : () => _editGroup(group)),
+                            DataCell(Text(_activityName(_s(group['activity_code'])))),
                             DataCell(Text('$count')),
                             DataCell(Checkbox(shape: const CircleBorder(), value: group['is_active'] == true,
-                              activeColor: _brandPurple, onChanged: _saving ? null : (_) => _toggleGroupField(group, 'is_active'))),
+                              activeColor: _brandPurple, onChanged: _saving || isDefault ? null : (_) => _toggleGroupField(group, 'is_active'))),
                             DataCell(Checkbox(shape: const CircleBorder(), value: group['show_in_app'] == true,
-                              activeColor: const Color(0xFFFFA015), onChanged: _saving ? null : (_) => _toggleGroupField(group, 'show_in_app'))),
+                              activeColor: const Color(0xFFFFA015), onChanged: _saving || isDefault ? null : (_) => _toggleGroupField(group, 'show_in_app'))),
                             DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
                               IconButton(tooltip: 'إضافة براندات للمجموعة',
                                 onPressed: _saving ? null : () => _openGroupBrandPicker(group),
                                 icon: const Icon(Icons.add_circle, color: _brandPurple)),
-                              IconButton(tooltip: 'حذف المجموعة', onPressed: _saving ? null : () => _deleteGroup(group),
+                              IconButton(tooltip: isDefault ? 'المجموعة الأساسية لا تُحذف' : 'حذف المجموعة', onPressed: _saving || isDefault ? null : () => _deleteGroup(group),
                                 icon: const Icon(Icons.delete, color: Colors.red)),
                             ])),
                           ]);
@@ -1106,12 +1144,9 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                             ])),
                             DataCell(SizedBox(width: 180, child: DropdownButton<String?>(
                               isExpanded: true,
-                              value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : null,
+                              value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : _defaultGroupId,
                               hint: const Text('بدون مجموعة'),
-                              items: [
-                                const DropdownMenuItem<String?>(value: null, child: Text('بدون مجموعة')),
-                                ..._groups.map((g) => DropdownMenuItem<String?>(value: _s(g['id']), child: Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow: TextOverflow.ellipsis))),
-                              ],
+                              items: _groups.map((g) => DropdownMenuItem<String?>(value: _s(g['id']), child: Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow: TextOverflow.ellipsis))).toList(),
                               onChanged: system ? null : (v) => _assignGroup(row, v),
                             ))),
                             DataCell(Checkbox(shape: const CircleBorder(), value: row['is_active'] == true, activeColor: _brandPurple, onChanged: system ? null : (_) => _toggle(row))),
