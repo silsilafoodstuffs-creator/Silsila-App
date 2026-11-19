@@ -631,7 +631,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       return;
     }
     final count = _rows.where((row) => _s(row['brand_group_id']) == id).length;
-                        final isDefault = _s(group['group_code']) == 'Brg01';
     final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) =>
       Directionality(textDirection: TextDirection.rtl, child: AlertDialog(
         title: const Text('حذف مجموعة البراندات'),
@@ -999,6 +998,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                         final group = entry.value;
                         final id = _s(group['id']);
                         final count = _rows.where((row) => _s(row['brand_group_id']) == id).length;
+                        final isDefault = _s(group['group_code']) == 'Brg01';
                         return DataRow(color: WidgetStateProperty.all(index.isEven ? Colors.white : const Color(0xFFFCFAFE)),
                           cells: [
                             DataCell(Text('$index')),
