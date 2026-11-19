@@ -51,6 +51,32 @@ jobs:
         with:
           path: build/web
 
+      # The Pages artifact upload completes before the Actions artifact-list API
+      # becomes consistent. deploy-pages queries that API immediately; without
+      # this gate it can incorrectly report "No artifacts named github-pages".
+      - name: Wait for GitHub Pages artifact indexing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          API_URL="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100"
+          for attempt in $(seq 1 24); do
+            RESPONSE="$(curl --silent --show-error --fail \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "${API_URL}")"
+            if printf '%s' "${RESPONSE}" | jq -e \
+              '.artifacts[]? | select(.name == "github-pages" and .expired == false)' >/dev/null; then
+              echo "GitHub Pages artifact is visible to the deployment API."
+              exit 0
+            fi
+            echo "Waiting for Pages artifact indexing (attempt ${attempt}/24)..."
+            sleep 5
+          done
+          echo "ERROR: github-pages artifact was not indexed for this workflow run."
+          exit 1
+
       - name: Publish Web Preview
         id: deployment
         uses: actions/deploy-pages@v4
