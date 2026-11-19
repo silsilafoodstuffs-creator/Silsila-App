@@ -19,7 +19,7 @@ void main() {
     expect(migration.existsSync(), isTrue);
 
     final sql = migration.readAsStringSync();
-    final tupleMatches = RegExp(r"\('([0-9]{2})','[^']*','[^']*',[0-9]+\)")
+    final tupleMatches = RegExp(r"\('([0-9]{2})','[^']*','[^']*',[0-9]+(?:,true,true)?\)")
         .allMatches(sql);
     final counts = <String, int>{};
     for (final match in tupleMatches) {
