@@ -21,6 +21,30 @@
   <title>سلسلة | Silsila ERP</title>
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // Remove legacy Flutter/PWA caches before boot. A stale service worker can
+    // keep serving an older Web bundle after GitHub Pages has deployed new data
+    // and application code, especially in mobile browsers.
+    (async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+        }
+      } catch (_) {}
+      try {
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys
+            .filter((key) => /flutter|silsila/i.test(key))
+            .map((key) => caches.delete(key)));
+        }
+      } catch (_) {}
+      const bootstrap = document.createElement('script');
+      bootstrap.src = 'flutter_bootstrap.js?v=__SILSILA_BUILD_VERSION__';
+      bootstrap.async = true;
+      document.body.appendChild(bootstrap);
+    })();
+  </script>
 </body>
 </html>
