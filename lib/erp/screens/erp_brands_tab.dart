@@ -748,6 +748,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
   final Map<String, Future<void>> _groupAssignmentQueues = <String, Future<void>>{};
   final Map<String, int> _groupAssignmentVersions = <String, int>{};
+  final Map<String, String?> _groupAssignmentPersistedValues = <String, String?>{};
 
   Future<void> _assignGroup(Map<String,dynamic> row, String? groupId) async {
     final brandId = _s(row['id']);
@@ -757,6 +758,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     if (index < 0) return;
     final previousGroupId = _rows[index]['brand_group_id']?.toString();
     if (previousGroupId == groupId) return;
+    _groupAssignmentPersistedValues.putIfAbsent(brandId, () => previousGroupId);
 
     // Reflect the selection in the grid immediately, without waiting for
     // Supabase and without reloading the entire brands/groups catalog.
@@ -772,6 +774,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         await _db.from('erp_brands').update({'brand_group_id': groupId})
           .eq('id', brandId).eq('company_id', widget.companyId.trim())
           .select('id').single();
+        _groupAssignmentPersistedValues[brandId] = groupId;
       } catch (error) {
         // A stale request must never roll back a newer selection.
         if (mounted && _groupAssignmentVersions[brandId] == version) {
@@ -780,7 +783,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             if (currentIndex >= 0) {
               _rows[currentIndex] = <String, dynamic>{
                 ..._rows[currentIndex],
-                'brand_group_id': previousGroupId,
+                'brand_group_id': _groupAssignmentPersistedValues[brandId],
               };
             }
           });
