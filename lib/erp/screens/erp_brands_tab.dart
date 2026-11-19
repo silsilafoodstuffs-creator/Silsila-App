@@ -724,43 +724,67 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     final id = _s(row['id']);
     final selected = _selectedId == id;
     final system = row['is_system'] == true;
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(start: 18, bottom: 6),
-      child: Material(
-        color: selected ? const Color(0xFFF0E7FA) : Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        child: InkWell(
+    return LayoutBuilder(builder: (context, constraints) {
+      final compact = constraints.maxWidth < 620;
+      final code = Text(_s(row['brand_code']), overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple, fontSize: 12));
+      final name = Text(_s(row['brand_name']), softWrap: true,
+        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14));
+      final english = Text(_s(row['brand_name_en']), textDirection: TextDirection.ltr,
+        overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.black54));
+      final status = Row(mainAxisSize: MainAxisSize.min, children: [
+        Checkbox(shape: const CircleBorder(), value: row['is_active'] == true,
+          activeColor: _brandPurple, visualDensity: VisualDensity.compact,
+          onChanged: system ? null : (_) => _toggle(row)),
+        const Text('نشط', style: TextStyle(fontSize: 11)),
+      ]);
+      final logo = _logoPreview(row, size: 40);
+      final upload = IconButton(tooltip: 'اختيار/تغيير الشعار',
+        visualDensity: VisualDensity.compact, onPressed: _saving ? null : () => _uploadLogo(row),
+        icon: const Icon(Icons.photo_library_outlined, color: _brandPurple));
+      return Padding(
+        padding: const EdgeInsetsDirectional.only(start: 8, bottom: 6),
+        child: Material(
+          color: selected ? const Color(0xFFF0E7FA) : Colors.white,
           borderRadius: BorderRadius.circular(10),
-          onTap: () => setState(() => _selectedId = id),
-          child: Container(
-            padding: const EdgeInsetsDirectional.fromSTEB(8, 6, 8, 6),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: selected ? _brandPurple : _brandBorder),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () => setState(() => _selectedId = id),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: selected ? _brandPurple : _brandBorder),
+              ),
+              child: compact
+                ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Row(children: [
+                      SizedBox(width: 76, child: code),
+                      const SizedBox(width: 8),
+                      Expanded(child: name),
+                    ]),
+                    if (_s(row['brand_name_en']).isNotEmpty)
+                      Padding(padding: const EdgeInsetsDirectional.only(start: 84, top: 4), child: Align(alignment: AlignmentDirectional.centerStart, child: english)),
+                    const Divider(height: 12),
+                    Row(children: [status, const Spacer(), logo, upload],)
+                  ])
+                : Row(children: [
+                    const SizedBox(width: 34, child: Icon(Icons.subdirectory_arrow_left, color: _brandPurple, size: 18)),
+                    SizedBox(width: 105, child: code),
+                    Expanded(flex: 3, child: name),
+                    Expanded(flex: 2, child: english),
+                    status,
+                    const SizedBox(width: 6),
+                    logo,
+                    upload,
+                  ]),
             ),
-            child: Row(children: [
-              const SizedBox(width: 34, child: Icon(Icons.subdirectory_arrow_left, color: _brandPurple, size: 18)),
-              SizedBox(width: 105, child: Text(_s(row['brand_code']), overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple, fontSize: 12))),
-              Expanded(flex: 3, child: Text(_s(row['brand_name']), overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w700))),
-              Expanded(flex: 2, child: Text(_s(row['brand_name_en']), overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: Colors.black54))),
-              Checkbox(shape: const CircleBorder(), value: row['is_active'] == true,
-                activeColor: _brandPurple, visualDensity: VisualDensity.compact,
-                onChanged: system ? null : (_) => _toggle(row)),
-              const SizedBox(width: 6),
-              _logoPreview(row, size: 44),
-              IconButton(tooltip: 'اختيار/تغيير الشعار', visualDensity: VisualDensity.compact,
-                onPressed: _saving ? null : () => _uploadLogo(row),
-                icon: const Icon(Icons.photo_library_outlined, color: _brandPurple)),
-            ]),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
-
   Widget _treeGroup(String group) {
     final children = _rowsInGroup(group);
     final expanded = _expandedGroups.contains(group);
