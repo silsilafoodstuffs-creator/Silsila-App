@@ -2,14 +2,14 @@
 
 ## Purpose
 
-Extend the existing ERP screen-layout Studio so its saved per-screen profiles control real ERP widgets through the shared dashboard runtime and `ErpScreenFrame`, rather than changing preview-only JSON.
+Refresh the Silsila Studio shell with a responsive Glossy Neon Luxury presentation, and extend the ERP screen-layout Studio so saved per-screen profiles control real ERP widgets through the shared dashboard runtime and `ErpScreenFrame`, rather than changing preview-only JSON.
 
 ## Presets and component styles
 
 - Theme presets: Glossy Neon Luxury, Neon Purple, Glass Orange, Platinum, Royal Violet, Classic.
 - Header styles: Glossy, Glass, Neon, Minimal.
 - Button styles: Glossy, Glass, Neon, Pill, Outline.
-- Table styles: Glass, Neon, Striped, Minimal, Outlined.
+- Table styles: Glass, Neon, Minimal, Outlined.
 - Tree/list styles: Neon, Nested Cards, Compact, Outlined.
 - Existing controls remain available for target screen, title/tabs/tasks/date/image placement, visibility, view mode, grid density, row height, spacing, content width, corner radius, and primary/accent colors.
 
