@@ -1527,7 +1527,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                                       : (_page == 'مراكز التكلفة' || _page == 'الفروع ومراكز التكلفة')
                                       ? ErpCostCentersScreen(companyId: _appManagementCompanyId)
                                        : _page == 'سلسلة ستوديو'
-                                      ? SilsilaStudioScreen(companyId: _appManagementCompanyId)
+                                      ? SilsilaStudioScreen(companyId: _appManagementCompanyId, availableScreens: (_modules.values.expand((module) => module.values.expand((items) => items)).toSet().toList()..sort()))
                                       : _page == 'شاشات الاستوديو المنشورة'
                                       ? ErpStudioPublishedDesignsScreen(companyId: _appManagementCompanyId)
                                       : _page == 'سياسات البرنامج'
