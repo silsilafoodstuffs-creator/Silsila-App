@@ -65,8 +65,16 @@ jobs:
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
-      - name: Build production-path Web app
-        run: flutter build web --release --base-href "/Silsila-App/"
+      - name: Build production-path Web app without offline-first PWA caching
+        run: flutter build web --release --pwa-strategy=none --base-href "/Silsila-App/"
+
+      - name: Stamp the Web bootstrap with the exact commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s build/web/index.html
+          sed -i "s/__SILSILA_BUILD_VERSION__/${GITHUB_SHA}/g" build/web/index.html
+          grep -q "flutter_bootstrap.js?v=${GITHUB_SHA}" build/web/index.html
 
       - name: Verify Web build output
         run: |
