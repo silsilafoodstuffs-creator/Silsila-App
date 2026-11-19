@@ -107,7 +107,7 @@ class ErpScreenFrame extends StatelessWidget {
               backgroundColor: buttonFill, foregroundColor: buttonForeground,
               elevation: buttonStyle == 'outline' || buttonStyle == 'glass' ? 0 : buttonStyle == 'neon' ? 9 : 5,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(buttonRadius)),
-              side: buttonStyle == 'neon' ? BorderSide(color: accent.withValues(alpha: .9), width: 1.2) : BorderSide.none,
+              side: buttonStyle == 'neon' ? BorderSide(color: accent.withValues(alpha: .9), width: 1.2) : buttonStyle == 'outline' ? BorderSide(color: primary.withValues(alpha: .8), width: 1.1) : BorderSide.none,
               shadowColor: accent.withValues(alpha: buttonStyle == 'neon' ? .55 : .30),
             ),
           ),
