@@ -139,6 +139,37 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     }
   }
 
+  void _selectThemePreset(String value) {
+    setState(() {
+      _themePreset = value;
+      switch (value) {
+        case 'neon_purple':
+          _primary = const Color(0xFF6A00F5);
+          _accent = const Color(0xFFFF27C3);
+          break;
+        case 'glass_orange':
+          _primary = const Color(0xFF8A3B00);
+          _accent = _orange;
+          break;
+        case 'platinum':
+          _primary = const Color(0xFF475569);
+          _accent = const Color(0xFFB08D57);
+          break;
+        case 'royal_violet':
+          _primary = _purple;
+          _accent = const Color(0xFFFF27C3);
+          break;
+        case 'classic':
+          _primary = _purple;
+          _accent = _orange;
+          break;
+        default:
+          _primary = _purple;
+          _accent = const Color(0xFFFF27C3);
+      }
+    });
+  }
+
   void _apply(Map<String, dynamic> value) {
     _view = value['view'] as String? ?? 'table';
     _tabsPosition = value['tabsPosition'] as String? ?? 'below_title';
@@ -323,7 +354,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
             _choice('الثيم العام',_themePreset,
               ['glossy_neon_luxury','neon_purple','glass_orange','platinum','royal_violet','classic'],
               {'glossy_neon_luxury':'Glossy Neon Luxury','neon_purple':'Neon Purple','glass_orange':'Glass Orange','platinum':'Platinum','royal_violet':'Royal Violet','classic':'Classic'},
-              (v)=>setState(()=>_themePreset=v??_themePreset)),
+              (v){if(v!=null)_selectThemePreset(v);}),
             _choice('ستايل الهيدر',_headerStyle,
               ['glossy','glass','neon','minimal'],
               {'glossy':'Glossy فاخر','glass':'Glass زجاجي','neon':'Neon مضيء','minimal':'Minimal بسيط'},
