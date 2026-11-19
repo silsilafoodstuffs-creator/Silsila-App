@@ -521,7 +521,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                   child: const Text('إلغاء التحديد')),
               ]),
               Expanded(child: filtered.isEmpty ? const Center(child: Text('لا توجد براندات متاحة مطابقة للبحث.'))
-                : SingleChildScrollView(child: SizedBox(width: 850, child: DataTable2(
+                : DataTable2(
                   minWidth: 820, columnSpacing: 10, horizontalMargin: 8, headingRowHeight: 42,
                   dataRowHeight: 48, showCheckboxColumn: false,
                   headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
@@ -548,7 +548,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       DataCell(Text(_s(row['brand_name_en']))),
                     ]);
                   }),
-                )))),
+                )),
             ])),
             actions: [
               TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
@@ -858,8 +858,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 icon: const Icon(Icons.add), label: const Text('إضافة مجموعة جديدة')),
             ])),
             Expanded(child: _loading ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(child: SingleChildScrollView(scrollDirection: Axis.horizontal,
-                child: DataTable2(
+              : DataTable2(
                   minWidth: 1120, columnSpacing: 10, horizontalMargin: 8,
                   headingRowHeight: 44, dataRowHeight: 54, showCheckboxColumn: false,
                   headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
@@ -877,7 +876,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       const DataCell(Text('1', style: TextStyle(fontWeight: FontWeight.w900))),
                       const DataCell(Text('—', style: TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
                       const DataCell(Text('بدون مجموعة', style: TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
-                      DataCell(Text('${_rows.where((row) => _s(row['brand_group_id']).isEmpty && _s(row['brand_group']).trim().isEmpty).length}')),
+                      DataCell(Text('${_rows.where((row) => _s(row['brand_group_id']).isEmpty).length}')),
                       const DataCell(Text('—')), const DataCell(Text('—')),
                       DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
                         IconButton(tooltip: 'إعادة براندات إلى بدون مجموعة',
@@ -894,7 +893,9 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                         return an.compareTo(bn);
                       });
                       return ordered.asMap().entries.map((entry) {
-                        final index = entry.key + 2, group = entry.value, id = _s(group['id']);
+                        final index = entry.key + 2;
+                        final group = entry.value;
+                        final id = _s(group['id']);
                         final count = _rows.where((row) => _s(row['brand_group_id']) == id).length;
                         return DataRow(color: WidgetStateProperty.all(index.isEven ? Colors.white : const Color(0xFFFCFAFE)),
                           cells: [
@@ -917,8 +918,8 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       }).toList();
                     })(),
                   ],
-                )))),
-          ]          ] else ...[
+                )),
+          ] else ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(12,7,12,3),
             child: TextField(
