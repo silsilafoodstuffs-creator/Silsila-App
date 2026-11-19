@@ -54,6 +54,16 @@ void main() {
     expect(erpOffersSource, contains('image_data'));
   });
 
+  test('Brand image and group changes preserve the current screen and refresh silently', () {
+    expect(brandSource, contains('Future<void> _load({bool showLoading = true})'));
+    expect(brandSource, contains('if (showLoading) setState(() { _loading = true; _error = null; });'));
+    expect(brandSource, contains('Keep the current Brands tab alive after each upload'));
+    expect(brandSource, contains('await _load(showLoading: false);'));
+    expect(brandSource, contains('Future<void> _assignGroup'));
+    expect(brandSource, contains('Future<void> _toggleGroupField'));
+    expect(brandSource, contains('Future<void> _uploadLogo'));
+  });
+
   test('Brand grid supports single-row and bulk atomic renaming', () {
     expect(brandSource, contains('تعديل المحدد'));
     expect(brandSource, contains('تعديل الكل'));
