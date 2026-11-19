@@ -55,12 +55,13 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     super.dispose();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool showLoading = true}) async {
     if (widget.companyId.trim().isEmpty) {
       setState(() => _error = 'لا توجد شركة نشطة لعرض البراندات.');
       return;
     }
-    setState(() { _loading = true; _error = null; });
+    if (showLoading) setState(() { _loading = true; _error = null; });
+    else if (mounted) setState(() => _error = null);
     try {
       final rows = await _db.from('erp_brands')
         .select('id,brand_code,brand_name,brand_name_en,brand_group,brand_group_id,display_order,is_active,is_system,logo_data,logo_mime_type,activity_code')
@@ -153,13 +154,13 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       });
       if (!mounted) return;
       setState(() { _gridEditing = false; _gridEditingOnlyId = null; });
-      await _load();
+      await _load(showLoading: false);
       if (mounted) ErpCenterToast.show(context, targets.length == 1
           ? 'تم حفظ اسم البراند بنجاح مع الاحتفاظ بكوده وربط أصنافه.'
           : 'تم حفظ أسماء البراندات المحددة دفعة واحدة مع الاحتفاظ بالأكواد والارتباطات.');
     } catch (error) {
       if (mounted) ErpCenterToast.show(context, _friendlySaveError(error), isError: true);
-      await _load();
+      await _load(showLoading: false);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -287,7 +288,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
           ],
         });
       }
-      await _load();
+      await _load(showLoading: false);
       if (mounted) ErpCenterToast.show(context, row == null ? 'تمت إضافة البراند وتوليد كوده.' : 'تم تعديل بيانات البراند.');
     } catch (error) {
       if (mounted) ErpCenterToast.show(context, _friendlySaveError(error), isError: true);
@@ -428,10 +429,10 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         await _db.from('erp_brands').insert(batch);
         imported += batch.length;
       }
-      await _load();
+      await _load(showLoading: false);
       if (mounted) ErpCenterToast.show(context, 'تم استيراد $imported شعارًا كسجلات مستقلة بأكواد تلقائية.');
     } catch (error) {
-      await _load();
+      await _load(showLoading: false);
       if (mounted) ErpCenterToast.show(context, 'تم استيراد $imported من أصل ${files.length} صورة قبل حدوث خطأ: $error', isError: true);
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -444,7 +445,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       await _db.from('erp_brands').update({'is_active':row['is_active'] != true})
         .eq('id',_s(row['id'])).eq('company_id',widget.companyId.trim())
         .select('id').single();
-      await _load();
+      await _load(showLoading: false);
       if (mounted) ErpCenterToast.show(context, 'تم تحديث حالة البراند.');
     } catch (error) {
       if (mounted) ErpCenterToast.show(context, 'تعذر تحديث حالة البراند: $error', isError: true);
@@ -470,7 +471,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       .eq('id',_s(row['id'])).eq('company_id',widget.companyId.trim())
       .select('id');
     if (deleted.isEmpty) throw StateError('لم يتم حذف البراند المحدد.');
-    await _load();
+    await _load(showLoading: false);
   }
 
 
@@ -504,7 +505,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         'company_id':widget.companyId.trim(), 'group_name':name.text.trim(),
         'group_name_en':english.text.trim().isEmpty ? null : english.text.trim(),
       }).select('id,group_code,group_name,group_name_en,is_active,show_in_app').single();
-      await _load();
+      await _load(showLoading: false);
       if (mounted) ErpCenterToast.show(context, 'تم إنشاء المجموعة بالكود ${_s(inserted['group_code'])}.');
     } catch (e) { if (mounted) ErpCenterToast.show(context, 'تعذر إنشاء المجموعة: $e', isError: true); }
     finally { name.dispose(); english.dispose(); if (mounted) setState(() => _saving = false); }
@@ -587,7 +588,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       final ids = selectedIds.toList();
       await _db.from('erp_brands').update({'brand_group_id': isUngrouped ? null : groupId})
         .eq('company_id', widget.companyId.trim()).inFilter('id', ids).select('id');
-      await _load();
+      await _load(showLoading: false);
       if (mounted) ErpCenterToast.show(context, 'تم ربط ${ids.length} براند بالمجموعة المحددة بنجاح.');
     } catch (error) {
       if (mounted) ErpCenterToast.show(context, 'تعذر ربط البراندات بالمجموعة: $error', isError: true);
@@ -614,7 +615,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     try {
       await _db.from('erp_brand_groups').delete().eq('id', id)
         .eq('company_id', widget.companyId.trim()).select('id').single();
-      await _load();
+      await _load(showLoading: false);
       if (mounted) ErpCenterToast.show(context, 'تم حذف المجموعة ونقل برانداتها إلى بدون مجموعة.');
     } catch (error) {
       if (mounted) ErpCenterToast.show(context, 'تعذر حذف المجموعة: $error', isError: true);
@@ -629,7 +630,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     try {
       await _db.from('erp_brand_groups').update({field: next})
         .eq('id', id).eq('company_id', widget.companyId.trim()).select('id').single();
-      await _load();
+      await _load(showLoading: false);
       if (mounted) ErpCenterToast.show(context, field == 'is_active'
         ? (next ? 'تم تنشيط المجموعة.' : 'تم إيقاف المجموعة.')
         : (next ? 'المجموعة ستظهر في التطبيق.' : 'تم إخفاء المجموعة من التطبيق.'));
@@ -656,7 +657,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         'group_name':name.text.trim(),
         'group_name_en':english.text.trim().isEmpty ? null : english.text.trim(),
       }).eq('id',_s(group['id'])).eq('company_id',widget.companyId.trim()).select('id').single();
-      await _load();
+      await _load(showLoading: false);
       if(mounted) ErpCenterToast.show(context,'تم تعديل بيانات المجموعة.');
     } catch(e){if(mounted) ErpCenterToast.show(context,'تعذر تعديل المجموعة: $e',isError:true);}
     finally{name.dispose();english.dispose();}
@@ -666,7 +667,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     try {
       await _db.from('erp_brand_groups').update({'is_active':group['is_active']!=true})
         .eq('id',_s(group['id'])).eq('company_id',widget.companyId.trim()).select('id').single();
-      await _load();
+      await _load(showLoading: false);
     } catch(e){if(mounted) ErpCenterToast.show(context,'تعذر تغيير حالة المجموعة: $e',isError:true);}
   }
 
@@ -674,7 +675,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     try {
       await _db.from('erp_brands').update({'brand_group_id':groupId})
         .eq('id',_s(row['id'])).eq('company_id',widget.companyId.trim()).select('id').single();
-      await _load();
+      await _load(showLoading: false);
     } catch (e) { if (mounted) ErpCenterToast.show(context, 'تعذر تغيير مجموعة البراند: $e', isError: true); }
   }
 
@@ -726,7 +727,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         'logo_data': null, 'logo_mime_type': null,
       }).eq('id', _s(row['id']))
         .eq('company_id', widget.companyId.trim()).select('id').single();
-      await _load();
+      await _load(showLoading: false);
       if (mounted) ErpCenterToast.show(context, 'تم حذف شعار البراند.');
     } catch (error) {
       if (mounted) ErpCenterToast.show(context, 'تعذر حذف الشعار: $error', isError: true);
