@@ -25,7 +25,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
   String? _message;
   String? _resolvedCompanyId;
   String? get _companyId => (_resolvedCompanyId?.trim().isNotEmpty == true) ? _resolvedCompanyId!.trim() : ((widget.companyId?.trim().isNotEmpty == true) ? widget.companyId!.trim() : null);
-  static const _pageKey = 'بيانات الأنشطة'; // Keep the persisted workspace key unchanged for backward compatibility.
+  static const _pageKey = 'أنواع الأنشطة'; // Keep the persisted workspace key unchanged for backward compatibility.
 
   @override
   void initState() { super.initState(); _load(); }
@@ -308,7 +308,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       if (sheet.rows.isEmpty) throw StateError('ورقة Excel فارغة.');
       final headers = sheet.rows.first.map((cell) => cell?.value?.toString().trim() ?? '').toList();
       final imported = <Map<String, String>>[];
-      var nextNumber = int.tryParse(_nextActivityCode().substring(3)) ?? 1;
+      var nextNumber = int.tryParse(_nextActivityCode()) ?? 1;
       for (final row in sheet.rows.skip(1)) {
         final values = <String, String>{};
         for (var i = 0; i < headers.length && i < row.length; i++) {
@@ -318,7 +318,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
         if (name.isEmpty) continue;
         imported.add({
           'ترتيب السطر': (_rows.length + imported.length + 1).toString(),
-          'كود النشاط': 'ACT${nextNumber.toString().padLeft(3, '0')}',
+          'كود النشاط': nextNumber.toString().padLeft(2, '0'),
           'اسم النشاط عربي': name,
           'اسم النشاط إنجليزي': (values['اسم النشاط إنجليزي'] ?? '').trim(),
           'نشط': (values['نشط'] ?? 'true').toLowerCase() == 'false' ? 'false' : 'true',
