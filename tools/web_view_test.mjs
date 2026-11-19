@@ -120,21 +120,18 @@ try {
         language: document.documentElement.lang,
         bootstrapSrc: [...document.scripts].map(script => script.src).find(src => src.includes('flutter_bootstrap.js')) ?? '',
         serviceWorkerControlled: !!navigator.serviceWorker?.controller,
-        serviceWorkerRegistrations: navigator.serviceWorker
-          ? undefined
-          : 0,
       };
     });
-    result.serviceWorkerRegistrations = await page.evaluate(async () =>
-      'serviceWorker' in navigator
-        ? (await navigator.serviceWorker.getRegistrations()).length
-        : 0);
+    result.flutterCacheKeys = await page.evaluate(async () =>
+      'caches' in window
+        ? (await caches.keys()).filter(key => /flutter|silsila/i.test(key))
+        : []);
 
     if (!result.title.includes('Silsila')) failures.push(`[${viewport.name}] Unexpected page title: ${result.title}`);
     if (result.visibleWidth <= 0 || result.visibleHeight <= 0) failures.push(`[${viewport.name}] Flutter canvas is not visible`);
     if (!result.bootstrapSrc.includes('?v=')) failures.push(`[${viewport.name}] Flutter bootstrap is not commit-versioned: ${result.bootstrapSrc}`);
-    if (result.serviceWorkerControlled || result.serviceWorkerRegistrations !== 0) {
-      failures.push(`[${viewport.name}] A stale/offline service worker can override the deployed app: ${JSON.stringify({ controlled: result.serviceWorkerControlled, registrations: result.serviceWorkerRegistrations })}`);
+    if (result.flutterCacheKeys.length > 0) {
+      failures.push(`[${viewport.name}] Stale Flutter/Silsila offline caches remain: ${JSON.stringify(result.flutterCacheKeys)}`);
     }
     console.log(`PASS WebView ${viewport.name}: ${JSON.stringify(result)}`);
     await page.close();
