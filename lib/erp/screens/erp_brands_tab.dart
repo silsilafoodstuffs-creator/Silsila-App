@@ -702,16 +702,40 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
           FilledButton(onPressed: () { if (formKey.currentState?.validate() == true) Navigator.pop(ctx, true); }, child: const Text('حفظ')),
         ])));
     if (ok != true) { name.dispose(); english.dispose(); return; }
+    final groupId = _s(group['id']);
+    final previous = Map<String, dynamic>.from(group);
+    final updated = <String, dynamic>{
+      ...previous,
+      'group_name': isDefault ? 'بدون مجموعة' : name.text.trim(),
+      'group_name_en': english.text.trim().isEmpty ? null : english.text.trim(),
+      'activity_code': activityCode,
+    };
+
+    // Update the visible group immediately; do not reload brands, groups and
+    // activity metadata just to reflect one edited group.
+    if (mounted) {
+      setState(() {
+        final index = _groups.indexWhere((item) => _s(item['id']) == groupId);
+        if (index >= 0) _groups[index] = updated;
+      });
+    }
     try {
       await _db.from('erp_brand_groups').update({
-        'group_name': isDefault ? 'بدون مجموعة' : name.text.trim(),
-        'group_name_en': english.text.trim().isEmpty ? null : english.text.trim(),
-        'activity_code': activityCode,
-      }).eq('id', _s(group['id'])).eq('company_id', widget.companyId.trim()).select('id').single();
-      await _load(showLoading: false);
+        'group_name': updated['group_name'],
+        'group_name_en': updated['group_name_en'],
+        'activity_code': updated['activity_code'],
+      }).eq('id', groupId).eq('company_id', widget.companyId.trim()).select('id').single();
       if (mounted) ErpCenterToast.show(context, 'تم تعديل بيانات المجموعة والنشاط التابع لها.');
-    } catch (e) { if (mounted) ErpCenterToast.show(context, 'تعذر تعديل المجموعة: $e', isError: true); }
-    finally { name.dispose(); english.dispose(); }
+    } catch (e) {
+      // Roll back the optimistic change if the database rejects the update.
+      if (mounted) {
+        setState(() {
+          final index = _groups.indexWhere((item) => _s(item['id']) == groupId);
+          if (index >= 0) _groups[index] = previous;
+        });
+        ErpCenterToast.show(context, 'تعذر تعديل المجموعة: $e', isError: true);
+      }
+    } finally { name.dispose(); english.dispose(); }
   }
 
   Future<void> _toggleGroup(Map<String,dynamic> group) async {
