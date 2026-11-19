@@ -5,6 +5,25 @@ const _erpFramePurple = Color(0xFF3E007D);
 const _erpFrameOrange = Color(0xFFFFA015);
 const _erpFramePink = Color(0xFFFF27C3);
 
+class ErpScreenLayoutScope extends InheritedWidget {
+  const ErpScreenLayoutScope({
+    super.key,
+    required this.screen,
+    required this.profile,
+    required super.child,
+  });
+
+  final String screen;
+  final Map<String, dynamic> profile;
+
+  static ErpScreenLayoutScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ErpScreenLayoutScope>();
+
+  @override
+  bool updateShouldNotify(ErpScreenLayoutScope oldWidget) =>
+      screen != oldWidget.screen || profile != oldWidget.profile;
+}
+
 /// Shared ERP page frame. Saved Studio layout profiles are applied live here.
 class ErpScreenFrame extends StatelessWidget {
   const ErpScreenFrame({
@@ -37,14 +56,17 @@ class ErpScreenFrame extends StatelessWidget {
     return ValueListenableBuilder<Map<String, dynamic>>(
       valueListenable: ErpScreenLayoutProfiles.profiles,
       builder: (context, profiles, _) {
-        final raw = profiles[title] is Map
+        final scoped = ErpScreenLayoutScope.maybeOf(context);
+        final raw = scoped?.profile ?? (profiles[title] is Map
             ? profiles[title] as Map
-            : profiles['*'] is Map ? profiles['*'] as Map : const {};
+            : profiles['*'] is Map ? profiles['*'] as Map : const {});
         final profile = Map<String, dynamic>.from(raw);
         final showTitle = profile['showTitle'] as bool? ?? true;
         final showTabs = profile['showTabs'] as bool? ?? true;
         final showTasks = profile['showTasks'] as bool? ?? true;
         final showFooter = profile['showFooter'] as bool? ?? true;
+        final tabsPosition = profile['tabsPosition'] as String? ?? 'below_title';
+        final tasksPosition = profile['tasksPosition'] as String? ?? 'below_title';
         final rowHeight = ((profile['rowHeight'] as num?)?.toDouble() ?? 40).clamp(28, 80).toDouble();
         final spacing = ((profile['spacing'] as num?)?.toDouble() ?? 5).clamp(0, 30).toDouble();
         final radius = ((profile['cornerRadius'] as num?)?.toDouble() ?? 12).clamp(0, 30).toDouble();
@@ -138,6 +160,21 @@ class ErpScreenFrame extends StatelessWidget {
           ),
         );
 
+        final taskBar = Container(
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(radius + 2),
+            border: Border.all(color: const Color(0xFFFFC9F3), width: 1),
+            gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.white, Color(0xFFFFF7FD), Color(0xFFF5EDFF)]),
+            boxShadow: [
+              BoxShadow(color: const Color(0xFF3E007D).withValues(alpha: .10), blurRadius: 10, offset: const Offset(0, 3)),
+              BoxShadow(color: const Color(0xFFFF27C3).withValues(alpha: .12), blurRadius: 14, spreadRadius: -4),
+            ],
+          ),
+          child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: actions)),
+        );
+
         return Theme(
           data: themed,
           child: Directionality(
@@ -145,6 +182,7 @@ class ErpScreenFrame extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (showTasks && actions.isNotEmpty && tasksPosition == 'top') taskBar,
                 if (showTitle || (showTabs && tabs.isNotEmpty))
                   Container(
                     margin: const EdgeInsets.fromLTRB(10, 8, 10, 5),
@@ -176,10 +214,11 @@ class ErpScreenFrame extends StatelessWidget {
                           )),
                         ],
                       ]);
+                      final effectiveShowTabs = showTabs && tabsPosition != 'hidden';
                       final tabStrip = SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          if (showTabs)
+                          if (effectiveShowTabs)
                             for (var i = 0; i < tabs.length; i++)
                               Padding(
                                 padding: const EdgeInsetsDirectional.only(start: 5),
@@ -207,14 +246,21 @@ class ErpScreenFrame extends StatelessWidget {
                               ),
                         ]),
                       );
-                      if (!showTitle) return tabStrip;
-                      if (!showTabs || tabs.isEmpty) return heading;
-                      if (constraints.maxWidth >= 820) {
-                        return Row(children: [
-                          Flexible(flex: 4, child: heading),
-                          const SizedBox(width: 12),
-                          Flexible(flex: 6, child: Align(alignment: Alignment.centerLeft, child: tabStrip)),
+                      if (!showTitle) return effectiveShowTabs ? tabStrip : const SizedBox.shrink();
+                      if (!effectiveShowTabs || tabs.isEmpty) return heading;
+                      if (tabsPosition == 'top') {
+                        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                          tabStrip,
+                          const SizedBox(height: 8),
+                          heading,
                         ]);
+                      }
+                      if (constraints.maxWidth >= 820 && tabsPosition != 'bottom' && tabsPosition != 'above_content') {
+                        final tabs = Flexible(flex: 6, child: Align(alignment: Alignment.centerLeft, child: tabStrip));
+                        final title = Flexible(flex: 4, child: heading);
+                        return Row(children: tabsPosition == 'left'
+                            ? [tabs, const SizedBox(width: 12), title]
+                            : [title, const SizedBox(width: 12), tabs]);
                       }
                       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                         heading,
@@ -223,21 +269,7 @@ class ErpScreenFrame extends StatelessWidget {
                       ]);
                     }),
                   ),
-                if (showTasks && actions.isNotEmpty)
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(radius + 2),
-                      border: Border.all(color: const Color(0xFFFFC9F3), width: 1),
-                      gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.white, Color(0xFFFFF7FD), Color(0xFFF5EDFF)]),
-                      boxShadow: [
-                        BoxShadow(color: const Color(0xFF3E007D).withValues(alpha: .10), blurRadius: 10, offset: const Offset(0, 3)),
-                        BoxShadow(color: const Color(0xFFFF27C3).withValues(alpha: .12), blurRadius: 14, spreadRadius: -4),
-                      ],
-                    ),
-                    child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: actions)),
-                  ),
+                if (showTasks && actions.isNotEmpty && tasksPosition != 'top' && tasksPosition != 'bottom' && tasksPosition != 'hidden') taskBar,
                 Expanded(
                   child: Center(
                     child: FractionallySizedBox(
@@ -246,6 +278,7 @@ class ErpScreenFrame extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (showTasks && actions.isNotEmpty && tasksPosition == 'bottom') taskBar,
                 if (showFooter && footer != null)
                   Container(
                     margin: const EdgeInsets.fromLTRB(10, 2, 10, 8),
