@@ -62,6 +62,12 @@ void main() {
     expect(brandSource, contains('Future<void> _assignGroup'));
     expect(brandSource, contains('Future<void> _toggleGroupField'));
     expect(brandSource, contains('Future<void> _uploadLogo'));
+    expect(brandSource, contains("'activity_code': activityCode"));
+    expect(brandSource, contains("group_code']) == 'Brg01'"));
+    expect(brandSource, contains('النشاط التابع له المجموعة'));
+    expect(brandSource, contains('مجموعة «بدون مجموعة» أساسية ومحمية من الحذف.'));
+    expect(brandSource, contains('final index = entry.key + 1;'));
+    expect(brandSource, isNot(contains("const DataCell(Text('—', style: TextStyle(fontWeight: FontWeight.w900, color: _brandPurple)))")));
   });
 
   test('Brand grid supports single-row and bulk atomic renaming', () {
