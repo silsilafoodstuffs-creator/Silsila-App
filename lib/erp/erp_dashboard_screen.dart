@@ -4016,7 +4016,7 @@ class ErpScreenLayoutRuntime extends StatelessWidget {
             minVerticalPadding: spacing,
           ),
         );
-        return Theme(data: theme, child: child);
+        return ErpScreenLayoutScope(screen: screen, profile: profile, child: Theme(data: theme, child: child));
       },
     );
   }
