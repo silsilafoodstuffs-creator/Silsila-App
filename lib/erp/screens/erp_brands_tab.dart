@@ -746,12 +746,53 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     } catch(e){if(mounted) ErpCenterToast.show(context,'تعذر تغيير حالة المجموعة: $e',isError:true);}
   }
 
+  final Map<String, Future<void>> _groupAssignmentQueues = <String, Future<void>>{};
+  final Map<String, int> _groupAssignmentVersions = <String, int>{};
+
   Future<void> _assignGroup(Map<String,dynamic> row, String? groupId) async {
-    try {
-      await _db.from('erp_brands').update({'brand_group_id':groupId})
-        .eq('id',_s(row['id'])).eq('company_id',widget.companyId.trim()).select('id').single();
-      await _load(showLoading: false);
-    } catch (e) { if (mounted) ErpCenterToast.show(context, 'تعذر تغيير مجموعة البراند: $e', isError: true); }
+    final brandId = _s(row['id']);
+    if (brandId.isEmpty || !mounted) return;
+
+    final index = _rows.indexWhere((item) => _s(item['id']) == brandId);
+    if (index < 0) return;
+    final previousGroupId = _rows[index]['brand_group_id']?.toString();
+    if (previousGroupId == groupId) return;
+
+    // Reflect the selection in the grid immediately, without waiting for
+    // Supabase and without reloading the entire brands/groups catalog.
+    setState(() {
+      _rows[index] = <String, dynamic>{..._rows[index], 'brand_group_id': groupId};
+    });
+
+    final version = (_groupAssignmentVersions[brandId] ?? 0) + 1;
+    _groupAssignmentVersions[brandId] = version;
+    final previousWrite = _groupAssignmentQueues[brandId] ?? Future<void>.value();
+    final write = previousWrite.catchError((_) {}).then((_) async {
+      try {
+        await _db.from('erp_brands').update({'brand_group_id': groupId})
+          .eq('id', brandId).eq('company_id', widget.companyId.trim())
+          .select('id').single();
+      } catch (error) {
+        // A stale request must never roll back a newer selection.
+        if (mounted && _groupAssignmentVersions[brandId] == version) {
+          setState(() {
+            final currentIndex = _rows.indexWhere((item) => _s(item['id']) == brandId);
+            if (currentIndex >= 0) {
+              _rows[currentIndex] = <String, dynamic>{
+                ..._rows[currentIndex],
+                'brand_group_id': previousGroupId,
+              };
+            }
+          });
+          ErpCenterToast.show(context, 'تعذر تغيير مجموعة البراند: $error', isError: true);
+        }
+      }
+    });
+    _groupAssignmentQueues[brandId] = write;
+    await write;
+    if (_groupAssignmentVersions[brandId] == version) {
+      _groupAssignmentQueues.remove(brandId);
+    }
   }
 
   List<String> get _groupNames {
