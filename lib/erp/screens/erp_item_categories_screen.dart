@@ -14,7 +14,9 @@ const _catOrange = Color(0xFFFFA015);
 const _catCanvas = Color(0xFFF7F5FA);
 
 class ErpItemCategoriesScreen extends StatefulWidget {
-  const ErpItemCategoriesScreen({super.key, this.companyId});
+  const ErpItemCategoriesScreen({super.key, this.companyId, this.initialCatalogTab = 0, this.hideHeaderAndTabs = false});
+  final int initialCatalogTab;
+  final bool hideHeaderAndTabs;
   final String? companyId;
   @override
   State<ErpItemCategoriesScreen> createState() => _ErpItemCategoriesScreenState();
@@ -52,6 +54,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   void initState() {
     super.initState();
     _company = widget.companyId;
+    _catalogTab = widget.initialCatalogTab.clamp(0, 4);
     try { _db = Supabase.instance.client; } catch (_) {}
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
@@ -655,7 +658,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
+          if (!widget.hideHeaderAndTabs) Container(
             color: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             child: const Row(children: [
@@ -670,7 +673,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
               )),
             ]),
           ),
-          Container(
+          if (!widget.hideHeaderAndTabs) Container(
             color: _catCanvas,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
             child: SingleChildScrollView(
