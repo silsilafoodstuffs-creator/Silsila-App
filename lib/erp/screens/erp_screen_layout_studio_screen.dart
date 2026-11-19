@@ -37,6 +37,11 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   String _imagesPosition = 'right';
   String _scrollPosition = 'right';
   String _gridStyle = 'compact';
+  String _themePreset = 'glossy_neon_luxury';
+  String _headerStyle = 'glossy';
+  String _buttonStyle = 'glossy';
+  String _tableStyle = 'glass';
+  String _treeStyle = 'neon';
   double _rowHeight = 40;
   double _spacing = 5;
   double _contentWidth = 100;
@@ -79,6 +84,37 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     if (mounted) setState(() => _loading = false);
   }
 
+  void _selectThemePreset(String value) {
+    setState(() {
+      _themePreset = value;
+      switch (value) {
+        case 'neon_purple':
+          _primary = const Color(0xFF6A00F5);
+          _accent = const Color(0xFFFF27C3);
+          break;
+        case 'glass_orange':
+          _primary = const Color(0xFF8A3B00);
+          _accent = _orange;
+          break;
+        case 'platinum':
+          _primary = const Color(0xFF475569);
+          _accent = const Color(0xFFB08D57);
+          break;
+        case 'royal_violet':
+          _primary = _purple;
+          _accent = const Color(0xFFFF27C3);
+          break;
+        case 'classic':
+          _primary = _purple;
+          _accent = _orange;
+          break;
+        default:
+          _primary = _purple;
+          _accent = const Color(0xFFFF27C3);
+      }
+    });
+  }
+
   void _apply(Map<String, dynamic> value) {
     _view = value['view'] as String? ?? 'table';
     _tabsPosition = value['tabsPosition'] as String? ?? 'below_title';
@@ -87,6 +123,11 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     _imagesPosition = value['imagesPosition'] as String? ?? 'right';
     _scrollPosition = value['scrollPosition'] as String? ?? 'right';
     _gridStyle = value['gridStyle'] as String? ?? 'compact';
+    _themePreset = value['themePreset'] as String? ?? 'glossy_neon_luxury';
+    _headerStyle = value['headerStyle'] as String? ?? 'glossy';
+    _buttonStyle = value['buttonStyle'] as String? ?? 'glossy';
+    _tableStyle = value['tableStyle'] as String? ?? 'glass';
+    _treeStyle = value['treeStyle'] as String? ?? 'neon';
     _rowHeight = (value['rowHeight'] as num?)?.toDouble() ?? 40;
     _spacing = (value['spacing'] as num?)?.toDouble() ?? 5;
     _contentWidth = (value['contentWidth'] as num?)?.toDouble() ?? 100;
@@ -107,6 +148,8 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     'view':_view, 'tabsPosition':_tabsPosition, 'tasksPosition':_tasksPosition,
     'datePosition':_datePosition, 'imagesPosition':_imagesPosition,
     'scrollPosition':_scrollPosition, 'gridStyle':_gridStyle,
+    'themePreset':_themePreset, 'headerStyle':_headerStyle,
+    'buttonStyle':_buttonStyle, 'tableStyle':_tableStyle, 'treeStyle':_treeStyle,
     'rowHeight':_rowHeight, 'spacing':_spacing, 'contentWidth':_contentWidth,
     'cornerRadius':_cornerRadius, 'showTitle':_showTitle, 'showTabs':_showTabs,
     'showTasks':_showTasks, 'showDate':_showDate, 'showFooter':_showFooter,
@@ -232,6 +275,25 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
           _section('الشاشة المستهدفة',Icons.web_asset_outlined,[
             _choice('تطبيق الإعداد على',_screen,_screens,{for(final s in _screens)s:s},(v){if(v==null)return;setState((){_screen=v;_apply(_current);});}),
             const Text('اختيار «كل الشاشات» يحدد القيم الافتراضية العامة، ويمكن تخصيص كل شاشة بصورة مستقلة.',style:TextStyle(fontSize:11,color:Colors.black54)),
+          ]),
+          _section('مكتبة الأنماط الاحترافية',Icons.auto_awesome,[
+            _choice('الثيم العام',_themePreset,
+              ['glossy_neon_luxury','neon_purple','glass_orange','platinum','royal_violet','classic'],
+              {'glossy_neon_luxury':'Glossy Neon Luxury','neon_purple':'Neon Purple','glass_orange':'Glass Orange','platinum':'Platinum','royal_violet':'Royal Violet','classic':'Classic'},
+              (v){if(v!=null)_selectThemePreset(v);}),
+            _choice('ستايل الهيدر',_headerStyle,['glossy','glass','neon','minimal'],
+              {'glossy':'Glossy فاخر','glass':'Glass زجاجي','neon':'Neon مضيء','minimal':'Minimal بسيط'},
+              (v)=>setState(()=>_headerStyle=v??_headerStyle)),
+            _choice('ستايل الأزرار',_buttonStyle,['glossy','glass','neon','pill','outline'],
+              {'glossy':'Glossy لامع','glass':'Glass شفاف','neon':'Neon مضيء','pill':'Pill دائري','outline':'Outline محدد'},
+              (v)=>setState(()=>_buttonStyle=v??_buttonStyle)),
+            _choice('ستايل الجداول',_tableStyle,['glass','neon','striped','minimal','outlined'],
+              {'glass':'Glass زجاجي','neon':'Neon مضيء','striped':'Striped صفوف متبادلة','minimal':'Minimal هادئ','outlined':'Outlined بحدود'},
+              (v)=>setState(()=>_tableStyle=v??_tableStyle)),
+            _choice('ستايل الأشجار',_treeStyle,['neon','nested_cards','compact','outlined'],
+              {'neon':'Neon متوهج','nested_cards':'Nested Cards متداخل','compact':'Compact مضغوط','outlined':'Outlined محدد'},
+              (v)=>setState(()=>_treeStyle=v??_treeStyle)),
+            const Text('تؤثر الاختيارات على إطار الشاشة ومكونات Material المشتركة؛ أي شاشة مخصصة لا تستخدم الإطار تحتاج Adapter صريحاً.',style:TextStyle(fontSize:11,color:Colors.black54)),
           ]),
           _section('طريقة عرض البيانات',Icons.view_quilt_outlined,[
             _choice('نمط العرض',_view,_views.keys.toList(),_views,(v)=>setState(()=>_view=v??_view)),
