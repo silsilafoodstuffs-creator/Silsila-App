@@ -79,7 +79,7 @@ class ErpScreenFrame extends StatelessWidget {
         final primary = Color((profile['primary'] as int?) ?? _erpFramePurple.toARGB32());
         final accent = Color((profile['accent'] as int?) ?? _erpFramePink.toARGB32());
         final buttonRadius = buttonStyle == 'pill' ? 28.0 : radius;
-        final buttonFill = buttonStyle == 'glass' ? primary.withValues(alpha: .10) : primary;
+        final buttonFill = buttonStyle == 'glass' ? primary.withValues(alpha: .10) : buttonStyle == 'outline' ? Colors.transparent : primary;
         final buttonForeground = buttonStyle == 'glass' || buttonStyle == 'outline' ? primary : Colors.white;
         final darkHeader = headerStyle == 'glossy' || headerStyle == 'neon';
         final headerGradient = switch (headerStyle) {
@@ -105,16 +105,18 @@ class ErpScreenFrame extends StatelessWidget {
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
               backgroundColor: buttonFill, foregroundColor: buttonForeground,
-              elevation: buttonStyle == 'outline' || buttonStyle == 'glass' ? 0 : 5,
+              elevation: buttonStyle == 'outline' || buttonStyle == 'glass' ? 0 : buttonStyle == 'neon' ? 9 : 5,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(buttonRadius)),
-              shadowColor: accent.withValues(alpha: .30),
+              side: buttonStyle == 'neon' ? BorderSide(color: accent.withValues(alpha: .9), width: 1.2) : BorderSide.none,
+              shadowColor: accent.withValues(alpha: buttonStyle == 'neon' ? .55 : .30),
             ),
           ),
           filledButtonTheme: FilledButtonThemeData(
             style: FilledButton.styleFrom(
               backgroundColor: buttonFill, foregroundColor: buttonForeground,
-              elevation: buttonStyle == 'outline' || buttonStyle == 'glass' ? 0 : 4,
+              elevation: buttonStyle == 'outline' || buttonStyle == 'glass' ? 0 : buttonStyle == 'neon' ? 8 : 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(buttonRadius)),
+              side: buttonStyle == 'neon' ? BorderSide(color: accent.withValues(alpha: .9), width: 1.2) : BorderSide.none,
             ),
           ),
           outlinedButtonTheme: OutlinedButtonThemeData(
@@ -132,11 +134,11 @@ class ErpScreenFrame extends StatelessWidget {
             headingRowHeight: rowHeight,
             columnSpacing: spacing,
             headingTextStyle: TextStyle(color: primary, fontWeight: FontWeight.w900, fontSize: 12),
-            dividerThickness: tableStyle == 'minimal' ? .4 : 1,
+            dividerThickness: tableStyle == 'minimal' ? .4 : tableStyle == 'outlined' ? 1.6 : 1,
             decoration: BoxDecoration(
               color: tableStyle == 'glass' ? Colors.white.withValues(alpha: .94) : Colors.white,
               borderRadius: BorderRadius.circular(radius),
-              border: Border.all(color: tableStyle == 'neon' ? accent.withValues(alpha: .65) : primary.withValues(alpha: .16)),
+              border: Border.all(color: tableStyle == 'neon' ? accent.withValues(alpha: .75) : primary.withValues(alpha: tableStyle == 'outlined' ? .55 : .16), width: tableStyle == 'outlined' ? 1.5 : 1),
               boxShadow: tableStyle == 'neon' ? [BoxShadow(color: accent.withValues(alpha: .14), blurRadius: 14)] : const [],
             ),
           ),
