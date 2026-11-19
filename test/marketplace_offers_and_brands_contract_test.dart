@@ -63,6 +63,15 @@ void main() {
     expect(brandSource, contains('final updated = <String, dynamic>{'));
     expect(brandSource, contains('Roll back the optimistic change'));
     expect(brandSource, contains('Future<void> _assignGroup'));
+    final assignmentBody = brandSource
+        .split('Future<void> _assignGroup')
+        .last
+        .split('List<String> get _groupNames')
+        .first;
+    expect(assignmentBody, contains('Reflect the selection in the grid immediately'));
+    expect(assignmentBody, contains('_groupAssignmentQueues'));
+    expect(assignmentBody, contains('_groupAssignmentVersions'));
+    expect(assignmentBody, isNot(contains('_load(')));
     expect(brandSource, contains('Future<void> _toggleGroupField'));
     expect(brandSource, contains('Future<void> _uploadLogo'));
     expect(brandSource, contains("'activity_code': activityCode"));
