@@ -7,8 +7,9 @@ const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
 
 class ErpScreenLayoutStudioScreen extends StatefulWidget {
-  const ErpScreenLayoutStudioScreen({super.key, this.companyId});
+  const ErpScreenLayoutStudioScreen({super.key, this.companyId, this.availableScreens = const <String>[]});
   final String? companyId;
+  final List<String> availableScreens;
   @override
   State<ErpScreenLayoutStudioScreen> createState() => _ErpScreenLayoutStudioScreenState();
 }
@@ -16,11 +17,17 @@ class ErpScreenLayoutStudioScreen extends StatefulWidget {
 class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScreen> {
   final _repository = ErpStudioRepository();
   String? _syncMessage;
-  static const _screens = <String>[
-    'كل الشاشات - الإعداد الافتراضي', 'فئات الأصناف', 'دليل الأصناف', 'بيانات المخازن',
-    'سياسات البرنامج', 'بيانات الشركة', 'المستخدمين', 'الملخص التنفيذي',
-    'شاشة المبيعات', 'شاشة المشتريات', 'شاشة الحسابات المالية', 'شاشة الموارد البشرية',
+  static const _defaultScreen = 'كل الشاشات - الإعداد الافتراضي';
+  static const _fallbackScreens = <String>[
+    'فئات الأصناف', 'دليل الأصناف', 'بيانات المخازن', 'سياسات البرنامج',
+    'بيانات الشركة', 'المستخدمين', 'الملخص التنفيذي', 'شاشة المبيعات',
+    'شاشة المشتريات', 'شاشة الحسابات المالية', 'شاشة الموارد البشرية',
   ];
+  List<String> get _screens => <String>{
+    _defaultScreen,
+    ..._fallbackScreens,
+    ...widget.availableScreens.where((screen) => screen.trim().isNotEmpty),
+  }.toList();
   static const _views = <String, String>{
     'tree': 'شجرة', 'table': 'جدول بيانات', 'grid': 'شبكي - بطاقات', 'split': 'تقسيم جانبي',
   };
@@ -29,7 +36,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     'right': 'يمين الشاشة', 'left': 'يسار الشاشة', 'bottom': 'أسفل الشاشة', 'hidden': 'مخفي',
   };
 
-  String _screen = _screens.first;
+  String _screen = _defaultScreen;
   String _view = 'table';
   String _tabsPosition = 'below_title';
   String _tasksPosition = 'below_title';
@@ -53,7 +60,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   bool _loading = true;
   Map<String, dynamic> _profiles = {};
 
-  String get _profileKey => _screen == _screens.first ? '*' : _screen;
+  String get _profileKey => _screen == _defaultScreen ? '*' : _screen;
 
   Map<String, dynamic> get _current => Map<String, dynamic>.from(_profiles[_profileKey] is Map
       ? _profiles[_profileKey] as Map : _profiles['*'] is Map ? _profiles['*'] as Map : <String,dynamic>{});
