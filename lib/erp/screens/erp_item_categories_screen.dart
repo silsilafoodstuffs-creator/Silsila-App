@@ -54,7 +54,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   void initState() {
     super.initState();
     _company = widget.companyId;
-    _catalogTab = widget.initialCatalogTab.clamp(0, 4);
+    _catalogTab = widget.initialCatalogTab.clamp(0, 4).toInt();
     try { _db = Supabase.instance.client; } catch (_) {}
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
