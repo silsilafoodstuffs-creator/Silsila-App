@@ -59,6 +59,9 @@ void main() {
     expect(brandSource, contains('if (showLoading) setState(() { _loading = true; _error = null; });'));
     expect(brandSource, contains('Keep the current Brands tab alive after each upload'));
     expect(brandSource, contains('await _load(showLoading: false);'));
+    expect(brandSource, contains('Update the visible group immediately'));
+    expect(brandSource, contains('final updated = <String, dynamic>{'));
+    expect(brandSource, contains('Roll back the optimistic change'));
     expect(brandSource, contains('Future<void> _assignGroup'));
     expect(brandSource, contains('Future<void> _toggleGroupField'));
     expect(brandSource, contains('Future<void> _uploadLogo'));
