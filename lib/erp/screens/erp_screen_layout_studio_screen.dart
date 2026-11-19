@@ -5,6 +5,7 @@ import '../services/erp_studio_repository.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
+const _pink = Color(0xFFFF27C3);
 
 class ErpScreenLayoutStudioScreen extends StatefulWidget {
   const ErpScreenLayoutStudioScreen({super.key, this.companyId, this.availableScreens = const <String>[]});
@@ -54,7 +55,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   double _contentWidth = 100;
   double _cornerRadius = 12;
   Color _primary = _purple;
-  Color _accent = _orange;
+  Color _accent = _pink;
   bool _showTitle = true, _showTabs = true, _showTasks = true, _showDate = true;
   bool _showFooter = true, _showImages = true, _showSidebar = false, _showScroll = true;
   bool _loading = true;
@@ -148,7 +149,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     _showSidebar = value['showSidebar'] as bool? ?? false;
     _showScroll = value['showScroll'] as bool? ?? true;
     _primary = Color((value['primary'] as int?) ?? _purple.toARGB32());
-    _accent = Color((value['accent'] as int?) ?? _orange.toARGB32());
+    _accent = Color((value['accent'] as int?) ?? _pink.toARGB32());
   }
 
   Map<String, dynamic> _serialize() => <String,dynamic>{
