@@ -26,9 +26,11 @@
     // keep serving an older Web bundle after GitHub Pages has deployed new data
     // and application code, especially in mobile browsers.
     (async () => {
+      let removedLegacyWorker = false;
       try {
         if ('serviceWorker' in navigator) {
           const registrations = await navigator.serviceWorker.getRegistrations();
+          removedLegacyWorker = registrations.length > 0;
           await Promise.all(registrations.map((registration) => registration.unregister()));
         }
       } catch (_) {}
@@ -39,6 +41,16 @@
             .filter((key) => /flutter|silsila/i.test(key))
             .map((key) => caches.delete(key)));
         }
+      } catch (_) {}
+      // Unregistering a worker does not detach it from the current document.
+      // Reload once so the next navigation is guaranteed to come from the network.
+      try {
+        if (removedLegacyWorker && sessionStorage.getItem('silsila-legacy-worker-cleared') !== '1') {
+          sessionStorage.setItem('silsila-legacy-worker-cleared', '1');
+          location.reload();
+          return;
+        }
+        sessionStorage.removeItem('silsila-legacy-worker-cleared');
       } catch (_) {}
       const bootstrap = document.createElement('script');
       bootstrap.src = 'flutter_bootstrap.js?v=__SILSILA_BUILD_VERSION__';
