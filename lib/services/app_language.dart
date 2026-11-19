@@ -129,7 +129,7 @@ String silsilaText(String value) {
     'قوالب صلاحيات المستخدمين': 'Permission Templates',
     'صلاحيات المستخدمين': 'User Permissions',
     'سجل العمليات': 'Audit Log',
-    'أنواع الأنشطة': 'Activity Types',
+    'بيانات الأنشطة': 'Activity Data',
     'شجرة الحسابات': 'Chart of Accounts',
     'الفترات المالية': 'Fiscal Periods',
     'العملات': 'Currencies',
