@@ -28,7 +28,7 @@ class _ErpActivityDataScreenState extends State<ErpActivityDataScreen> {
   Widget build(BuildContext context) {
     ErpKeyboardNavigation.registerActions();
     final children = <Widget>[
-      ErpActivityTypesScreen(key: ValueKey('activity-data-${widget.companyId}'), companyId: widget.companyId),
+      ErpActivityTypesScreen(key: ValueKey('activity-data-${widget.companyId}'), companyId: widget.companyId, hideHeader: true),
       for (var tab = 0; tab < 5; tab++)
         ErpItemCategoriesScreen(
           key: ValueKey('activity-category-$tab-${widget.companyId}'),
