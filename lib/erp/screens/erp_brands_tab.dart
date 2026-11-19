@@ -66,7 +66,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         .select('id,brand_code,brand_name,brand_name_en,brand_group,brand_group_id,display_order,is_active,is_system,logo_data,logo_mime_type,activity_code')
         .eq('company_id', widget.companyId.trim())
         .order('brand_code');
-      final groups = await _db.from('erp_brand_groups').select('id,group_code,group_name,is_active,show_in_app').eq('company_id', widget.companyId.trim()).order('group_code');
+      final groups = await _db.from('erp_brand_groups').select('id,group_code,group_name,group_name_en,is_active,show_in_app').eq('company_id', widget.companyId.trim()).order('group_code');
       // The activity directory is auxiliary metadata. A missing or restricted
       // activity_types table must never hide the brands/groups catalog.
       List<Map<String,dynamic>> activities = <Map<String,dynamic>>[];
@@ -470,21 +470,29 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
   Future<void> _addGroup() async {
     final name = TextEditingController();
+    final english = TextEditingController();
     final ok = await showDialog<bool>(context: context, builder: (ctx) => Directionality(
       textDirection: TextDirection.rtl,
-      child: AlertDialog(title: const Text('إضافة مجموعة براندات'), content: SizedBox(width: 360,
-        child: TextField(controller: name, autofocus: true, decoration: const InputDecoration(labelText: 'اسم المجموعة *'))),
+      child: AlertDialog(title: const Text('إضافة مجموعة براندات'),
+        content: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: name, autofocus: true, decoration: const InputDecoration(labelText: 'اسم البراند عربي *')),
+          const SizedBox(height: 8),
+          TextField(controller: english, textDirection: TextDirection.ltr,
+            decoration: const InputDecoration(labelText: 'اسم انجليزي')),
+        ])),
         actions: [TextButton(onPressed: () => Navigator.pop(ctx,false), child: const Text('إلغاء')),
           FilledButton(onPressed: () => Navigator.pop(ctx,name.text.trim().isNotEmpty), child: const Text('حفظ'))])));
-    if (ok != true) { name.dispose(); return; }
+    if (ok != true) { name.dispose(); english.dispose(); return; }
     setState(() => _saving = true);
     try {
-      final inserted = await _db.from('erp_brand_groups').insert({'company_id':widget.companyId.trim(),'group_name':name.text.trim()})
-        .select('id,group_code,group_name,is_active').single();
+      final inserted = await _db.from('erp_brand_groups').insert({
+        'company_id':widget.companyId.trim(), 'group_name':name.text.trim(),
+        'group_name_en':english.text.trim().isEmpty ? null : english.text.trim(),
+      }).select('id,group_code,group_name,group_name_en,is_active,show_in_app').single();
       await _load();
       if (mounted) ErpCenterToast.show(context, 'تم إنشاء المجموعة بالكود ${_s(inserted['group_code'])}.');
     } catch (e) { if (mounted) ErpCenterToast.show(context, 'تعذر إنشاء المجموعة: $e', isError: true); }
-    finally { name.dispose(); if (mounted) setState(() => _saving = false); }
+    finally { name.dispose(); english.dispose(); if (mounted) setState(() => _saving = false); }
   }
 
 
@@ -617,19 +625,26 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
   Future<void> _editGroup(Map<String,dynamic> group) async {
     final name = TextEditingController(text:_s(group['group_name']));
+    final english = TextEditingController(text:_s(group['group_name_en']));
     final ok = await showDialog<bool>(context:context,builder:(ctx)=>Directionality(
       textDirection:TextDirection.rtl, child:AlertDialog(title:const Text('تعديل مجموعة البراندات'),
-        content:SizedBox(width:360,child:TextField(controller:name,decoration:const InputDecoration(labelText:'اسم المجموعة *'))),
+        content:SizedBox(width:420,child:Column(mainAxisSize:MainAxisSize.min,children:[
+          TextField(controller:name,decoration:const InputDecoration(labelText:'اسم البراند عربي *')),
+          const SizedBox(height:8),
+          TextField(controller:english,textDirection:TextDirection.ltr,decoration:const InputDecoration(labelText:'اسم انجليزي')),
+        ])),
         actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),
           FilledButton(onPressed:()=>Navigator.pop(ctx,name.text.trim().isNotEmpty),child:const Text('حفظ'))])));
-    if(ok!=true){name.dispose();return;}
+    if(ok!=true){name.dispose();english.dispose();return;}
     try {
-      await _db.from('erp_brand_groups').update({'group_name':name.text.trim()})
-        .eq('id',_s(group['id'])).eq('company_id',widget.companyId.trim()).select('id').single();
+      await _db.from('erp_brand_groups').update({
+        'group_name':name.text.trim(),
+        'group_name_en':english.text.trim().isEmpty ? null : english.text.trim(),
+      }).eq('id',_s(group['id'])).eq('company_id',widget.companyId.trim()).select('id').single();
       await _load();
-      if(mounted) ErpCenterToast.show(context,'تم تعديل اسم المجموعة.');
+      if(mounted) ErpCenterToast.show(context,'تم تعديل بيانات المجموعة.');
     } catch(e){if(mounted) ErpCenterToast.show(context,'تعذر تعديل المجموعة: $e',isError:true);}
-    finally{name.dispose();}
+    finally{name.dispose();english.dispose();}
   }
 
   Future<void> _toggleGroup(Map<String,dynamic> group) async {
@@ -859,13 +874,14 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             ])),
             Expanded(child: _loading ? const Center(child: CircularProgressIndicator())
               : DataTable2(
-                  minWidth: 1120, columnSpacing: 10, horizontalMargin: 8,
+                  minWidth: 1320, columnSpacing: 10, horizontalMargin: 8,
                   headingRowHeight: 44, dataRowHeight: 54, showCheckboxColumn: false,
                   headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                   columns: const [
                     DataColumn2(label: Text('م'), size: ColumnSize.S, fixedWidth: 52),
                     DataColumn2(label: Text('كود مجموعة البراند'), size: ColumnSize.M, fixedWidth: 175),
-                    DataColumn2(label: Text('اسم المجموعة'), size: ColumnSize.L),
+                    DataColumn2(label: Text('اسم البراند عربي'), size: ColumnSize.L, fixedWidth: 220),
+                    DataColumn2(label: Text('اسم انجليزي'), size: ColumnSize.L, fixedWidth: 190),
                     DataColumn2(label: Text('عدد البراندات'), size: ColumnSize.S, fixedWidth: 115),
                     DataColumn2(label: Text('نشط أو لا'), size: ColumnSize.S, fixedWidth: 95),
                     DataColumn2(label: Text('يظهر في التطبيق أو لا'), size: ColumnSize.M, fixedWidth: 165),
@@ -901,7 +917,8 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                           cells: [
                             DataCell(Text('$index')),
                             DataCell(Text(_s(group['group_code']), style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
-                            DataCell(Text(_s(group['group_name']), style: const TextStyle(fontWeight: FontWeight.w700))),
+                            DataCell(Text(_s(group['group_name']), style: const TextStyle(fontWeight: FontWeight.w700)), onTap: () => _editGroup(group)),
+                            DataCell(Text(_s(group['group_name_en']), textDirection: TextDirection.ltr), onTap: () => _editGroup(group)),
                             DataCell(Text('$count')),
                             DataCell(Checkbox(shape: const CircleBorder(), value: group['is_active'] == true,
                               activeColor: _brandPurple, onChanged: _saving ? null : (_) => _toggleGroupField(group, 'is_active'))),
