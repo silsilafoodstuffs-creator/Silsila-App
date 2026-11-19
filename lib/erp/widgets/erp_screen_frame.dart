@@ -258,11 +258,14 @@ class ErpScreenFrame extends StatelessWidget {
                         ]);
                       }
                       if (constraints.maxWidth >= 820 && tabsPosition != 'bottom' && tabsPosition != 'above_content') {
-                        final tabs = Flexible(flex: 6, child: Align(alignment: Alignment.centerLeft, child: tabStrip));
-                        final title = Flexible(flex: 4, child: heading);
-                        return Row(children: tabsPosition == 'left'
-                            ? [tabs, const SizedBox(width: 12), title]
-                            : [title, const SizedBox(width: 12), tabs]);
+                        final tabsWidget = Flexible(flex: 6, child: Align(alignment: Alignment.centerLeft, child: tabStrip));
+                        final titleWidget = Flexible(flex: 4, child: heading);
+                        return Row(
+                          textDirection: TextDirection.ltr,
+                          children: tabsPosition == 'left'
+                              ? [tabsWidget, const SizedBox(width: 12), titleWidget]
+                              : [titleWidget, const SizedBox(width: 12), tabsWidget],
+                        );
                       }
                       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                         heading,
