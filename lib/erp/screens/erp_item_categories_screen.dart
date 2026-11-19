@@ -83,31 +83,60 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     try {
       var company = (_company ?? '').trim();
       final uid = _db!.auth.currentUser?.id;
-      if (company.isEmpty && uid != null) {
+      final activeCompanies = <String>[];
+      if (uid != null) {
         final memberships = await _db!.from('erp_company_members')
             .select('company_id')
             .eq('user_id', uid)
             .eq('is_active', true)
-            .order('created_at')
-            .limit(1);
-        if ((memberships as List).isNotEmpty) {
-          company = _s(memberships.first['company_id']).trim();
+            .order('created_at');
+        for (final membership in (memberships as List)) {
+          final memberCompany = _s(membership['company_id']).trim();
+          if (memberCompany.isNotEmpty && !activeCompanies.contains(memberCompany)) {
+            activeCompanies.add(memberCompany);
+          }
         }
       }
-      if (company.isEmpty) throw StateError('لم يتم تحديد الشركة الحالية.');
+      // A nested ERP route can pass a workspace identifier or stale company
+      // context. Prefer a verified active company membership in that case.
+      if (company.isEmpty ||
+          (activeCompanies.isNotEmpty && !activeCompanies.contains(company))) {
+        if (activeCompanies.isNotEmpty) company = activeCompanies.first;
+      }
+      if (company.isEmpty) throw StateError('لم يتم تحديد الشركة الحالية أو عضويتها النشطة.');
       _company = company;
 
       // Read the canonical catalog once. Activity metadata is optional and
       // must never prevent the actual categories from loading.
-      final rawRows = await _db!.from('erp_item_categories')
+      var rawRows = await _db!.from('erp_item_categories')
           .select('*')
           .eq('company_id', company)
           .order('category_code')
           .limit(10000);
+      // Retry only against the user's other verified memberships when a stale
+      // company context yields no rows. Never read another company's catalog.
+      if ((rawRows as List).isEmpty && activeCompanies.length > 1) {
+        for (final candidate in activeCompanies.where((id) => id != company)) {
+          final candidateRows = await _db!.from('erp_item_categories')
+              .select('*')
+              .eq('company_id', candidate)
+              .order('category_code')
+              .limit(10000);
+          if ((candidateRows as List).isNotEmpty) {
+            company = candidate;
+            _company = candidate;
+            rawRows = candidateRows;
+            break;
+          }
+        }
+      }
       final catalog = (rawRows as List)
           .whereType<Map>()
           .map((row) => Map<String, dynamic>.from(row))
           .toList(growable: false);
+      if (catalog.isEmpty) {
+        throw StateError('لم تُرجع قاعدة البيانات فئات للشركة المحددة. تحقق من الشركة النشطة وصلاحية قراءة فئات الأصناف.');
+      }
 
       const activityNames = <String, String>{
         '01': 'مواد غذائية', '02': 'لوازم بناء', '03': 'ملابس واكسسوارات',
