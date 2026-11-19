@@ -185,7 +185,7 @@ class ErpScreenFrame extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (showTasks && actions.isNotEmpty && tasksPosition == 'top') taskBar,
-                if (showTitle || (showTabs && tabs.isNotEmpty))
+                if (showTitle || (showTabs && tabs.isNotEmpty && tabsPosition != 'hidden'))
                   Container(
                     margin: const EdgeInsets.fromLTRB(10, 8, 10, 5),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
