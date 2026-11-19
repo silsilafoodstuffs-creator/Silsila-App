@@ -199,7 +199,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     final name = TextEditingController(text: _s(row?['brand_name']));
     final english = TextEditingController(text: _s(row?['brand_name_en']));
     var activityCode = _s(row?['activity_code']).isEmpty
-        ? 'ACT001'
+        ? '01'
         : _s(row?['activity_code']);
     final formKey = GlobalKey<FormState>();
     final result = await showDialog<bool>(
