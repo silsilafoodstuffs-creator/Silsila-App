@@ -5,10 +5,12 @@ import '../services/erp_studio_repository.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
+const _pink = Color(0xFFFF27C3);
 
 class ErpScreenLayoutStudioScreen extends StatefulWidget {
-  const ErpScreenLayoutStudioScreen({super.key, this.companyId});
+  const ErpScreenLayoutStudioScreen({super.key, this.companyId, this.availableScreens = const <String>[]});
   final String? companyId;
+  final List<String> availableScreens;
   @override
   State<ErpScreenLayoutStudioScreen> createState() => _ErpScreenLayoutStudioScreenState();
 }
@@ -16,11 +18,17 @@ class ErpScreenLayoutStudioScreen extends StatefulWidget {
 class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScreen> {
   final _repository = ErpStudioRepository();
   String? _syncMessage;
-  static const _screens = <String>[
-    'كل الشاشات - الإعداد الافتراضي', 'فئات الأصناف', 'دليل الأصناف', 'بيانات المخازن',
-    'سياسات البرنامج', 'بيانات الشركة', 'المستخدمين', 'الملخص التنفيذي',
-    'شاشة المبيعات', 'شاشة المشتريات', 'شاشة الحسابات المالية', 'شاشة الموارد البشرية',
+  static const _defaultScreen = 'كل الشاشات - الإعداد الافتراضي';
+  static const _fallbackScreens = <String>[
+    'فئات الأصناف', 'دليل الأصناف', 'بيانات المخازن', 'سياسات البرنامج',
+    'بيانات الشركة', 'المستخدمين', 'الملخص التنفيذي', 'شاشة المبيعات',
+    'شاشة المشتريات', 'شاشة الحسابات المالية', 'شاشة الموارد البشرية',
   ];
+  List<String> get _screens => <String>{
+    _defaultScreen,
+    ..._fallbackScreens,
+    ...widget.availableScreens.where((screen) => screen.trim().isNotEmpty),
+  }.toList();
   static const _views = <String, String>{
     'tree': 'شجرة', 'table': 'جدول بيانات', 'grid': 'شبكي - بطاقات', 'split': 'تقسيم جانبي',
   };
@@ -29,7 +37,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     'right': 'يمين الشاشة', 'left': 'يسار الشاشة', 'bottom': 'أسفل الشاشة', 'hidden': 'مخفي',
   };
 
-  String _screen = _screens.first;
+  String _screen = _defaultScreen;
   String _view = 'table';
   String _tabsPosition = 'below_title';
   String _tasksPosition = 'below_title';
@@ -37,18 +45,23 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   String _imagesPosition = 'right';
   String _scrollPosition = 'right';
   String _gridStyle = 'compact';
+  String _themePreset = 'glossy_neon_luxury';
+  String _headerStyle = 'glossy';
+  String _buttonStyle = 'glossy';
+  String _tableStyle = 'glass';
+  String _treeStyle = 'neon';
   double _rowHeight = 40;
   double _spacing = 5;
   double _contentWidth = 100;
   double _cornerRadius = 12;
   Color _primary = _purple;
-  Color _accent = _orange;
+  Color _accent = _pink;
   bool _showTitle = true, _showTabs = true, _showTasks = true, _showDate = true;
   bool _showFooter = true, _showImages = true, _showSidebar = false, _showScroll = true;
   bool _loading = true;
   Map<String, dynamic> _profiles = {};
 
-  String get _profileKey => _screen == _screens.first ? '*' : _screen;
+  String get _profileKey => _screen == _defaultScreen ? '*' : _screen;
 
   Map<String, dynamic> get _current => Map<String, dynamic>.from(_profiles[_profileKey] is Map
       ? _profiles[_profileKey] as Map : _profiles['*'] is Map ? _profiles['*'] as Map : <String,dynamic>{});
@@ -79,6 +92,37 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     if (mounted) setState(() => _loading = false);
   }
 
+  void _selectThemePreset(String value) {
+    setState(() {
+      _themePreset = value;
+      switch (value) {
+        case 'neon_purple':
+          _primary = const Color(0xFF6A00F5);
+          _accent = const Color(0xFFFF27C3);
+          break;
+        case 'glass_orange':
+          _primary = const Color(0xFF8A3B00);
+          _accent = _orange;
+          break;
+        case 'platinum':
+          _primary = const Color(0xFF475569);
+          _accent = const Color(0xFFB08D57);
+          break;
+        case 'royal_violet':
+          _primary = _purple;
+          _accent = const Color(0xFFFF27C3);
+          break;
+        case 'classic':
+          _primary = _purple;
+          _accent = _orange;
+          break;
+        default:
+          _primary = _purple;
+          _accent = const Color(0xFFFF27C3);
+      }
+    });
+  }
+
   void _apply(Map<String, dynamic> value) {
     _view = value['view'] as String? ?? 'table';
     _tabsPosition = value['tabsPosition'] as String? ?? 'below_title';
@@ -87,6 +131,11 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     _imagesPosition = value['imagesPosition'] as String? ?? 'right';
     _scrollPosition = value['scrollPosition'] as String? ?? 'right';
     _gridStyle = value['gridStyle'] as String? ?? 'compact';
+    _themePreset = value['themePreset'] as String? ?? 'glossy_neon_luxury';
+    _headerStyle = value['headerStyle'] as String? ?? 'glossy';
+    _buttonStyle = value['buttonStyle'] as String? ?? 'glossy';
+    _tableStyle = value['tableStyle'] as String? ?? 'glass';
+    _treeStyle = value['treeStyle'] as String? ?? 'neon';
     _rowHeight = (value['rowHeight'] as num?)?.toDouble() ?? 40;
     _spacing = (value['spacing'] as num?)?.toDouble() ?? 5;
     _contentWidth = (value['contentWidth'] as num?)?.toDouble() ?? 100;
@@ -100,13 +149,15 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     _showSidebar = value['showSidebar'] as bool? ?? false;
     _showScroll = value['showScroll'] as bool? ?? true;
     _primary = Color((value['primary'] as int?) ?? _purple.toARGB32());
-    _accent = Color((value['accent'] as int?) ?? _orange.toARGB32());
+    _accent = Color((value['accent'] as int?) ?? _pink.toARGB32());
   }
 
   Map<String, dynamic> _serialize() => <String,dynamic>{
     'view':_view, 'tabsPosition':_tabsPosition, 'tasksPosition':_tasksPosition,
     'datePosition':_datePosition, 'imagesPosition':_imagesPosition,
     'scrollPosition':_scrollPosition, 'gridStyle':_gridStyle,
+    'themePreset':_themePreset, 'headerStyle':_headerStyle,
+    'buttonStyle':_buttonStyle, 'tableStyle':_tableStyle, 'treeStyle':_treeStyle,
     'rowHeight':_rowHeight, 'spacing':_spacing, 'contentWidth':_contentWidth,
     'cornerRadius':_cornerRadius, 'showTitle':_showTitle, 'showTabs':_showTabs,
     'showTasks':_showTasks, 'showDate':_showDate, 'showFooter':_showFooter,
@@ -233,6 +284,25 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
             _choice('تطبيق الإعداد على',_screen,_screens,{for(final s in _screens)s:s},(v){if(v==null)return;setState((){_screen=v;_apply(_current);});}),
             const Text('اختيار «كل الشاشات» يحدد القيم الافتراضية العامة، ويمكن تخصيص كل شاشة بصورة مستقلة.',style:TextStyle(fontSize:11,color:Colors.black54)),
           ]),
+          _section('مكتبة الأنماط الاحترافية',Icons.auto_awesome,[
+            _choice('الثيم العام',_themePreset,
+              ['glossy_neon_luxury','neon_purple','glass_orange','platinum','royal_violet','classic'],
+              {'glossy_neon_luxury':'Glossy Neon Luxury','neon_purple':'Neon Purple','glass_orange':'Glass Orange','platinum':'Platinum','royal_violet':'Royal Violet','classic':'Classic'},
+              (v){if(v!=null)_selectThemePreset(v);}),
+            _choice('ستايل الهيدر',_headerStyle,['glossy','glass','neon','minimal'],
+              {'glossy':'Glossy فاخر','glass':'Glass زجاجي','neon':'Neon مضيء','minimal':'Minimal بسيط'},
+              (v)=>setState(()=>_headerStyle=v??_headerStyle)),
+            _choice('ستايل الأزرار',_buttonStyle,['glossy','glass','neon','pill','outline'],
+              {'glossy':'Glossy لامع','glass':'Glass شفاف','neon':'Neon مضيء','pill':'Pill دائري','outline':'Outline محدد'},
+              (v)=>setState(()=>_buttonStyle=v??_buttonStyle)),
+            _choice('ستايل الجداول',_tableStyle,['glass','neon','minimal','outlined'],
+              {'glass':'Glass زجاجي','neon':'Neon مضيء','striped':'Striped صفوف متبادلة','minimal':'Minimal هادئ','outlined':'Outlined بحدود'},
+              (v)=>setState(()=>_tableStyle=v??_tableStyle)),
+            _choice('ستايل الأشجار',_treeStyle,['neon','nested_cards','compact','outlined'],
+              {'neon':'Neon متوهج','nested_cards':'Nested Cards متداخل','compact':'Compact مضغوط','outlined':'Outlined محدد'},
+              (v)=>setState(()=>_treeStyle=v??_treeStyle)),
+            const Text('تؤثر الاختيارات على إطار الشاشة ومكونات Material المشتركة. تحريك التبويبات وشريط المهام يعمل في الإطار الموحد؛ تغيير بنية Grid/Tree أو نقل التاريخ والصور داخل شاشة مخصصة يحتاج Adapter للشاشة.',style:TextStyle(fontSize:11,color:Colors.black54)),
+          ]),
           _section('طريقة عرض البيانات',Icons.view_quilt_outlined,[
             _choice('نمط العرض',_view,_views.keys.toList(),_views,(v)=>setState(()=>_view=v??_view)),
             _choice('شكل Grid Data',_gridStyle,['compact','comfortable','striped','outlined'],{'compact':'مضغوط','comfortable':'مريح','striped':'صفوف متبادلة','outlined':'حدود كاملة'},(v)=>setState(()=>_gridStyle=v??_gridStyle)),
@@ -240,7 +310,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
           ]),
           _section('مواضع عناصر الشاشة',Icons.open_with,[
             _choice('مكان التبويبات',_tabsPosition,_positions.keys.toList(),_positions,(v)=>setState(()=>_tabsPosition=v??_tabsPosition)),
-            _choice('مكان أزرار المهام',_tasksPosition,_positions.keys.toList(),_positions,(v)=>setState(()=>_tasksPosition=v??_tasksPosition)),
+            _choice('مكان أزرار المهام',_tasksPosition,['top','below_title','bottom','hidden'],{'top':'أعلى الشاشة','below_title':'أسفل العنوان','bottom':'أسفل الشاشة','hidden':'مخفي'},(v)=>setState(()=>_tasksPosition=v??_tasksPosition)),
             _choice('مكان التاريخ والفلاتر الزمنية',_datePosition,_positions.keys.toList(),_positions,(v)=>setState(()=>_datePosition=v??_datePosition)),
             _choice('مكان الصور',_imagesPosition,_positions.keys.toList(),_positions,(v)=>setState(()=>_imagesPosition=v??_imagesPosition)),
             _choice('مكان شريط التمرير',_scrollPosition,_positions.keys.toList(),_positions,(v)=>setState(()=>_scrollPosition=v??_scrollPosition)),

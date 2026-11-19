@@ -1,7 +1,22 @@
 name: Silsila Full Validation - All Recent Changes
 
-# Run this broad, slower audit manually. Routine checks are handled by the three independent lanes.
+# Run the complete acceptance suite on Studio and ERP pull requests as well as on demand.
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/**"
+      - "test/**"
+      - "integration_test/**"
+      - "android/**"
+      - "web/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "assets/**"
+      - "docs/**"
+      - "supabase/**"
+      - "tools/**"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:
@@ -18,8 +33,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Checkout latest source
+      - name: Checkout exact tested PR head
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Python
         uses: actions/setup-python@v5

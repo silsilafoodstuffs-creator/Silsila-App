@@ -15,8 +15,9 @@ const _studioOrange = Color(0xFFFFA015);
 const _studioCanvas = Color(0xFFFAF8FC);
 
 class SilsilaStudioScreen extends StatefulWidget {
-  const SilsilaStudioScreen({super.key, this.companyId});
+  const SilsilaStudioScreen({super.key, this.companyId, this.availableScreens = const <String>[]});
   final String? companyId;
+  final List<String> availableScreens;
 
   @override
   State<SilsilaStudioScreen> createState() => _SilsilaStudioScreenState();
@@ -748,10 +749,17 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       child: Scaffold(
         backgroundColor: _studioCanvas,
         appBar: AppBar(
-          title: const Text('سلسلة ستوديو'),
-          backgroundColor: _studioPurple,
+          title: const Text('سلسلة ستوديو', style: TextStyle(fontWeight: FontWeight.w900, shadows: [Shadow(color: Color(0x88FF27C3), blurRadius: 12)])),
+          backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
-          actions: [
+          elevation: 0,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF16002D), Color(0xFF3E007D), Color(0xFF7020A0)]),
+              boxShadow: [BoxShadow(color: Color(0x443E007D), blurRadius: 18, offset: Offset(0, 5))],
+            ),
+          ),
+          actions: wide ? [
             IconButton(tooltip: 'تراجع', onPressed: _undo.isEmpty ? null : _undoChange, icon: const Icon(Icons.undo)),
             IconButton(tooltip: 'إعادة', onPressed: _redo.isEmpty ? null : _redoChange, icon: const Icon(Icons.redo)),
             IconButton(tooltip: 'فتح المسودات المحلية', onPressed: _openLocalDrafts, icon: const Icon(Icons.folder_open)),
@@ -759,12 +767,44 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
             IconButton(tooltip: 'تصدير JSON', onPressed: _exportJson, icon: const Icon(Icons.code)),
             IconButton(tooltip: 'حفظ محلي', onPressed: _busy ? null : _saveLocal, icon: const Icon(Icons.save_outlined)),
             IconButton(tooltip: 'حفظ مركزي ومزامنة', onPressed: _busy ? null : _syncPendingDrafts, icon: const Icon(Icons.cloud_sync_outlined)),
+          ] : [
+            IconButton(tooltip: 'تراجع', onPressed: _undo.isEmpty ? null : _undoChange, icon: const Icon(Icons.undo)),
+            IconButton(tooltip: 'حفظ محلي', onPressed: _busy ? null : _saveLocal, icon: const Icon(Icons.save_outlined)),
+            PopupMenuButton<String>(
+              tooltip: 'المزيد من أدوات الاستوديو',
+              onSelected: (value) {
+                switch (value) {
+                  case 'redo': _redoChange(); break;
+                  case 'drafts': _openLocalDrafts(); break;
+                  case 'import': _importJson(); break;
+                  case 'export': _exportJson(); break;
+                  case 'sync': if (!_busy) _syncPendingDrafts(); break;
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'redo', child: Text('إعادة')),
+                PopupMenuItem(value: 'drafts', child: Text('فتح المسودات المحلية')),
+                PopupMenuItem(value: 'import', child: Text('استيراد JSON')),
+                PopupMenuItem(value: 'export', child: Text('تصدير JSON')),
+                PopupMenuItem(value: 'sync', child: Text('حفظ مركزي ومزامنة')),
+              ],
+            ),
           ],
         ),
-        body: Column(children: [
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFFBF8FF), Color(0xFFF3ECFB), Color(0xFFFFF7FC)]),
+          ),
+          child: Column(children: [
           Container(
-            color: Colors.white,
+            margin: const EdgeInsets.fromLTRB(8, 8, 8, 6),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFFF27C3).withValues(alpha: .22)),
+              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.white, Color(0xFFF9F3FF), Color(0xFFFFF7FD)]),
+              boxShadow: [BoxShadow(color: const Color(0xFF3E007D).withValues(alpha: .10), blurRadius: 14, offset: const Offset(0, 4))],
+            ),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: [
@@ -774,10 +814,14 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
                     child: ChoiceChip(
                       label: Text(_studioTabs[i]),
                       selected: _activeTab == i,
-                      selectedColor: const Color(0xFFF0E7FA),
+                      selectedColor: _studioPurple,
+                      backgroundColor: Colors.white,
+                      showCheckmark: false,
+                      side: BorderSide(color: _activeTab == i ? const Color(0xFFFF27C3) : const Color(0xFFE7DDF1), width: _activeTab == i ? 1.2 : .8),
+                      elevation: _activeTab == i ? 3 : 0,
                       labelStyle: TextStyle(
-                        color: _activeTab == i ? _studioPurple : Colors.black87,
-                        fontWeight: FontWeight.w700,
+                        color: _activeTab == i ? Colors.white : _studioPurple,
+                        fontWeight: FontWeight.w800,
                       ),
                       onSelected: (_) => setState(() => _activeTab = i),
                     ),
@@ -788,12 +832,13 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
           if (_activeTab == 0) _overviewPanel(),
           if (_activeTab >= 1 && _activeTab <= 4) _designerPanel(wide),
           if (_activeTab == 5) _dataBindingPanel(),
-          if (_activeTab == 6) Expanded(child: ErpScreenLayoutStudioScreen(companyId: widget.companyId)),
+          if (_activeTab == 6) Expanded(child: ErpScreenLayoutStudioScreen(companyId: widget.companyId, availableScreens: widget.availableScreens)),
           if (_activeTab == 7) _testPanel(),
           if (_activeTab == 8) _versionsPanel(),
           if (_activeTab == 9) _approvalPanel(),
           if (_activeTab != 6) _statusBar(),
         ]),
+        ),
       ),
     );
   }

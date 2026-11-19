@@ -1527,7 +1527,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                                       : (_page == 'مراكز التكلفة' || _page == 'الفروع ومراكز التكلفة')
                                       ? ErpCostCentersScreen(companyId: _appManagementCompanyId)
                                        : _page == 'سلسلة ستوديو'
-                                      ? SilsilaStudioScreen(companyId: _appManagementCompanyId)
+                                      ? SilsilaStudioScreen(companyId: _appManagementCompanyId, availableScreens: (_modules.values.expand((module) => module.values.expand((items) => items)).toSet().toList()..sort()))
                                       : _page == 'شاشات الاستوديو المنشورة'
                                       ? ErpStudioPublishedDesignsScreen(companyId: _appManagementCompanyId)
                                       : _page == 'سياسات البرنامج'
@@ -3922,11 +3922,19 @@ class ErpScreenLayoutRuntime extends StatelessWidget {
             ? profiles[screen] as Map
             : profiles['*'] is Map ? profiles['*'] as Map : const {};
         final profile = Map<String, dynamic>.from(raw);
+        final themePreset = profile['themePreset'] as String? ?? 'glossy_neon_luxury';
+        final buttonStyle = profile['buttonStyle'] as String? ?? 'glossy';
+        final tableStyle = profile['tableStyle'] as String? ?? 'glass';
+        final treeStyle = profile['treeStyle'] as String? ?? 'neon';
+        final headerStyle = profile['headerStyle'] as String? ?? 'glossy';
         final primary = Color((profile['primary'] as int?) ?? const Color(0xFF3E007D).toARGB32());
-        final accent = Color((profile['accent'] as int?) ?? const Color(0xFFFFA015).toARGB32());
+        final accent = Color((profile['accent'] as int?) ?? const Color(0xFFFF27C3).toARGB32());
         final rowHeight = ((profile['rowHeight'] as num?)?.toDouble() ?? 40).clamp(28, 80).toDouble();
         final spacing = ((profile['spacing'] as num?)?.toDouble() ?? 5).clamp(0, 30).toDouble();
         final radius = ((profile['cornerRadius'] as num?)?.toDouble() ?? 12).clamp(0, 30).toDouble();
+        final buttonRadius = buttonStyle == 'pill' ? 28.0 : radius;
+        final buttonFill = buttonStyle == 'glass' ? primary.withValues(alpha: .10) : buttonStyle == 'outline' ? Colors.transparent : primary;
+        final buttonForeground = buttonStyle == 'glass' || buttonStyle == 'outline' ? primary : Colors.white;
         final base = Theme.of(context);
         final border = OutlineInputBorder(
           borderRadius: BorderRadius.circular(radius),
@@ -3934,24 +3942,83 @@ class ErpScreenLayoutRuntime extends StatelessWidget {
         );
         final theme = base.copyWith(
           colorScheme: base.colorScheme.copyWith(primary: primary, secondary: accent),
+          cardTheme: CardThemeData(
+            color: themePreset == 'platinum' ? const Color(0xFFF8F9FC) : Colors.white,
+            elevation: themePreset == 'classic' ? 1 : 5,
+            shadowColor: accent.withValues(alpha: .22),
+            surfaceTintColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radius + (themePreset == 'classic' ? 0 : 3)),
+              side: BorderSide(color: accent.withValues(alpha: .20)),
+            ),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: buttonFill, foregroundColor: buttonForeground,
+              elevation: buttonStyle == 'outline' || buttonStyle == 'glass' ? 0 : buttonStyle == 'neon' ? 9 : 5,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(buttonRadius)),
+              side: buttonStyle == 'neon' ? BorderSide(color: accent.withValues(alpha: .9), width: 1.2) : buttonStyle == 'outline' ? BorderSide(color: primary.withValues(alpha: .8), width: 1.1) : BorderSide.none,
+              shadowColor: accent.withValues(alpha: buttonStyle == 'neon' ? .55 : .30),
+            ),
+          ),
+          filledButtonTheme: FilledButtonThemeData(
+            style: FilledButton.styleFrom(
+              backgroundColor: buttonFill, foregroundColor: buttonForeground,
+              elevation: buttonStyle == 'outline' || buttonStyle == 'glass' ? 0 : buttonStyle == 'neon' ? 8 : 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(buttonRadius)),
+              side: buttonStyle == 'neon' ? BorderSide(color: accent.withValues(alpha: .9), width: 1.2) : BorderSide.none,
+            ),
+          ),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: primary, side: BorderSide(color: accent.withValues(alpha: .75)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(buttonRadius)),
+            ),
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(foregroundColor: primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(buttonRadius))),
+          ),
           dataTableTheme: base.dataTableTheme.copyWith(
             dataRowMinHeight: rowHeight,
             dataRowMaxHeight: rowHeight + 8,
+            headingRowHeight: rowHeight,
             columnSpacing: spacing <= 2 ? 6 : spacing * 2.8,
+            headingTextStyle: TextStyle(color: primary, fontWeight: FontWeight.w900, fontSize: 12),
+            dividerThickness: tableStyle == 'minimal' ? .4 : tableStyle == 'outlined' ? 1.6 : 1,
+            decoration: BoxDecoration(
+              color: tableStyle == 'glass' ? Colors.white.withValues(alpha: .94) : Colors.white,
+              borderRadius: BorderRadius.circular(radius),
+              border: Border.all(color: tableStyle == 'neon' ? accent.withValues(alpha: .75) : primary.withValues(alpha: tableStyle == 'outlined' ? .55 : .16), width: tableStyle == 'outlined' ? 1.5 : 1),
+              boxShadow: tableStyle == 'neon' ? [BoxShadow(color: accent.withValues(alpha: .14), blurRadius: 14)] : const [],
+            ),
           ),
           inputDecorationTheme: base.inputDecorationTheme.copyWith(
+            filled: true,
+            fillColor: themePreset == 'classic' ? Colors.white : const Color(0xFFFCF9FF),
             border: border,
             enabledBorder: border,
             focusedBorder: border.copyWith(borderSide: BorderSide(color: accent, width: 1.6)),
-            constraints: BoxConstraints(minHeight: rowHeight),
+            constraints: BoxConstraints(minHeight: rowHeight, maxHeight: rowHeight + 4),
           ),
-          appBarTheme: base.appBarTheme.copyWith(backgroundColor: primary),
+          appBarTheme: base.appBarTheme.copyWith(
+            backgroundColor: headerStyle == 'minimal' || headerStyle == 'glass' ? Colors.white : primary,
+            foregroundColor: headerStyle == 'minimal' || headerStyle == 'glass' ? primary : Colors.white,
+            elevation: headerStyle == 'minimal' ? 0 : 5,
+            shadowColor: accent.withValues(alpha: .24),
+          ),
+          expansionTileTheme: base.expansionTileTheme.copyWith(
+            tilePadding: EdgeInsets.symmetric(horizontal: treeStyle == 'compact' ? 6 : 12),
+            childrenPadding: EdgeInsetsDirectional.only(start: treeStyle == 'nested_cards' ? 18 : 12, end: 8, bottom: 4),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius), side: BorderSide(color: accent.withValues(alpha: .45))),
+            iconColor: primary, collapsedIconColor: primary,
+          ),
           listTileTheme: base.listTileTheme.copyWith(
+            dense: treeStyle == 'compact',
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
             minVerticalPadding: spacing,
           ),
         );
-        return Theme(data: theme, child: child);
+        return ErpScreenLayoutScope(screen: screen, profile: profile, child: Theme(data: theme, child: child));
       },
     );
   }
