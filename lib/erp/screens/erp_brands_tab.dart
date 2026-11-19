@@ -352,8 +352,23 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         'logo_data': hex,
         'logo_mime_type': mime,
       }).eq('id', _s(row['id'])).eq('company_id', widget.companyId.trim()).select('id').single();
-      await _load();
-      if (mounted) ErpCenterToast.show(context, 'تم حفظ شعار البراند بنجاح.');
+
+      // Keep the current Brands tab alive after each upload. Refresh only the
+      // affected in-memory row instead of reloading the entire tab/screen.
+      if (!mounted) return;
+      setState(() {
+        final id = _s(row['id']);
+        final index = _rows.indexWhere((item) => _s(item['id']) == id);
+        if (index >= 0) {
+          _rows[index] = {
+            ..._rows[index],
+            'logo_data': hex,
+            'logo_mime_type': mime,
+          };
+        }
+        _selectedId = id;
+      });
+      ErpCenterToast.show(context, 'تم حفظ شعار البراند بنجاح. يمكنك اختيار براند آخر وتحميل صورته دون مغادرة الشاشة.');
     } catch (error) {
       if (mounted) ErpCenterToast.show(context, 'تعذر حفظ شعار البراند: $error', isError: true);
     } finally {
