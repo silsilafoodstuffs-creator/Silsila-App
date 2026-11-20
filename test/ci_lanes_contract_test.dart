@@ -141,6 +141,8 @@ void main() {
   test('food category activity filtering and three-level tree remain wired', () {
     final categories = File('lib/erp/screens/erp_item_categories_screen.dart').readAsStringSync();
     expect(categories, contains("const defaultActivity = '01';"));
+    expect(categories, contains('if (company.isEmpty && activeCompanies.isNotEmpty)'));
+    expect(categories, contains('if ((rawRows as List).isEmpty && activeCompanies.isNotEmpty)'));
     expect(categories, contains("final rawCode = normalizeActivity(_s(row['activity_code']));"));
     expect(categories, contains("return rawCode == _selectedActivityCode;"));
     expect(categories, contains("Map<String,dynamic>? _parentOf"));
