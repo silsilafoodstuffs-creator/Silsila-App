@@ -2953,7 +2953,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             children: [
               GridView.count(
                 crossAxisCount: constraints.maxWidth >= 700 ? 3 : constraints.maxWidth >= 460 ? 2 : 1,
-                childAspectRatio: constraints.maxWidth >= 700 ? 1.15 : constraints.maxWidth >= 460 ? 1.2 : 1.35,
+                childAspectRatio: constraints.maxWidth >= 560 ? 3.4 : 3.8,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: 10,
@@ -2988,7 +2988,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               const SizedBox(height: 10),
               GridView.count(
                 crossAxisCount: constraints.maxWidth >= 700 ? 3 : constraints.maxWidth >= 460 ? 2 : 1,
-                childAspectRatio: constraints.maxWidth >= 700 ? 1.65 : constraints.maxWidth >= 460 ? 1.8 : 2.15,
+                childAspectRatio: constraints.maxWidth >= 700 ? 1.15 : constraints.maxWidth >= 460 ? 1.2 : 1.35,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: 10,
