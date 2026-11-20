@@ -456,14 +456,20 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       final isHrResponsible = jobTitle == 'مسئول موارد بشرية' || jobTitle == 'مسؤول موارد بشرية';
       final normalizedMemberRole = memberRole.replaceAll(RegExp(r'[\s_-]+'), '');
       final normalizedJobTitle = jobTitle.replaceAll(RegExp(r'[\s_-]+'), '');
-      final normalizedUserType = erpUserTypeName.replaceAll(RegExp(r'[\s_-]+'), '');
+      final normalizedUserTypes = erpUserTypeName
+          .split(RegExp(r'\s+'))
+          .map((value) => value.replaceAll(RegExp(r'[\s_-]+'), ''))
+          .where((value) => value.isNotEmpty)
+          .toSet();
       final isCompanyAdmin = isActiveCompanyMember && (
         <String>{
           'owner', 'admin', 'administrator', 'systemadmin', 'superadmin',
           'مديرالنظام', 'مديرالنظامالرئيسي', 'ادمن', 'أدمن', 'مسؤولالنظام',
         }.contains(normalizedMemberRole) ||
-        <String>{'admin', 'administrator', 'systemadmin', 'superadmin', 'ادمن', 'أدمن', 'مديرالنظام'}
-            .contains(normalizedUserType) ||
+        normalizedUserTypes.any((value) => <String>{
+          'admin', 'administrator', 'systemadmin', 'superadmin', 'ادمن', 'أدمن',
+          'مديرالنظام', 'مديرالنظامالرئيسي',
+        }.contains(value)) ||
         <String>{'مديرالنظام', 'مديرالنظامالرئيسي'}.contains(normalizedJobTitle)
       );
       if (isCompanyAdmin) {
