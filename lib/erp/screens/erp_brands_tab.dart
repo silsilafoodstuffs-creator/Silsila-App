@@ -987,6 +987,16 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       ..sort(_compareBrandCodes);
   }
 
+  Widget _brandGridField(Widget child) => Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      border: Border.all(color: _brandBorder),
+      borderRadius: BorderRadius.circular(7),
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+    child: child,
+  );
+
   Widget _logoPreview(Map<String,dynamic> row, {double size = 48}) {
     final bytes = _logoBytes(row['logo_data']);
     return Container(
@@ -1074,7 +1084,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         border: OutlineInputBorder(), hintText: 'ترتيب'),
       onFieldSubmitted: (value) => _saveDisplayOrder(row, value),
     ));
-    final logo = _logoPreview(row, size: 46);
     final logo = InkWell(onTap: () => _showLogoDialog(row), child: _logoPreview(row, size: 46));
     return Padding(
       padding: const EdgeInsetsDirectional.only(bottom: 6),
@@ -1312,7 +1321,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 child: SizedBox(
                   width: 1125,
                   child: DataTable2(
-                  minWidth: 1125, columnSpacing: 8, horizontalMargin: 8,
+                  minWidth: 1125, columnSpacing: 2, horizontalMargin: 8,
                   headingRowHeight: 44, dataRowHeight: compactMobile ? 40 : 54, showCheckboxColumn: false,
                   headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                   columns: const [
@@ -1441,9 +1450,9 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                         return DataRow(
                           color: WidgetStateProperty.all(system ? const Color(0xFFEDE1F8) : Colors.white),
                           cells: [
-                            DataCell(Text('${index + 1}', style: const TextStyle(fontWeight: FontWeight.w800))),
-                            DataCell(Text(_s(row['brand_code']), style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple)), onTap: () => setState(() => _selectedId = id)),
-                            DataCell(SizedBox(width: 104, child: _gridEditing && (_gridEditingOnlyId == null || _gridEditingOnlyId == id) && !system
+                            DataCell(_brandGridField(Text('${index + 1}', style: const TextStyle(fontWeight: FontWeight.w800)))),
+                            DataCell(_brandGridField(Text(_s(row['brand_code']), style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))), onTap: () => setState(() => _selectedId = id)),
+                            DataCell(_brandGridField(SizedBox(width: 104, child: _gridEditing && (_gridEditingOnlyId == null || _gridEditingOnlyId == id) && !system
                               ? Focus(
                                   onKeyEvent: (_, event) {
                                     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) { FocusScope.of(context).nextFocus(); return KeyEventResult.handled; }
@@ -1460,15 +1469,15 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                                   _gridEditing = true;
                                   _gridEditingOnlyId = id;
                                 })
-                              : null),
-                            DataCell(InkWell(onTap: () => _showLogoDialog(row), child: _logoPreview(row, size: 50))),
-                            DataCell(SizedBox(width: 180, child: DropdownButton<String?>(
+                              : null)),
+                            DataCell(_brandGridField(InkWell(onTap: () => _showLogoDialog(row), child: _logoPreview(row, size: 50)))),
+                            DataCell(_brandGridField(SizedBox(width: 150, child: DropdownButton<String?>(
                               isExpanded: true, isDense: compactMobile, itemHeight: compactMobile ? 40 : 48,
                               value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : _defaultGroupId,
                               hint: const Text('بدون مجموعة'),
                               items: _groups.map((g) => DropdownMenuItem<String?>(value: _s(g['id']), child: Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow: TextOverflow.ellipsis))).toList(),
                               onChanged: system ? null : (v) => _assignGroup(row, v),
-                            ))),
+                            )))),
                             DataCell(Checkbox(shape: const CircleBorder(), value: row['is_active'] == true, activeColor: _brandPurple,
                               visualDensity: compactMobile ? VisualDensity.compact : VisualDensity.standard,
                               materialTapTargetSize: compactMobile ? MaterialTapTargetSize.shrinkWrap : MaterialTapTargetSize.padded,
