@@ -9,6 +9,7 @@ void main() {
   late String migrationSource;
   late String activityMigrationSource;
   late String brandVisibilityMigrationSource;
+  late String tickerOrderMigrationSource;
   late String adsScreenSource;
   late String categoryServiceSource;
 
@@ -25,6 +26,9 @@ void main() {
     ).readAsStringSync();
     brandVisibilityMigrationSource = File(
       'supabase/migrations/20261120083304_brand_master_app_visibility_and_ticker_order.sql',
+    ).readAsStringSync();
+    tickerOrderMigrationSource = File(
+      'supabase/migrations/20261120084349_preserve_existing_ticker_brand_order.sql',
     ).readAsStringSync();
     adsScreenSource = File('lib/erp/screens/erp_app_advertisements_screen.dart')
         .readAsStringSync();
@@ -142,6 +146,9 @@ void main() {
     expect(brandVisibilityMigrationSource, contains('ADD COLUMN IF NOT EXISTS show_in_app boolean NOT NULL DEFAULT true'));
     expect(brandVisibilityMigrationSource, contains('AND b.show_in_app = true'));
     expect(brandVisibilityMigrationSource, contains('ORDER BY display_order NULLS LAST, brand_code, id'));
+    expect(tickerOrderMigrationSource, contains('SET display_order = ticker.slot_no'));
+    expect(tickerOrderMigrationSource, contains('public.erp_app_ticker_ads'));
+    expect(tickerOrderMigrationSource, contains("app.app_key = 'silsila'"));
     expect(brandSource, contains("'show_in_app'"));
     expect(brandSource, contains('Future<void> _assignActivity'));
     expect(brandSource, contains('Future<void> _toggleBrandVisibility'));
