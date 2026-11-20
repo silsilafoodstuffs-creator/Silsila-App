@@ -1624,7 +1624,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             width: width < 380 ? width * .88 : 320,
             child: _rightPanel(),
           ) : null,
-          body: Row(children: [
+          body: !_executiveAccessChecked
+              ? const Center(child: CircularProgressIndicator())
+              : Row(children: [
             if (!mobile && _mainSidebarVisible) SizedBox(width: sidebarWidth, child: _sidebar()),
             Expanded(child: Column(children: [
               _header(compact, mobile: mobile),
