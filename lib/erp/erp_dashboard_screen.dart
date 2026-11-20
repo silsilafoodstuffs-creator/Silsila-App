@@ -383,6 +383,34 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         permissions[key] = row['allow_access'] == true;
         if (row['allow_access'] == true && row['show_in_quick_tasks'] == true) quickAccess.add(key);
       }
+      // The user administration screen stores its canonical matrix against the
+      // ERP user record (linked to the authenticated account by auth_user_id).
+      try {
+        final erpUser = await db.from('erp_users')
+            .select('id')
+            .eq('company_id', companyId)
+            .eq('auth_user_id', userId)
+            .eq('is_active', true)
+            .maybeSingle();
+        final erpUserId = erpUser?['id']?.toString();
+        if (erpUserId != null && erpUserId.isNotEmpty) {
+          final matrix = await db.from('erp_user_permission_matrix')
+              .select('menu_name,submenu_name,page_name,can_access,show_in_quick_tasks')
+              .eq('company_id', companyId)
+              .eq('user_id', erpUserId);
+          for (final row in (matrix as List).whereType<Map<String, dynamic>>()) {
+            final key = '${row['menu_name']}::${row['submenu_name']}::${row['page_name']}';
+            permissions[key] = row['can_access'] == true;
+            if (row['can_access'] == true && row['show_in_quick_tasks'] == true) {
+              quickAccess.add(key);
+            } else {
+              quickAccess.remove(key);
+            }
+          }
+        }
+      } catch (_) {
+        // Older installations may only have the legacy permission table.
+      }
       const hrDashboardKey = 'موارد بشرية::بيانات أساسية::ملخص إدارة موارد بشرية';
       final isHrManager = isActiveCompanyMember && jobTitle == 'مدير موارد بشرية';
       final isHrResponsible = jobTitle == 'مسئول موارد بشرية' || jobTitle == 'مسؤول موارد بشرية';
@@ -455,7 +483,26 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       if (add) { _quickAccessKeys.add(key); } else { _quickAccessKeys.remove(key); }
     });
     try {
-      await Supabase.instance.client.from('erp_user_permissions')
+      final db = Supabase.instance.client;
+      final erpUser = await db.from('erp_users')
+          .select('id')
+          .eq('company_id', companyId)
+          .eq('auth_user_id', userId)
+          .eq('is_active', true)
+          .maybeSingle();
+      final erpUserId = erpUser?['id']?.toString();
+      if (erpUserId != null && erpUserId.isNotEmpty) {
+        await db.from('erp_user_permission_matrix')
+            .update({'show_in_quick_tasks': add})
+            .eq('company_id', companyId)
+            .eq('user_id', erpUserId)
+            .eq('menu_name', module)
+            .eq('submenu_name', group)
+            .eq('page_name', page)
+            .eq('can_access', true);
+      }
+      // Keep legacy dashboard permission records synchronized when present.
+      await db.from('erp_user_permissions')
           .update({'show_in_quick_tasks': add})
           .eq('company_id', companyId)
           .eq('user_id', userId)
