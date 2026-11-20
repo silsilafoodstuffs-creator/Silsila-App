@@ -178,8 +178,8 @@ void main() {
     expect(itemCodePolicyMigrationSource, contains('2+v_main_digits+v_sub_digits+v_secondary_digits'));
     expect(itemCodePolicyMigrationSource, contains("'{category_digits}', '8'::jsonb"));
     expect(brandSource, contains('shape: BoxShape.circle'));
-    expect(brandSource, contains('Expanded(flex: 2, child: name)'));
-    expect(brandSource, contains('Expanded(flex: 1, child: english)'));
+    expect(brandSource, contains('Expanded(flex: 3, child: name)'));
+    expect(brandSource, contains('Expanded(flex: 2, child: Text(group =='));
   });
 
   test('public ticker automatically includes all active brands for the selected activity', () {
