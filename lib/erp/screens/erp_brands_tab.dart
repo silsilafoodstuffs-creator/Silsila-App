@@ -1014,7 +1014,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         border: OutlineInputBorder(), hintText: 'ترتيب'),
       onFieldSubmitted: (value) => _saveDisplayOrder(row, value),
     ));
-    final logo = _logoPreview(row, size: 60);
+    final logo = _logoPreview(row, size: 46);
     final upload = IconButton(tooltip: 'اختيار/تغيير الشعار', visualDensity: VisualDensity.compact,
       onPressed: _saving || system ? null : () => _uploadLogo(row),
       icon: const Icon(Icons.photo_library_outlined, color: _brandPurple));
