@@ -2,6 +2,23 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'erp_center_toast.dart';
 
+class ErpQuickTaskPermissionScope extends InheritedWidget {
+  const ErpQuickTaskPermissionScope({
+    super.key,
+    required this.canPerform,
+    required super.child,
+  });
+
+  final bool Function(String label) canPerform;
+
+  static ErpQuickTaskPermissionScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ErpQuickTaskPermissionScope>();
+
+  @override
+  bool updateShouldNotify(ErpQuickTaskPermissionScope oldWidget) =>
+      canPerform != oldWidget.canPerform;
+}
+
 /// One consistent visual system for ERP task actions across every screen.
 class ErpQuickTaskButton extends StatelessWidget {
   const ErpQuickTaskButton({
@@ -72,6 +89,10 @@ class ErpQuickTaskButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final permissionScope = ErpQuickTaskPermissionScope.maybeOf(context);
+    if (permissionScope != null && !permissionScope.canPerform(label)) {
+      return const SizedBox.shrink();
+    }
     final color = _color;
     final lowerColor = Color.lerp(color, Colors.black, .16)!;
     final radius = BorderRadius.circular(9);
