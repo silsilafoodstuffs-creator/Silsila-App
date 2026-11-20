@@ -1021,10 +1021,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     final upload = IconButton(tooltip: 'اختيار/تغيير الشعار', visualDensity: VisualDensity.compact,
       onPressed: _saving || system ? null : () => _uploadLogo(row),
       icon: const Icon(Icons.photo_library_outlined, color: _brandPurple));
-    final controls = Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 5, runSpacing: 2,
-      children: [
-        activityDropdown, groupDropdown, status, appVisibility, displayOrder, logo, upload,
-      ]);
     return Padding(
       padding: const EdgeInsetsDirectional.only(bottom: 6),
       child: Material(
@@ -1040,7 +1036,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             child: LayoutBuilder(builder: (context, constraints) {
               final code = Text(_s(row['brand_code']), overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple, fontSize: 11));
-              final name = Text(_s(row['brand_name']), softWrap: true,
+              final name = Text(_s(row['brand_name']), maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13));
               final english = Text(_s(row['brand_name_en']), textDirection: TextDirection.ltr,
                 overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.black54));
@@ -1143,7 +1139,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     ));
     return SingleChildScrollView(scrollDirection: Axis.horizontal,
       child: SizedBox(width: 1120, child: Container(
-        margin: const EdgeInsetsDirectional.only(start: 8, end: 0, bottom: 5),
+        margin: const EdgeInsetsDirectional.only(bottom: 5),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(color: const Color(0xFFF5EFFB), borderRadius: BorderRadius.circular(8), border: Border.all(color: _brandBorder)),
         child: Column(children: [
