@@ -24,7 +24,7 @@ void main() {
       'supabase/migrations/20261114141137_brand_activity_scope_and_ticker_feed.sql',
     ).readAsStringSync();
     brandVisibilityMigrationSource = File(
-      'supabase/migrations/20261120130000_brand_master_app_visibility_and_ticker_order.sql',
+      'supabase/migrations/20261120083304_brand_master_app_visibility_and_ticker_order.sql',
     ).readAsStringSync();
     adsScreenSource = File('lib/erp/screens/erp_app_advertisements_screen.dart')
         .readAsStringSync();
