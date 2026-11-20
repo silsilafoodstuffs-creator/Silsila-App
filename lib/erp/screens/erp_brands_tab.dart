@@ -194,7 +194,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       final groupName = _groupKey(row);
       if (_selectedActivityCode != 'all' && activityCode != _selectedActivityCode) return false;
       if (term.isNotEmpty && ![_s(row['brand_code']), _s(row['brand_name']), _s(row['brand_name_en']), groupName].any((v) => v.toLowerCase().contains(term))) return false;
-      final filters = <String, String>{'code': _s(row['brand_code']), 'activity': _activityName(activityCode), 'group': groupName, 'name': _s(row['brand_name']), 'english': _s(row['brand_name_en'])};
+      final filters = <String, String>{'code': _s(row['brand_code']), 'activity': _activityName(activityCode), 'group': groupName, 'name': _s(row['brand_name'])};
       for (final entry in filters.entries) {
         final value = _columnSearch[entry.key]!.text.trim().toLowerCase();
         if (value.isNotEmpty && !entry.value.toLowerCase().contains(value)) return false;
@@ -223,7 +223,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       return;
     }
     final name = TextEditingController(text: _s(row?['brand_name']));
-    final english = TextEditingController(text: _s(row?['brand_name_en']));
     var activityCode = _s(row?['activity_code']).isEmpty ? '01' : _s(row?['activity_code']);
     var groupId = _s(row?['brand_group_id']).isEmpty ? null : _s(row?['brand_group_id']);
     final formKey = GlobalKey<FormState>();
@@ -244,11 +243,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                     autofocus: true,
                     decoration: const InputDecoration(labelText: 'اسم البراند/الماركة بالعربية *'),
                     validator: (value) => value == null || value.trim().isEmpty ? 'اكتب اسم البراند.' : null,
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: english,
-                    decoration: const InputDecoration(labelText: 'الاسم بالإنجليزية'),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
@@ -296,14 +290,12 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     );
     if (result != true) {
       name.dispose();
-      english.dispose();
       return;
     }
     setState(() => _saving = true);
     try {
       final payload = <String,dynamic>{
         'brand_name': name.text.trim(),
-        'brand_name_en': english.text.trim().isEmpty ? null : english.text.trim(),
         if (row == null || activityCode != _s(row['activity_code'])) 'activity_code': activityCode,
         'brand_group_id': groupId,
         'brand_group': _groupById(groupId)?['group_name'],
@@ -320,7 +312,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
           'p_rows': [{
             'id': _s(row['id']),
             'brand_name': name.text.trim(),
-            'brand_name_en': english.text.trim(),
+            'brand_name_en': _s(row['brand_name_en']),
             'activity_code': activityCode,
           }],
         });
@@ -335,7 +327,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       if (mounted) ErpCenterToast.show(context, _friendlySaveError(error), isError: true);
     } finally {
       name.dispose();
-      english.dispose();
       if (mounted) setState(() => _saving = false);
     }
   }
@@ -548,7 +539,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
   Future<void> _addGroup() async {
     final name = TextEditingController();
-    final english = TextEditingController();
     var activityCode = _selectedActivityCode == 'all' ? (_activities.isEmpty ? '01' : _s(_activities.first['code'])) : _selectedActivityCode;
     final formKey = GlobalKey<FormState>();
     final ok = await showDialog<bool>(context: context, builder: (ctx) => Directionality(
@@ -557,8 +547,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         content: SizedBox(width: 420, child: Form(key: formKey, child: Column(mainAxisSize: MainAxisSize.min, children: [
           TextFormField(controller: name, autofocus: true, decoration: const InputDecoration(labelText: 'اسم المجموعة عربي *'),
             validator: (value) => value == null || value.trim().isEmpty ? 'اكتب اسم المجموعة.' : null),
-          const SizedBox(height: 8),
-          TextFormField(controller: english, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'اسم انجليزي')),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             value: activityCode, isExpanded: true,
@@ -574,18 +562,17 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
           FilledButton(onPressed: () { if (formKey.currentState?.validate() == true) Navigator.pop(ctx, true); }, child: const Text('حفظ')),
         ])));
-    if (ok != true) { name.dispose(); english.dispose(); return; }
+    if (ok != true) { name.dispose(); return; }
     setState(() => _saving = true);
     try {
       final inserted = await _db.from('erp_brand_groups').insert({
         'company_id': widget.companyId.trim(), 'group_name': name.text.trim(),
-        'group_name_en': english.text.trim().isEmpty ? null : english.text.trim(),
         'activity_code': activityCode,
       }).select('id,group_code,group_name,group_name_en,activity_code,is_active,show_in_app').single();
       await _load(showLoading: false);
       if (mounted) ErpCenterToast.show(context, 'تم إنشاء المجموعة بالكود ${_s(inserted['group_code'])} وربطها بالنشاط المحدد.');
     } catch (e) { if (mounted) ErpCenterToast.show(context, 'تعذر إنشاء المجموعة: $e', isError: true); }
-    finally { name.dispose(); english.dispose(); if (mounted) setState(() => _saving = false); }
+    finally { name.dispose(); if (mounted) setState(() => _saving = false); }
   }
 
   Future<void> _openGroupBrandPicker(Map<String,dynamic> group) async {
@@ -608,7 +595,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             title: Text(isUngrouped ? 'إعادة براندات إلى بدون مجموعة' : 'إضافة براندات إلى ${_s(group['group_name'])}'),
             content: SizedBox(width: 900, height: 560, child: Column(children: [
               TextField(controller: search, onChanged: (_) => setDialogState(() {}),
-                decoration: const InputDecoration(labelText: 'ابحث بكود البراند أو الاسم العربي أو الإنجليزي',
+                decoration: const InputDecoration(labelText: 'ابحث بكود البراند أو الاسم العربي',
                   prefixIcon: Icon(Icons.search, color: _brandPurple), isDense: true, border: OutlineInputBorder())),
               const SizedBox(height: 8),
               Row(children: [
@@ -722,7 +709,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   Future<void> _editGroup(Map<String,dynamic> group) async {
     final isDefault = _s(group['group_code']) == 'Brg01';
     final name = TextEditingController(text: _s(group['group_name']));
-    final english = TextEditingController(text: _s(group['group_name_en']));
     var activityCode = _s(group['activity_code']).isEmpty ? '01' : _s(group['activity_code']);
     final formKey = GlobalKey<FormState>();
     final ok = await showDialog<bool>(context: context, builder: (ctx) => Directionality(
@@ -732,8 +718,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
           TextFormField(controller: name, readOnly: isDefault,
             decoration: const InputDecoration(labelText: 'اسم البراند عربي *'),
             validator: (value) => value == null || value.trim().isEmpty ? 'اكتب اسم المجموعة.' : null),
-          const SizedBox(height: 8),
-          TextFormField(controller: english, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'اسم انجليزي')),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             value: activityCode, isExpanded: true,
@@ -749,13 +733,12 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
           FilledButton(onPressed: () { if (formKey.currentState?.validate() == true) Navigator.pop(ctx, true); }, child: const Text('حفظ')),
         ])));
-    if (ok != true) { name.dispose(); english.dispose(); return; }
+    if (ok != true) { name.dispose(); return; }
     final groupId = _s(group['id']);
     final previous = Map<String, dynamic>.from(group);
     final updated = <String, dynamic>{
       ...previous,
       'group_name': isDefault ? 'بدون مجموعة' : name.text.trim(),
-      'group_name_en': english.text.trim().isEmpty ? null : english.text.trim(),
       'activity_code': activityCode,
     };
 
@@ -783,7 +766,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         });
         ErpCenterToast.show(context, 'تعذر تعديل المجموعة: $e', isError: true);
       }
-    } finally { name.dispose(); english.dispose(); }
+    } finally { name.dispose(); }
   }
 
   Future<void> _toggleGroup(Map<String,dynamic> group) async {
@@ -1053,15 +1036,12 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple, fontSize: 11));
               final name = Text(_s(row['brand_name']), maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13));
-              final english = Text(_s(row['brand_name_en']), textDirection: TextDirection.ltr,
-                overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.black54));
 
               return Row(children: [
                 SizedBox(width: 28, child: Text('${index + 1}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800))),
                 SizedBox(width: 92, child: code),
                 activityDropdown, const SizedBox(width: 5), groupDropdown, const SizedBox(width: 5),
-                Expanded(flex: 2, child: name), const SizedBox(width: 5),
-                Expanded(flex: 1, child: english), const SizedBox(width: 3),
+                Expanded(flex: 3, child: name), const SizedBox(width: 3),
                 status, appVisibility, displayOrder, const SizedBox(width: 3),
                 SizedBox(width: 46, child: Center(child: logo)),
                 SizedBox(width: 40, child: Center(child: upload)),
@@ -1167,7 +1147,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             const SizedBox(width: 5),
             const Expanded(flex: 2, child: Text('اسم البراند عربي', style: headingStyle)),
             const SizedBox(width: 5),
-            const Expanded(flex: 1, child: Text('الاسم الإنجليزي', style: headingStyle)),
             const SizedBox(width: 3),
             const SizedBox(width: 68, child: Center(child: Text('نشط', style: headingStyle))),
             const SizedBox(width: 78, child: Center(child: Text('في التطبيق', style: headingStyle))),
@@ -1182,7 +1161,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             filter('group', 165, 'بحث المجموعة'), const SizedBox(width: 5),
             Expanded(flex: 2, child: filter('name', double.infinity, 'بحث الاسم العربي')),
             const SizedBox(width: 5),
-            Expanded(flex: 1, child: filter('english', double.infinity, 'بحث الإنجليزي')),
             const SizedBox(width: 3), const SizedBox(width: 68), const SizedBox(width: 78),
             const SizedBox(width: 62), const SizedBox(width: 46), const SizedBox(width: 40),
           ]),
@@ -1279,16 +1257,15 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
               : SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SizedBox(
-                  width: 1315,
+                  width: 1125,
                   child: DataTable2(
-                  minWidth: 1315, columnSpacing: 8, horizontalMargin: 8,
+                  minWidth: 1125, columnSpacing: 8, horizontalMargin: 8,
                   headingRowHeight: 44, dataRowHeight: compactMobile ? 40 : 54, showCheckboxColumn: false,
                   headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                   columns: const [
                     DataColumn2(label: Text('م'), size: ColumnSize.S, fixedWidth: 52),
                     DataColumn2(label: Text('كود مجموعة البراند'), size: ColumnSize.M, fixedWidth: 175),
                     DataColumn2(label: Text('اسم البراند عربي'), size: ColumnSize.L, fixedWidth: 220),
-                    DataColumn2(label: Text('اسم انجليزي'), size: ColumnSize.L, fixedWidth: 190),
                     DataColumn2(label: Text('النشاط'), size: ColumnSize.M, fixedWidth: 160),
                     DataColumn2(label: Text('عدد البراندات'), size: ColumnSize.S, fixedWidth: 115),
                     DataColumn2(label: Text('نشط أو لا'), size: ColumnSize.S, fixedWidth: 95),
@@ -1312,7 +1289,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                             DataCell(Text('$index')),
                             DataCell(Text(_s(group['group_code']), style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
                             DataCell(Text(_s(group['group_name']), maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)), onTap: isDefault ? null : () => _editGroup(group)),
-                            DataCell(Text(_s(group['group_name_en']), maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, textDirection: TextDirection.ltr), onTap: isDefault ? null : () => _editGroup(group)),
                             DataCell(Text(_activityName(_s(group['activity_code'])), maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis)),
                             DataCell(Text('$count')),
                             DataCell(Checkbox(shape: const CircleBorder(), value: group['is_active'] == true,
@@ -1388,7 +1364,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                     )
                   : DataTable2(
                       fixedTopRows: 1,
-                      minWidth: 1040,
+                      minWidth: 850,
                       columnSpacing: 8,
                       horizontalMargin: 8,
                       headingRowHeight: 42,
@@ -1399,7 +1375,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                         DataColumn2(label: Text('م'), size: ColumnSize.S, fixedWidth: 52),
                         DataColumn2(label: Text('كود البراند'), size: ColumnSize.S, fixedWidth: 110),
                         DataColumn2(label: Text('اسم البراند عربي'), size: ColumnSize.L, fixedWidth: 220),
-                        DataColumn2(label: Text('الاسم الإنجليزي'), size: ColumnSize.L, fixedWidth: 190),
                         DataColumn2(label: Text('الصورة'), size: ColumnSize.S, fixedWidth: 115),
                         DataColumn2(label: Text('المجموعة'), size: ColumnSize.M, fixedWidth: 190),
                         DataColumn2(label: Text('نشط'), size: ColumnSize.S, fixedWidth: 70),
@@ -1409,7 +1384,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                         final id = _s(row['id']);
                         final system = row['is_system'] == true;
                         final ar = _gridNameControllers.putIfAbsent(id, () => TextEditingController(text: _s(row['brand_name'])));
-                        final en = _gridEnglishControllers.putIfAbsent(id, () => TextEditingController(text: _s(row['brand_name_en'])));
                         return DataRow(
                           color: WidgetStateProperty.all(system ? const Color(0xFFEDE1F8) : Colors.white),
                           cells: [
@@ -1433,18 +1407,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                                   _gridEditingOnlyId = id;
                                 })
                               : null),
-                            DataCell(SizedBox(width: 180, child: _gridEditing && (_gridEditingOnlyId == null || _gridEditingOnlyId == id) && !system
-                              ? Focus(
-                                  onKeyEvent: (_, event) {
-                                    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) { FocusScope.of(context).nextFocus(); return KeyEventResult.handled; }
-                                    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowUp) { FocusScope.of(context).previousFocus(); return KeyEventResult.handled; }
-                                    return KeyEventResult.ignored;
-                                  },
-                                  child: TextField(controller: en, enabled: !_saving, textDirection: TextDirection.ltr, textInputAction: TextInputAction.next,
-                                    decoration: const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'Brand name'),
-                                    onSubmitted: (_) => FocusScope.of(context).nextFocus()),
-                                )
-                              : Text(_s(row['brand_name_en']), maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis))),
                             DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
                               _logoPreview(row, size: compactMobile ? 30 : 46),
                               SizedBox(width: compactMobile ? 2 : 4),
