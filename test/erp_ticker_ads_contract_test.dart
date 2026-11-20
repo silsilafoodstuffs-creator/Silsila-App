@@ -148,7 +148,7 @@ void main() {
     expect(brandSource, contains('Future<void> _saveDisplayOrder'));
     expect(brandSource, contains('DropdownButton<String?>'));
     expect(brandSource, contains('DropdownButtonFormField<String?>'));
-    expect(brandSource, contains('_logoPreview(row, size: 60)'));
+    expect(brandSource, contains('_logoPreview(row, size: 46)'));
     expect(brandSource, contains('shape: BoxShape.circle'));
     expect(brandSource, contains('Expanded(flex: 2, child: name)'));
     expect(brandSource, contains('Expanded(flex: 1, child: english)'));
