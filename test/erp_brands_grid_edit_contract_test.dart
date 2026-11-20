@@ -13,20 +13,20 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('brand names can be edited directly from their grid cells', () {
+  test('Arabic brand names can be edited directly from their grid cells', () {
     expect(source, contains("_gridEditingOnlyId = id;"));
     expect(source, contains("_gridEditing && (_gridEditingOnlyId == null || _gridEditingOnlyId == id) && !system"));
     expect(source, contains("TextField(controller: ar"));
-    expect(source, contains("TextField(controller: en"));
+    expect(source, isNot(contains("TextField(controller: en")));
     expect(source, contains("ErpQuickTaskButton(label:'تعديل الكل'"));
     expect(source, contains("_saveGridNames(onlyId:_gridEditingOnlyId)"));
   });
 
-  test('single-row grid editing restricts both language fields to the selected brand', () {
-    final englishCell = source.indexOf("DataCell(SizedBox(width: 180");
-    expect(englishCell, greaterThanOrEqualTo(0));
-    final englishCellSource = source.substring(englishCell, englishCell + 1500);
-    expect(englishCellSource, contains("_gridEditingOnlyId == id"));
+  test('single-row grid editing restricts the Arabic name field to the selected brand', () {
+    final arabicCell = source.indexOf("SizedBox(width: 94, child: _gridEditing");
+    expect(arabicCell, greaterThanOrEqualTo(0));
+    final arabicCellSource = source.substring(arabicCell, arabicCell + 1000);
+    expect(arabicCellSource, contains("_gridEditingOnlyId == id"));
   });
 
   test('brand name updates are atomic, company-scoped and preserve protected records', () {
