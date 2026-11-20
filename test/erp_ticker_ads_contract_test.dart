@@ -159,7 +159,17 @@ void main() {
     expect(brandSource, contains('Future<void> _saveDisplayOrder'));
     expect(brandSource, contains('DropdownButton<String?>'));
     expect(brandSource, contains('DropdownButtonFormField<String?>'));
-    expect(brandSource, contains('_logoPreview(row, size: compactMobile ? 30 : 46)'));
+    expect(brandSource, contains('_logoPreview(row, size: 44)'));
+    expect(brandSource, contains('_logoPreview(current, size: 50)'));
+    expect(brandSource, contains('Future<void> _showLogoDialog'));
+    expect(brandSource, contains('ImageSource.camera'));
+    expect(brandSource, contains("Text('اسم البراند/الماركة')"));
+    expect(brandSource, contains('columnSpacing: 2'));
+    expect(brandSource, contains('fixedWidth: 110'));
+    expect(brandSource, contains("_showLogoDialog(row)"));
+    expect(brandSource, contains('value: row[\'show_in_app\'] == true, activeColor: _brandPurple'));
+    expect(brandSource, isNot(contains('تعديل صورة البراند')));
+    expect(brandSource, isNot(contains('حذف صورة البراند')));
     expect(brandSource, contains('dataRowHeight: compactMobile ? 40 : 60'));
     expect(brandSource, contains('dataRowHeight: compactMobile ? 40 : 54'));
     expect(brandSource, contains('itemHeight: compactMobile ? 40 : 48'));
