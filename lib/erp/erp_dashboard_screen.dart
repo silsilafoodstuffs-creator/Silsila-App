@@ -562,7 +562,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     if (page == 'ملخص إدارة موارد بشرية') return _hrDashboardAccessChecked && _hrDashboardAllowed;
     final key = _screenPermissionKey(module, group, page);
     // Keep legacy installations usable until the permission table is configured.
-    return !_executiveAccessChecked || !_screenAccessPermissions.containsKey(key) || _screenAccessPermissions[key] == true;
+    return _screenAccessPermissions[key] == true;
   }
 
   Future<void> _toggleQuickAccess(String module, String group, String page) async {
@@ -613,7 +613,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         for (final page in group.value) {
           final key = _screenPermissionKey(module.key, group.key, page);
           if (!_quickAccessKeys.contains(key) || !_canOpenScreen(module.key, group.key, page)) continue;
-          tiles.add(_quick('$_module • $page', Icons.favorite_rounded, () => _open(module.key, group.key, page)));
+          tiles.add(_quick('${module.key} • $page', Icons.favorite_rounded, () => _open(module.key, group.key, page)));
         }
       }
     }
@@ -3488,6 +3488,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required List<Map<String, Object?>> rows,
     double? trend,
   }) {
+    final chartRows = rows.where((row) => row['isPercent'] != true).toList();
+    final donutRows = chartRows.isEmpty ? rows : chartRows;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -3524,15 +3526,15 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           height: 82,
           child: Row(children: [
             SizedBox(width: 82, height: 82, child: CustomPaint(
-              painter: _ExecutiveDonutPainter(rows.map((row) => (row['value'] as num?)?.toDouble() ?? 0).toList()),
+              painter: _ExecutiveDonutPainter(donutRows.map((row) => (row['value'] as num?)?.toDouble() ?? 0).toList()),
             )),
             const SizedBox(width: 8),
             Expanded(child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: rows.map((row) {
+              children: donutRows.map((row) {
                 final value = ((row['value'] as num?)?.toDouble() ?? 0).abs();
-                final total = rows.fold<double>(0, (sum, item) => sum + (((item['value'] as num?)?.toDouble() ?? 0).abs()));
+                final total = donutRows.fold<double>(0, (sum, item) => sum + (((item['value'] as num?)?.toDouble() ?? 0).abs()));
                 final percent = total == 0 ? 0.0 : value / total * 100;
                 final label = (row['label'] ?? '').toString();
                 return Padding(padding: const EdgeInsets.symmetric(vertical: 1), child: Text(
