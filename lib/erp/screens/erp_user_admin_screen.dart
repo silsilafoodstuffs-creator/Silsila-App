@@ -21,7 +21,7 @@ const _userAdminActions = <String>['مسموح','تحديث','إضافة','حف�
 const _userAdminActionFields = <String,String>{'مسموح':'can_access','تحديث':'can_refresh','إضافة':'can_add','حفظ':'can_save','تعديل':'can_edit','حذف':'can_delete','معاينة':'can_preview','طباعة':'can_print','استيراد Excel':'can_import_excel','تصدير Excel':'can_export_excel','طباعة PDF':'can_print_pdf','الوصول السريع':'show_in_quick_tasks'};
 const _permissionActions = <String>['مسموح','تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','استيراد Excel','تصدير Excel','PDF'];
 const _permissionActionFields = <String,String>{'مسموح':'can_access','تحديث':'can_refresh','إضافة':'can_add','حفظ':'can_save','تعديل':'can_edit','حذف':'can_delete','معاينة':'can_preview','طباعة':'can_print','Excel':'can_import_excel','استيراد Excel':'can_import_excel','تصدير Excel':'can_export_excel','PDF':'can_print_pdf'};
-const _userAdminTree = ErpMenuCatalog.modules;;
+const _userAdminTree = ErpMenuCatalog.modules;
 
 class ErpUserAdminScreen extends StatefulWidget {
   const ErpUserAdminScreen({super.key, required this.companyId, required this.initialView});
