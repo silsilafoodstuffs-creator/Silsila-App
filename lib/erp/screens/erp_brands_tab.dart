@@ -988,6 +988,8 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   }
 
   Widget _brandGridField(Widget child) => Container(
+    width: double.infinity,
+    constraints: const BoxConstraints(minHeight: 34),
     decoration: BoxDecoration(
       color: Colors.white,
       border: Border.all(color: _brandBorder),
