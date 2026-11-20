@@ -162,6 +162,14 @@ void main() {
     expect(brandSource, contains('_logoPreview(row, size: 44)'));
     expect(brandSource, contains('_logoPreview(current, size: 50)'));
     expect(brandSource, contains('Future<void> _showLogoDialog'));
+    // The default view is the tree, so verify its live row/header layout too.
+    expect(brandSource, contains("String _viewMode = 'tree'"));
+    expect(brandSource, contains("SizedBox(width: 220, child: _brandGridField(name))"));
+    expect(brandSource, contains("SizedBox(width: 220, child: Text('اسم البراند/الماركة'"));
+    expect(brandSource, contains("SizedBox(width: 145, child: _brandGridField(DropdownButton<String>("));
+    expect(brandSource, contains("SizedBox(width: 165, child: _brandGridField(DropdownButton<String?>("));
+    expect(brandSource, contains("const Expanded(child: SizedBox.shrink())"));
+
     expect(brandSource, contains('ImageSource.camera'));
     expect(brandSource, contains("Text('اسم البراند/الماركة')"));
     expect(brandSource, contains('columnSpacing: 2'));
