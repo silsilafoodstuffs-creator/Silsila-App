@@ -198,24 +198,21 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     }
     final name = TextEditingController(text: _s(row?['brand_name']));
     final english = TextEditingController(text: _s(row?['brand_name_en']));
-    var activityCode = _s(row?['activity_code']).isEmpty
-        ? '01'
-        : _s(row?['activity_code']);
+    var activityCode = _s(row?['activity_code']).isEmpty ? '01' : _s(row?['activity_code']);
     var groupId = _s(row?['brand_group_id']).isEmpty ? null : _s(row?['brand_group_id']);
     final formKey = GlobalKey<FormState>();
     final result = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: Text(row == null ? 'إضافة براند/ماركة' : 'تعديل البراند/الماركة'),
-          content: SizedBox(
-            width: 420,
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: Text(row == null ? 'إضافة براند/ماركة' : 'تعديل البراند/الماركة'),
+            content: SizedBox(
+              width: 420,
+              child: Form(
+                key: formKey,
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
                   TextFormField(
                     controller: name,
                     autofocus: true,
@@ -231,22 +228,18 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                   DropdownButtonFormField<String>(
                     value: activityCode,
                     isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'نوع النشاط المرتبط بالبراند *',
-                    ),
+                    decoration: const InputDecoration(labelText: 'نوع النشاط المرتبط بالبراند *'),
                     items: _activities.map((activity) => DropdownMenuItem<String>(
                       value: _s(activity['code']),
                       child: Text('${_s(activity['name'])} — ${_s(activity['code'])}'),
                     )).toList(),
                     onChanged: (value) {
-                      if (value != null) {
+                      if (value != null) setDialogState(() {
                         activityCode = value;
                         if (!_groupsForActivity(value).any((group) => _s(group['id']) == groupId)) groupId = null;
-                      }
+                      });
                     },
-                    validator: (value) => value == null || value.isEmpty
-                        ? 'اختر نوع النشاط.'
-                        : null,
+                    validator: (value) => value == null || value.isEmpty ? 'اختر نوع النشاط.' : null,
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String?>(
@@ -256,21 +249,22 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                     items: [
                       const DropdownMenuItem<String?>(value: null, child: Text('بدون مجموعة')),
                       ..._groupsForActivity(activityCode).map((group) => DropdownMenuItem<String?>(
-                        value: _s(group['id']), child: Text('${_s(group['group_code'])} — ${_s(group['group_name'])}', overflow: TextOverflow.ellipsis),
+                        value: _s(group['id']),
+                        child: Text('${_s(group['group_code'])} — ${_s(group['group_name'])}', overflow: TextOverflow.ellipsis),
                       )),
                     ],
-                    onChanged: (value) => groupId = value,
+                    onChanged: (value) => setDialogState(() => groupId = value),
                   ),
-                ],
+                ]),
               ),
             ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+              FilledButton(onPressed: () {
+                if (formKey.currentState?.validate() == true) Navigator.pop(dialogContext, true);
+              }, child: const Text('حفظ')),
+            ],
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
-            FilledButton(onPressed: () {
-              if (formKey.currentState?.validate() == true) Navigator.pop(dialogContext, true);
-            }, child: const Text('حفظ')),
-          ],
         ),
       ),
     );
@@ -290,21 +284,19 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       };
       if (row == null) {
         final inserted = await _db.from('erp_brands')
-          .insert({'company_id':widget.companyId.trim(), ...payload})
+          .insert({'company_id': widget.companyId.trim(), ...payload})
           .select('id,brand_code,brand_name,brand_name_en,is_active,is_system')
           .single();
         if (mounted) _selectedId = _s(inserted['id']);
       } else {
         await _db.rpc('erp_update_brand_names_batch', params: {
           'p_company_id': widget.companyId.trim(),
-          'p_rows': [
-            {
-              'id': _s(row['id']),
-              'brand_name': name.text.trim(),
-              'brand_name_en': english.text.trim(),
-              'activity_code': activityCode,
-            },
-          ],
+          'p_rows': [{
+            'id': _s(row['id']),
+            'brand_name': name.text.trim(),
+            'brand_name_en': english.text.trim(),
+            'activity_code': activityCode,
+          }],
         });
         await _db.from('erp_brands').update({
           'brand_group_id': groupId,
