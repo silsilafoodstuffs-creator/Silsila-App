@@ -64,10 +64,10 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     else if (mounted) setState(() => _error = null);
     try {
       final rows = await _db.from('erp_brands')
-        .select('id,brand_code,brand_name,brand_name_en,brand_group,brand_group_id,display_order,is_active,is_system,logo_data,logo_mime_type,activity_code')
+        .select('id,brand_code,brand_name,brand_name_en,brand_group,brand_group_id,display_order,show_in_app,is_active,is_system,logo_data,logo_mime_type,activity_code')
         .eq('company_id', widget.companyId.trim())
         .order('brand_code');
-      final groups = await _db.from('erp_brand_groups').select('id,group_code,group_name,group_name_en,activity_code,is_active,show_in_app').eq('company_id', widget.companyId.trim()).order('group_code');
+      final groups = await _db.from('erp_brand_groups').select('id,group_code,group_name,group_name_en,activity_code,is_active').eq('company_id', widget.companyId.trim()).order('group_code');
       // The activity directory is auxiliary metadata. A missing or restricted
       // activity_types table must never hide the brands/groups catalog.
       List<Map<String,dynamic>> activities = <Map<String,dynamic>>[];
@@ -483,12 +483,12 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     return code;
   }
 
-  String? get _defaultGroupId {
-    for (final group in _groups) {
-      if (_s(group['group_code']) == 'Brg01') return _s(group['id']);
-    }
+  Map<String,dynamic>? _groupById(String? id) {
+    for (final group in _groups) { if (_s(group['id']) == (id ?? '')) return group; }
     return null;
   }
+
+  List<Map<String,dynamic>> _groupsForActivity(String code) => _groups.where((g) => _s(g['activity_code']) == code).toList();
 
   String _groupKey(Map<String,dynamic> row) {
     final id = _s(row['brand_group_id']);
@@ -750,6 +750,76 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   final Map<String, int> _groupAssignmentVersions = <String, int>{};
   final Map<String, String?> _groupAssignmentPersistedValues = <String, String?>{};
 
+  Future<void> _assignActivity(Map<String,dynamic> row, String activityCode) async {
+    final id = _s(row['id']);
+    if (id.isEmpty || !mounted || row['is_system'] == true) return;
+    final index = _rows.indexWhere((item) => _s(item['id']) == id);
+    if (index < 0 || _s(_rows[index]['activity_code']) == activityCode) return;
+    final previous = Map<String,dynamic>.from(_rows[index]);
+    final group = _groupById(_s(previous['brand_group_id']));
+    final keepGroup = group != null && _s(group['activity_code']) == activityCode;
+    final nextGroupId = keepGroup ? _s(group['id']) : null;
+    setState(() { _rows[index] = <String,dynamic>{...previous,
+      'activity_code': activityCode, 'brand_group_id': nextGroupId,
+      'brand_group': keepGroup ? _s(group['group_name']) : ''}; });
+    try {
+      await _db.from('erp_brands').update({'activity_code': activityCode,
+        'brand_group_id': nextGroupId, 'brand_group': keepGroup ? _s(group['group_name']) : null})
+        .eq('id', id).eq('company_id', widget.companyId.trim()).select('id').single();
+      if (mounted) ErpCenterToast.show(context, keepGroup
+        ? 'تم تغيير نوع نشاط البراند.'
+        : 'تم تغيير نوع النشاط وإلغاء المجموعة غير التابعة له. اختر مجموعة مناسبة للنشاط الجديد.');
+    } catch (error) {
+      if (!mounted) return;
+      final current = _rows.indexWhere((item) => _s(item['id']) == id);
+      if (current >= 0) setState(() => _rows[current] = previous);
+      ErpCenterToast.show(context, 'تعذر تغيير نوع نشاط البراند: $error', isError: true);
+    }
+  }
+
+  Future<void> _toggleBrandVisibility(Map<String,dynamic> row) async {
+    final id = _s(row['id']);
+    if (id.isEmpty || row['is_system'] == true) return;
+    final index = _rows.indexWhere((item) => _s(item['id']) == id);
+    if (index < 0) return;
+    final previous = row['show_in_app'] == true;
+    final next = !previous;
+    setState(() => _rows[index] = <String,dynamic>{..._rows[index], 'show_in_app': next});
+    try {
+      await _db.from('erp_brands').update({'show_in_app': next})
+        .eq('id', id).eq('company_id', widget.companyId.trim()).select('id').single();
+      if (mounted) ErpCenterToast.show(context, next ? 'سيظهر البراند في التطبيق.' : 'تم إخفاء البراند من التطبيق.');
+    } catch (error) {
+      if (!mounted) return;
+      final current = _rows.indexWhere((item) => _s(item['id']) == id);
+      if (current >= 0) setState(() => _rows[current] = <String,dynamic>{..._rows[current], 'show_in_app': previous});
+      ErpCenterToast.show(context, 'تعذر تحديث ظهور البراند: $error', isError: true);
+    }
+  }
+
+  Future<void> _saveDisplayOrder(Map<String,dynamic> row, String value) async {
+    final order = int.tryParse(value.trim());
+    if (order == null || order < 0) {
+      ErpCenterToast.show(context, 'ترتيب الظهور يجب أن يكون رقمًا صحيحًا يبدأ من صفر.', isError: true);
+      return;
+    }
+    final id = _s(row['id']);
+    final index = _rows.indexWhere((item) => _s(item['id']) == id);
+    if (index < 0 || (int.tryParse(_s(_rows[index]['display_order'])) ?? 0) == order) return;
+    final previous = _rows[index]['display_order'];
+    setState(() => _rows[index] = <String,dynamic>{..._rows[index], 'display_order': order});
+    try {
+      await _db.from('erp_brands').update({'display_order': order})
+        .eq('id', id).eq('company_id', widget.companyId.trim()).select('id').single();
+      if (mounted) ErpCenterToast.show(context, 'تم حفظ ترتيب ظهور البراند في التطبيق.');
+    } catch (error) {
+      if (!mounted) return;
+      final current = _rows.indexWhere((item) => _s(item['id']) == id);
+      if (current >= 0) setState(() => _rows[current] = <String,dynamic>{..._rows[current], 'display_order': previous});
+      ErpCenterToast.show(context, 'تعذر حفظ ترتيب الظهور: $error', isError: true);
+    }
+  }
+
   Future<void> _assignGroup(Map<String,dynamic> row, String? groupId) async {
     final brandId = _s(row['id']);
     if (brandId.isEmpty || !mounted) return;
@@ -758,20 +828,25 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     if (index < 0) return;
     final previousGroupId = _rows[index]['brand_group_id']?.toString();
     if (previousGroupId == groupId) return;
+    final selectedGroup = _groupById(groupId);
+    if (selectedGroup != null && _s(selectedGroup['activity_code']) != _s(_rows[index]['activity_code'])) {
+      ErpCenterToast.show(context, 'لا يمكن ربط البراند بمجموعة تابعة لنوع نشاط مختلف.', isError: true);
+      return;
+    }
     _groupAssignmentPersistedValues.putIfAbsent(brandId, () => previousGroupId);
 
     // Reflect the selection in the grid immediately, without waiting for
     // Supabase and without reloading the entire brands/groups catalog.
-    setState(() {
-      _rows[index] = <String, dynamic>{..._rows[index], 'brand_group_id': groupId};
-    });
+    setState(() { _rows[index] = <String, dynamic>{..._rows[index], 'brand_group_id': groupId,
+      'brand_group': selectedGroup == null ? '' : _s(selectedGroup['group_name'])}; });
 
     final version = (_groupAssignmentVersions[brandId] ?? 0) + 1;
     _groupAssignmentVersions[brandId] = version;
     final previousWrite = _groupAssignmentQueues[brandId] ?? Future<void>.value();
     final write = previousWrite.catchError((_) {}).then((_) async {
       try {
-        await _db.from('erp_brands').update({'brand_group_id': groupId})
+        await _db.from('erp_brands').update({'brand_group_id': groupId,
+          'brand_group': selectedGroup == null ? null : _s(selectedGroup['group_name'])})
           .eq('id', brandId).eq('company_id', widget.companyId.trim())
           .select('id').single();
         _groupAssignmentPersistedValues[brandId] = groupId;
@@ -784,6 +859,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
               _rows[currentIndex] = <String, dynamic>{
                 ..._rows[currentIndex],
                 'brand_group_id': _groupAssignmentPersistedValues[brandId],
+                'brand_group': _groupById(_groupAssignmentPersistedValues[brandId])?['group_name'] ?? '',
               };
             }
           });
@@ -825,16 +901,17 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     final bytes = _logoBytes(row['logo_data']);
     return Container(
       width: size, height: size, alignment: Alignment.center,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: const Color(0xFFD8CBE7)),
+      padding: const EdgeInsets.all(3), clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(shape: BoxShape.circle,
+        gradient: SweepGradient(colors: [Color(0xFFFFA015), Color(0xFFFF27C3), _brandPurple, Color(0xFFFFA015)])),
+      child: Container(
+        padding: const EdgeInsets.all(2), clipBehavior: Clip.antiAlias,
+        decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+        child: ClipOval(child: bytes != null && bytes.isNotEmpty
+          ? Image.memory(bytes, fit: BoxFit.cover, width: size - 10, height: size - 10,
+              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.black38))
+          : const Icon(Icons.storefront_outlined, color: Color(0xFF9A86B5), size: 25)),
       ),
-      child: bytes != null && bytes.isNotEmpty
-        ? Image.memory(bytes, fit: BoxFit.contain, width: size, height: size,
-            errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.black38))
-        : const Icon(Icons.storefront_outlined, color: Color(0xFF9A86B5), size: 25),
     );
   }
 
