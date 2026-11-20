@@ -443,7 +443,12 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
     if(parts[2]=='*')return _allKeys.where((k)=>k.startsWith(parts[0]+'::'+parts[1]+'::')).toList();
     return [key];
   }
-  void _setCell(String key,String action,bool value){setState((){
+  void _setCell(String key,String action,bool value){
+    if(action=='وصول سريع' && value && !_cell(key,'مسموح')) {
+      setState(()=>_error='لا يمكن إضافة الشاشة للوصول السريع قبل منح المستخدم صلاحية الوصول إليها.');
+      return;
+    }
+    setState((){
     final affected=_affectedKeys(key);
     for(final uid in _targets){
       final map=_draft.putIfAbsent(uid,()=>_blank('مخصص بلا صلاحيات'));
@@ -481,7 +486,18 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
     }catch(e){if(!mounted)return;setState((){_saving=false;_error='تعذر حفظ الصلاحيات: '+e.toString();});}
   }
   Widget _row(String key,String label,{bool nested=false})=>Container(margin:EdgeInsetsDirectional.only(start:nested?12:0,bottom:19),padding:const EdgeInsets.symmetric(horizontal:6,vertical:8),decoration:BoxDecoration(color:Colors.white,border:Border.all(color:Colors.black12),borderRadius:BorderRadius.circular(8)),child:Row(children:[
-    Expanded(flex:3,child:Text(label,style:TextStyle(fontSize:11,fontWeight:nested?FontWeight.w600:FontWeight.w800))),
+    Expanded(flex:3,child:Row(children:[
+      Expanded(child:Text(label,style:TextStyle(fontSize:11,fontWeight:nested?FontWeight.w600:FontWeight.w800))),
+      if(nested) IconButton(
+        tooltip: !_cell(key,'مسموح') ? 'يجب منح صلاحية الشاشة أولاً' : _cell(key,'وصول سريع') ? 'إزالة الشاشة من الوصول السريع' : 'إضافة الشاشة إلى الوصول السريع',
+        visualDensity: VisualDensity.compact,
+        constraints: const BoxConstraints(minWidth:28,minHeight:28),
+        padding: EdgeInsets.zero,
+        onPressed: _saving || !_cell(key,'مسموح') ? null : ()=>_setCell(key,'وصول سريع',!_cell(key,'وصول سريع')),
+        icon: Icon(_cell(key,'وصول سريع') ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+          size:17,color: !_cell(key,'مسموح') ? Colors.black26 : _cell(key,'وصول سريع') ? Colors.red : _permPurple),
+      ),
+    ])),
     for(final a in _actions)SizedBox(width:48,child:Center(child:Checkbox(shape:const CircleBorder(),value:_cell(key,a),onChanged:_saving?null:(v)=>_setCell(key,a,v??false),activeColor:_permPurple,visualDensity:VisualDensity.compact))),
   ]));
   Widget _section(String main,String section,List<String> pages){
