@@ -410,14 +410,26 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       }
       // The user administration screen stores its canonical matrix against the
       // ERP user record (linked to the authenticated account by auth_user_id).
+      String erpUserTypeName = '';
       try {
         final erpUser = await db.from('erp_users')
-            .select('id')
+            .select('id,user_type_id')
             .eq('company_id', companyId)
             .eq('auth_user_id', userId)
             .eq('is_active', true)
             .maybeSingle();
         final erpUserId = erpUser?['id']?.toString();
+        final userTypeId = erpUser?['user_type_id']?.toString();
+        if (userTypeId != null && userTypeId.isNotEmpty) {
+          try {
+            final userType = await db.from('erp_user_types')
+                .select('name_ar,name_en')
+                .eq('company_id', companyId)
+                .eq('id', userTypeId)
+                .maybeSingle();
+            erpUserTypeName = '${userType?['name_ar'] ?? ''} ${userType?['name_en'] ?? ''}'.trim().toLowerCase();
+          } catch (_) {}
+        }
         if (erpUserId != null && erpUserId.isNotEmpty) {
           final matrix = await db.from('erp_user_permission_matrix')
               .select('menu_name,submenu_name,page_name,can_access,can_refresh,can_add,can_save,can_edit,can_delete,can_preview,can_print,can_import_excel,can_export_excel,can_print_pdf,show_in_quick_tasks')
@@ -443,10 +455,17 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       final isHrManager = isActiveCompanyMember && jobTitle == 'مدير موارد بشرية';
       final isHrResponsible = jobTitle == 'مسئول موارد بشرية' || jobTitle == 'مسؤول موارد بشرية';
       final normalizedMemberRole = memberRole.replaceAll(RegExp(r'[\s_-]+'), '');
-      final isCompanyAdmin = isActiveCompanyMember && <String>{
-        'owner', 'admin', 'administrator', 'systemadmin', 'superadmin',
-        'مديرالنظام', 'مديرالنظامالرئيسي', 'ادمن', 'أدمن', 'مسؤولالنظام',
-      }.contains(normalizedMemberRole);
+      final normalizedJobTitle = jobTitle.replaceAll(RegExp(r'[\s_-]+'), '');
+      final normalizedUserType = erpUserTypeName.replaceAll(RegExp(r'[\s_-]+'), '');
+      final isCompanyAdmin = isActiveCompanyMember && (
+        <String>{
+          'owner', 'admin', 'administrator', 'systemadmin', 'superadmin',
+          'مديرالنظام', 'مديرالنظامالرئيسي', 'ادمن', 'أدمن', 'مسؤولالنظام',
+        }.contains(normalizedMemberRole) ||
+        <String>{'admin', 'administrator', 'systemadmin', 'superadmin', 'ادمن', 'أدمن', 'مديرالنظام'}
+            .contains(normalizedUserType) ||
+        <String>{'مديرالنظام', 'مديرالنظامالرئيسي'}.contains(normalizedJobTitle)
+      );
       if (isCompanyAdmin) {
         for (final module in _modules.entries) {
           for (final group in module.value.entries) {
