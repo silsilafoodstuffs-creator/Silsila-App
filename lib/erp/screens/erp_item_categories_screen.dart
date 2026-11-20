@@ -146,38 +146,35 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         '12': 'زراعة ومستلزمات زراعية', '13': 'قطع غيار ومستلزمات صيانة',
         '14': 'مستلزمات فندقية ومطاعم', '15': 'تعبئة وتغليف',
         '16': 'منظفات ومستلزمات نظافة', '17': 'مستلزمات حيوانات وأعلاف',
-        '18': 'خدمات نقل وتوصيل', '19': 'خدمات عامة ومستلزمات متنوعة',
-        '20': 'كتب ومطبوعات', 'ACT001': 'مواد غذائية',
-        'ACT002': 'لوازم بناء', 'ACT003': 'ملابس واكسسوارات',
-        'ACT004': 'أجهزة وإلكترونيات', 'ACT005': 'سيارات ومعدات',
-        'ACT006': 'خدمات شحن ونقل', 'ACT007': 'أثاث وديكورات',
+        '18': 'خدمات نقل وتوصيل', '19': 'أنشطة أخرى',
+        '20': 'كتب ومطبوعات',
       };
-      String normalizeActivity(String value, Set<String> available) {
+
+      // Use one canonical activity key throughout the category screen.
+      // Older catalogs may still contain ACT001 / ACT01 / ACT1 while the
+      // current master uses 01. Normalize both sides before filtering so
+      // food categories cannot disappear because of a legacy activity code.
+      String normalizeActivity(String value) {
         final code = value.trim().toUpperCase();
         if (code.isEmpty) return '';
-        final legacy = RegExp(r'^ACT(\d{3})$').firstMatch(code);
+        final legacy = RegExp(r'^ACT0*(\\d{1,3})$').firstMatch(code);
         if (legacy != null) {
           final number = int.tryParse(legacy.group(1)!);
-          if (number != null) {
-            final shortCode = number.toString().padLeft(2, '0');
-            if (available.contains(shortCode)) return shortCode;
-          }
+          if (number != null) return number.toString().padLeft(2, '0');
         }
-        if (RegExp(r'^\d{1,2}$').hasMatch(code)) {
-          final shortCode = int.parse(code).toString().padLeft(2, '0');
-          final legacyCode = 'ACT${shortCode}';
-          if (available.contains(legacyCode)) return legacyCode;
-          return shortCode;
+        if (RegExp(r'^\\d{1,3}$').hasMatch(code)) {
+          final number = int.tryParse(code);
+          if (number != null) return number.toString().padLeft(2, '0');
         }
         return code;
       }
 
-      final actualCodes = catalog
-          .map((row) => _s(row['activity_code']).trim().toUpperCase())
-          .where((code) => code.isNotEmpty)
-          .toSet();
+      final actualCodes = <String>{};
+      for (final row in catalog) {
+        final code = normalizeActivity(_s(row['activity_code']));
+        if (code.isNotEmpty) actualCodes.add(code);
+      }
       // Always include active, visible activities from the authoritative master.
-      // Company category rows may be empty or incomplete and must not hide activities.
       try {
         final masterRows = await _db!.from('activity_types')
             .select('code,is_active,show_in_app')
@@ -185,43 +182,42 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
             .eq('show_in_app', true)
             .order('code');
         for (final raw in (masterRows as List)) {
-          final code = _s(raw['code']).trim().toUpperCase();
+          final code = normalizeActivity(_s(raw['code']));
           if (code.isNotEmpty) actualCodes.add(code);
         }
       } catch (_) {
         // Preserve the company catalog if the shared activity master is unavailable.
       }
+
       final sortedActualCodes = actualCodes.toList()..sort();
-      final defaultActivity = actualCodes.contains('ACT001')
-          ? 'ACT001'
-          : actualCodes.contains('01')
-              ? '01'
-              : sortedActualCodes.isNotEmpty ? sortedActualCodes.first : 'ACT001';
+      const defaultActivity = '01';
       final displayCodes = actualCodes.isEmpty ? <String>{defaultActivity} : actualCodes;
       _activities = displayCodes.map((code) => <String, String>{
         'code': code,
-        'name': activityNames[code] ??
-            activityNames[normalizeActivity(code, displayCodes)] ??
-            'نشاط $code',
+        'name': activityNames[code] ?? 'نشاط $code',
       }).toList()
         ..sort((a, b) => a['code']!.compareTo(b['code']!));
 
-      final wanted = normalizeActivity(_selectedActivityCode, displayCodes);
-      _selectedActivityCode = displayCodes.contains(wanted) ? wanted : defaultActivity;
+      final wanted = normalizeActivity(_selectedActivityCode);
+      _selectedActivityCode = displayCodes.contains(wanted)
+          ? wanted
+          : displayCodes.contains(defaultActivity)
+              ? defaultActivity
+              : sortedActualCodes.isNotEmpty ? sortedActualCodes.first : defaultActivity;
 
       _companyCategories = catalog.map((row) => <String, dynamic>{
         'id': row['id'],
         'company_id': row['company_id'],
-        'activity_code': row['activity_code'],
+        'activity_code': normalizeActivity(_s(row['activity_code'])),
         'category_code': row['category_code'],
         'parent_id': row['parent_id'],
         'created_at': row['created_at'],
       }).toList(growable: false);
 
       _all = catalog.where((row) {
-        final rawCode = _s(row['activity_code']).trim().toUpperCase();
+        final rawCode = normalizeActivity(_s(row['activity_code']));
         if (rawCode.isEmpty) return _selectedActivityCode == defaultActivity;
-        return normalizeActivity(rawCode, displayCodes) == _selectedActivityCode;
+        return rawCode == _selectedActivityCode;
       }).toList();
       _expandedIds.addAll(_all.map((row) => _s(row['id'])));
       _syncControllers();
