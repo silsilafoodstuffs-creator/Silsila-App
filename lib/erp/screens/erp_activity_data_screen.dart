@@ -21,7 +21,6 @@ class _ErpActivityDataScreenState extends State<ErpActivityDataScreen> {
     'الفئة الفرعية',
     'الفئة الثانوية',
     'البراندات/الماركات',
-    'مجموعات البراندات',
   ];
 
   @override
@@ -29,7 +28,7 @@ class _ErpActivityDataScreenState extends State<ErpActivityDataScreen> {
     ErpKeyboardNavigation.registerActions();
     final children = <Widget>[
       ErpActivityTypesScreen(key: ValueKey('activity-data-${widget.companyId}'), companyId: widget.companyId, hideHeader: true),
-      for (var tab = 0; tab < 5; tab++)
+      for (var tab = 0; tab < 4; tab++)
         ErpItemCategoriesScreen(
           key: ValueKey('activity-category-$tab-${widget.companyId}'),
           companyId: widget.companyId,
