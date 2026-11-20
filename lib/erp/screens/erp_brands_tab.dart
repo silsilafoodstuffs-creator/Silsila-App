@@ -1047,7 +1047,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     final selectedGroupId = availableGroups.any((group) => _s(group['id']) == _s(row['brand_group_id']))
         ? _s(row['brand_group_id']) : null;
     final activityDropdown = SizedBox(width: 145, child: _brandGridField(DropdownButton<String>(
-      isExpanded: true,
+      isExpanded: true, isDense: true, itemHeight: 40,
       value: _activities.any((activity) => _s(activity['code']) == activityCode) ? activityCode : null,
       hint: const Text('نوع النشاط'), underline: const SizedBox.shrink(),
       style: const TextStyle(fontSize: 11, color: Colors.black87),
@@ -1057,7 +1057,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       onChanged: system ? null : (value) { if (value != null) _assignActivity(row, value); },
     )));
     final groupDropdown = SizedBox(width: 165, child: _brandGridField(DropdownButton<String?>(
-      isExpanded: true, value: selectedGroupId, hint: const Text('بدون مجموعة'),
+      isExpanded: true, isDense: true, itemHeight: 40, value: selectedGroupId, hint: const Text('بدون مجموعة'),
       underline: const SizedBox.shrink(), style: const TextStyle(fontSize: 11, color: Colors.black87),
       items: [
         const DropdownMenuItem<String?>(value: null, child: Text('بدون مجموعة')),
@@ -1153,7 +1153,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 SizedBox(width: 92, child: Text(groupCode, overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: _brandPurple))),
                 SizedBox(width: 145, child: Text(record == null ? '' : _activityName(_s(record['activity_code'])), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Colors.black54))),
-                const SizedBox(width: 5),
+                const SizedBox(width: 2),
                 const SizedBox(width: 165),
                 const SizedBox(width: 2),
                 Expanded(flex: 2, child: Text(group == 'بدون مجموعة' ? 'براندات بدون مجموعة' : group,
@@ -1161,7 +1161,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: _brandPurple))),
                 const SizedBox(width: 2),
                 const Expanded(flex: 1, child: SizedBox.shrink()),
-                const SizedBox(width: 3),
+                const SizedBox(width: 2),
                 SizedBox(width: 68, child: Center(child: Text('${children.length}',
                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)))),
                 const SizedBox(width: 78),
