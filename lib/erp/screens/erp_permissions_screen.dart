@@ -26,7 +26,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
   final Map<String,Map<String,bool>> _draft={};
   final Map<String,bool> _expanded={};
   final List<String> _actions=const ['مسموح','إضافة','تعديل','حذف','حفظ','طباعة','Excel','PDF','وصول سريع'];
-  static const Map<String,Map<String,List<String>>> _tree = ErpMenuCatalog.modules;;
+  static const Map<String,Map<String,List<String>>> _tree = ErpMenuCatalog.modules;
   @override void initState(){super.initState();try{_db=Supabase.instance.client;}catch(_){}_load();}
   @override void didUpdateWidget(covariant ErpPermissionsScreen oldWidget){super.didUpdateWidget(oldWidget);if(oldWidget.companyId!=widget.companyId)_load();}
   String _s(dynamic v)=>(v??'').toString();
