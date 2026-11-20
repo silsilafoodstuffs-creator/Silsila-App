@@ -159,8 +159,14 @@ jobs:
           if "import java.util.Properties" not in s:
               s = imports + s
 
-          if 'ndkVersion = "27.0.12077973"' not in s:
-              s = s.replace("android {", 'android {\n    ndkVersion = "27.0.12077973"', 1)
+          import re
+          ndk_line = '    ndkVersion = "27.0.12077973"'
+          s, replacements = re.subn(r'(?m)^[ \t]*ndkVersion[ \t]*=[^\\r\\n]*', ndk_line, s)
+          if replacements == 0:
+              marker = "android {"
+              if marker not in s:
+                  raise SystemExit("Android configuration not found")
+              s = s.replace(marker, marker + "\\n" + ndk_line, 1)
 
           props = """
           val keystoreProperties = Properties()
