@@ -153,6 +153,8 @@ void main() {
     expect(dashboard, contains("const executiveKey = 'إعدادات عامة::بيانات أساسية::الملخص التنفيذي';"));
     expect(dashboard, contains('if (_executiveSummaryAllowed)'));
     expect(dashboard, contains('void _ensureCurrentScreenAllowed()'));
+    expect(dashboard, contains('body: !_executiveAccessChecked'));
+    expect(dashboard, contains('_executiveSummaryAllowed = false;'));
   });
 
 }
