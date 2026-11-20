@@ -180,7 +180,7 @@ void main() {
     expect(brandSource, isNot(contains('حذف صورة البراند')));
     expect(brandSource, contains('dataRowHeight: compactMobile ? 40 : 60'));
     expect(brandSource, contains('dataRowHeight: compactMobile ? 40 : 54'));
-    expect(brandSource, contains('itemHeight: compactMobile ? 40 : 48'));
+    expect(brandSource, contains('itemHeight: 48'));
     expect(brandSource, contains('materialTapTargetSize: compactMobile ? MaterialTapTargetSize.shrinkWrap : MaterialTapTargetSize.padded'));
     expect(brandSource, contains('maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis'));
     expect(itemCodePolicyMigrationSource, contains('2+v_main_digits+v_sub_digits+v_secondary_digits'));
