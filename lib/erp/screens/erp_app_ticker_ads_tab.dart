@@ -447,7 +447,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Text(
-              'ترتيب العرض تلقائيًا حسب الجزء الرقمي الكامل من كود البراند تصاعديًا، مع إدراج جميع البراندات النشطة.',
+              'يتم ترتيب البراندات حسب خانة «ترتيب الظهور» في شاشة بيانات البراندات، وتظهر هنا البراندات النشطة المفعّل لها الظهور في التطبيق فقط.',
               style: TextStyle(color: Colors.grey.shade700, height: 1.4),
             ),
           ),
