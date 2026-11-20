@@ -144,6 +144,16 @@ void main() {
     expect(pages, hasLength(78));
   });
 
+  test('food category activity filtering and hierarchy remain connected', () {
+    final categories = File('lib/erp/screens/erp_item_categories_screen.dart').readAsStringSync();
+    expect(categories, contains("const defaultActivity = '01';"));
+    expect(categories, contains("final rawCode = normalizeActivity(_s(row['activity_code']));"));
+    expect(categories, contains("return rawCode == _selectedActivityCode;"));
+    expect(categories, contains("Map<String,dynamic>? _parentOf"));
+    expect(categories, contains("if (row['parent_id'] == null) return 0;"));
+    expect(categories, contains("category_code"));
+  });
+
   test('dashboard filters screens and actions while keeping system administrators unrestricted', () {
     final dashboard = File('lib/erp/erp_dashboard_screen.dart').readAsStringSync();
     expect(dashboard, contains('if (_isSystemAdmin) return true;'));
