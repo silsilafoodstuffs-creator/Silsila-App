@@ -275,6 +275,15 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           _appManagementMessage = _appManagementService.currentUserId == null
               ? 'سجّل الدخول إلى Supabase لربط إعدادات التطبيقات.'
               : 'لا توجد عضوية شركة نشطة لهذا المستخدم؛ لم يتم تحميل أو حفظ إعدادات.';
+          _isSystemAdmin = false;
+          _executiveAccessChecked = true;
+          _executiveSummaryAllowed = false;
+          _hrDashboardAccessChecked = true;
+          _hrDashboardAllowed = false;
+          _screenAccessPermissions.clear();
+          _screenActionPermissions.clear();
+          _quickAccessKeys.clear();
+          _ensureCurrentScreenAllowed();
         });
         return;
       }
