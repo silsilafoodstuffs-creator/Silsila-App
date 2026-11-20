@@ -193,6 +193,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   final Set<String> _executiveAllowedSections = <String>{};
   final Set<String> _quickAccessKeys = <String>{};
   final Map<String, bool> _screenAccessPermissions = <String, bool>{};
+  final Map<String, bool> _screenActionPermissions = <String, bool>{};
+  bool _isSystemAdmin = false;
   static const Map<String, String> _executivePermissionSectionKeys = {
     'مبيعات': 'مؤشرات المبيعات والعملاء',
     'المالية والسيولة': 'مؤشرات المالية والسيولة',
@@ -339,11 +341,17 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       if (mounted) setState(() {
         _hrDashboardAccessChecked = true;
         _hrDashboardAllowed = false;
+        _isSystemAdmin = false;
+        _screenActionPermissions.clear();
         _hrDashboardCanManage = false;
         _hrDashboardCanApproveStaffingPlans = false;
         _executiveAccessChecked = true;
         _executiveSummaryAllowed = true;
         _executivePartialConfigured = false;
+        _isSystemAdmin = false;
+        _screenAccessPermissions.clear();
+        _screenActionPermissions.clear();
+        _quickAccessKeys.clear();
         _executiveAllowedSections.clear();
       });
       return;
@@ -371,17 +379,29 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         isActiveCompanyMember = member != null;
         memberRole = (member?['member_role'] ?? '').toString().trim().toLowerCase();
       } catch (_) {}
-      final rows = await db
-          .from('erp_user_permissions')
-          .select('menu_key,allow_access,show_in_quick_tasks')
-          .eq('company_id', companyId)
-          .eq('user_id', userId);
       final permissions = <String, bool>{};
       final quickAccess = <String>{};
-      for (final row in (rows as List).whereType<Map<String, dynamic>>()) {
-        final key = (row['menu_key'] ?? '').toString();
-        permissions[key] = row['allow_access'] == true;
-        if (row['allow_access'] == true && row['show_in_quick_tasks'] == true) quickAccess.add(key);
+      final actionPermissions = <String, bool>{};
+      const actionFields = <String, String>{
+        'تحديث': 'can_refresh', 'إضافة': 'can_add', 'حفظ': 'can_save',
+        'تعديل': 'can_edit', 'حذف': 'can_delete', 'معاينة': 'can_preview',
+        'طباعة': 'can_print', 'استيراد Excel': 'can_import_excel',
+        'تصدير Excel': 'can_export_excel', 'طباعة PDF': 'can_print_pdf',
+      };
+      try {
+        final rows = await db.from('erp_user_permissions')
+            .select('menu_key,allow_access,show_in_quick_tasks,can_refresh,can_add,can_save,can_edit,can_delete,can_preview,can_print,can_import_excel,can_export_excel,can_print_pdf')
+            .eq('company_id', companyId).eq('user_id', userId);
+        for (final row in (rows as List).whereType<Map<String, dynamic>>()) {
+          final key = (row['menu_key'] ?? '').toString();
+          permissions[key] = row['allow_access'] == true;
+          if (row['allow_access'] == true && row['show_in_quick_tasks'] == true) quickAccess.add(key);
+          for (final action in actionFields.entries) {
+            actionPermissions[key + '::' + action.key] = row[action.value] == true;
+          }
+        }
+      } catch (_) {
+        // Continue with the canonical matrix on installations without the legacy table.
       }
       // The user administration screen stores its canonical matrix against the
       // ERP user record (linked to the authenticated account by auth_user_id).
@@ -395,7 +415,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         final erpUserId = erpUser?['id']?.toString();
         if (erpUserId != null && erpUserId.isNotEmpty) {
           final matrix = await db.from('erp_user_permission_matrix')
-              .select('menu_name,submenu_name,page_name,can_access,show_in_quick_tasks')
+              .select('menu_name,submenu_name,page_name,can_access,can_refresh,can_add,can_save,can_edit,can_delete,can_preview,can_print,can_import_excel,can_export_excel,can_print_pdf,show_in_quick_tasks')
               .eq('company_id', companyId)
               .eq('user_id', erpUserId);
           for (final row in (matrix as List).whereType<Map<String, dynamic>>()) {
@@ -406,6 +426,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             } else {
               quickAccess.remove(key);
             }
+            for (final action in actionFields.entries) {
+              actionPermissions[key + '::' + action.key] = row[action.value] == true;
+            }
           }
         }
       } catch (_) {
@@ -414,7 +437,20 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       const hrDashboardKey = 'موارد بشرية::بيانات أساسية::ملخص إدارة موارد بشرية';
       final isHrManager = isActiveCompanyMember && jobTitle == 'مدير موارد بشرية';
       final isHrResponsible = jobTitle == 'مسئول موارد بشرية' || jobTitle == 'مسؤول موارد بشرية';
-      final isCompanyAdmin = isActiveCompanyMember && (memberRole == 'owner' || memberRole == 'admin');
+      final normalizedMemberRole = memberRole.replaceAll(RegExp(r'[\s_-]+'), '');
+      final isCompanyAdmin = isActiveCompanyMember && <String>{
+        'owner', 'admin', 'administrator', 'systemadmin', 'superadmin',
+        'مديرالنظام', 'مديرالنظامالرئيسي', 'ادمن', 'أدمن', 'مسؤولالنظام',
+      }.contains(normalizedMemberRole);
+      if (isCompanyAdmin) {
+        for (final module in _modules.entries) {
+          for (final group in module.value.entries) {
+            for (final page in group.value) {
+              permissions[module.key + '::' + group.key + '::' + page] = true;
+            }
+          }
+        }
+      }
       final hrDashboardAllowed = isActiveCompanyMember && !isHrResponsible &&
           (isHrManager || isCompanyAdmin || permissions[hrDashboardKey] == true);
       const parentKey = 'التقارير والتحليلات::تقارير::الملخص التنفيذي';
@@ -426,12 +462,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       if (!mounted) return;
       setState(() {
         _hrDashboardAccessChecked = true;
-        _hrDashboardAllowed = hrDashboardAllowed;
+        _isSystemAdmin = isCompanyAdmin;
+        _hrDashboardAllowed = isCompanyAdmin || hrDashboardAllowed;
         _hrDashboardCanManage = isHrManager || isCompanyAdmin;
         _hrDashboardCanApproveStaffingPlans = isCompanyAdmin;
         _screenAccessPermissions
           ..clear()
           ..addAll(permissions);
+        _screenActionPermissions
+          ..clear()
+          ..addAll(actionPermissions);
         _quickAccessKeys
           ..clear()
           ..addAll(quickAccess);
@@ -467,10 +507,15 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   String _screenPermissionKey(String module, String group, String page) => '$module::$group::$page';
 
   bool _canOpenScreen(String module, String group, String page) {
+    if (_isSystemAdmin) return true;
     if (page == 'ملخص إدارة موارد بشرية') return _hrDashboardAccessChecked && _hrDashboardAllowed;
-    final key = _screenPermissionKey(module, group, page);
-    // Keep legacy installations usable until the permission table is configured.
-    return _screenAccessPermissions[key] == true;
+    return _screenAccessPermissions[_screenPermissionKey(module, group, page)] == true;
+  }
+
+  bool _canPerformCurrentAction(String action) {
+    if (_isSystemAdmin) return true;
+    final key = _screenPermissionKey(_module, _group, _page) + '::' + action;
+    return _screenActionPermissions[key] == true;
   }
 
   Future<void> _toggleQuickAccess(String module, String group, String page) async {
@@ -1442,16 +1487,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           _recordAction('عرض شجرة', Icons.account_tree_outlined, _hrStructureView == 'tree' ? _purple : Colors.blueGrey, () => setState(() => _hrStructureView = 'tree')),
           _recordAction('عرض جدول', Icons.table_rows_outlined, _hrStructureView == 'table' ? _purple : Colors.blueGrey, () => setState(() => _hrStructureView = 'table')),
         ],
-        _recordAction('تحديث', Icons.refresh_rounded, const Color(0xFF2475B8), () => _loadWorkspacePage(_page)),
-        if (!reports && includeAdd) _recordAction('إضافة', Icons.add_rounded, const Color(0xFF18865A), _openAddDialog),
-        if (!reports) _recordAction('حفظ', Icons.save_outlined, _purple, _saveCurrentPage),
-        if (!reports) _recordAction('تعديل', Icons.edit_outlined, _orange, _editCurrentRecord),
-        if (!reports) _recordAction('حذف', Icons.delete_outline_rounded, const Color(0xFFB42318), _chooseWorkspaceDeleteScope),
-        _recordAction('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), () => _showPrintPreview(pdf: false)),
-        _recordAction('طباعة', Icons.print_outlined, _pink, _printCurrentPagePdf),
-        _recordAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importExcel),
-        _recordAction('تصدير Excel', Icons.file_download_outlined, const Color(0xFF16834A), _exportExcel),
-        _recordAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printCurrentPagePdf),
+        if (_canPerformCurrentAction('تحديث')) _recordAction('تحديث', Icons.refresh_rounded, const Color(0xFF2475B8), () => _loadWorkspacePage(_page)),
+        if (!reports && includeAdd && _canPerformCurrentAction('إضافة')) _recordAction('إضافة', Icons.add_rounded, const Color(0xFF18865A), _openAddDialog),
+        if (!reports && _canPerformCurrentAction('حفظ')) _recordAction('حفظ', Icons.save_outlined, _purple, _saveCurrentPage),
+        if (!reports && _canPerformCurrentAction('تعديل')) _recordAction('تعديل', Icons.edit_outlined, _orange, _editCurrentRecord),
+        if (!reports && _canPerformCurrentAction('حذف')) _recordAction('حذف', Icons.delete_outline_rounded, const Color(0xFFB42318), _chooseWorkspaceDeleteScope),
+        if (_canPerformCurrentAction('معاينة')) _recordAction('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), () => _showPrintPreview(pdf: false)),
+        if (_canPerformCurrentAction('طباعة')) _recordAction('طباعة', Icons.print_outlined, _pink, _printCurrentPagePdf),
+        if (_canPerformCurrentAction('استيراد Excel')) _recordAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importExcel),
+        if (_canPerformCurrentAction('تصدير Excel')) _recordAction('تصدير Excel', Icons.file_download_outlined, const Color(0xFF16834A), _exportExcel),
+        if (_canPerformCurrentAction('طباعة PDF')) _recordAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printCurrentPagePdf),
         if (reports) _recordAction('إلغاء التحديد', Icons.clear_all_rounded, _purple, () => setState(() => _selectedRecord = null)),
       ]),
     );
@@ -1636,7 +1681,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         Expanded(child: ListView(
           padding: const EdgeInsets.symmetric(vertical: 8),
           children: [
-          ..._modules.entries.map((moduleEntry) {
+          ..._modules.entries
+              .where((moduleEntry) => _isSystemAdmin || moduleEntry.value.entries.any((groupEntry) =>
+                  groupEntry.value.any((page) => _canOpenScreen(moduleEntry.key, groupEntry.key, page))))
+              .map((moduleEntry) {
             final name = moduleEntry.key;
             final moduleOpen = _expandedModules.contains(name);
             final selectedModule = name == _module;
@@ -1694,7 +1742,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 ]),
               ),
               if (moduleOpen)
-                ...moduleEntry.value.entries.map((groupEntry) {
+                ...moduleEntry.value.entries
+                  .where((groupEntry) => _isSystemAdmin || groupEntry.value.any((page) =>
+                      _canOpenScreen(name, groupEntry.key, page)))
+                  .map((groupEntry) {
                   final groupKey = '$name::${groupEntry.key}';
                   final groupOpen = _expandedGroups.contains(groupKey);
                   final selectedGroup = selectedModule && _group == groupEntry.key;
@@ -1752,8 +1803,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                       ]),
                       if (groupOpen)
                         ...groupEntry.value
-                            .where((page) => page != 'ملخص إدارة موارد بشرية' ||
-                                (_hrDashboardAccessChecked && _hrDashboardAllowed))
+                            .where((page) => _canOpenScreen(name, groupEntry.key, page))
                             .map((page) => Padding(
                           padding: const EdgeInsetsDirectional.only(start: 20, end: 5),
                           child: Row(children: [
@@ -3472,10 +3522,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   });
 
   void _open(String module, String group, String page) {
-    if (page == 'ملخص إدارة موارد بشرية' &&
-        (!_hrDashboardAccessChecked || !_hrDashboardAllowed)) {
-      return;
-    }
+    if (!_canOpenScreen(module, group, page)) return;
     setState(() {
       _module = module;
       _group = group;
