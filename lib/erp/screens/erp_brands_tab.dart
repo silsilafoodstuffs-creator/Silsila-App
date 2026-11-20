@@ -1470,13 +1470,13 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                                     decoration: const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'اسم البراند بالعربية'),
                                     onSubmitted: (_) => FocusScope.of(context).nextFocus()),
                                 )
-                              : Text(_s(row['brand_name']), maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis)), onTap: !system && !_gridEditing
+                              : Text(_s(row['brand_name']), maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis))), onTap: !system && !_gridEditing
                               ? () => setState(() {
                                   _selectedId = id;
                                   _gridEditing = true;
                                   _gridEditingOnlyId = id;
                                 })
-                              : null)),
+                              : null),
                             DataCell(_brandGridField(InkWell(onTap: () => _showLogoDialog(row), child: _logoPreview(row, size: 44)))),
                             DataCell(_brandGridField(SizedBox(width: 140, child: DropdownButton<String?>(
                               isExpanded: true, isDense: compactMobile, itemHeight: 48,
