@@ -427,7 +427,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                   child: Text('${activity['name']} — ${activity['code']}'),
                 )),
               ],
-              onChanged: _loading || _saving ? null : (value) =>
+              onChanged: _loading ? null : (value) =>
                   _changeActivity(value ?? 'ALL'),
             ),
           ),
