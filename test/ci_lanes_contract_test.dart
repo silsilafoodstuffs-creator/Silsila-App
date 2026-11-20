@@ -76,6 +76,7 @@ void main() {
 
     expect(web, contains('name: Silsila Web App Validation'));
     expect(web, contains('flutter build web --release'));
+    expect(web, contains('--pwa-strategy=none'));
     expect(web, contains('actions/upload-artifact@v4'));
     expect(web, contains('silsila-web-build-'));
 
@@ -93,6 +94,11 @@ void main() {
     expect(preview, contains('group: silsila-web-preview-validation-'));
     expect(release, contains('workflow_dispatch:'));
     expect(release, isNot(contains('workflow_run:')));
+
+    final fullValidation = File('.github/workflows/full-validation.yml').readAsStringSync();
+    expect(fullValidation, contains('--pwa-strategy=none'));
+    expect(fullValidation, contains('Stamp the Web bootstrap with the exact commit'));
+    expect(fullValidation, contains('flutter_bootstrap.js?v=${GITHUB_SHA}'));
 
     // Validate each commit independently so later pushes cannot cancel active checks.
     for (final workflow in [mobile, web]) {
