@@ -395,7 +395,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       };
       try {
         final rows = await db.from('erp_user_permissions')
-            .select('menu_key,allow_access,show_in_quick_tasks,can_refresh,can_add,can_save,can_edit,can_delete,can_preview,can_print,can_import_excel,can_export_excel,can_print_pdf')
+            .select('menu_key,allow_access,show_in_quick_tasks,can_add,can_save,can_edit,can_delete,can_print,can_export_excel,can_export_pdf')
             .eq('company_id', companyId).eq('user_id', userId);
         for (final row in (rows as List).whereType<Map<String, dynamic>>()) {
           final key = (row['menu_key'] ?? '').toString();
