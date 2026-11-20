@@ -1477,7 +1477,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                                   _gridEditing = true;
                                   _gridEditingOnlyId = id;
                                 })
-                              : null)),
+                              : null),
                             DataCell(_brandGridField(InkWell(onTap: () => _showLogoDialog(row), child: _logoPreview(row, size: 44)))),
                             DataCell(_brandGridField(SizedBox(width: 150, child: DropdownButton<String?>(
                               isExpanded: true, isDense: compactMobile, itemHeight: compactMobile ? 40 : 48,
