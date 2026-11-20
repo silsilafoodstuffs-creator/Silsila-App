@@ -12,6 +12,7 @@ void main() {
   late String tickerOrderMigrationSource;
   late String adsScreenSource;
   late String categoryServiceSource;
+  late String itemCodePolicyMigrationSource;
 
   setUpAll(() {
     homeSource = File('lib/main.dart').readAsStringSync();
@@ -33,6 +34,9 @@ void main() {
     adsScreenSource = File('lib/erp/screens/erp_app_advertisements_screen.dart')
         .readAsStringSync();
     categoryServiceSource = File('lib/services/category_service.dart').readAsStringSync();
+    itemCodePolicyMigrationSource = File(
+      'supabase/migrations/20261120110000_align_item_codes_with_activity_category_policy.sql',
+    ).readAsStringSync();
   });
 
 
@@ -155,7 +159,11 @@ void main() {
     expect(brandSource, contains('Future<void> _saveDisplayOrder'));
     expect(brandSource, contains('DropdownButton<String?>'));
     expect(brandSource, contains('DropdownButtonFormField<String?>'));
-    expect(brandSource, contains('_logoPreview(row, size: 46)'));
+    expect(brandSource, contains('_logoPreview(row, size: compactMobile ? 30 : 46)'));
+    expect(brandSource, contains('dataRowHeight: compactMobile ? 40 : 60'));
+    expect(brandSource, contains('maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis'));
+    expect(itemCodePolicyMigrationSource, contains('2+v_main_digits+v_sub_digits+v_secondary_digits'));
+    expect(itemCodePolicyMigrationSource, contains("'{category_digits}', '8'::jsonb"));
     expect(brandSource, contains('shape: BoxShape.circle'));
     expect(brandSource, contains('Expanded(flex: 2, child: name)'));
     expect(brandSource, contains('Expanded(flex: 1, child: english)'));
