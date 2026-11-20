@@ -161,7 +161,7 @@ void main() {
     expect(activityMigrationSource, contains('SET activity_code = COALESCE'));
     expect(activityMigrationSource, contains('REFERENCES public.activity_types(code)'));
     expect(brandSource, contains("'activity_code': activityCode"));
-    expect(adminSource, contains("_s(brand['activity_code']) != _activityCode"));
+    expect(adminSource, contains("brandRows = brandRows.where((brand) => _s(brand['activity_code']) == _activityCode).toList();"));
     expect(activityMigrationSource, contains('public.erp_items i'));
     expect(activityMigrationSource, contains('WHERE NOT EXISTS'));
     expect(activityMigrationSource, contains('ORDER BY result.slot_no'));
