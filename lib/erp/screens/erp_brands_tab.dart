@@ -1065,27 +1065,61 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   Widget _treeGroup(String group) {
     final children = _rowsInGroup(group);
     final expanded = _expandedGroups.contains(group);
+    Map<String, dynamic>? record;
+    for (final candidate in _groups) {
+      if (_s(candidate['group_name']) == group) { record = candidate; break; }
+    }
+    final groupCode = _s(record?['group_code']);
+    final groupEnglish = _s(record?['group_name_en']);
+    final isDefault = groupCode == 'Brg01';
     return Container(
       margin: const EdgeInsets.only(bottom: 7),
       decoration: BoxDecoration(color: const Color(0xFFEDE1F8),
         borderRadius: BorderRadius.circular(10), border: Border.all(color: _brandBorder)),
       child: Column(children: [
-        InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: () => setState(() {
-            if (expanded) { _expandedGroups.remove(group); } else { _expandedGroups.add(group); }
-          }),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(children: [
-              Icon(expanded ? Icons.keyboard_arrow_down : Icons.chevron_left, color: _brandPurple),
-              const Icon(Icons.folder_outlined, color: _brandPurple, size: 20),
-              const SizedBox(width: 8),
-              Expanded(child: Text(group == 'بدون مجموعة' ? 'براندات بدون مجموعة' : group,
-                style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
-              Text('${children.length} براند',
-                style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w700)),
-            ]),
+        Material(
+          color: const Color(0xFFEDE1F8),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () => setState(() {
+              if (expanded) { _expandedGroups.remove(group); } else { _expandedGroups.add(group); }
+            }),
+            child: SizedBox(height: 48, child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(children: [
+                SizedBox(width: 28, child: Icon(expanded ? Icons.keyboard_arrow_down : Icons.chevron_left, color: _brandPurple)),
+                const SizedBox(width: 92, child: Icon(Icons.folder_outlined, color: _brandPurple, size: 19)),
+                const SizedBox(width: 145),
+                const SizedBox(width: 5),
+                SizedBox(width: 165, child: Text(groupCode, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: _brandPurple))),
+                const SizedBox(width: 5),
+                Expanded(flex: 2, child: Text(group == 'بدون مجموعة' ? 'براندات بدون مجموعة' : group,
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: _brandPurple))),
+                const SizedBox(width: 5),
+                Expanded(flex: 1, child: Text(groupEnglish, textDirection: TextDirection.ltr,
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.black54))),
+                const SizedBox(width: 3),
+                SizedBox(width: 68, child: Center(child: Text('\${children.length}',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)))),
+                const SizedBox(width: 78),
+                const SizedBox(width: 62),
+                SizedBox(width: 46, child: record == null ? const SizedBox.shrink() : IconButton(
+                  tooltip: 'إضافة براندات للمجموعة', visualDensity: VisualDensity.compact, padding: EdgeInsets.zero,
+                  onPressed: _saving ? null : () => _openGroupBrandPicker(record!),
+                  icon: const Icon(Icons.add_circle_outline, color: _brandPurple, size: 18))),
+                SizedBox(width: 40, child: record == null ? const SizedBox.shrink() : Row(mainAxisSize: MainAxisSize.min, children: [
+                  IconButton(tooltip: 'تعديل المجموعة', visualDensity: VisualDensity.compact, padding: EdgeInsets.zero,
+                    onPressed: _saving || isDefault ? null : () => _editGroup(record!),
+                    icon: const Icon(Icons.edit_outlined, color: _brandPurple, size: 17)),
+                  IconButton(tooltip: isDefault ? 'المجموعة الأساسية لا تحذف' : 'حذف المجموعة',
+                    visualDensity: VisualDensity.compact, padding: EdgeInsets.zero,
+                    onPressed: _saving || isDefault ? null : () => _deleteGroup(record!),
+                    icon: const Icon(Icons.delete_outline, color: Colors.red, size: 17)),
+                ])),
+              ]),
+            )),
           ),
         ),
         if (expanded) Padding(
@@ -1150,8 +1184,15 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   Widget build(BuildContext context) {
     final rows = _visibleRows.toList()..sort(_compareBrandCodes);
     final selected = _selectedRow();
-    final visibleGroups = rows.map(_groupKey).toSet().toList()
-      ..sort((a,b) {
+    final visibleGroups = rows.map(_groupKey).toSet().toList();
+    for (final group in _groups) {
+      final code = _s(group['activity_code']);
+      if (_selectedActivityCode == 'all' || code == _selectedActivityCode) {
+        final name = _s(group['group_name']);
+        if (name.isNotEmpty && !visibleGroups.contains(name)) visibleGroups.add(name);
+      }
+    }
+    visibleGroups.sort((a,b) {
         if (a == 'بدون مجموعة') return -1;
         if (b == 'بدون مجموعة') return 1;
         return a.compareTo(b);
