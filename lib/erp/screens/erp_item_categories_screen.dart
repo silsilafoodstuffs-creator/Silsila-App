@@ -54,7 +54,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   void initState() {
     super.initState();
     _company = widget.companyId;
-    _catalogTab = widget.initialCatalogTab.clamp(0, 4).toInt();
+    _catalogTab = widget.initialCatalogTab.clamp(0, 3).toInt();
     try { _db = Supabase.instance.client; } catch (_) {}
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
@@ -708,11 +708,11 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: [
-                for (var tab = 0; tab < 5; tab++)
+                for (var tab = 0; tab < 4; tab++)
                   Padding(
                     padding: const EdgeInsetsDirectional.only(end: 5),
                     child: ChoiceChip(
-                      label: Text(const ['الفئة الرئيسية', 'الفئة الفرعية', 'الفئة الثانوية', 'البراندات/الماركات', 'مجموعات البراندات'][tab]),
+                      label: Text(const ['الفئة الرئيسية', 'الفئة الفرعية', 'الفئة الثانوية', 'البراندات/الماركات'][tab]),
                       selected: _catalogTab == tab,
                       onSelected: _saving ? null : (selected) {
                         if (!selected) return;
@@ -739,8 +739,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
               ]),
             ),
           ),
-          if (_catalogTab == 3 || _catalogTab == 4)
-            Expanded(child: ErpBrandsTab(key: ValueKey('brands-tab-$_catalogTab'), companyId: _company ?? '', showGroupsOnly: _catalogTab == 4))
+          if (_catalogTab == 3)
+            Expanded(child: ErpBrandsTab(key: const ValueKey('brands-tab'), companyId: _company ?? ''))
           else ...[
             Container(
               color: _catCanvas,
