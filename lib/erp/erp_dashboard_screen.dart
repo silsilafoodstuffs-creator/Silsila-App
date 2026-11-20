@@ -184,7 +184,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   bool _mainSidebarVisible = true;
   bool _utilitySidebarVisible = true;
   bool _executiveAccessChecked = false;
-  bool _executiveSummaryAllowed = true;
+  bool _executiveSummaryAllowed = false;
   bool _hrDashboardAccessChecked = false;
   bool _hrDashboardAllowed = false;
   bool _hrDashboardCanManage = false;
@@ -315,16 +315,18 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         }
         _appManagementMessage = 'تم تحميل سجل التطبيقات من قاعدة البيانات.';
       });
-      // None of these loaders depends on another loader's network result.
-      // Await them together so the screen is not delayed by a serial chain of requests.
+      // Load authorization before requesting executive figures. A user without
+      // access must not fetch or render data from the executive dashboard.
       await Future.wait<void>([
         _loadSelectedManagedAppTheme(),
         _loadPermissionsForSelectedApp(),
         _loadSavedAppActivity(),
         _loadWorkspaceSettings(companyId),
         _loadExecutivePermissions(companyId),
-        _loadExecutiveMetrics(companyId),
       ]);
+      if (_executiveSummaryAllowed) {
+        await _loadExecutiveMetrics(companyId);
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -346,13 +348,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _hrDashboardCanManage = false;
         _hrDashboardCanApproveStaffingPlans = false;
         _executiveAccessChecked = true;
-        _executiveSummaryAllowed = true;
+        _executiveSummaryAllowed = false;
         _executivePartialConfigured = false;
         _isSystemAdmin = false;
         _screenAccessPermissions.clear();
         _screenActionPermissions.clear();
         _quickAccessKeys.clear();
         _executiveAllowedSections.clear();
+        _ensureCurrentScreenAllowed();
       });
       return;
     }
@@ -483,11 +486,11 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       }
       final hrDashboardAllowed = isActiveCompanyMember && !isHrResponsible &&
           (isHrManager || isCompanyAdmin || permissions[hrDashboardKey] == true);
-      const parentKey = 'التقارير والتحليلات::تقارير::الملخص التنفيذي';
+      const executiveKey = 'إعدادات عامة::بيانات أساسية::الملخص التنفيذي';
+      final executiveSummaryAllowed = isCompanyAdmin || permissions[executiveKey] == true;
       final childKeys = _executivePermissionSectionKeys.values
           .map((label) => 'التقارير والتحليلات::تقارير::$label')
           .toList();
-      final hasParent = permissions.containsKey(parentKey);
       final configuredChildren = childKeys.where(permissions.containsKey).toList();
       if (!mounted) return;
       setState(() {
@@ -506,7 +509,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           ..clear()
           ..addAll(quickAccess);
         _executiveAccessChecked = true;
-        _executiveSummaryAllowed = hasParent ? permissions[parentKey] == true : true;
+        _executiveSummaryAllowed = executiveSummaryAllowed;
         _executivePartialConfigured = configuredChildren.isNotEmpty;
         _executiveAllowedSections
           ..clear()
@@ -516,6 +519,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         if (!_executivePartialConfigured) {
           _executiveAllowedSections.addAll(_executivePermissionSectionKeys.keys);
         }
+        _ensureCurrentScreenAllowed();
       });
     } catch (_) {
       // Keep the summary usable until the permissions schema is installed.
@@ -525,11 +529,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _hrDashboardCanManage = false;
         _hrDashboardCanApproveStaffingPlans = false;
         _executiveAccessChecked = true;
-        _executiveSummaryAllowed = true;
+        _executiveSummaryAllowed = false;
         _executivePartialConfigured = false;
         _executiveAllowedSections..clear()..addAll(_executivePermissionSectionKeys.keys);
         _screenAccessPermissions.clear();
+        _screenActionPermissions.clear();
         _quickAccessKeys.clear();
+        _ensureCurrentScreenAllowed();
       });
     }
   }
@@ -540,6 +546,27 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     if (_isSystemAdmin) return true;
     if (page == 'ملخص إدارة موارد بشرية') return _hrDashboardAccessChecked && _hrDashboardAllowed;
     return _screenAccessPermissions[_screenPermissionKey(module, group, page)] == true;
+  }
+
+  void _ensureCurrentScreenAllowed() {
+    if (_isSystemAdmin || _canOpenScreen(_module, _group, _page)) return;
+    for (final module in _modules.entries) {
+      for (final group in module.value.entries) {
+        for (final page in group.value) {
+          if (_canOpenScreen(module.key, group.key, page)) {
+            _module = module.key;
+            _group = group.key;
+            _page = page;
+            _search = '';
+            _selectedRecord = null;
+            return;
+          }
+        }
+      }
+    }
+    _page = 'عن البرنامج';
+    _search = '';
+    _selectedRecord = null;
   }
 
   bool _canPerformCurrentAction(String action) {
