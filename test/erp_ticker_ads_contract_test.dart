@@ -8,6 +8,7 @@ void main() {
   late String brandSource;
   late String migrationSource;
   late String activityMigrationSource;
+  late String brandVisibilityMigrationSource;
   late String adsScreenSource;
   late String categoryServiceSource;
 
@@ -21,6 +22,9 @@ void main() {
     ).readAsStringSync();
     activityMigrationSource = File(
       'supabase/migrations/20261114141137_brand_activity_scope_and_ticker_feed.sql',
+    ).readAsStringSync();
+    brandVisibilityMigrationSource = File(
+      'supabase/migrations/20261120130000_brand_master_app_visibility_and_ticker_order.sql',
     ).readAsStringSync();
     adsScreenSource = File('lib/erp/screens/erp_app_advertisements_screen.dart')
         .readAsStringSync();
@@ -110,29 +114,44 @@ void main() {
     expect(adsScreenSource, isNot(contains('tabAlignment: TabAlignment.fill')));
   });
 
-  test('admin ticker orders all active brands by numeric brand code in one order column', () {
-    expect(adminSource, contains('int get _slotCount => _brands.length'));
-    expect(adminSource, contains('final brandRows = List<Map<String, dynamic>>.from(brandRowsResult)'));
-    expect(adminSource, contains('_brandOrderDigits'));
-    expect(adminSource, contains('_brandOrderValue'));
-    expect(adminSource, contains('return numeric != 0 ? numeric'));
+  test('ticker preview follows brand master visibility and display order', () {
+    expect(adminSource, contains("select('id,brand_code,brand_name,brand_name_en,logo_data,logo_mime_type,is_active,show_in_app,activity_code,display_order')"));
+    expect(adminSource, contains(".eq('show_in_app', true)"));
+    expect(adminSource, contains(".order('display_order')"));
     expect(adminSource, contains("Text('كود البراند')"));
-    expect(adminSource, contains("Text('ترتيبه في العرض')"));
     expect(adminSource, contains('معاينة دائرية'));
+    expect(adminSource, isNot(contains('ترتيبه في العرض')));
+    expect(adminSource, isNot(contains('erp_save_app_ticker_ads')));
+    expect(adminSource, isNot(contains('_slotOwners')));
     expect(adminSource, isNot(contains('Checkbox(')));
     expect(adminSource, isNot(contains('take(25)')));
-    expect(adminSource, contains('هل ترغب في الحفظ؟'));
   });
 
-  test('ticker brand grid uses a bounded DataTable2 so rows remain visible inside the tab', () {
+  test('ticker brand grid remains a compact preview table without a second order editor', () {
     expect(adminSource, contains("import 'package:data_table_2/data_table_2.dart';"));
     expect(adminSource, contains('DataTable2('));
-    expect(adminSource, contains('minWidth: 570'));
+    expect(adminSource, contains('minWidth: 470'));
     expect(adminSource, contains('fixedTopRows: 1'));
     expect(adminSource, contains("rows: brands.asMap().entries.map((entry)"));
     expect(adminSource, contains("Text('معاينة دائرية')"));
-    expect(adminSource, contains("Text('ترتيبه في العرض')"));
+    expect(adminSource, isNot(contains("Text('ترتيبه في العرض')")));
     expect(adminSource, contains('لا توجد براندات نشطة لعرضها في هذا النطاق.'));
+  });
+
+  test('brand master stores app visibility and is the authoritative ticker order', () {
+    expect(brandVisibilityMigrationSource, contains('ADD COLUMN IF NOT EXISTS show_in_app boolean NOT NULL DEFAULT true'));
+    expect(brandVisibilityMigrationSource, contains('AND b.show_in_app = true'));
+    expect(brandVisibilityMigrationSource, contains('ORDER BY display_order NULLS LAST, brand_code, id'));
+    expect(brandSource, contains("'show_in_app'"));
+    expect(brandSource, contains('Future<void> _assignActivity'));
+    expect(brandSource, contains('Future<void> _toggleBrandVisibility'));
+    expect(brandSource, contains('Future<void> _saveDisplayOrder'));
+    expect(brandSource, contains('DropdownButton<String?>'));
+    expect(brandSource, contains('DropdownButtonFormField<String?>'));
+    expect(brandSource, contains('_logoPreview(row, size: 60)'));
+    expect(brandSource, contains('shape: BoxShape.circle'));
+    expect(brandSource, contains('Expanded(flex: 2, child: name)'));
+    expect(brandSource, contains('Expanded(flex: 1, child: english)'));
   });
 
   test('public ticker automatically includes all active brands for the selected activity', () {
