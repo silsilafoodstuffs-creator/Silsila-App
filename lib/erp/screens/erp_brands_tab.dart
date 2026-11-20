@@ -1435,7 +1435,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       fixedTopRows: 1,
                       minWidth: 650,
                       columnSpacing: 2,
-                      horizontalMargin: 8,
+                      horizontalMargin: 2,
                       headingRowHeight: 42,
                       dataRowHeight: compactMobile ? 40 : 60,
                       showCheckboxColumn: false,
@@ -1478,7 +1478,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                                 })
                               : null)),
                             DataCell(_brandGridField(InkWell(onTap: () => _showLogoDialog(row), child: _logoPreview(row, size: 44)))),
-                            DataCell(_brandGridField(SizedBox(width: 150, child: DropdownButton<String?>(
+                            DataCell(_brandGridField(SizedBox(width: 140, child: DropdownButton<String?>(
                               isExpanded: true, isDense: compactMobile, itemHeight: 48,
                               value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : _defaultGroupId,
                               hint: const Text('بدون مجموعة'),
