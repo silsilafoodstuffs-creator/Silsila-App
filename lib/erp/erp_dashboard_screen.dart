@@ -501,13 +501,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             .eq('page_name', page)
             .eq('can_access', true);
       }
-      // Keep legacy dashboard permission records synchronized when present.
-      await db.from('erp_user_permissions')
-          .update({'show_in_quick_tasks': add})
-          .eq('company_id', companyId)
-          .eq('user_id', userId)
-          .eq('menu_key', key)
-          .eq('allow_access', true);
+      // Keep legacy dashboard permission records synchronized when present;
+      // their absence must not undo a successful canonical matrix update.
+      try {
+        await db.from('erp_user_permissions')
+            .update({'show_in_quick_tasks': add})
+            .eq('company_id', companyId)
+            .eq('user_id', userId)
+            .eq('menu_key', key)
+            .eq('allow_access', true);
+      } catch (_) {}
       if (mounted) setState(() {});
     } catch (error) {
       if (!mounted) return;
