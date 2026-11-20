@@ -353,7 +353,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     try {
       final workbook = excel.Excel.createExcel();
       final sheet = workbook['بيانات الأنشطة'];
-      const keys = ['ترتيب السطر', 'كود النشاط', 'اسم النشاط عربي', 'اسم النشاط إنجليزي', 'نشط', 'يظهر في التطبيق'];
+      const keys = ['ترتيب السطر', 'كود النشاط', 'اسم النشاط عربي', 'نشط', 'يظهر في التطبيق'];
       sheet.appendRow(keys.map((key) => excel.TextCellValue(key)).toList());
       for (final row in _rows) {
         sheet.appendRow(keys.map((key) => excel.TextCellValue(row[key] ?? '')).toList());
@@ -377,7 +377,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     if (_rows.isEmpty) { setState(() => _message = 'لا توجد بيانات للطباعة.'); return; }
     try {
       final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
-      const keys = ['ترتيب السطر', 'كود النشاط', 'اسم النشاط عربي', 'اسم النشاط إنجليزي', 'نشط', 'يظهر في التطبيق'];
+      const keys = ['ترتيب السطر', 'كود النشاط', 'اسم النشاط عربي', 'نشط', 'يظهر في التطبيق'];
       final doc = pw.Document();
       doc.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, theme: pw.ThemeData.withFont(base: font, bold: font), build: (_) => [
         ErpPrintSupport.text('سلسلة — بيانات الأنشطة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
@@ -401,7 +401,6 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
               children: _rows.map((r) => ListTile(
                 dense: true,
                 title: Text('${r['كود النشاط'] ?? ''} — ${r['اسم النشاط عربي'] ?? ''}'),
-                subtitle: Text(r['اسم النشاط إنجليزي'] ?? ''),
               )).toList(),
             ),
           ),
@@ -433,12 +432,11 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       if (_loading) const LinearProgressIndicator(minHeight: 2),
       Expanded(
         child: SingleChildScrollView(
-          child: Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40, horizontalMargin: 5, columnSpacing: 5, headingRowColor: WidgetStateProperty.all(const Color(0xFFF1EAF9)), columns: const [DataColumn(label: Text('م')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط عربي')), DataColumn(label: Text('اسم النشاط إنجليزي')), DataColumn(label: Text('نشط')), DataColumn(label: Text('يظهر في التطبيق')), DataColumn(label: Text('إجراءات'))], rows: [
+          child: Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40, horizontalMargin: 5, columnSpacing: 5, headingRowColor: WidgetStateProperty.all(const Color(0xFFF1EAF9)), columns: const [DataColumn(label: Text('م')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط عربي')), DataColumn(label: Text('نشط')), DataColumn(label: Text('يظهر في التطبيق')), DataColumn(label: Text('إجراءات'))], rows: [
         for (var i = 0; i < _rows.length; i++) DataRow(cells: [
           DataCell(SizedBox(width: 38, child: Text('${i + 1}', textAlign: TextAlign.center))),
           DataCell(SizedBox(width: 82, child: Align(alignment: AlignmentDirectional.centerStart, child: Text(_rows[i]['كود النشاط'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6F42C1)))))),
           DataCell(SizedBox(width: 220, child: TextFormField(initialValue: _rows[i]['اسم النشاط عربي'] ?? '', key: ValueKey('activity-ar-$i-${_rows[i]['كود النشاط']}'), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4)), onChanged: (v) => _rows[i]['اسم النشاط عربي'] = v))),
-          DataCell(SizedBox(width: 220, child: TextFormField(initialValue: _rows[i]['اسم النشاط إنجليزي'] ?? '', key: ValueKey('activity-en-$i-${_rows[i]['كود النشاط']}'), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4)), onChanged: (v) => _rows[i]['اسم النشاط إنجليزي'] = v))),
           DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: (_rows[i]['نشط'] ?? 'true') == 'true', onChanged: _editing ? (v) => setState(() { final active = v ?? false; _rows[i]['نشط'] = active.toString(); if (!active) _rows[i]['يظهر في التطبيق'] = 'false'; }) : null)),
           DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: (_rows[i]['يظهر في التطبيق'] ?? 'true') == 'true' && (_rows[i]['نشط'] ?? 'true') == 'true', onChanged: _editing && (_rows[i]['نشط'] ?? 'true') == 'true' ? (v) => setState(() => _rows[i]['يظهر في التطبيق'] = (v ?? false).toString()) : null)),
           DataCell(IconButton(tooltip: 'حذف هذا النشاط فقط', onPressed: _saving || !_editing ? null : () => _deleteActivityRow(_rows[i]), icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFB42318)))),
