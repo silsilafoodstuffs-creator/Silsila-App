@@ -1764,10 +1764,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                               minLeadingWidth: 12,
                               leading: Icon(page == _page && selectedModule ? Icons.radio_button_checked_rounded : Icons.circle_outlined, color: const Color(0xFF3E007D), size: 11),
                               title: Text(page, style: TextStyle(color: const Color(0xFF3E007D), fontSize: 10.5, fontWeight: page == _page && selectedModule ? FontWeight.w800 : FontWeight.normal)),
-                              onTap: () {
-                                if (!_canOpenScreen(name, groupEntry.key, page)) { _showActionMessage('هذه الشاشة غير متاحة ضمن صلاحيات المستخدم.'); return; }
-                                _open(name, groupEntry.key, page);
-                              },
+                              onTap: () => _open(name, groupEntry.key, page),
                             )),
                             _quickAccessScreenButton(name, groupEntry.key, page),
                           ]),
