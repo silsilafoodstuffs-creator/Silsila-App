@@ -559,11 +559,11 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     try {
       final rows = _all.where((r) => r['_draft'] != true).map((r) => <String, dynamic>{
         'كود الفئة': r['category_code'], 'اسم الفئة': r['category_name'],
-        'الاسم بالإنجليزية': r['category_name_en'], 'معرف الفئة الأب': r['parent_id'],
+        'معرف الفئة الأب': r['parent_id'],
         'كود النشاط': r['activity_code'], 'نشطة': r['is_active'] == true ? 'نعم' : 'لا',
         'تظهر بالتطبيق': r['show_in_app'] == true ? 'نعم' : 'لا',
       }).toList();
-      await exportErpExcel(fileName: 'silsila_item_categories', sheets: {'فئات الأصناف': rows}, columns: {'فئات الأصناف': {for (final key in ['كود الفئة','اسم الفئة','الاسم بالإنجليزية','معرف الفئة الأب','كود النشاط','نشطة','تظهر بالتطبيق']) key: key}});
+      await exportErpExcel(fileName: 'silsila_item_categories', sheets: {'فئات الأصناف': rows}, columns: {'فئات الأصناف': {for (final key in ['كود الفئة','اسم الفئة','معرف الفئة الأب','كود النشاط','نشطة','تظهر بالتطبيق']) key: key}});
       if (mounted) setState(() => _message = 'تم تصدير ${rows.length} فئة من النشاط المحدد.');
     } catch (e) { if (mounted) setState(() => _error = 'تعذر تصدير فئات الأصناف: $e'); }
   }
@@ -629,9 +629,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
               crossAxisAlignment: WrapCrossAlignment.center,
               spacing: 4, runSpacing: 2,
               children: [
-                SizedBox(width: 165, child: TextField(controller: en, enabled: _editing,
-                  decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'English category name'),
-                  onTap: () => setState(() => _selectedId = id))),
                 Tooltip(message: 'نشط', child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Checkbox(shape: const CircleBorder(), value: active, activeColor: _catPurple,
                     visualDensity: VisualDensity.compact,
@@ -814,7 +811,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
               child: Row(children: [
                 const SizedBox(width: 84, child: Text('كود الفئة', style: TextStyle(fontWeight: FontWeight.w800))),
                 const Expanded(flex: 3, child: Text('اسم الفئة عربي', style: TextStyle(fontWeight: FontWeight.w800))),
-                const Expanded(flex: 2, child: Text('اسم الفئة إنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
                 const Text('نشط'),
                 const SizedBox(width: 8),
                 const Text('في التطبيق'),
@@ -851,7 +847,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                           columns: const [
                             DataColumn(label: Text('كود الفئة')),
                             DataColumn(label: Text('اسم الفئة عربي')),
-                            DataColumn(label: Text('اسم الفئة إنجليزي')),
                             DataColumn(label: Text('الصورة')),
                             DataColumn(label: Text('المستوى')),
                             DataColumn(label: Text('نشط')),
@@ -867,7 +862,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                               cells: [
                                 DataCell(Text(_s(r['category_code']))),
                                 DataCell(SizedBox(width: 170, child: TextField(controller: _ar.putIfAbsent(id, () => TextEditingController(text: _s(r['category_name']))), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none)))),
-                                DataCell(SizedBox(width: 150, child: TextField(controller: _en.putIfAbsent(id, () => TextEditingController(text: _s(r['category_name_en']))), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none)))),
                                 DataCell(_imagePreview(r, size: 48)),
                                 DataCell(Text(['رئيسية', 'فرعية', 'ثانوية'][_rowLevel(r)])),
                                 DataCell(Checkbox(shape: const CircleBorder(), value: r['is_active'] == true, activeColor: _catPurple, onChanged: _editing ? (v) => setState(() => r['is_active'] = v == true) : null)),
