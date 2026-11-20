@@ -94,7 +94,7 @@ const _orange = Color(0xFFFFA015);
 const _pink = Color(0xFFFF27C3);
 const _canvas = Color(0xFFF5EFFB);
 
-final _modules = ErpMenuCatalog.modules;;
+final _modules = ErpMenuCatalog.modules;
 
 class ErpDashboardScreen extends StatefulWidget {
   const ErpDashboardScreen({super.key, this.initialPage});
