@@ -33,4 +33,25 @@ void main() {
     await tester.pump();
     expect(pressed, isTrue);
   });
+
+  testWidgets('ERP quick task buttons are hidden when the current screen action is not allowed',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ErpQuickTaskPermissionScope(
+          canPerform: (_) => false,
+          child: Scaffold(
+            body: ErpQuickTaskButton(
+              label: 'إضافة',
+              icon: Icons.add,
+              onPressed: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('إضافة'), findsNothing);
+    expect(find.byType(FilledButton), findsNothing);
+  });
 }
