@@ -97,11 +97,12 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           }
         }
       }
-      // A nested ERP route can pass a workspace identifier or stale company
-      // context. Prefer a verified active company membership in that case.
-      if (company.isEmpty ||
-          (activeCompanies.isNotEmpty && !activeCompanies.contains(company))) {
-        if (activeCompanies.isNotEmpty) company = activeCompanies.first;
+      // Preserve an explicitly selected company. System administrators may
+      // access it through elevated RLS policies without a membership row.
+      // If its catalog is empty, the guarded fallback below checks only the
+      // user's verified active memberships.
+      if (company.isEmpty && activeCompanies.isNotEmpty) {
+        company = activeCompanies.first;
       }
       if (company.isEmpty) throw StateError('لم يتم تحديد الشركة الحالية أو عضويتها النشطة.');
       _company = company;
@@ -115,7 +116,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           .limit(10000);
       // Retry only against the user's other verified memberships when a stale
       // company context yields no rows. Never read another company's catalog.
-      if ((rawRows as List).isEmpty && activeCompanies.length > 1) {
+      if ((rawRows as List).isEmpty && activeCompanies.isNotEmpty) {
         for (final candidate in activeCompanies.where((id) => id != company)) {
           final candidateRows = await _db!.from('erp_item_categories')
               .select('*')
