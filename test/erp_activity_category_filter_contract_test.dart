@@ -11,46 +11,8 @@ void main() {
   });
 
   test('activity category filtering canonicalizes legacy and current activity codes', () {
-    expect(categoryScreen, contains("RegExp(r'^ACT0*(\\d{1,3})
-    expect(categoryScreen, contains("RegExp(r'^\\d{1,3}
-    expect(categoryScreen, contains("final rawCode = normalizeActivity(_s(row['activity_code']));"));
-    expect(categoryScreen, contains('return rawCode == _selectedActivityCode;'));
-    expect(categoryScreen, contains("const defaultActivity = '01';"));
-  });
-
-  test('food categories remain attached to the canonical food activity', () {
-    expect(categoryScreen, contains("'01': 'مواد غذائية'"));
-    expect(categoryScreen, contains("_selectedActivityCode = displayCodes.contains(wanted)"));
-    expect(categoryScreen, contains("'activity_code': normalizeActivity(_s(row['activity_code']))"));
-  });
-}
-)"));
-    expect(categoryScreen, contains("RegExp(r'^\\d{1,3}')"));
-    expect(categoryScreen, contains("final rawCode = normalizeActivity(_s(row['activity_code']));"));
-    expect(categoryScreen, contains('return rawCode == _selectedActivityCode;'));
-    expect(categoryScreen, contains("const defaultActivity = '01';"));
-  });
-
-  test('food categories remain attached to the canonical food activity', () {
-    expect(categoryScreen, contains("'01': 'مواد غذائية'"));
-    expect(categoryScreen, contains("_selectedActivityCode = displayCodes.contains(wanted)"));
-    expect(categoryScreen, contains("'activity_code': normalizeActivity(_s(row['activity_code']))"));
-  });
-}
-)"));
-    expect(categoryScreen, contains("final rawCode = normalizeActivity(_s(row['activity_code']));"));
-    expect(categoryScreen, contains('return rawCode == _selectedActivityCode;'));
-    expect(categoryScreen, contains("const defaultActivity = '01';"));
-  });
-
-  test('food categories remain attached to the canonical food activity', () {
-    expect(categoryScreen, contains("'01': 'مواد غذائية'"));
-    expect(categoryScreen, contains("_selectedActivityCode = displayCodes.contains(wanted)"));
-    expect(categoryScreen, contains("'activity_code': normalizeActivity(_s(row['activity_code']))"));
-  });
-}
-)"));
-    expect(categoryScreen, contains("RegExp(r'^\\d{1,3}')"));
+    expect(categoryScreen, contains("RegExp(r'^ACT0*(\\d{1,3})$')"));
+    expect(categoryScreen, contains("RegExp(r'^\\d{1,3}$')"));
     expect(categoryScreen, contains("final rawCode = normalizeActivity(_s(row['activity_code']));"));
     expect(categoryScreen, contains('return rawCode == _selectedActivityCode;'));
     expect(categoryScreen, contains("const defaultActivity = '01';"));
