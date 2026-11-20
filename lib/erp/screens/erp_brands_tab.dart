@@ -1086,7 +1086,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 SizedBox(width: 28, child: Text('$index', textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900))),
                 SizedBox(width: 92, child: Text(groupCode, overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: _brandPurple))),
-                const SizedBox(width: 145),
+                SizedBox(width: 145, child: Text(record == null ? '' : _activityName(_s(record['activity_code'])), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Colors.black54))),
                 const SizedBox(width: 5),
                 const SizedBox(width: 165),
                 const SizedBox(width: 5),
