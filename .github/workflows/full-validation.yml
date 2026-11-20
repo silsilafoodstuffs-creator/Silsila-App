@@ -96,13 +96,15 @@ jobs:
           if not p.exists():
               raise SystemExit("Android Gradle Kotlin file was not generated")
           source = p.read_text()
-          version = 'ndkVersion = "27.0.12077973"'
-          if version not in source:
+          import re
+          version = '    ndkVersion = "27.0.12077973"'
+          source, replacements = re.subn(r'(?m)^[ \\t]*ndkVersion[ \\t]*=[^\\r\\n]*', version, source)
+          if replacements == 0:
               marker = "android {"
               if marker not in source:
                   raise SystemExit("Android configuration block not found")
-              source = source.replace(marker, marker + "\n    " + version, 1)
-              p.write_text(source)
+              source = source.replace(marker, marker + "\\n" + version, 1)
+          p.write_text(source)
           print("Configured Android NDK 27.0.12077973")
           PY
 
