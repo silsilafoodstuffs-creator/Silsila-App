@@ -1101,7 +1101,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 Expanded(flex: 1, child: Text(groupEnglish, textDirection: TextDirection.ltr,
                   maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.black54))),
                 const SizedBox(width: 3),
-                SizedBox(width: 68, child: Center(child: Text('\${children.length}',
+                SizedBox(width: 68, child: Center(child: Text('${children.length}',
                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)))),
                 const SizedBox(width: 78),
                 const SizedBox(width: 62),
