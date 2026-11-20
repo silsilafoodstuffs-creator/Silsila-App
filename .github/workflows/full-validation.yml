@@ -112,7 +112,23 @@ jobs:
       - name: Build production-path web app with Dart source maps
         id: build_web
         if: always() && !cancelled()
-        run: flutter build web --release --source-maps --base-href "/Silsila-App/"
+        run: flutter build web --release --source-maps --pwa-strategy=none --base-href "/Silsila-App/"
+
+      - name: Stamp the Web bootstrap with the exact commit
+        if: always() && !cancelled() && steps.build_web.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s build/web/index.html
+          sed -i "s/__SILSILA_BUILD_VERSION__/${GITHUB_SHA}/g" build/web/index.html
+          grep -q "flutter_bootstrap.js?v=${GITHUB_SHA}" build/web/index.html
+          # Prevent browsers from reusing a previously cached compiled Dart bundle.
+          if grep -q "main.dart.js" build/web/flutter_bootstrap.js; then
+            sed -i "s/main.dart.js/main.dart.js?v=${GITHUB_SHA}/g" build/web/flutter_bootstrap.js
+          else
+            echo "ERROR: Flutter bootstrap does not reference main.dart.js as expected."
+            exit 1
+          fi
 
       - name: Verify web build output
         id: verify_web
