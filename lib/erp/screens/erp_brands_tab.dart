@@ -22,6 +22,11 @@ class ErpBrandsTab extends StatefulWidget {
 
 class _ErpBrandsTabState extends State<ErpBrandsTab> {
   final _search = TextEditingController();
+  String _selectedActivityCode = 'all';
+  final Map<String, TextEditingController> _columnSearch = {
+    'code': TextEditingController(), 'activity': TextEditingController(),
+    'group': TextEditingController(), 'name': TextEditingController(), 'english': TextEditingController(),
+  };
   List<Map<String,dynamic>> _rows = [];
   List<Map<String,dynamic>> _groups = [];
   List<Map<String,dynamic>> _activities = [];
@@ -50,6 +55,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   @override
   void dispose() {
     _search.dispose();
+    for (final controller in _columnSearch.values) { controller.dispose(); }
     for (final controller in _gridNameControllers.values) { controller.dispose(); }
     for (final controller in _gridEnglishControllers.values) { controller.dispose(); }
     super.dispose();
@@ -168,13 +174,18 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
   List<Map<String,dynamic>> get _visibleRows {
     final term = _search.text.trim().toLowerCase();
-    if (term.isEmpty) return _rows;
-    return _rows.where((row) =>
-      _s(row['brand_code']).toLowerCase().contains(term) ||
-      _s(row['brand_name']).toLowerCase().contains(term) ||
-      _s(row['brand_name_en']).toLowerCase().contains(term) ||
-      _s(row['brand_group']).toLowerCase().contains(term)
-    ).toList();
+    return _rows.where((row) {
+      final activityCode = _s(row['activity_code']).isEmpty ? '01' : _s(row['activity_code']);
+      final groupName = _groupKey(row);
+      if (_selectedActivityCode != 'all' && activityCode != _selectedActivityCode) return false;
+      if (term.isNotEmpty && ![_s(row['brand_code']), _s(row['brand_name']), _s(row['brand_name_en']), groupName].any((v) => v.toLowerCase().contains(term))) return false;
+      final filters = <String, String>{'code': _s(row['brand_code']), 'activity': _activityName(activityCode), 'group': groupName, 'name': _s(row['brand_name']), 'english': _s(row['brand_name_en'])};
+      for (final entry in filters.entries) {
+        final value = _columnSearch[entry.key]!.text.trim().toLowerCase();
+        if (value.isNotEmpty && !entry.value.toLowerCase().contains(value)) return false;
+      }
+      return true;
+    }).toList();
   }
 
   String _friendlySaveError(Object error) {
@@ -523,7 +534,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   Future<void> _addGroup() async {
     final name = TextEditingController();
     final english = TextEditingController();
-    var activityCode = '01';
+    var activityCode = _selectedActivityCode == 'all' ? (_activities.isEmpty ? '01' : _s(_activities.first['code'])) : _selectedActivityCode;
     final formKey = GlobalKey<FormState>();
     final ok = await showDialog<bool>(context: context, builder: (ctx) => Directionality(
       textDirection: TextDirection.rtl,
@@ -1027,22 +1038,13 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             decoration: BoxDecoration(borderRadius: BorderRadius.circular(10),
               border: Border.all(color: selected ? _brandPurple : _brandBorder)),
             child: LayoutBuilder(builder: (context, constraints) {
-              final compact = constraints.maxWidth < 850;
               final code = Text(_s(row['brand_code']), overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple, fontSize: 11));
               final name = Text(_s(row['brand_name']), softWrap: true,
                 style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13));
               final english = Text(_s(row['brand_name_en']), textDirection: TextDirection.ltr,
                 overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.black54));
-              if (compact) {
-                return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  Row(children: [SizedBox(width: 76, child: code), const SizedBox(width: 8), Expanded(child: name)]),
-                  if (_s(row['brand_name_en']).isNotEmpty)
-                    Padding(padding: const EdgeInsetsDirectional.only(start: 84, top: 3),
-                      child: Align(alignment: AlignmentDirectional.centerStart, child: english)),
-                  const Divider(height: 10), controls,
-                ]);
-              }
+
               return Row(children: [
                 const SizedBox(width: 28, child: Icon(Icons.subdirectory_arrow_left, color: _brandPurple, size: 17)),
                 SizedBox(width: 92, child: code),
@@ -1175,6 +1177,21 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 ErpQuickTaskButton(label:'حذف', icon:Icons.delete_outline, onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
               ]),
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 5, 12, 4),
+            child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, runSpacing: 5, children: [
+              const Text('نوع النشاط:', style: TextStyle(color: _brandPurple, fontWeight: FontWeight.w800)),
+              SizedBox(width: 220, child: DropdownButtonFormField<String>(
+                value: _selectedActivityCode, isExpanded: true, isDense: true,
+                decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 9, vertical: 8), border: OutlineInputBorder()),
+                items: [const DropdownMenuItem(value: 'all', child: Text('كل الأنشطة')),
+                  ..._activities.map((a) => DropdownMenuItem(value: _s(a['code']), child: Text(_s(a['name']), overflow: TextOverflow.ellipsis)))],
+                onChanged: (value) => setState(() { _selectedActivityCode = value ?? 'all'; }),
+              )),
+              FilledButton.icon(onPressed: _saving ? null : _addGroup,
+                icon: const Icon(Icons.create_new_folder_outlined, size: 18), label: const Text('إضافة مجموعة براند')),
+            ]),
           ),
           if (_showGroups) ...[
             Padding(padding: const EdgeInsets.fromLTRB(12, 6, 12, 4), child: Row(children: [
