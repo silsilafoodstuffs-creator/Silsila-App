@@ -554,6 +554,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   bool _canOpenScreen(String module, String group, String page) {
     if (_isSystemAdmin) return true;
+    // Maintenance tooling is reserved for the system administrator.
+    if (page == 'مركز الصيانة والتطوير') return false;
     if (page == 'ملخص إدارة موارد بشرية') return _hrDashboardAccessChecked && _hrDashboardAllowed;
     return _screenAccessPermissions[_screenPermissionKey(module, group, page)] == true;
   }
