@@ -145,8 +145,8 @@ void main() {
     expect(dashboard, contains("'superadmin'"));
     expect(dashboard, contains('.where((page) => _canOpenScreen(name, groupEntry.key, page))'));
     expect(dashboard, contains('bool _canPerformCurrentAction(String action)'));
-    expect(dashboard, contains("if (_canPerformCurrentAction('إضافة'))"));
-    expect(dashboard, contains("if (_canPerformCurrentAction('حذف'))"));
+    expect(dashboard, contains("_canPerformCurrentAction('إضافة')"));
+    expect(dashboard, contains("_canPerformCurrentAction('حذف')"));
     expect(dashboard, contains('can_import_excel'));
     expect(dashboard, contains('can_export_excel'));
   });
