@@ -965,7 +965,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     }
   }
 
-  Widget _treeBrandRow(Map<String,dynamic> row) {
+  Widget _treeBrandRow(Map<String,dynamic> row, int index) {
     final id = _s(row['id']);
     final selected = _selectedId == id;
     final system = row['is_system'] == true;
@@ -1046,7 +1046,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.black54));
 
               return Row(children: [
-                const SizedBox(width: 28, child: Icon(Icons.subdirectory_arrow_left, color: _brandPurple, size: 17)),
+                SizedBox(width: 28, child: Text('${index + 1}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800))),
                 SizedBox(width: 92, child: code),
                 activityDropdown, const SizedBox(width: 5), groupDropdown, const SizedBox(width: 5),
                 Expanded(flex: 2, child: name), const SizedBox(width: 5),
@@ -1062,7 +1062,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     );
   }
 
-  Widget _treeGroup(String group) {
+  Widget _treeGroup(String group, int index) {
     final children = _rowsInGroup(group);
     final expanded = _expandedGroups.contains(group);
     Map<String, dynamic>? record;
@@ -1087,12 +1087,12 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             child: SizedBox(height: 48, child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(children: [
-                SizedBox(width: 28, child: Icon(expanded ? Icons.keyboard_arrow_down : Icons.chevron_left, color: _brandPurple)),
-                const SizedBox(width: 92, child: Icon(Icons.folder_outlined, color: _brandPurple, size: 19)),
+                SizedBox(width: 28, child: Text('$index', textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900))),
+                SizedBox(width: 92, child: Text(groupCode, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: _brandPurple))),
                 const SizedBox(width: 145),
                 const SizedBox(width: 5),
-                SizedBox(width: 165, child: Text(groupCode, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: _brandPurple))),
+                const SizedBox(width: 165),
                 const SizedBox(width: 5),
                 Expanded(flex: 2, child: Text(group == 'بدون مجموعة' ? 'براندات بدون مجموعة' : group,
                   maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -1124,7 +1124,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         ),
         if (expanded) Padding(
           padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 8),
-          child: Column(children: children.map(_treeBrandRow).toList()),
+          child: Column(children: children.asMap().entries.map((entry) => _treeBrandRow(entry.value, entry.key)).toList()),
         ),
       ]),
     );
@@ -1363,7 +1363,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       scrollDirection: Axis.horizontal,
                       child: SizedBox(width: 1120, child: ListView(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        children: visibleGroups.map(_treeGroup).toList(),
+                        children: visibleGroups.asMap().entries.map((entry) => _treeGroup(entry.value, entry.key + 1)).toList(),
                       )),
                     )
                   : DataTable2(
