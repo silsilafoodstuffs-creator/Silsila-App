@@ -1318,9 +1318,12 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
               : rows.isEmpty
                 ? const Center(child:Text('لا توجد براندات مطابقة للبحث.'))
                 : _viewMode == 'tree'
-                  ? ListView(
-                      padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
-                      children:visibleGroups.map(_treeGroup).toList(),
+                  ? SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SizedBox(width: 1120, child: ListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        children: visibleGroups.map(_treeGroup).toList(),
+                      )),
                     )
                   : DataTable2(
                       fixedTopRows: 1,
