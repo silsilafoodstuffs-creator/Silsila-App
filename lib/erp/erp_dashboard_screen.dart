@@ -3450,7 +3450,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           height: 82,
           child: Row(children: [
             SizedBox(width: 82, height: 82, child: CustomPaint(
-              painter: _ExecutiveDonutPainter(donutRows.map((row) => (row['value'] as num?)?.toDouble() ?? 0).toList()),
+              painter: _ExecutiveDonutPainter(values: donutRows.map((row) => (row['value'] as num?)?.toDouble() ?? 0).toList()),
             )),
             const SizedBox(width: 8),
             Expanded(child: Column(
@@ -4048,42 +4048,3 @@ class ErpScreenLayoutRuntime extends StatelessWidget {
     );
   }
 }
-
-
-class _ExecutiveDonutPainter extends CustomPainter {
-  _ExecutiveDonutPainter(this.values);
-  final List<double> values;
-  static const _colors = <Color>[
-    Color(0xFF3E007D), Color(0xFFFFA015), Color(0xFFFF27C3),
-    Color(0xFF2475B8), Color(0xFF24A879), Color(0xFF8E78A8),
-  ];
-  @override
-  void paint(Canvas canvas, Size size) {
-    final total = values.fold<double>(0, (sum, value) => sum + value.abs());
-    final rect = Offset.zero & size;
-    final center = rect.center;
-    final radius = math.min(size.width, size.height) / 2;
-    final paint = Paint()..style = PaintingStyle.stroke..strokeWidth = 12..strokeCap = StrokeCap.butt;
-    if (total <= 0) {
-      paint.color = const Color(0xFFECE7F2);
-      canvas.drawCircle(center, radius - 7, paint);
-    } else {
-      var start = -math.pi / 2;
-      for (var i = 0; i < values.length; i++) {
-        final sweep = values[i].abs() / total * math.pi * 2;
-        if (sweep <= 0) continue;
-        paint.color = _colors[i % _colors.length];
-        canvas.drawArc(Rect.fromCircle(center: center, radius: radius - 7), start, sweep, false, paint);
-        start += sweep;
-      }
-    }
-    final centerText = TextPainter(
-      text: const TextSpan(text: 'النسب', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
-      textDirection: TextDirection.rtl,
-    )..layout();
-    centerText.paint(canvas, center - Offset(centerText.width / 2, centerText.height / 2));
-  }
-  @override
-  bool shouldRepaint(covariant _ExecutiveDonutPainter oldDelegate) => oldDelegate.values != values;
-}
-
