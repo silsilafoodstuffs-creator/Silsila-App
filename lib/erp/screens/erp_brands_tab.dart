@@ -23,6 +23,9 @@ class ErpBrandsTab extends StatefulWidget {
 class _ErpBrandsTabState extends State<ErpBrandsTab> {
   final _search = TextEditingController();
   String _selectedActivityCode = 'all';
+  final ScrollController _treeHeaderController = ScrollController();
+  final ScrollController _treeRowsController = ScrollController();
+  bool _syncingTreeScroll = false;
   final Map<String, TextEditingController> _columnSearch = {
     'code': TextEditingController(), 'activity': TextEditingController(),
     'group': TextEditingController(), 'name': TextEditingController(), 'english': TextEditingController(),
@@ -48,12 +51,24 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   @override
   void initState() {
     super.initState();
+    _treeHeaderController.addListener(() => _syncTreeScroll(_treeHeaderController, _treeRowsController));
+    _treeRowsController.addListener(() => _syncTreeScroll(_treeRowsController, _treeHeaderController));
     _showGroups = widget.showGroupsOnly;
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
+  void _syncTreeScroll(ScrollController source, ScrollController target) {
+    if (_syncingTreeScroll || !source.hasClients || !target.hasClients) return;
+    _syncingTreeScroll = true;
+    final offset = source.position.pixels.clamp(target.position.minScrollExtent, target.position.maxScrollExtent).toDouble();
+    if ((target.position.pixels - offset).abs() > 0.5) target.jumpTo(offset);
+    _syncingTreeScroll = false;
+  }
+
   @override
   void dispose() {
+    _treeHeaderController.dispose();
+    _treeRowsController.dispose();
     _search.dispose();
     for (final controller in _columnSearch.values) { controller.dispose(); }
     for (final controller in _gridNameControllers.values) { controller.dispose(); }
@@ -1137,7 +1152,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         prefixIconConstraints: const BoxConstraints(minWidth: 18, minHeight: 22),
         border: const OutlineInputBorder()),
     ));
-    return SingleChildScrollView(scrollDirection: Axis.horizontal,
+    return SingleChildScrollView(controller: _treeHeaderController, scrollDirection: Axis.horizontal,
       child: SizedBox(width: 1120, child: Container(
         margin: const EdgeInsetsDirectional.only(bottom: 5),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1358,6 +1373,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 ? const Center(child:Text('لا توجد براندات مطابقة للبحث.'))
                 : _viewMode == 'tree'
                   ? SingleChildScrollView(
+                      controller: _treeRowsController,
                       scrollDirection: Axis.horizontal,
                       child: SizedBox(width: 1120, child: ListView(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
