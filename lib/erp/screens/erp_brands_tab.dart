@@ -1109,15 +1109,15 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                   tooltip: 'إضافة براندات للمجموعة', visualDensity: VisualDensity.compact, padding: EdgeInsets.zero,
                   onPressed: _saving ? null : () => _openGroupBrandPicker(record!),
                   icon: const Icon(Icons.add_circle_outline, color: _brandPurple, size: 18))),
-                SizedBox(width: 40, child: record == null ? const SizedBox.shrink() : Row(mainAxisSize: MainAxisSize.min, children: [
-                  IconButton(tooltip: 'تعديل المجموعة', visualDensity: VisualDensity.compact, padding: EdgeInsets.zero,
-                    onPressed: _saving || isDefault ? null : () => _editGroup(record!),
-                    icon: const Icon(Icons.edit_outlined, color: _brandPurple, size: 17)),
-                  IconButton(tooltip: isDefault ? 'المجموعة الأساسية لا تحذف' : 'حذف المجموعة',
-                    visualDensity: VisualDensity.compact, padding: EdgeInsets.zero,
-                    onPressed: _saving || isDefault ? null : () => _deleteGroup(record!),
-                    icon: const Icon(Icons.delete_outline, color: Colors.red, size: 17)),
-                ])),
+                SizedBox(width: 40, child: record == null ? const SizedBox.shrink() : PopupMenuButton<String>(
+                  tooltip: 'إدارة المجموعة', padding: EdgeInsets.zero, enabled: !_saving && !isDefault,
+                  icon: const Icon(Icons.more_vert, size: 18, color: _brandPurple),
+                  onSelected: (value) { if (value == 'edit') _editGroup(record!); if (value == 'delete') _deleteGroup(record!); },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'edit', child: Text('تعديل المجموعة')),
+                    PopupMenuItem(value: 'delete', child: Text('حذف المجموعة')),
+                  ],
+                )),
               ]),
             )),
           ),
@@ -1318,7 +1318,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 ),
               )),
           ] else ...[
-          Padding(
+          if (_viewMode != 'tree') Padding(
             padding: const EdgeInsets.fromLTRB(12,7,12,3),
             child: TextField(
               controller:_search,
