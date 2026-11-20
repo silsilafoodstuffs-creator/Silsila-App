@@ -239,7 +239,10 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       child: Text('${_s(activity['name'])} — ${_s(activity['code'])}'),
                     )).toList(),
                     onChanged: (value) {
-                      if (value != null) activityCode = value;
+                      if (value != null) {
+                        activityCode = value;
+                        if (!_groupsForActivity(value).any((group) => _s(group['id']) == groupId)) groupId = null;
+                      }
                     },
                     validator: (value) => value == null || value.isEmpty
                         ? 'اختر نوع النشاط.'
@@ -501,6 +504,13 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       if (_s(activity['code']) == code) return _s(activity['name']);
     }
     return code;
+  }
+
+  String? get _defaultGroupId {
+    for (final group in _groups) {
+      if (_s(group['group_code']) == 'Brg01') return _s(group['id']);
+    }
+    return null;
   }
 
   Map<String,dynamic>? _groupById(String? id) {
