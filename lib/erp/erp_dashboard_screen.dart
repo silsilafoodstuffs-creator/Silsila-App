@@ -463,6 +463,23 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       } catch (_) {
         // Older installations may only have the legacy permission table.
       }
+      // Quick access is personal navigation state, not a permission flag.
+      // Read it from its own RLS-protected table so every authenticated
+      // company member can retain favorites without changing their permissions.
+      try {
+        final savedQuickAccess = await db.from('erp_user_quick_access')
+            .select('menu_key')
+            .eq('company_id', companyId)
+            .eq('user_id', userId);
+        quickAccess
+          ..clear()
+          ..addAll((savedQuickAccess as List)
+              .whereType<Map<String, dynamic>>()
+              .map((row) => (row['menu_key'] ?? '').toString())
+              .where((key) => key.isNotEmpty));
+      } catch (_) {
+        // Keep legacy permission-backed favorites available on older installs.
+      }
       const hrDashboardKey = 'موارد بشرية::بيانات أساسية::ملخص إدارة موارد بشرية';
       final isHrManager = isActiveCompanyMember && jobTitle == 'مدير موارد بشرية';
       final isHrResponsible = jobTitle == 'مسئول موارد بشرية' || jobTitle == 'مسؤول موارد بشرية';
@@ -623,33 +640,36 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     });
     try {
       final db = Supabase.instance.client;
-      final erpUser = await db.from('erp_users')
-          .select('id')
-          .eq('company_id', companyId)
-          .eq('auth_user_id', userId)
-          .eq('is_active', true)
-          .maybeSingle();
-      final erpUserId = erpUser?['id']?.toString();
-      if (erpUserId != null && erpUserId.isNotEmpty) {
-        await db.from('erp_user_permission_matrix')
-            .update({'show_in_quick_tasks': add})
+      if (add) {
+        final saved = await db.from('erp_user_quick_access').upsert({
+          'company_id': companyId,
+          'user_id': userId,
+          'menu_key': key,
+          'menu_name': module,
+          'submenu_name': group,
+          'page_name': page,
+        }, onConflict: 'company_id,user_id,menu_key')
+            .select('menu_key')
+            .maybeSingle();
+        if (saved == null || saved['menu_key'] != key) {
+          throw StateError('لم يتم تأكيد حفظ الشاشة في الوصول السريع.');
+        }
+      } else {
+        await db.from('erp_user_quick_access')
+            .delete()
             .eq('company_id', companyId)
-            .eq('user_id', erpUserId)
-            .eq('menu_name', module)
-            .eq('submenu_name', group)
-            .eq('page_name', page)
-            .eq('can_access', true);
-      }
-      // Keep legacy dashboard permission records synchronized when present;
-      // their absence must not undo a successful canonical matrix update.
-      try {
-        await db.from('erp_user_permissions')
-            .update({'show_in_quick_tasks': add})
+            .eq('user_id', userId)
+            .eq('menu_key', key);
+        final remaining = await db.from('erp_user_quick_access')
+            .select('menu_key')
             .eq('company_id', companyId)
             .eq('user_id', userId)
             .eq('menu_key', key)
-            .eq('allow_access', true);
-      } catch (_) {}
+            .maybeSingle();
+        if (remaining != null) {
+          throw StateError('تعذر إزالة الشاشة من الوصول السريع.');
+        }
+      }
       if (mounted) setState(() {});
     } catch (error) {
       if (!mounted) return;
@@ -682,7 +702,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         for (final page in group.value) {
           final key = _screenPermissionKey(module.key, group.key, page);
           if (!_quickAccessKeys.contains(key) || !_canOpenScreen(module.key, group.key, page)) continue;
-          tiles.add(_quick('${module.key} • $page', Icons.favorite_rounded, () => _open(module.key, group.key, page)));
+          tiles.add(_quick(page, Icons.favorite_rounded, () => _open(module.key, group.key, page)));
         }
       }
     }
