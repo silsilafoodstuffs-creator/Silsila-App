@@ -138,4 +138,17 @@ void main() {
     expect(pages, hasLength(78));
   });
 
+  test('dashboard filters screens and actions while keeping system administrators unrestricted', () {
+    final dashboard = File('lib/erp/erp_dashboard_screen.dart').readAsStringSync();
+    expect(dashboard, contains('if (_isSystemAdmin) return true;'));
+    expect(dashboard, contains("'مديرالنظام'"));
+    expect(dashboard, contains("'superadmin'"));
+    expect(dashboard, contains('.where((page) => _canOpenScreen(name, groupEntry.key, page))'));
+    expect(dashboard, contains('bool _canPerformCurrentAction(String action)'));
+    expect(dashboard, contains("if (_canPerformCurrentAction('إضافة'))"));
+    expect(dashboard, contains("if (_canPerformCurrentAction('حذف'))"));
+    expect(dashboard, contains('can_import_excel'));
+    expect(dashboard, contains('can_export_excel'));
+  });
+
 }
