@@ -1193,6 +1193,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final compactMobile = MediaQuery.sizeOf(context).width < 600;
     final rows = _visibleRows.toList()..sort(_compareBrandCodes);
     final selected = _selectedRow();
     final visibleGroups = rows.map(_groupKey).toSet().toList();
@@ -1386,7 +1387,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       columnSpacing: 8,
                       horizontalMargin: 8,
                       headingRowHeight: 42,
-                      dataRowHeight: 60,
+                      dataRowHeight: compactMobile ? 40 : 60,
                       showCheckboxColumn: false,
                       headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                       columns: const [
@@ -1420,7 +1421,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                                     decoration: const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'اسم البراند بالعربية'),
                                     onSubmitted: (_) => FocusScope.of(context).nextFocus()),
                                 )
-                              : Text(_s(row['brand_name']))), onTap: !system && !_gridEditing
+                              : Text(_s(row['brand_name']), maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis)), onTap: !system && !_gridEditing
                               ? () => setState(() {
                                   _selectedId = id;
                                   _gridEditing = true;
@@ -1438,17 +1439,17 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                                     decoration: const InputDecoration(isDense:true, contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:8), border:OutlineInputBorder(), hintText:'Brand name'),
                                     onSubmitted: (_) => FocusScope.of(context).nextFocus()),
                                 )
-                              : Text(_s(row['brand_name_en'])))),
+                              : Text(_s(row['brand_name_en']), maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis))),
                             DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
-                              _logoPreview(row, size: 46),
-                              const SizedBox(width: 4),
+                              _logoPreview(row, size: compactMobile ? 30 : 46),
+                              SizedBox(width: compactMobile ? 2 : 4),
                               Column(mainAxisSize: MainAxisSize.min, children: [
                                 IconButton(tooltip:'تعديل صورة البراند', visualDensity:VisualDensity.compact, padding:EdgeInsets.zero,
-                                  constraints:const BoxConstraints.tightFor(width:30,height:25), onPressed:_saving ? null : () => _uploadLogo(row),
-                                  icon:const Icon(Icons.edit_outlined,color:_brandPurple,size:18)),
+                                  constraints: BoxConstraints.tightFor(width: compactMobile ? 22 : 30, height: compactMobile ? 18 : 25), onPressed:_saving ? null : () => _uploadLogo(row),
+                                  icon: Icon(Icons.edit_outlined,color:_brandPurple,size: compactMobile ? 14 : 18)),
                                 IconButton(tooltip:'حذف صورة البراند', visualDensity:VisualDensity.compact, padding:EdgeInsets.zero,
-                                  constraints:const BoxConstraints.tightFor(width:30,height:25), onPressed:_saving || system || _logoBytes(row['logo_data']) == null ? null : () => _removeLogo(row),
-                                  icon:const Icon(Icons.delete_outline,color:Colors.redAccent,size:18)),
+                                  constraints: BoxConstraints.tightFor(width: compactMobile ? 22 : 30, height: compactMobile ? 18 : 25), onPressed:_saving || system || _logoBytes(row['logo_data']) == null ? null : () => _removeLogo(row),
+                                  icon: Icon(Icons.delete_outline,color:Colors.redAccent,size: compactMobile ? 14 : 18)),
                               ]),
                             ])),
                             DataCell(SizedBox(width: 180, child: DropdownButton<String?>(
