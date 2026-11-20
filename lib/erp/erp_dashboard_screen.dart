@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'services/erp_screen_layout_profiles.dart';
@@ -310,6 +311,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   bool _hrDashboardCanApproveStaffingPlans = false;
   bool _executivePartialConfigured = false;
   final Set<String> _executiveAllowedSections = <String>{};
+  final Set<String> _quickAccessKeys = <String>{};
+  final Map<String, bool> _screenAccessPermissions = <String, bool>{};
   static const Map<String, String> _executivePermissionSectionKeys = {
     'مبيعات': 'مؤشرات المبيعات والعملاء',
     'المالية والسيولة': 'مؤشرات المالية والسيولة',
@@ -458,6 +461,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _hrDashboardAllowed = false;
         _hrDashboardCanManage = false;
         _hrDashboardCanApproveStaffingPlans = false;
+        _screenAccessPermissions
+          ..clear()
+          ..addAll(permissions);
+        _quickAccessKeys
+          ..clear()
+          ..addAll(quickAccess);
         _executiveAccessChecked = true;
         _executiveSummaryAllowed = true;
         _executivePartialConfigured = false;
@@ -490,13 +499,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       } catch (_) {}
       final rows = await db
           .from('erp_user_permissions')
-          .select('menu_key,allow_access')
+          .select('menu_key,allow_access,show_in_quick_tasks')
           .eq('company_id', companyId)
           .eq('user_id', userId);
-      final permissions = <String, bool>{
-        for (final row in (rows as List).whereType<Map<String, dynamic>>())
-          (row['menu_key'] ?? '').toString(): row['allow_access'] == true,
-      };
+      final permissions = <String, bool>{};
+      final quickAccess = <String>{};
+      for (final row in (rows as List).whereType<Map<String, dynamic>>()) {
+        final key = (row['menu_key'] ?? '').toString();
+        permissions[key] = row['allow_access'] == true;
+        if (row['allow_access'] == true && row['show_in_quick_tasks'] == true) quickAccess.add(key);
+      }
       const hrDashboardKey = 'موارد بشرية::بيانات أساسية::ملخص إدارة موارد بشرية';
       final isHrManager = isActiveCompanyMember && jobTitle == 'مدير موارد بشرية';
       final isHrResponsible = jobTitle == 'مسئول موارد بشرية' || jobTitle == 'مسؤول موارد بشرية';
@@ -538,8 +550,74 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _executiveSummaryAllowed = true;
         _executivePartialConfigured = false;
         _executiveAllowedSections..clear()..addAll(_executivePermissionSectionKeys.keys);
+        _screenAccessPermissions.clear();
+        _quickAccessKeys.clear();
       });
     }
+  }
+
+  String _screenPermissionKey(String module, String group, String page) => '$module::$group::$page';
+
+  bool _canOpenScreen(String module, String group, String page) {
+    if (page == 'ملخص إدارة موارد بشرية') return _hrDashboardAccessChecked && _hrDashboardAllowed;
+    final key = _screenPermissionKey(module, group, page);
+    // Keep legacy installations usable until the permission table is configured.
+    return !_executiveAccessChecked || !_screenAccessPermissions.containsKey(key) || _screenAccessPermissions[key] == true;
+  }
+
+  Future<void> _toggleQuickAccess(String module, String group, String page) async {
+    final companyId = _appManagementCompanyId;
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    final key = _screenPermissionKey(module, group, page);
+    if (companyId == null || userId == null || !_canOpenScreen(module, group, page)) return;
+    final add = !_quickAccessKeys.contains(key);
+    setState(() {
+      if (add) { _quickAccessKeys.add(key); } else { _quickAccessKeys.remove(key); }
+    });
+    try {
+      await Supabase.instance.client.from('erp_user_permissions')
+          .update({'show_in_quick_tasks': add})
+          .eq('company_id', companyId)
+          .eq('user_id', userId)
+          .eq('menu_key', key)
+          .eq('allow_access', true);
+      if (mounted) setState(() {});
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        if (add) { _quickAccessKeys.remove(key); } else { _quickAccessKeys.add(key); }
+      });
+      _showActionMessage('تعذر تحديث الوصول السريع: $error');
+    }
+  }
+
+  Widget _quickAccessScreenButton(String module, String group, String page) {
+    final key = _screenPermissionKey(module, group, page);
+    final allowed = _canOpenScreen(module, group, page);
+    final selected = _quickAccessKeys.contains(key);
+    return IconButton(
+      tooltip: !allowed ? 'الشاشة غير متاحة ضمن صلاحيات المستخدم' : selected ? 'إزالة من الوصول السريع' : 'إضافة إلى الوصول السريع',
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+      padding: EdgeInsets.zero,
+      onPressed: allowed ? () => _toggleQuickAccess(module, group, page) : null,
+      icon: Icon(selected ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+          size: 17, color: selected ? Colors.red : (allowed ? _purple : Colors.black26)),
+    );
+  }
+
+  List<Widget> _quickAccessScreenTiles() {
+    final tiles = <Widget>[];
+    for (final module in _modules.entries) {
+      for (final group in module.value.entries) {
+        for (final page in group.value) {
+          final key = _screenPermissionKey(module.key, group.key, page);
+          if (!_quickAccessKeys.contains(key) || !_canOpenScreen(module.key, group.key, page)) continue;
+          tiles.add(_quick('$_module • $page', Icons.favorite_rounded, () => _open(module.key, group.key, page)));
+        }
+      }
+    }
+    return tiles;
   }
 
   Future<void> _loadWorkspaceSettings(String companyId) async {
@@ -1748,28 +1826,24 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                                 (_hrDashboardAccessChecked && _hrDashboardAllowed))
                             .map((page) => Padding(
                           padding: const EdgeInsetsDirectional.only(start: 20, end: 5),
-                          child: ListTile(
-                            dense: true,
-                            visualDensity: const VisualDensity(vertical: -3),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 9),
-                            hoverColor: const Color(0xFFFFA015),
-                            selected: page == _page && selectedModule,
-                            selectedTileColor: const Color(0xFFFFA015),
-                            minLeadingWidth: 12,
-                            leading: Icon(page == _page && selectedModule ? Icons.radio_button_checked_rounded : Icons.circle_outlined, color: const Color(0xFF3E007D), size: 11),
-                            title: Text(page, style: TextStyle(color: const Color(0xFF3E007D), fontSize: 10.5, fontWeight: page == _page && selectedModule ? FontWeight.w800 : FontWeight.normal)),
-                            onTap: () {
-                              setState(() {
-                                _module = name;
-                                _group = groupEntry.key;
-                                _page = page;
-                                _search = '';
-                                _expandedModules.add(name);
-                                _expandedGroups.add(groupKey);
-                              });
-                              _loadWorkspacePage(page);
-                            },
-                          ),
+                          child: Row(children: [
+                            Expanded(child: ListTile(
+                              dense: true,
+                              visualDensity: const VisualDensity(vertical: -3),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 9),
+                              hoverColor: const Color(0xFFFFA015),
+                              selected: page == _page && selectedModule,
+                              selectedTileColor: const Color(0xFFFFA015),
+                              minLeadingWidth: 12,
+                              leading: Icon(page == _page && selectedModule ? Icons.radio_button_checked_rounded : Icons.circle_outlined, color: const Color(0xFF3E007D), size: 11),
+                              title: Text(page, style: TextStyle(color: const Color(0xFF3E007D), fontSize: 10.5, fontWeight: page == _page && selectedModule ? FontWeight.w800 : FontWeight.normal)),
+                              onTap: () {
+                                if (!_canOpenScreen(name, groupEntry.key, page)) { _showActionMessage('هذه الشاشة غير متاحة ضمن صلاحيات المستخدم.'); return; }
+                                _open(name, groupEntry.key, page);
+                              },
+                            )),
+                            _quickAccessScreenButton(name, groupEntry.key, page),
+                          ]),
                         )),
                     ]),
                   ));
@@ -1896,8 +1970,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             ]),
             const SizedBox(height: 10),
             Wrap(spacing: 5, runSpacing: 5, children: [
-              _quick('فاتورة البيع', Icons.point_of_sale_rounded, () => _open('مبيعات', 'حركات', 'فاتورة بيع')),
-              _quick('جامع صور الأصناف', Icons.photo_library_outlined, () => _open('مخازن', 'حركات', 'جامع صور الأصناف')),
+              ..._quickAccessScreenTiles(),
             ]),
           ]),
         ),
@@ -2891,19 +2964,20 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 Expanded(child: Text(silsilaText('الملخص التنفيذي'), style: const TextStyle(fontSize: 22, height: 1.15, fontWeight: FontWeight.w900, color: _purple, letterSpacing: -.3))),
                 const SizedBox(width: 12),
                 SizedBox(
-                  width: 360,
-                  height: 40,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _executivePeriodCheckbox('السنة السابقة'),
-                        _executivePeriodCheckbox('السنة الحالية'),
-                        _executivePeriodCheckbox('الشهر السابق'),
-                        _executivePeriodCheckbox('الشهر الحالي'),
-                      ],
-                    ),
+                  width: 250,
+                  child: GridView.count(
+                    crossAxisCount: 2,
+                    childAspectRatio: 3.8,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 1,
+                    crossAxisSpacing: 3,
+                    children: [
+                      _executivePeriodCheckbox('السنة السابقة'),
+                      _executivePeriodCheckbox('الشهر السابق'),
+                      _executivePeriodCheckbox('السنة الحالية'),
+                      _executivePeriodCheckbox('الشهر الحالي'),
+                    ],
                   ),
                 ),
               ]),
@@ -3445,7 +3519,32 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             ),
           ],
         ]),
-        const Divider(height: 13),
+        const Divider(height: 8),
+        SizedBox(
+          height: 82,
+          child: Row(children: [
+            SizedBox(width: 82, height: 82, child: CustomPaint(
+              painter: _ExecutiveDonutPainter(rows.map((row) => (row['value'] as num?)?.toDouble() ?? 0).toList()),
+            )),
+            const SizedBox(width: 8),
+            Expanded(child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: rows.map((row) {
+                final value = ((row['value'] as num?)?.toDouble() ?? 0).abs();
+                final total = rows.fold<double>(0, (sum, item) => sum + (((item['value'] as num?)?.toDouble() ?? 0).abs()));
+                final percent = total == 0 ? 0.0 : value / total * 100;
+                final label = (row['label'] ?? '').toString();
+                return Padding(padding: const EdgeInsets.symmetric(vertical: 1), child: Text(
+                  '$label  •  ${percent.toStringAsFixed(1)}%  •  ${_executiveMoney((row['value'] as num?)?.toDouble()).replaceAll(' ج.م', '')}',
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF51465D)),
+                ));
+              }).toList(),
+            )),
+          ]),
+        ),
+        const Divider(height: 8),
         Expanded(child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: rows.map((row) {
@@ -4023,3 +4122,42 @@ class ErpScreenLayoutRuntime extends StatelessWidget {
     );
   }
 }
+
+
+class _ExecutiveDonutPainter extends CustomPainter {
+  _ExecutiveDonutPainter(this.values);
+  final List<double> values;
+  static const _colors = <Color>[
+    Color(0xFF3E007D), Color(0xFFFFA015), Color(0xFFFF27C3),
+    Color(0xFF2475B8), Color(0xFF24A879), Color(0xFF8E78A8),
+  ];
+  @override
+  void paint(Canvas canvas, Size size) {
+    final total = values.fold<double>(0, (sum, value) => sum + value.abs());
+    final rect = Offset.zero & size;
+    final center = rect.center;
+    final radius = math.min(size.width, size.height) / 2;
+    final paint = Paint()..style = PaintingStyle.stroke..strokeWidth = 12..strokeCap = StrokeCap.butt;
+    if (total <= 0) {
+      paint.color = const Color(0xFFECE7F2);
+      canvas.drawCircle(center, radius - 7, paint);
+    } else {
+      var start = -math.pi / 2;
+      for (var i = 0; i < values.length; i++) {
+        final sweep = values[i].abs() / total * math.pi * 2;
+        if (sweep <= 0) continue;
+        paint.color = _colors[i % _colors.length];
+        canvas.drawArc(Rect.fromCircle(center: center, radius: radius - 7), start, sweep, false, paint);
+        start += sweep;
+      }
+    }
+    final centerText = TextPainter(
+      text: const TextSpan(text: 'النسب', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
+      textDirection: TextDirection.rtl,
+    )..layout();
+    centerText.paint(canvas, center - Offset(centerText.width / 2, centerText.height / 2));
+  }
+  @override
+  bool shouldRepaint(covariant _ExecutiveDonutPainter oldDelegate) => oldDelegate.values != values;
+}
+
