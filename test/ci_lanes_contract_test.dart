@@ -98,7 +98,7 @@ void main() {
     final fullValidation = File('.github/workflows/full-validation.yml').readAsStringSync();
     expect(fullValidation, contains('--pwa-strategy=none'));
     expect(fullValidation, contains('Stamp the Web bootstrap with the exact commit'));
-    expect(fullValidation, contains('flutter_bootstrap.js?v=${GITHUB_SHA}'));
+    expect(fullValidation, contains(r'flutter_bootstrap.js?v=${GITHUB_SHA}'));
 
     // Validate each commit independently so later pushes cannot cancel active checks.
     for (final workflow in [mobile, web]) {
