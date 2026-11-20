@@ -617,7 +617,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                     DataColumn2(label: Text('م'), size: ColumnSize.S, fixedWidth: 52),
                     DataColumn2(label: Text('كود البراند'), size: ColumnSize.S, fixedWidth: 115),
                     DataColumn2(label: Text('اسم البراند عربي'), size: ColumnSize.L),
-                    DataColumn2(label: Text('الاسم الإنجليزي'), size: ColumnSize.L),
                   ],
                   rows: List<DataRow>.generate(filtered.length, (index) {
                     final row = filtered[index], id = _s(filtered[index]['id']);
@@ -632,7 +631,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       DataCell(Text('${index + 1}')),
                       DataCell(Text(_s(row['brand_code']), style: const TextStyle(color: _brandPurple, fontWeight: FontWeight.w900))),
                       DataCell(Text(_s(row['brand_name']))),
-                      DataCell(Text(_s(row['brand_name_en']))),
                     ]);
                   }),
                 )),
@@ -1061,7 +1059,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       if (_s(candidate['group_name']) == group) { record = candidate; break; }
     }
     final groupCode = _s(record?['group_code']);
-    final groupEnglish = _s(record?['group_name_en']);
     final isDefault = groupCode == 'Brg01';
     return Container(
       margin: const EdgeInsets.only(bottom: 7),
@@ -1089,8 +1086,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: _brandPurple))),
                 const SizedBox(width: 5),
-                Expanded(flex: 1, child: Text(groupEnglish, textDirection: TextDirection.ltr,
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.black54))),
+                const Expanded(flex: 1, child: SizedBox.shrink()),
                 const SizedBox(width: 3),
                 SizedBox(width: 68, child: Center(child: Text('${children.length}',
                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)))),
