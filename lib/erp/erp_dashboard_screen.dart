@@ -4079,6 +4079,7 @@ class ErpScreenLayoutRuntime extends StatelessWidget {
         final buttonStyle = profile['buttonStyle'] as String? ?? 'glossy';
         final tableStyle = profile['tableStyle'] as String? ?? 'glass';
         final treeStyle = profile['treeStyle'] as String? ?? 'neon';
+        final gridStyle = profile['gridStyle'] as String? ?? 'compact';
         final headerStyle = profile['headerStyle'] as String? ?? 'glossy';
         final primary = Color((profile['primary'] as int?) ?? const Color(0xFF3E007D).toARGB32());
         final accent = Color((profile['accent'] as int?) ?? const Color(0xFFFF27C3).toARGB32());
@@ -4095,6 +4096,18 @@ class ErpScreenLayoutRuntime extends StatelessWidget {
         );
         final theme = base.copyWith(
           colorScheme: base.colorScheme.copyWith(primary: primary, secondary: accent),
+          visualDensity: gridStyle == 'comfortable' ? VisualDensity.standard : VisualDensity.compact,
+          dividerTheme: DividerThemeData(
+            color: primary.withValues(alpha: gridStyle == 'outlined' ? .34 : .14),
+            thickness: gridStyle == 'outlined' ? 1.2 : .7,
+            space: spacing * 2 + 1,
+          ),
+          chipTheme: base.chipTheme.copyWith(
+            backgroundColor: primary.withValues(alpha: gridStyle == 'striped' ? .12 : .07),
+            side: BorderSide(color: accent.withValues(alpha: gridStyle == 'outlined' ? .7 : .28)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
+            labelStyle: base.textTheme.labelMedium?.copyWith(color: primary, fontWeight: FontWeight.w700),
+          ),
           cardTheme: CardThemeData(
             color: themePreset == 'platinum' ? const Color(0xFFF8F9FC) : Colors.white,
             elevation: themePreset == 'classic' ? 1 : 5,
