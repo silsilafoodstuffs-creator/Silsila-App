@@ -1046,7 +1046,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     final availableGroups = _groupsForActivity(activityCode);
     final selectedGroupId = availableGroups.any((group) => _s(group['id']) == _s(row['brand_group_id']))
         ? _s(row['brand_group_id']) : null;
-    final activityDropdown = SizedBox(width: 145, child: DropdownButton<String>(
+    final activityDropdown = SizedBox(width: 145, child: _brandGridField(DropdownButton<String>(
       isExpanded: true,
       value: _activities.any((activity) => _s(activity['code']) == activityCode) ? activityCode : null,
       hint: const Text('نوع النشاط'), underline: const SizedBox.shrink(),
@@ -1055,8 +1055,8 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         value: _s(activity['code']), child: Text(_s(activity['name']), overflow: TextOverflow.ellipsis),
       )).toList(),
       onChanged: system ? null : (value) { if (value != null) _assignActivity(row, value); },
-    ));
-    final groupDropdown = SizedBox(width: 165, child: DropdownButton<String?>(
+    )));
+    final groupDropdown = SizedBox(width: 165, child: _brandGridField(DropdownButton<String?>(
       isExpanded: true, value: selectedGroupId, hint: const Text('بدون مجموعة'),
       underline: const SizedBox.shrink(), style: const TextStyle(fontSize: 11, color: Colors.black87),
       items: [
@@ -1067,7 +1067,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         )),
       ],
       onChanged: system ? null : (value) => _assignGroup(row, value),
-    ));
+    )));
     final status = SizedBox(width: 68, child: Center(child: Checkbox(
       shape: const CircleBorder(), value: row['is_active'] == true,
       activeColor: _brandPurple, visualDensity: VisualDensity.compact,
@@ -1080,7 +1080,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       onChanged: system ? null : (_) => _toggleBrandVisibility(row),
     )));
-    final displayOrder = SizedBox(width: 62, child: TextFormField(
+    final displayOrder = SizedBox(width: 62, child: _brandGridField(TextFormField(
       key: ValueKey('brand-order-$id-${_s(row['display_order'])}'),
       initialValue: _s(row['display_order']).isEmpty ? '1000' : _s(row['display_order']),
       enabled: !system, textAlign: TextAlign.center, keyboardType: TextInputType.number,
@@ -1089,7 +1089,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         border: OutlineInputBorder(), hintText: 'ترتيب'),
       onFieldSubmitted: (value) => _saveDisplayOrder(row, value),
-    ));
+    )));
     final logo = InkWell(onTap: () => _showLogoDialog(row), child: _logoPreview(row, size: 46));
     return Padding(
       padding: const EdgeInsetsDirectional.only(bottom: 6),
@@ -1111,12 +1111,12 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
               return Row(children: [
                 SizedBox(width: 28, child: Text('${index + 1}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800))),
-                SizedBox(width: 92, child: code),
-                activityDropdown, const SizedBox(width: 5), groupDropdown, const SizedBox(width: 5),
-                Expanded(flex: 3, child: name), const SizedBox(width: 3),
-                status, appVisibility, displayOrder, const SizedBox(width: 3),
+                SizedBox(width: 92, child: _brandGridField(code)),
+                activityDropdown, const SizedBox(width: 2), groupDropdown, const SizedBox(width: 2),
+                SizedBox(width: 220, child: _brandGridField(name)), const SizedBox(width: 2),
+                status, appVisibility, displayOrder, const SizedBox(width: 2),
                 SizedBox(width: 50, child: Center(child: logo)),
-                const SizedBox(width: 40),
+                const Expanded(child: SizedBox.shrink()),
               ]);
             }),
           ),
@@ -1212,27 +1212,27 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             const SizedBox(width: 28, child: Text('م', textAlign: TextAlign.center, style: headingStyle)),
             const SizedBox(width: 92, child: Text('كود البراند', style: headingStyle)),
             const SizedBox(width: 145, child: Text('نوع النشاط', style: headingStyle)),
-            const SizedBox(width: 5),
+            const SizedBox(width: 2),
             const SizedBox(width: 165, child: Text('مجموعة البراند', style: headingStyle)),
-            const SizedBox(width: 5),
-            const Expanded(flex: 2, child: Text('اسم البراند/الماركة', style: headingStyle)),
-            const SizedBox(width: 5),
+            const SizedBox(width: 2),
+            const SizedBox(width: 220, child: Text('اسم البراند/الماركة', style: headingStyle)),
+            const SizedBox(width: 2),
             const SizedBox(width: 3),
             const SizedBox(width: 68, child: Center(child: Text('نشط', style: headingStyle))),
             const SizedBox(width: 78, child: Center(child: Text('في التطبيق', style: headingStyle))),
             const SizedBox(width: 62, child: Center(child: Text('الترتيب', style: headingStyle))),
             const SizedBox(width: 50, child: Center(child: Text('الشعار', style: headingStyle))),
-            const SizedBox(width: 40),
+            const Expanded(child: SizedBox.shrink()),
           ]),
           const SizedBox(height: 4),
           Row(children: [
             const SizedBox(width: 28), filter('code', 92, 'بحث الكود'),
-            filter('activity', 145, 'بحث النشاط'), const SizedBox(width: 5),
-            filter('group', 165, 'بحث المجموعة'), const SizedBox(width: 5),
-            Expanded(flex: 2, child: filter('name', double.infinity, 'بحث الاسم العربي')),
-            const SizedBox(width: 5),
+            filter('activity', 145, 'بحث النشاط'), const SizedBox(width: 2),
+            filter('group', 165, 'بحث المجموعة'), const SizedBox(width: 2),
+            SizedBox(width: 220, child: filter('name', 220, 'بحث الاسم العربي')),
+            const SizedBox(width: 2),
             const SizedBox(width: 3), const SizedBox(width: 68), const SizedBox(width: 78),
-            const SizedBox(width: 62), const SizedBox(width: 50), const SizedBox(width: 40),
+            const SizedBox(width: 62), const SizedBox(width: 50), const Expanded(child: SizedBox.shrink()),
           ]),
         ]),
       )),
