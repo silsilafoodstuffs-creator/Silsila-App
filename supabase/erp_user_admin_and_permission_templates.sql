@@ -115,6 +115,7 @@ create table if not exists public.erp_user_permission_matrix (
  can_preview boolean not null default false,
  can_print boolean not null default false,
  can_import_excel boolean not null default false,
+ can_export_excel boolean not null default false,
  can_print_pdf boolean not null default false,
  show_in_quick_tasks boolean not null default false,
  updated_at timestamptz not null default now(),
