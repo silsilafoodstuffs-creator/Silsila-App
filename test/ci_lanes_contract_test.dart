@@ -9,13 +9,15 @@ void main() {
     final hrRecords = File('lib/erp/screens/erp_hr_records_screen.dart').readAsStringSync();
     final app = File('lib/main.dart').readAsStringSync();
 
-    expect(dashboard, contains("'موارد بشرية': {"));
+    final menuCatalog = File('lib/erp/services/erp_menu_catalog.dart').readAsStringSync();
+    expect(dashboard, contains('ErpMenuCatalog.modules'));
+    expect(menuCatalog, contains("'موارد بشرية': {"));
     expect(dashboard, isNot(contains("'شئون موظفين': {")));
     final permissionCatalog = File('lib/erp/screens/erp_permissions_screen.dart').readAsStringSync();
     final userAdmin = File('lib/erp/screens/erp_user_admin_screen.dart').readAsStringSync();
-    expect(permissionCatalog, contains("'موارد بشرية':{"));
+    expect(permissionCatalog, contains('ErpMenuCatalog.modules'));
     expect(permissionCatalog, isNot(contains("'شئون موظفين':{")));
-    expect(userAdmin, contains("'موارد بشرية':{"));
+    expect(userAdmin, contains('ErpMenuCatalog.modules'));
     expect(userAdmin, isNot(contains("'شئون موظفين':{")));
     expect(dashboard, contains("'الهيكل الوظيفي'"));
     expect(dashboard, contains("'سلف الموظفين'"));
@@ -109,6 +111,7 @@ void main() {
     final dashboard = File('lib/erp/erp_dashboard_screen.dart').readAsStringSync();
     final permissionCatalog = File('lib/erp/screens/erp_permissions_screen.dart').readAsStringSync();
     final userAdmin = File('lib/erp/screens/erp_user_admin_screen.dart').readAsStringSync();
+    final menuCatalog = File('lib/erp/services/erp_menu_catalog.dart').readAsStringSync();
     expect(migration, contains("set menu_name='موارد بشرية'"));
     expect(migration, contains("where menu_name='شئون موظفين'"));
     expect(migration, contains("name_ar='مدير موارد بشرية'"));
@@ -128,10 +131,11 @@ void main() {
           .where((value) => !headings.contains(value))
           .toList();
     }
-    final pages = hrPages(dashboard, "'علاقات عملاء'");
+    expect(dashboard, contains('ErpMenuCatalog.modules'));
+    expect(permissionCatalog, contains('ErpMenuCatalog.modules'));
+    expect(userAdmin, contains('ErpMenuCatalog.modules'));
+    final pages = hrPages(menuCatalog, "'علاقات عملاء'");
     expect(pages, hasLength(78));
-    expect(hrPages(permissionCatalog, "'الخزائن والبنوك'"), equals(pages));
-    expect(hrPages(userAdmin, "'علاقات عملاء'"), equals(pages));
   });
 
 }
