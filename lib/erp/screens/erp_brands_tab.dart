@@ -1097,36 +1097,53 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   }
 
   Widget _treeHeader() {
-    return LayoutBuilder(builder: (context, constraints) {
-      if (constraints.maxWidth < 850) return const SizedBox.shrink();
-      const headingStyle = TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _brandPurple);
-      return Container(
+    const headingStyle = TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: _brandPurple);
+    Widget filter(String key, double width, String hint) => SizedBox(width: width, child: TextField(
+      controller: _columnSearch[key], onChanged: (_) => setState(() {}),
+      style: const TextStyle(fontSize: 10),
+      decoration: InputDecoration(hintText: hint, isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        prefixIcon: const Icon(Icons.search, size: 12),
+        prefixIconConstraints: const BoxConstraints(minWidth: 18, minHeight: 22),
+        border: const OutlineInputBorder()),
+    ));
+    return SingleChildScrollView(scrollDirection: Axis.horizontal,
+      child: SizedBox(width: 1120, child: Container(
         margin: const EdgeInsetsDirectional.only(start: 8, end: 0, bottom: 5),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF5EFFB),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: _brandBorder),
-        ),
-        child: Row(children: [
-          const SizedBox(width: 28),
-          const SizedBox(width: 92, child: Text('كود البراند', style: headingStyle)),
-          const SizedBox(width: 145, child: Text('نوع النشاط', style: headingStyle)),
-          const SizedBox(width: 5),
-          const SizedBox(width: 165, child: Text('مجموعة البراند', style: headingStyle)),
-          const SizedBox(width: 5),
-          const Expanded(flex: 2, child: Text('اسم البراند عربي', style: headingStyle)),
-          const SizedBox(width: 5),
-          const Expanded(flex: 1, child: Text('الاسم الإنجليزي', style: headingStyle)),
-          const SizedBox(width: 3),
-          const SizedBox(width: 68, child: Center(child: Text('نشط', style: headingStyle))),
-          const SizedBox(width: 78, child: Center(child: Text('في التطبيق', style: headingStyle))),
-          const SizedBox(width: 62, child: Center(child: Text('الترتيب', style: headingStyle))),
-          const SizedBox(width: 46, child: Center(child: Text('الشعار', style: headingStyle))),
-          const SizedBox(width: 40),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(color: const Color(0xFFF5EFFB), borderRadius: BorderRadius.circular(8), border: Border.all(color: _brandBorder)),
+        child: Column(children: [
+          Row(children: [
+            const SizedBox(width: 28),
+            const SizedBox(width: 92, child: Text('كود البراند', style: headingStyle)),
+            const SizedBox(width: 145, child: Text('نوع النشاط', style: headingStyle)),
+            const SizedBox(width: 5),
+            const SizedBox(width: 165, child: Text('مجموعة البراند', style: headingStyle)),
+            const SizedBox(width: 5),
+            const Expanded(flex: 2, child: Text('اسم البراند عربي', style: headingStyle)),
+            const SizedBox(width: 5),
+            const Expanded(flex: 1, child: Text('الاسم الإنجليزي', style: headingStyle)),
+            const SizedBox(width: 3),
+            const SizedBox(width: 68, child: Center(child: Text('نشط', style: headingStyle))),
+            const SizedBox(width: 78, child: Center(child: Text('في التطبيق', style: headingStyle))),
+            const SizedBox(width: 62, child: Center(child: Text('الترتيب', style: headingStyle))),
+            const SizedBox(width: 46, child: Center(child: Text('الشعار', style: headingStyle))),
+            const SizedBox(width: 40),
+          ]),
+          const SizedBox(height: 4),
+          Row(children: [
+            const SizedBox(width: 28), filter('code', 92, 'بحث الكود'),
+            filter('activity', 145, 'بحث النشاط'), const SizedBox(width: 5),
+            filter('group', 165, 'بحث المجموعة'), const SizedBox(width: 5),
+            Expanded(flex: 2, child: filter('name', double.infinity, 'بحث الاسم العربي')),
+            const SizedBox(width: 5),
+            Expanded(flex: 1, child: filter('english', double.infinity, 'بحث الإنجليزي')),
+            const SizedBox(width: 3), const SizedBox(width: 68), const SizedBox(width: 78),
+            const SizedBox(width: 62), const SizedBox(width: 46), const SizedBox(width: 40),
+          ]),
         ]),
-      );
-    });
+      )),
+    );
   }
 
   @override
