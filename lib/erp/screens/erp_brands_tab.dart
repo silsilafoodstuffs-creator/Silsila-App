@@ -1047,7 +1047,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     final selectedGroupId = availableGroups.any((group) => _s(group['id']) == _s(row['brand_group_id']))
         ? _s(row['brand_group_id']) : null;
     final activityDropdown = SizedBox(width: 145, child: _brandGridField(DropdownButton<String>(
-      isExpanded: true, isDense: true, itemHeight: 40,
+      isExpanded: true, isDense: true,
       value: _activities.any((activity) => _s(activity['code']) == activityCode) ? activityCode : null,
       hint: const Text('نوع النشاط'), underline: const SizedBox.shrink(),
       style: const TextStyle(fontSize: 11, color: Colors.black87),
@@ -1057,7 +1057,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       onChanged: system ? null : (value) { if (value != null) _assignActivity(row, value); },
     )));
     final groupDropdown = SizedBox(width: 165, child: _brandGridField(DropdownButton<String?>(
-      isExpanded: true, isDense: true, itemHeight: 40, value: selectedGroupId, hint: const Text('بدون مجموعة'),
+      isExpanded: true, isDense: true, value: selectedGroupId, hint: const Text('بدون مجموعة'),
       underline: const SizedBox.shrink(), style: const TextStyle(fontSize: 11, color: Colors.black87),
       items: [
         const DropdownMenuItem<String?>(value: null, child: Text('بدون مجموعة')),
@@ -1479,7 +1479,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                               : null)),
                             DataCell(_brandGridField(InkWell(onTap: () => _showLogoDialog(row), child: _logoPreview(row, size: 44)))),
                             DataCell(_brandGridField(SizedBox(width: 150, child: DropdownButton<String?>(
-                              isExpanded: true, isDense: compactMobile, itemHeight: compactMobile ? 40 : 48,
+                              isExpanded: true, isDense: compactMobile, itemHeight: 48,
                               value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : _defaultGroupId,
                               hint: const Text('بدون مجموعة'),
                               items: _groups.map((g) => DropdownMenuItem<String?>(value: _s(g['id']), child: Text('${_s(g['group_code'])} - ${_s(g['group_name'])}', overflow: TextOverflow.ellipsis))).toList(),
