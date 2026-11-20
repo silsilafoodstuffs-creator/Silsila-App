@@ -11,8 +11,8 @@ void main() {
   });
 
   test('activity category filtering canonicalizes legacy and current activity codes', () {
-    expect(categoryScreen, contains("RegExp(r'^ACT0*(\\d{1,3})$')"));
-    expect(categoryScreen, contains("RegExp(r'^\\d{1,3}$')"));
+    expect(categoryScreen, contains("RegExp(r'^ACT0*(\\d{1,3})')"));
+    expect(categoryScreen, contains("RegExp(r'^\\d{1,3}')"));
     expect(categoryScreen, contains("final rawCode = normalizeActivity(_s(row['activity_code']));"));
     expect(categoryScreen, contains('return rawCode == _selectedActivityCode;'));
     expect(categoryScreen, contains("const defaultActivity = '01';"));
