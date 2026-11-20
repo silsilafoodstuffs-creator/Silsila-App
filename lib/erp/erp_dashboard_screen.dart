@@ -548,6 +548,34 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     return _screenActionPermissions[key] == true;
   }
 
+  bool _canPerformActionLabel(String label) {
+    if (_isSystemAdmin) return true;
+    final value = label.trim().toLowerCase();
+    String? action;
+    if (value.contains('استيراد')) {
+      action = 'استيراد Excel';
+    } else if (value.contains('تصدير') || value.contains('excel')) {
+      action = 'تصدير Excel';
+    } else if (value.contains('pdf')) {
+      action = 'طباعة PDF';
+    } else if (value.contains('معاينة')) {
+      action = 'معاينة';
+    } else if (value.contains('طباعة') || value.contains('print')) {
+      action = 'طباعة';
+    } else if (value.contains('تحديث') || value.contains('تحميل')) {
+      action = 'تحديث';
+    } else if (value.contains('إضافة')) {
+      action = 'إضافة';
+    } else if (value.contains('حفظ')) {
+      action = 'حفظ';
+    } else if (value.contains('تعديل')) {
+      action = 'تعديل';
+    } else if (value.contains('حذف')) {
+      action = 'حذف';
+    }
+    return action == null || _canPerformCurrentAction(action);
+  }
+
   Future<void> _toggleQuickAccess(String module, String group, String page) async {
     final companyId = _appManagementCompanyId;
     final userId = Supabase.instance.client.auth.currentUser?.id;
@@ -1536,7 +1564,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   Widget build(BuildContext context) {
     return ErpScreenLayoutRuntime(
       screen: _page,
-      child: Directionality(
+      child: ErpQuickTaskPermissionScope(
+        canPerform: _canPerformActionLabel,
+        child: Directionality(
       textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
       child: LayoutBuilder(builder: (context, c) {
         // Responsive breakpoints: keep navigation, workspace, and utility panels visible.
@@ -1657,6 +1687,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           ]),
         );
       }),
+        ),
       ),
     );
   }
