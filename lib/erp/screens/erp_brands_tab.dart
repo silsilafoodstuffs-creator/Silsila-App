@@ -1110,6 +1110,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 Expanded(flex: 3, child: name), const SizedBox(width: 3),
                 status, appVisibility, displayOrder, const SizedBox(width: 3),
                 SizedBox(width: 50, child: Center(child: logo)),
+                const SizedBox(width: 40),
               ]);
             }),
           ),
@@ -1215,6 +1216,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             const SizedBox(width: 78, child: Center(child: Text('في التطبيق', style: headingStyle))),
             const SizedBox(width: 62, child: Center(child: Text('الترتيب', style: headingStyle))),
             const SizedBox(width: 50, child: Center(child: Text('الشعار', style: headingStyle))),
+            const SizedBox(width: 40),
           ]),
           const SizedBox(height: 4),
           Row(children: [
@@ -1224,7 +1226,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             Expanded(flex: 2, child: filter('name', double.infinity, 'بحث الاسم العربي')),
             const SizedBox(width: 5),
             const SizedBox(width: 3), const SizedBox(width: 68), const SizedBox(width: 78),
-            const SizedBox(width: 62), const SizedBox(width: 50),
+            const SizedBox(width: 62), const SizedBox(width: 50), const SizedBox(width: 40),
           ]),
         ]),
       )),
@@ -1284,7 +1286,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                     _syncGridNameControllers();
                   }),
                 ],
-                ErpQuickTaskButton(label:'شعار البراند', icon:Icons.image_outlined, onPressed:_saving || selected == null ? null : () => _uploadLogo(selected)),
+                ErpQuickTaskButton(label:'شعار البراند', icon:Icons.image_outlined, onPressed:_saving || selected == null ? null : () => _showLogoDialog(selected)),
                 ErpQuickTaskButton(label:'استيراد شعارات متعددة', icon:Icons.collections_outlined, onPressed:_saving ? null : _bulkImportLogos),
                 ErpQuickTaskButton(label:'حذف', icon:Icons.delete_outline, onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
               ]),
@@ -1452,7 +1454,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                           cells: [
                             DataCell(_brandGridField(Text('${index + 1}', style: const TextStyle(fontWeight: FontWeight.w800)))),
                             DataCell(_brandGridField(Text(_s(row['brand_code']), style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))), onTap: () => setState(() => _selectedId = id)),
-                            DataCell(_brandGridField(SizedBox(width: 104, child: _gridEditing && (_gridEditingOnlyId == null || _gridEditingOnlyId == id) && !system
+                            DataCell(_brandGridField(SizedBox(width: 94, child: _gridEditing && (_gridEditingOnlyId == null || _gridEditingOnlyId == id) && !system
                               ? Focus(
                                   onKeyEvent: (_, event) {
                                     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) { FocusScope.of(context).nextFocus(); return KeyEventResult.handled; }
@@ -1470,7 +1472,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                                   _gridEditingOnlyId = id;
                                 })
                               : null)),
-                            DataCell(_brandGridField(InkWell(onTap: () => _showLogoDialog(row), child: _logoPreview(row, size: 50)))),
+                            DataCell(_brandGridField(InkWell(onTap: () => _showLogoDialog(row), child: _logoPreview(row, size: 44)))),
                             DataCell(_brandGridField(SizedBox(width: 150, child: DropdownButton<String?>(
                               isExpanded: true, isDense: compactMobile, itemHeight: compactMobile ? 40 : 48,
                               value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : _defaultGroupId,
