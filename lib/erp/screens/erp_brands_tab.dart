@@ -1012,7 +1012,13 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       icon: const Icon(Icons.photo_library_outlined, color: _brandPurple));
     final controls = Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 7, runSpacing: 4,
       children: [
-        activityDropdown, groupDropdown, status, appVisibility,
+        Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('نوع النشاط', style: TextStyle(fontSize: 9, color: Colors.black54)), activityDropdown,
+        ]),
+        Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('مجموعة البراند', style: TextStyle(fontSize: 9, color: Colors.black54)), groupDropdown,
+        ]),
+        status, appVisibility,
         Column(mainAxisSize: MainAxisSize.min, children: [
           const Text('ترتيب الظهور', style: TextStyle(fontSize: 9, color: Colors.black54)), displayOrder,
         ]),
@@ -1097,22 +1103,25 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   }
 
   Widget _treeHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      child: Row(children: [
-        const SizedBox(width: 28),
-        const SizedBox(width: 92, child: Text('كود البراند', style: TextStyle(fontWeight: FontWeight.w800))),
-        const SizedBox(width: 145, child: Text('نوع النشاط', style: TextStyle(fontWeight: FontWeight.w800))),
-        const SizedBox(width: 165, child: Text('مجموعة البراند', style: TextStyle(fontWeight: FontWeight.w800))),
-        const Expanded(flex: 2, child: Text('اسم البراند عربي', style: TextStyle(fontWeight: FontWeight.w800))),
-        const Expanded(flex: 1, child: Text('الاسم الإنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
-        const Text('نشط', style: TextStyle(fontWeight: FontWeight.w800)),
-        const Text('في التطبيق', style: TextStyle(fontWeight: FontWeight.w800)),
-        const SizedBox(width: 68, child: Text('ترتيب الظهور', style: TextStyle(fontWeight: FontWeight.w800))),
-        const SizedBox(width: 66, child: Text('الصورة', style: TextStyle(fontWeight: FontWeight.w800))),
-        const SizedBox(width: 42),
-      ]),
-    );
+    return LayoutBuilder(builder: (context, constraints) {
+      if (constraints.maxWidth < 850) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        child: Row(children: [
+          const SizedBox(width: 28),
+          const SizedBox(width: 92, child: Text('كود البراند', style: TextStyle(fontWeight: FontWeight.w800))),
+          const SizedBox(width: 145, child: Text('نوع النشاط', style: TextStyle(fontWeight: FontWeight.w800))),
+          const SizedBox(width: 165, child: Text('مجموعة البراند', style: TextStyle(fontWeight: FontWeight.w800))),
+          const Expanded(flex: 2, child: Text('اسم البراند عربي', style: TextStyle(fontWeight: FontWeight.w800))),
+          const Expanded(flex: 1, child: Text('الاسم الإنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
+          const Text('نشط', style: TextStyle(fontWeight: FontWeight.w800)),
+          const Text('في التطبيق', style: TextStyle(fontWeight: FontWeight.w800)),
+          const SizedBox(width: 68, child: Text('ترتيب الظهور', style: TextStyle(fontWeight: FontWeight.w800))),
+          const SizedBox(width: 66, child: Text('الصورة', style: TextStyle(fontWeight: FontWeight.w800))),
+          const SizedBox(width: 42),
+        ]),
+      );
+    });
   }
 
   @override
