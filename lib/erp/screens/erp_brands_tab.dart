@@ -201,6 +201,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     var activityCode = _s(row?['activity_code']).isEmpty
         ? '01'
         : _s(row?['activity_code']);
+    var groupId = _s(row?['brand_group_id']).isEmpty ? null : _s(row?['brand_group_id']);
     final formKey = GlobalKey<FormState>();
     final result = await showDialog<bool>(
       context: context,
@@ -244,6 +245,19 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                         ? 'اختر نوع النشاط.'
                         : null,
                   ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String?>(
+                    value: _groupsForActivity(activityCode).any((group) => _s(group['id']) == groupId) ? groupId : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'مجموعة البراند'),
+                    items: [
+                      const DropdownMenuItem<String?>(value: null, child: Text('بدون مجموعة')),
+                      ..._groupsForActivity(activityCode).map((group) => DropdownMenuItem<String?>(
+                        value: _s(group['id']), child: Text('${_s(group['group_code'])} — ${_s(group['group_name'])}', overflow: TextOverflow.ellipsis),
+                      )),
+                    ],
+                    onChanged: (value) => groupId = value,
+                  ),
                 ],
               ),
             ),
@@ -268,6 +282,8 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         'brand_name': name.text.trim(),
         'brand_name_en': english.text.trim().isEmpty ? null : english.text.trim(),
         if (row == null || activityCode != _s(row['activity_code'])) 'activity_code': activityCode,
+        'brand_group_id': groupId,
+        'brand_group': _groupById(groupId)?['group_name'],
       };
       if (row == null) {
         final inserted = await _db.from('erp_brands')
@@ -287,6 +303,10 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             },
           ],
         });
+        await _db.from('erp_brands').update({
+          'brand_group_id': groupId,
+          'brand_group': _groupById(groupId)?['group_name'],
+        }).eq('id', _s(row['id'])).eq('company_id', widget.companyId.trim());
       }
       await _load(showLoading: false);
       if (mounted) ErpCenterToast.show(context, row == null ? 'تمت إضافة البراند وتوليد كوده.' : 'تم تعديل بيانات البراند.');
@@ -936,83 +956,122 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     final id = _s(row['id']);
     final selected = _selectedId == id;
     final system = row['is_system'] == true;
-    return LayoutBuilder(builder: (context, constraints) {
-      final compact = constraints.maxWidth < 620;
-      final code = Text(_s(row['brand_code']), overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple, fontSize: 12));
-      final name = Text(_s(row['brand_name']), softWrap: true,
-        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14));
-      final english = Text(_s(row['brand_name_en']), textDirection: TextDirection.ltr,
-        overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.black54));
-      final status = Row(mainAxisSize: MainAxisSize.min, children: [
-        Checkbox(shape: const CircleBorder(), value: row['is_active'] == true,
-          activeColor: _brandPurple, visualDensity: VisualDensity.compact,
-          onChanged: system ? null : (_) => _toggle(row)),
-        const Text('نشط', style: TextStyle(fontSize: 11)),
+    final activityCode = _s(row['activity_code']).isEmpty ? '01' : _s(row['activity_code']);
+    final availableGroups = _groupsForActivity(activityCode);
+    final selectedGroupId = availableGroups.any((group) => _s(group['id']) == _s(row['brand_group_id']))
+        ? _s(row['brand_group_id']) : null;
+    final activityDropdown = SizedBox(width: 145, child: DropdownButton<String>(
+      isExpanded: true,
+      value: _activities.any((activity) => _s(activity['code']) == activityCode) ? activityCode : null,
+      hint: const Text('نوع النشاط'), underline: const SizedBox.shrink(),
+      style: const TextStyle(fontSize: 11, color: Colors.black87),
+      items: _activities.map((activity) => DropdownMenuItem<String>(
+        value: _s(activity['code']), child: Text(_s(activity['name']), overflow: TextOverflow.ellipsis),
+      )).toList(),
+      onChanged: system ? null : (value) { if (value != null) _assignActivity(row, value); },
+    ));
+    final groupDropdown = SizedBox(width: 165, child: DropdownButton<String?>(
+      isExpanded: true, value: selectedGroupId, hint: const Text('بدون مجموعة'),
+      underline: const SizedBox.shrink(), style: const TextStyle(fontSize: 11, color: Colors.black87),
+      items: [
+        const DropdownMenuItem<String?>(value: null, child: Text('بدون مجموعة')),
+        ...availableGroups.map((group) => DropdownMenuItem<String?>(
+          value: _s(group['id']),
+          child: Text('${_s(group['group_code'])} - ${_s(group['group_name'])}', overflow: TextOverflow.ellipsis),
+        )),
+      ],
+      onChanged: system ? null : (value) => _assignGroup(row, value),
+    ));
+    final status = Row(mainAxisSize: MainAxisSize.min, children: [
+      Checkbox(shape: const CircleBorder(), value: row['is_active'] == true,
+        activeColor: _brandPurple, visualDensity: VisualDensity.compact,
+        onChanged: system ? null : (_) => _toggle(row)),
+      const Text('نشط', style: TextStyle(fontSize: 11)),
+    ]);
+    final appVisibility = Row(mainAxisSize: MainAxisSize.min, children: [
+      Checkbox(shape: const CircleBorder(), value: row['show_in_app'] == true,
+        activeColor: const Color(0xFFFFA015), visualDensity: VisualDensity.compact,
+        onChanged: system ? null : (_) => _toggleBrandVisibility(row)),
+      const Text('في التطبيق', style: TextStyle(fontSize: 10)),
+    ]);
+    final displayOrder = SizedBox(width: 62, child: TextFormField(
+      key: ValueKey('brand-order-$id-${_s(row['display_order'])}'),
+      initialValue: _s(row['display_order']).isEmpty ? '1000' : _s(row['display_order']),
+      enabled: !system, textAlign: TextAlign.center, keyboardType: TextInputType.number,
+      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _brandPurple),
+      decoration: const InputDecoration(isDense: true,
+        contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        border: OutlineInputBorder(), hintText: 'ترتيب'),
+      onFieldSubmitted: (value) => _saveDisplayOrder(row, value),
+    ));
+    final logo = _logoPreview(row, size: 60);
+    final upload = IconButton(tooltip: 'اختيار/تغيير الشعار', visualDensity: VisualDensity.compact,
+      onPressed: _saving || system ? null : () => _uploadLogo(row),
+      icon: const Icon(Icons.photo_library_outlined, color: _brandPurple));
+    final controls = Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 7, runSpacing: 4,
+      children: [
+        activityDropdown, groupDropdown, status, appVisibility,
+        Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('ترتيب الظهور', style: TextStyle(fontSize: 9, color: Colors.black54)), displayOrder,
+        ]),
+        logo, upload,
       ]);
-      final logo = _logoPreview(row, size: 40);
-      final upload = IconButton(tooltip: 'اختيار/تغيير الشعار',
-        visualDensity: VisualDensity.compact, onPressed: _saving ? null : () => _uploadLogo(row),
-        icon: const Icon(Icons.photo_library_outlined, color: _brandPurple));
-      return Padding(
-        padding: const EdgeInsetsDirectional.only(start: 8, bottom: 6),
-        child: Material(
-          color: selected ? const Color(0xFFF0E7FA) : Colors.white,
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 8, bottom: 6),
+      child: Material(
+        color: selected ? const Color(0xFFF0E7FA) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
           borderRadius: BorderRadius.circular(10),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: () => setState(() => _selectedId = id),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: selected ? _brandPurple : _brandBorder),
-              ),
-              child: compact
-                ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    Row(children: [
-                      SizedBox(width: 76, child: code),
-                      const SizedBox(width: 8),
-                      Expanded(child: name),
-                    ]),
-                    if (_s(row['brand_name_en']).isNotEmpty)
-                      Padding(padding: const EdgeInsetsDirectional.only(start: 84, top: 4), child: Align(alignment: AlignmentDirectional.centerStart, child: english)),
-                    const Divider(height: 12),
-                    Row(children: [status, const Spacer(), logo, upload],)
-                  ])
-                : Row(children: [
-                    const SizedBox(width: 34, child: Icon(Icons.subdirectory_arrow_left, color: _brandPurple, size: 18)),
-                    SizedBox(width: 105, child: code),
-                    Expanded(flex: 3, child: name),
-                    Expanded(flex: 2, child: english),
-                    status,
-                    const SizedBox(width: 6),
-                    logo,
-                    upload,
-                  ]),
-            ),
+          onTap: () => setState(() => _selectedId = id),
+          child: Container(
+            width: double.infinity, padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: selected ? _brandPurple : _brandBorder)),
+            child: LayoutBuilder(builder: (context, constraints) {
+              final compact = constraints.maxWidth < 850;
+              final code = Text(_s(row['brand_code']), overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple, fontSize: 11));
+              final name = Text(_s(row['brand_name']), softWrap: true,
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13));
+              final english = Text(_s(row['brand_name_en']), textDirection: TextDirection.ltr,
+                overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.black54));
+              if (compact) {
+                return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  Row(children: [SizedBox(width: 76, child: code), const SizedBox(width: 8), Expanded(child: name)]),
+                  if (_s(row['brand_name_en']).isNotEmpty)
+                    Padding(padding: const EdgeInsetsDirectional.only(start: 84, top: 3),
+                      child: Align(alignment: AlignmentDirectional.centerStart, child: english)),
+                  const Divider(height: 10), controls,
+                ]);
+              }
+              return Row(children: [
+                const SizedBox(width: 28, child: Icon(Icons.subdirectory_arrow_left, color: _brandPurple, size: 17)),
+                SizedBox(width: 92, child: code),
+                activityDropdown, const SizedBox(width: 6), groupDropdown, const SizedBox(width: 8),
+                Expanded(flex: 2, child: name), const SizedBox(width: 6),
+                Expanded(flex: 1, child: english), const SizedBox(width: 5),
+                status, appVisibility, displayOrder, const SizedBox(width: 5), logo, upload,
+              ]);
+            }),
           ),
         ),
-      );
-    });
+      ),
+    );
   }
+
   Widget _treeGroup(String group) {
     final children = _rowsInGroup(group);
     final expanded = _expandedGroups.contains(group);
     return Container(
       margin: const EdgeInsets.only(bottom: 7),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEDE1F8),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _brandBorder),
-      ),
+      decoration: BoxDecoration(color: const Color(0xFFEDE1F8),
+        borderRadius: BorderRadius.circular(10), border: Border.all(color: _brandBorder)),
       child: Column(children: [
         InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: () => setState(() {
-            if (expanded) { _expandedGroups.remove(group); }
-            else { _expandedGroups.add(group); }
+            if (expanded) { _expandedGroups.remove(group); } else { _expandedGroups.add(group); }
           }),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -1027,11 +1086,10 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             ]),
           ),
         ),
-        if (expanded)
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 8),
-            child: Column(children: children.map(_treeBrandRow).toList()),
-          ),
+        if (expanded) Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 8),
+          child: Column(children: children.map(_treeBrandRow).toList()),
+        ),
       ]),
     );
   }
@@ -1040,14 +1098,17 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       child: Row(children: [
-        const SizedBox(width: 34),
-        const SizedBox(width: 105, child: Text('كود البراند', style: TextStyle(fontWeight: FontWeight.w800))),
-        const Expanded(flex: 3, child: Text('اسم البراند عربي', style: TextStyle(fontWeight: FontWeight.w800))),
-        const Expanded(flex: 2, child: Text('الاسم الإنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
+        const SizedBox(width: 28),
+        const SizedBox(width: 92, child: Text('كود البراند', style: TextStyle(fontWeight: FontWeight.w800))),
+        const SizedBox(width: 145, child: Text('نوع النشاط', style: TextStyle(fontWeight: FontWeight.w800))),
+        const SizedBox(width: 165, child: Text('مجموعة البراند', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Expanded(flex: 2, child: Text('اسم البراند عربي', style: TextStyle(fontWeight: FontWeight.w800))),
+        const Expanded(flex: 1, child: Text('الاسم الإنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
         const Text('نشط', style: TextStyle(fontWeight: FontWeight.w800)),
-        const SizedBox(width: 12),
-        const Text('الصورة', style: TextStyle(fontWeight: FontWeight.w800)),
-        const SizedBox(width: 48),
+        const Text('في التطبيق', style: TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(width: 68, child: Text('ترتيب الظهور', style: TextStyle(fontWeight: FontWeight.w800))),
+        const SizedBox(width: 66, child: Text('الصورة', style: TextStyle(fontWeight: FontWeight.w800))),
+        const SizedBox(width: 42),
       ]),
     );
   }
@@ -1115,9 +1176,9 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
               : SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SizedBox(
-                  width: 1480,
+                  width: 1315,
                   child: DataTable2(
-                  minWidth: 1480, columnSpacing: 10, horizontalMargin: 8,
+                  minWidth: 1315, columnSpacing: 8, horizontalMargin: 8,
                   headingRowHeight: 44, dataRowHeight: 54, showCheckboxColumn: false,
                   headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                   columns: const [
@@ -1128,7 +1189,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                     DataColumn2(label: Text('النشاط'), size: ColumnSize.M, fixedWidth: 160),
                     DataColumn2(label: Text('عدد البراندات'), size: ColumnSize.S, fixedWidth: 115),
                     DataColumn2(label: Text('نشط أو لا'), size: ColumnSize.S, fixedWidth: 95),
-                    DataColumn2(label: Text('يظهر في التطبيق أو لا'), size: ColumnSize.M, fixedWidth: 165),
                     DataColumn2(label: Text('إضافة / حذف'), size: ColumnSize.S, fixedWidth: 130),
                   ],
                   rows: [
@@ -1154,8 +1214,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                             DataCell(Text('$count')),
                             DataCell(Checkbox(shape: const CircleBorder(), value: group['is_active'] == true,
                               activeColor: _brandPurple, onChanged: _saving || isDefault ? null : (_) => _toggleGroupField(group, 'is_active'))),
-                            DataCell(Checkbox(shape: const CircleBorder(), value: group['show_in_app'] == true,
-                              activeColor: const Color(0xFFFFA015), onChanged: _saving || isDefault ? null : (_) => _toggleGroupField(group, 'show_in_app'))),
                             DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
                               IconButton(tooltip: 'إضافة براندات للمجموعة',
                                 onPressed: _saving ? null : () => _openGroupBrandPicker(group),
