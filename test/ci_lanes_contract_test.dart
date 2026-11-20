@@ -149,6 +149,10 @@ void main() {
     expect(dashboard, contains("_canPerformCurrentAction('حذف')"));
     expect(dashboard, contains('can_import_excel'));
     expect(dashboard, contains('can_export_excel'));
+    expect(dashboard, contains('ErpQuickTaskPermissionScope'));
+    expect(dashboard, contains("const executiveKey = 'إعدادات عامة::بيانات أساسية::الملخص التنفيذي';"));
+    expect(dashboard, contains('if (_executiveSummaryAllowed)'));
+    expect(dashboard, contains('void _ensureCurrentScreenAllowed()'));
   });
 
 }
