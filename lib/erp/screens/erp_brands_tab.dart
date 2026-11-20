@@ -1282,7 +1282,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                   width: 1315,
                   child: DataTable2(
                   minWidth: 1315, columnSpacing: 8, horizontalMargin: 8,
-                  headingRowHeight: 44, dataRowHeight: 54, showCheckboxColumn: false,
+                  headingRowHeight: 44, dataRowHeight: compactMobile ? 40 : 54, showCheckboxColumn: false,
                   headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                   columns: const [
                     DataColumn2(label: Text('م'), size: ColumnSize.S, fixedWidth: 52),
@@ -1311,9 +1311,9 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                           cells: [
                             DataCell(Text('$index')),
                             DataCell(Text(_s(group['group_code']), style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple))),
-                            DataCell(Text(_s(group['group_name']), style: const TextStyle(fontWeight: FontWeight.w700)), onTap: isDefault ? null : () => _editGroup(group)),
-                            DataCell(Text(_s(group['group_name_en']), textDirection: TextDirection.ltr), onTap: isDefault ? null : () => _editGroup(group)),
-                            DataCell(Text(_activityName(_s(group['activity_code'])))),
+                            DataCell(Text(_s(group['group_name']), maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)), onTap: isDefault ? null : () => _editGroup(group)),
+                            DataCell(Text(_s(group['group_name_en']), maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, textDirection: TextDirection.ltr), onTap: isDefault ? null : () => _editGroup(group)),
+                            DataCell(Text(_activityName(_s(group['activity_code'])), maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis)),
                             DataCell(Text('$count')),
                             DataCell(Checkbox(shape: const CircleBorder(), value: group['is_active'] == true,
                               activeColor: _brandPurple, onChanged: _saving || isDefault ? null : (_) => _toggleGroupField(group, 'is_active'))),
