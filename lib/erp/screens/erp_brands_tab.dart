@@ -1026,7 +1026,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         activityDropdown, groupDropdown, status, appVisibility, displayOrder, logo, upload,
       ]);
     return Padding(
-      padding: const EdgeInsetsDirectional.only(start: 8, bottom: 6),
+      padding: const EdgeInsetsDirectional.only(bottom: 6),
       child: Material(
         color: selected ? const Color(0xFFF0E7FA) : Colors.white,
         borderRadius: BorderRadius.circular(10),
@@ -1034,7 +1034,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
           borderRadius: BorderRadius.circular(10),
           onTap: () => setState(() => _selectedId = id),
           child: Container(
-            width: double.infinity, padding: const EdgeInsets.all(8),
+            width: double.infinity, padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(borderRadius: BorderRadius.circular(10),
               border: Border.all(color: selected ? _brandPurple : _brandBorder)),
             child: LayoutBuilder(builder: (context, constraints) {
@@ -1123,7 +1123,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
           ),
         ),
         if (expanded) Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 8),
+          padding: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 8),
           child: Column(children: children.asMap().entries.map((entry) => _treeBrandRow(entry.value, entry.key)).toList()),
         ),
       ]),
@@ -1187,8 +1187,10 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     final visibleGroups = rows.map(_groupKey).toSet().toList();
     for (final group in _groups) {
       final code = _s(group['activity_code']);
-      if (_selectedActivityCode == 'all' || code == _selectedActivityCode) {
-        final name = _s(group['group_name']);
+      final name = _s(group['group_name']);
+      final groupFilter = _columnSearch['group']!.text.trim().toLowerCase();
+      if ((_selectedActivityCode == 'all' || code == _selectedActivityCode) &&
+          (groupFilter.isEmpty || name.toLowerCase().contains(groupFilter))) {
         if (name.isNotEmpty && !visibleGroups.contains(name)) visibleGroups.add(name);
       }
     }
