@@ -98,12 +98,12 @@ jobs:
           source = p.read_text()
           import re
           version = '    ndkVersion = "27.0.12077973"'
-          source, replacements = re.subn(r'(?m)^[ \\t]*ndkVersion[ \\t]*=[^\\r\\n]*', version, source)
+          source, replacements = re.subn(r'(?m)^[ \t]*ndkVersion[ \t]*=[^\r\n]*', version, source)
           if replacements == 0:
               marker = "android {"
               if marker not in source:
                   raise SystemExit("Android configuration block not found")
-              source = source.replace(marker, marker + "\\n" + version, 1)
+              source = source.replace(marker, marker + "\n" + version, 1)
           p.write_text(source)
           print("Configured Android NDK 27.0.12077973")
           PY
