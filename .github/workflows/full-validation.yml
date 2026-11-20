@@ -112,7 +112,7 @@ jobs:
       - name: Build production-path web app with Dart source maps
         id: build_web
         if: always() && !cancelled()
-        run: flutter build web --release --source-maps --base-href "/Silsila-App/"
+        run: flutter build web --release --source-maps --pwa-strategy=none --base-href "/Silsila-App/"
 
       - name: Verify web build output
         id: verify_web
