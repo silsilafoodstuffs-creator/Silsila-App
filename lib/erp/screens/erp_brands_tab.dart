@@ -450,19 +450,23 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         final locked = current['is_system'] == true;
         return AlertDialog(
           title: Text('شعار ${_s(current['brand_name'])}'),
-          content: SizedBox(width: 230, child: Column(mainAxisSize: MainAxisSize.min, children: [
+          content: SizedBox(width: 250, child: Column(mainAxisSize: MainAxisSize.min, children: [
             _logoPreview(current, size: 50),
             const SizedBox(height: 8),
             Text(_s(current['brand_name']), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w800, color: _brandPurple)),
+            const SizedBox(height: 12),
+            SizedBox(width: double.infinity, child: OutlinedButton.icon(
+              onPressed: locked || _saving ? null : () async { await _uploadLogo(current); if (mounted) setDialogState(() {}); },
+              icon: const Icon(Icons.folder_open_outlined), label: const Text('استيراد صورة من الجهاز'))),
+            SizedBox(width: double.infinity, child: OutlinedButton.icon(
+              onPressed: locked || _saving ? null : () async { await _uploadLogoFromCamera(current); if (mounted) setDialogState(() {}); },
+              icon: const Icon(Icons.photo_camera_outlined), label: const Text('التقاط صورة بالكاميرا'))),
+            SizedBox(width: double.infinity, child: OutlinedButton.icon(
+              onPressed: locked || !hasLogo || _saving ? null : () async { await _removeLogo(current); if (mounted) setDialogState(() {}); },
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              label: const Text('حذف الصورة', style: TextStyle(color: Colors.red)))),
           ])),
-          actionsAlignment: MainAxisAlignment.center,
           actions: [
-            TextButton.icon(onPressed: locked || _saving ? null : () async { await _uploadLogo(current); if (mounted) setDialogState(() {}); },
-              icon: const Icon(Icons.folder_open_outlined), label: const Text('من الجهاز')),
-            TextButton.icon(onPressed: locked || _saving ? null : () async { await _uploadLogoFromCamera(current); if (mounted) setDialogState(() {}); },
-              icon: const Icon(Icons.photo_camera_outlined), label: const Text('الكاميرا')),
-            TextButton.icon(onPressed: locked || !hasLogo || _saving ? null : () async { await _removeLogo(current); if (mounted) setDialogState(() {}); },
-              icon: const Icon(Icons.delete_outline, color: Colors.red), label: const Text('حذف الصورة', style: TextStyle(color: Colors.red))),
             TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق')),
           ],
         );
