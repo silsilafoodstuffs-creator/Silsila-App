@@ -1,5 +1,6 @@
 
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -407,6 +408,66 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+
+  Future<void> _uploadLogoFromCamera(Map<String,dynamic> row) async {
+    if (row['is_system'] == true || _saving) return;
+    try {
+      final picked = await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 90);
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      final ext = picked.name.split('.').last.toLowerCase();
+      final mime = switch (ext) { 'jpg' || 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'gif' => 'image/gif', _ => '' };
+      if (bytes.isEmpty || bytes.length > 256 * 1024 || mime.isEmpty) {
+        ErpCenterToast.show(context, bytes.length > 256 * 1024 ? 'الحد الأقصى لحجم الشعار 256 كيلوبايت.' : 'صيغة الصورة غير مدعومة أو تعذر قراءتها.', isError: true);
+        return;
+      }
+      setState(() => _saving = true);
+      try {
+        final hex = r'\x' + bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+        await _db.from('erp_brands').update({'logo_data': hex, 'logo_mime_type': mime})
+          .eq('id', _s(row['id'])).eq('company_id', widget.companyId.trim()).select('id').single();
+        if (!mounted) return;
+        setState(() {
+          final i = _rows.indexWhere((item) => _s(item['id']) == _s(row['id']));
+          if (i >= 0) _rows[i] = {..._rows[i], 'logo_data': hex, 'logo_mime_type': mime};
+        });
+        ErpCenterToast.show(context, 'تم حفظ شعار البراند.');
+      } finally { if (mounted) setState(() => _saving = false); }
+    } catch (error) {
+      if (mounted) ErpCenterToast.show(context, 'تعذر التقاط صورة الشعار: $error', isError: true);
+    }
+  }
+
+  Future<void> _showLogoDialog(Map<String,dynamic> row) async {
+    await showDialog<void>(context: context, builder: (dialogContext) => Directionality(
+      textDirection: TextDirection.rtl,
+      child: StatefulBuilder(builder: (context, setDialogState) {
+        final i = _rows.indexWhere((item) => _s(item['id']) == _s(row['id']));
+        final current = i >= 0 ? _rows[i] : row;
+        final hasLogo = _logoBytes(current['logo_data'])?.isNotEmpty == true;
+        final locked = current['is_system'] == true;
+        return AlertDialog(
+          title: Text('شعار ${_s(current['brand_name'])}'),
+          content: SizedBox(width: 230, child: Column(mainAxisSize: MainAxisSize.min, children: [
+            _logoPreview(current, size: 50),
+            const SizedBox(height: 8),
+            Text(_s(current['brand_name']), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w800, color: _brandPurple)),
+          ])),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            TextButton.icon(onPressed: locked || _saving ? null : () async { await _uploadLogo(current); if (mounted) setDialogState(() {}); },
+              icon: const Icon(Icons.folder_open_outlined), label: const Text('من الجهاز')),
+            TextButton.icon(onPressed: locked || _saving ? null : () async { await _uploadLogoFromCamera(current); if (mounted) setDialogState(() {}); },
+              icon: const Icon(Icons.photo_camera_outlined), label: const Text('الكاميرا')),
+            TextButton.icon(onPressed: locked || !hasLogo || _saving ? null : () async { await _removeLogo(current); if (mounted) setDialogState(() {}); },
+              icon: const Icon(Icons.delete_outline, color: Colors.red), label: const Text('حذف الصورة', style: TextStyle(color: Colors.red))),
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق')),
+          ],
+        );
+      }),
+    ));
   }
 
   Future<void> _bulkImportLogos() async {
@@ -999,7 +1060,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     )));
     final appVisibility = SizedBox(width: 78, child: Center(child: Checkbox(
       shape: const CircleBorder(), value: row['show_in_app'] == true,
-      activeColor: const Color(0xFFFFA015), visualDensity: VisualDensity.compact,
+      activeColor: _brandPurple, visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       onChanged: system ? null : (_) => _toggleBrandVisibility(row),
     )));
@@ -1014,9 +1075,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       onFieldSubmitted: (value) => _saveDisplayOrder(row, value),
     ));
     final logo = _logoPreview(row, size: 46);
-    final upload = IconButton(tooltip: 'اختيار/تغيير الشعار', visualDensity: VisualDensity.compact,
-      onPressed: _saving || system ? null : () => _uploadLogo(row),
-      icon: const Icon(Icons.photo_library_outlined, color: _brandPurple));
+    final logo = InkWell(onTap: () => _showLogoDialog(row), child: _logoPreview(row, size: 46));
     return Padding(
       padding: const EdgeInsetsDirectional.only(bottom: 6),
       child: Material(
@@ -1041,8 +1100,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 activityDropdown, const SizedBox(width: 5), groupDropdown, const SizedBox(width: 5),
                 Expanded(flex: 3, child: name), const SizedBox(width: 3),
                 status, appVisibility, displayOrder, const SizedBox(width: 3),
-                SizedBox(width: 46, child: Center(child: logo)),
-                SizedBox(width: 40, child: Center(child: upload)),
+                SizedBox(width: 50, child: Center(child: logo)),
               ]);
             }),
           ),
@@ -1141,14 +1199,13 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             const SizedBox(width: 5),
             const SizedBox(width: 165, child: Text('مجموعة البراند', style: headingStyle)),
             const SizedBox(width: 5),
-            const Expanded(flex: 2, child: Text('اسم البراند عربي', style: headingStyle)),
+            const Expanded(flex: 2, child: Text('اسم البراند/الماركة', style: headingStyle)),
             const SizedBox(width: 5),
             const SizedBox(width: 3),
             const SizedBox(width: 68, child: Center(child: Text('نشط', style: headingStyle))),
             const SizedBox(width: 78, child: Center(child: Text('في التطبيق', style: headingStyle))),
             const SizedBox(width: 62, child: Center(child: Text('الترتيب', style: headingStyle))),
-            const SizedBox(width: 46, child: Center(child: Text('الشعار', style: headingStyle))),
-            const SizedBox(width: 40),
+            const SizedBox(width: 50, child: Center(child: Text('الشعار', style: headingStyle))),
           ]),
           const SizedBox(height: 4),
           Row(children: [
@@ -1158,7 +1215,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             Expanded(flex: 2, child: filter('name', double.infinity, 'بحث الاسم العربي')),
             const SizedBox(width: 5),
             const SizedBox(width: 3), const SizedBox(width: 68), const SizedBox(width: 78),
-            const SizedBox(width: 62), const SizedBox(width: 46), const SizedBox(width: 40),
+            const SizedBox(width: 62), const SizedBox(width: 50),
           ]),
         ]),
       )),
@@ -1360,8 +1417,8 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                     )
                   : DataTable2(
                       fixedTopRows: 1,
-                      minWidth: 850,
-                      columnSpacing: 8,
+                      minWidth: 650,
+                      columnSpacing: 2,
                       horizontalMargin: 8,
                       headingRowHeight: 42,
                       dataRowHeight: compactMobile ? 40 : 60,
@@ -1370,10 +1427,11 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       columns: const [
                         DataColumn2(label: Text('م'), size: ColumnSize.S, fixedWidth: 52),
                         DataColumn2(label: Text('كود البراند'), size: ColumnSize.S, fixedWidth: 110),
-                        DataColumn2(label: Text('اسم البراند عربي'), size: ColumnSize.L, fixedWidth: 220),
-                        DataColumn2(label: Text('الصورة'), size: ColumnSize.S, fixedWidth: 115),
-                        DataColumn2(label: Text('المجموعة'), size: ColumnSize.M, fixedWidth: 190),
-                        DataColumn2(label: Text('نشط'), size: ColumnSize.S, fixedWidth: 70),
+                        DataColumn2(label: Text('اسم البراند/الماركة'), size: ColumnSize.S, fixedWidth: 110),
+                        DataColumn2(label: Text('الشعار'), size: ColumnSize.S, fixedWidth: 58),
+                        DataColumn2(label: Text('المجموعة'), size: ColumnSize.M, fixedWidth: 160),
+                        DataColumn2(label: Text('نشط'), size: ColumnSize.S, fixedWidth: 58),
+                        DataColumn2(label: Text('في التطبيق'), size: ColumnSize.S, fixedWidth: 68),
                       ],
                       rows: List<DataRow>.generate(rows.length, (index) {
                         final row = rows[index];
@@ -1385,7 +1443,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                           cells: [
                             DataCell(Text('${index + 1}', style: const TextStyle(fontWeight: FontWeight.w800))),
                             DataCell(Text(_s(row['brand_code']), style: const TextStyle(fontWeight: FontWeight.w900, color: _brandPurple)), onTap: () => setState(() => _selectedId = id)),
-                            DataCell(SizedBox(width: 210, child: _gridEditing && (_gridEditingOnlyId == null || _gridEditingOnlyId == id) && !system
+                            DataCell(SizedBox(width: 104, child: _gridEditing && (_gridEditingOnlyId == null || _gridEditingOnlyId == id) && !system
                               ? Focus(
                                   onKeyEvent: (_, event) {
                                     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) { FocusScope.of(context).nextFocus(); return KeyEventResult.handled; }
@@ -1403,18 +1461,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                                   _gridEditingOnlyId = id;
                                 })
                               : null),
-                            DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
-                              _logoPreview(row, size: compactMobile ? 30 : 46),
-                              SizedBox(width: compactMobile ? 2 : 4),
-                              Column(mainAxisSize: MainAxisSize.min, children: [
-                                IconButton(tooltip:'تعديل صورة البراند', visualDensity:VisualDensity.compact, padding:EdgeInsets.zero,
-                                  constraints: BoxConstraints.tightFor(width: compactMobile ? 22 : 30, height: compactMobile ? 18 : 25), onPressed:_saving ? null : () => _uploadLogo(row),
-                                  icon: Icon(Icons.edit_outlined,color:_brandPurple,size: compactMobile ? 14 : 18)),
-                                IconButton(tooltip:'حذف صورة البراند', visualDensity:VisualDensity.compact, padding:EdgeInsets.zero,
-                                  constraints: BoxConstraints.tightFor(width: compactMobile ? 22 : 30, height: compactMobile ? 18 : 25), onPressed:_saving || system || _logoBytes(row['logo_data']) == null ? null : () => _removeLogo(row),
-                                  icon: Icon(Icons.delete_outline,color:Colors.redAccent,size: compactMobile ? 14 : 18)),
-                              ]),
-                            ])),
+                            DataCell(InkWell(onTap: () => _showLogoDialog(row), child: _logoPreview(row, size: 50))),
                             DataCell(SizedBox(width: 180, child: DropdownButton<String?>(
                               isExpanded: true, isDense: compactMobile, itemHeight: compactMobile ? 40 : 48,
                               value: _groups.any((g) => _s(g['id']) == _s(row['brand_group_id'])) ? _s(row['brand_group_id']) : _defaultGroupId,
@@ -1426,6 +1473,10 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                               visualDensity: compactMobile ? VisualDensity.compact : VisualDensity.standard,
                               materialTapTargetSize: compactMobile ? MaterialTapTargetSize.shrinkWrap : MaterialTapTargetSize.padded,
                               onChanged: system ? null : (_) => _toggle(row))),
+                            DataCell(Checkbox(shape: const CircleBorder(), value: row['show_in_app'] == true, activeColor: _brandPurple,
+                              visualDensity: compactMobile ? VisualDensity.compact : VisualDensity.standard,
+                              materialTapTargetSize: compactMobile ? MaterialTapTargetSize.shrinkWrap : MaterialTapTargetSize.padded,
+                              onChanged: system ? null : (_) => _toggleBrandVisibility(row))),
                           ],
                         );
                       }),
