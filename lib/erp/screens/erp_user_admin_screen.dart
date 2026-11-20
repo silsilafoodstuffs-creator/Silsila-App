@@ -1534,8 +1534,19 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         headingRowHeight: 40,dataRowMinHeight: 40,dataRowMaxHeight: 40,horizontalMargin: 5,columnSpacing: 5,
         columns:[const DataColumn(label:Text('القائمة الرئيسية / الفرعية / الشاشة')),for(final action in _userAdminActions)DataColumn(label:SizedBox(width:48,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800))))],
         rows:_rules.map((rule)=>DataRow(cells:[
-          DataCell(SizedBox(width:250,child:Text('${rule['menu_name']} › ${rule['submenu_name']} › ${rule['page_name']}',maxLines:2,overflow:TextOverflow.ellipsis))),
-          for(final field in _userAdminActionFields.values)DataCell(Center(child:Checkbox(value:rule[field]==true,onChanged:_editMode?(v)=>setState((){final enabled=v==true;rule[field]=enabled;if(field=='can_access'&&!enabled){for(final f in _userAdminActionFields.values.where((f)=>f!='can_access'))rule[f]=false;}else if(enabled){rule['can_access']=true;}}):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
+          DataCell(SizedBox(width:250,child:Row(children:[
+            Expanded(child:Text('${rule['menu_name']} › ${rule['submenu_name']} › ${rule['page_name']}',maxLines:2,overflow:TextOverflow.ellipsis)),
+            if(_s(rule['page_name'])!='*') IconButton(
+              tooltip: rule['can_access']!=true ? 'يجب منح صلاحية الشاشة أولاً' : rule['show_in_quick_tasks']==true ? 'إزالة من الوصول السريع' : 'إضافة إلى الوصول السريع',
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(minWidth:28,minHeight:28),
+              padding: EdgeInsets.zero,
+              onPressed: !_editMode || rule['can_access']!=true ? null : ()=>setState(()=>rule['show_in_quick_tasks']=rule['show_in_quick_tasks']!=true),
+              icon: Icon(rule['show_in_quick_tasks']==true ? Icons.favorite_rounded : Icons.favorite_border_rounded,size:17,
+                color: rule['can_access']!=true ? Colors.black26 : rule['show_in_quick_tasks']==true ? Colors.red : _userAdminPurple),
+            ),
+          ]))),
+          for(final field in _userAdminActionFields.values)DataCell(Center(child:Checkbox(value:rule[field]==true,onChanged:_editMode?(v)=>setState((){final enabled=v==true;if(field=='show_in_quick_tasks'&&enabled&&rule['can_access']!=true)return;rule[field]=enabled;if(field=='can_access'&&!enabled){for(final f in _userAdminActionFields.values.where((f)=>f!='can_access'))rule[f]=false;}else if(enabled){rule['can_access']=true;}}):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
         ])).toList(),
       )),
     ]);
