@@ -155,12 +155,12 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       String normalizeActivity(String value) {
         final code = value.trim().toUpperCase();
         if (code.isEmpty) return '';
-        final legacy = RegExp(r'^ACT0*(\d{1,3})).firstMatch(code);
+        final legacy = RegExp(r'^ACT0*(\d{1,3})$').firstMatch(code);
         if (legacy != null) {
           final number = int.tryParse(legacy.group(1)!);
           if (number != null) return number.toString().padLeft(2, '0');
         }
-        if (RegExp(r'^\d{1,3}).hasMatch(code)) {
+        if (RegExp(r'^\d{1,3}$').hasMatch(code)) {
           final number = int.tryParse(code);
           if (number != null) return number.toString().padLeft(2, '0');
         }
