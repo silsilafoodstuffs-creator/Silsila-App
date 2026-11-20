@@ -461,12 +461,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _hrDashboardAllowed = false;
         _hrDashboardCanManage = false;
         _hrDashboardCanApproveStaffingPlans = false;
-        _screenAccessPermissions
-          ..clear()
-          ..addAll(permissions);
-        _quickAccessKeys
-          ..clear()
-          ..addAll(quickAccess);
         _executiveAccessChecked = true;
         _executiveSummaryAllowed = true;
         _executivePartialConfigured = false;
@@ -527,6 +521,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _hrDashboardAllowed = hrDashboardAllowed;
         _hrDashboardCanManage = isHrManager || isCompanyAdmin;
         _hrDashboardCanApproveStaffingPlans = isCompanyAdmin;
+        _screenAccessPermissions
+          ..clear()
+          ..addAll(permissions);
+        _quickAccessKeys
+          ..clear()
+          ..addAll(quickAccess);
         _executiveAccessChecked = true;
         _executiveSummaryAllowed = hasParent ? permissions[parentKey] == true : true;
         _executivePartialConfigured = configuredChildren.isNotEmpty;
