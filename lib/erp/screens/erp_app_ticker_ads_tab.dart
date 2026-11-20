@@ -266,26 +266,13 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
   final _search = TextEditingController();
   List<Map<String, dynamic>> _brands = [];
   List<Map<String, String>> _activities = [];
-  final Map<int, String> _slotOwners = {};
   String _activityCode = 'ALL';
   bool _loading = false;
-  bool _saving = false;
-  bool _hasUnsavedChanges = false;
   String? _error;
-  String? _message;
 
   SupabaseClient get _db => Supabase.instance.client;
-  int get _slotCount => _brands.length;
-
   String _s(dynamic value) => (value ?? '').toString();
 
-  String _brandOrderDigits(Map<String, dynamic> brand) =>
-      _s(brand['brand_code']).replaceAll(RegExp(r'[^0-9]'), '');
-
-  BigInt? _brandOrderValue(Map<String, dynamic> brand) {
-    final digits = _brandOrderDigits(brand);
-    return digits.isEmpty ? null : BigInt.tryParse(digits);
-  }
 
   bool get _ready =>
       (widget.companyId ?? '').trim().isNotEmpty &&
@@ -335,68 +322,30 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
           'اختر شركة نشطة واحفظ سجل تطبيق سلسلة أولًا من إدارة التطبيقات.');
       return;
     }
-    setState(() { _loading = true; _error = null; _message = null; });
+    setState(() { _loading = true; _error = null; });
     try {
-      final brandRowsResult = await _db.from('erp_brands')
-          .select('id,brand_code,brand_name,brand_name_en,logo_data,logo_mime_type,is_active,activity_code')
+      final result = await _db.from('erp_brands')
+          .select('id,brand_code,brand_name,brand_name_en,logo_data,logo_mime_type,is_active,show_in_app,activity_code,display_order')
           .eq('company_id', widget.companyId!.trim())
           .eq('is_active', true)
           .eq('is_system', false)
+          .eq('show_in_app', true)
           .order('display_order')
           .order('brand_code');
-      // Recompute the visible order from every numeric segment of the complete brand code.
-      final brandRows = List<Map<String, dynamic>>.from(brandRowsResult)
-        ..sort((a, b) {
-          final aValue = _brandOrderValue(a) ?? BigInt.zero;
-          final bValue = _brandOrderValue(b) ?? BigInt.zero;
-          final numeric = aValue.compareTo(bValue);
-          return numeric != 0 ? numeric : _s(a['brand_code']).compareTo(_s(b['brand_code']));
-        });
-      // Brand-to-activity ownership is explicit on the brand master.
-      // The global scope remains company-wide.
+      var brandRows = List<Map<String, dynamic>>.from(result);
       if (_activityCode != 'ALL') {
-        brandRows.removeWhere(
-          (brand) => _s(brand['activity_code']) != _activityCode,
-        );
+        brandRows = brandRows.where((brand) => _s(brand['activity_code']) == _activityCode).toList();
       }
-      var query = _db.from('erp_app_ticker_ads')
-          .select('slot_no,brand_id')
-          .eq('app_id', widget.appId!);
-      query = _activityCode == 'ALL'
-          ? query.isFilter('activity_code', null)
-          : query.eq('activity_code', _activityCode);
-      final assignedRows = await query.order('slot_no');
       if (!mounted) return;
-      final activeBrandIds = List<Map<String, dynamic>>.from(brandRows)
-          .map((brand) => _s(brand['id']))
-          .toSet();
-      final validAssignments = (assignedRows as List)
-          .where((row) => activeBrandIds.contains(_s(row['brand_id'])))
-          .toList();
-      final savedOwners = <int, String>{
-        for (final row in validAssignments)
-          (row['slot_no'] as num).toInt(): _s(row['brand_id']),
-      };
-      final nextOwners = <int, String>{};
-      for (var index = 0; index < brandRows.length; index++) {
-        final brand = brandRows[index];
-        nextOwners[index + 1] = _s(brand['id']);
-      }
-      final sameAssignments = savedOwners.length == nextOwners.length &&
-          nextOwners.entries.every((entry) => savedOwners[entry.key] == entry.value);
       setState(() {
-        _brands = List<Map<String, dynamic>>.from(brandRows);
-        _slotOwners
-          ..clear()
-          ..addAll(nextOwners);
-        _hasUnsavedChanges = !sameAssignments;
+        _brands = brandRows;
         _loading = false;
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'تعذر تحميل البراندات أو توزيع شريط التمرير. تأكد من تطبيق تحديث قاعدة البيانات: $error';
+        _error = 'تعذر تحميل البراندات الظاهرة في التطبيق. تأكد من تطبيق تحديث قاعدة البيانات: $error';
       });
     }
   }
@@ -426,67 +375,13 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
     }
   }
 
-  Future<bool> _confirmPendingChanges() async {
-    if (!_hasUnsavedChanges) return true;
-    final choice = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('تعديلات غير محفوظة'),
-        content: const Text('هل ترغب في الحفظ؟'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, 'cancel'), child: const Text('إلغاء الأمر')),
-          TextButton(onPressed: () => Navigator.pop(dialogContext, 'discard'), child: const Text('لأ')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, 'save'), child: const Text('نعم')),
-        ],
-      ),
-    );
-    if (!mounted || choice == null || choice == 'cancel') return false;
-    if (choice == 'save') {
-      await _save();
-      return mounted && _error == null && !_hasUnsavedChanges;
-    }
-    return choice == 'discard';
-  }
-
-  Future<void> _refresh() async {
-    if (!await _confirmPendingChanges()) return;
-    await _load();
-  }
+  Future<void> _refresh() async => _load();
 
   Future<void> _changeActivity(String nextCode) async {
-    if (nextCode == _activityCode || !await _confirmPendingChanges()) return;
+    if (nextCode == _activityCode) return;
     if (!mounted) return;
-    setState(() {
-      _activityCode = nextCode;
-      _slotOwners.clear();
-      _hasUnsavedChanges = false;
-    });
+    setState(() => _activityCode = nextCode);
     await _load();
-  }
-
-  Future<void> _save() async {
-    if (!_ready || _saving) return;
-    setState(() { _saving = true; _error = null; _message = null; });
-    try {
-      final assignments = _slotOwners.entries
-          .map((entry) => <String, Object>{
-            'slot_no': entry.key,
-            'brand_id': entry.value,
-          }).toList()
-        ..sort((a, b) => (a['slot_no'] as int).compareTo(b['slot_no'] as int));
-      final count = await _db.rpc('erp_save_app_ticker_ads', params: {
-        'p_app_id': widget.appId,
-        'p_activity_code': _activityCode == 'ALL' ? null : _activityCode,
-        'p_assignments': assignments,
-      });
-      if (!mounted) return;
-      setState(() => _message = 'تم حفظ توزيع ${count ?? assignments.length} موضعًا إعلانيًا بنجاح.');
-      await _load();
-    } catch (error) {
-      if (mounted) setState(() => _error = 'تعذر حفظ توزيع شريط التمرير: $error');
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
   }
 
   @override
@@ -508,7 +403,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
               )),
               IconButton(
                 tooltip: 'تحديث',
-                onPressed: _loading || _saving ? null : _refresh,
+                onPressed: _loading ? null : _refresh,
                 icon: const Icon(Icons.refresh),
               ),
             ]),
@@ -562,11 +457,6 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
               padding: const EdgeInsets.all(10),
               child: Text(_error!, style: const TextStyle(color: Colors.red)),
             ),
-          if (_message != null)
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Text(_message!, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w700)),
-            ),
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
@@ -580,7 +470,7 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                         ),
                       )
                     : DataTable2(
-                        minWidth: 570,
+                        minWidth: 470,
                         fixedTopRows: 1,
                         columnSpacing: 6,
                         horizontalMargin: 6,
@@ -615,16 +505,10 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                             label: Text('اسم البراند'),
                             size: ColumnSize.L,
                           ),
-                          DataColumn2(
-                            label: Text('ترتيبه في العرض'),
-                            size: ColumnSize.S,
-                            fixedWidth: 92,
-                          ),
                         ],
                         rows: brands.asMap().entries.map((entry) {
                           final rowIndex = entry.key + 1;
                           final brand = entry.value;
-                          final orderDigits = _brandOrderDigits(brand);
                           final bytes = _logoBytes(brand['logo_data']);
                           return DataRow(cells: [
                             DataCell(
@@ -674,38 +558,9 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                                 ],
                               ),
                             ),
-                            DataCell(
-                              Center(
-                                child: Text(
-                                  orderDigits.isEmpty ? '$rowIndex' : orderDigits,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                    color: _tickerPurple,
-                                  ),
-                                ),
-                              ),
-                            ),
                           ]);
                         }).toList(),
                       ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(children: [
-              Text('البراندات الداخلة في شريط العرض: ${_slotOwners.length}/$_slotCount',
-                style: const TextStyle(color: _tickerPurple, fontWeight: FontWeight.w900)),
-              const Spacer(),
-              FilledButton.icon(
-                onPressed: !_ready || _saving || _loading ? null : _save,
-                icon: _saving
-                    ? const SizedBox(width: 16, height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.save_outlined),
-                label: const Text('حفظ التوزيع'),
-                style: FilledButton.styleFrom(backgroundColor: _tickerPurple),
-              ),
-            ]),
           ),
         ],
       ),
