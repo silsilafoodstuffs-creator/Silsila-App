@@ -2927,12 +2927,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         ),
         const SizedBox(height: 9),
         LayoutBuilder(builder: (context, constraints) {
-          final netActivity = _executiveGrossProfit != null && _executiveExpenses != null
-              ? _executiveGrossProfit! - _executiveExpenses!
-              : null;
-          final previousNetActivity = _executivePreviousGrossProfit != null && _executivePreviousExpenses != null
-              ? _executivePreviousGrossProfit! - _executivePreviousExpenses!
-              : null;
           final cards = <Widget>[
             _executiveAnalysisCard(
               title: 'مجمل الربح التقديري',
@@ -2998,41 +2992,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              GridView.count(
-                crossAxisCount: constraints.maxWidth >= 700 ? 3 : constraints.maxWidth >= 460 ? 2 : 1,
-                childAspectRatio: constraints.maxWidth >= 560 ? 3.4 : 3.8,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                children: [
-                  _executiveKpiCard(
-                    title: 'صافي نتيجة النشاط',
-                    value: netActivity,
-                    change: _executiveChange(netActivity, previousNetActivity),
-                    icon: Icons.account_balance_rounded,
-                    color: _green,
-                    note: 'مجمل الربح التقديري بعد المصروفات',
-                  ),
-                  _executiveKpiCard(
-                    title: 'صافي المبيعات',
-                    value: _executiveSales,
-                    change: _executiveChange(_executiveSales, _executivePreviousSales),
-                    icon: Icons.point_of_sale_rounded,
-                    color: _purple,
-                    note: 'بعد خصم مرتجعات المبيعات',
-                  ),
-                  _executiveKpiCard(
-                    title: 'صافي المشتريات',
-                    value: _executivePurchases,
-                    change: _executiveChange(_executivePurchases, _executivePreviousPurchases),
-                    icon: Icons.shopping_cart_outlined,
-                    color: const Color(0xFF2475B8),
-                    note: 'بعد خصم مرتجعات المشتريات',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
               GridView.count(
                 crossAxisCount: constraints.maxWidth >= 700 ? 3 : constraints.maxWidth >= 460 ? 2 : 1,
                 childAspectRatio: constraints.maxWidth >= 700 ? .95 : constraints.maxWidth >= 460 ? 1.0 : 1.15,
