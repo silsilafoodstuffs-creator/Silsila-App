@@ -1148,7 +1148,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         decoration: BoxDecoration(color: const Color(0xFFF5EFFB), borderRadius: BorderRadius.circular(8), border: Border.all(color: _brandBorder)),
         child: Column(children: [
           Row(children: [
-            const SizedBox(width: 28),
+            const SizedBox(width: 28, child: Text('م', textAlign: TextAlign.center, style: headingStyle)),
             const SizedBox(width: 92, child: Text('كود البراند', style: headingStyle)),
             const SizedBox(width: 145, child: Text('نوع النشاط', style: headingStyle)),
             const SizedBox(width: 5),
