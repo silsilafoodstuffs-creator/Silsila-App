@@ -984,18 +984,18 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       ],
       onChanged: system ? null : (value) => _assignGroup(row, value),
     ));
-    final status = Row(mainAxisSize: MainAxisSize.min, children: [
-      Checkbox(shape: const CircleBorder(), value: row['is_active'] == true,
-        activeColor: _brandPurple, visualDensity: VisualDensity.compact,
-        onChanged: system ? null : (_) => _toggle(row)),
-      const Text('نشط', style: TextStyle(fontSize: 11)),
-    ]);
-    final appVisibility = Row(mainAxisSize: MainAxisSize.min, children: [
-      Checkbox(shape: const CircleBorder(), value: row['show_in_app'] == true,
-        activeColor: const Color(0xFFFFA015), visualDensity: VisualDensity.compact,
-        onChanged: system ? null : (_) => _toggleBrandVisibility(row)),
-      const Text('في التطبيق', style: TextStyle(fontSize: 10)),
-    ]);
+    final status = SizedBox(width: 68, child: Center(child: Checkbox(
+      shape: const CircleBorder(), value: row['is_active'] == true,
+      activeColor: _brandPurple, visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      onChanged: system ? null : (_) => _toggle(row),
+    )));
+    final appVisibility = SizedBox(width: 78, child: Center(child: Checkbox(
+      shape: const CircleBorder(), value: row['show_in_app'] == true,
+      activeColor: const Color(0xFFFFA015), visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      onChanged: system ? null : (_) => _toggleBrandVisibility(row),
+    )));
     final displayOrder = SizedBox(width: 62, child: TextFormField(
       key: ValueKey('brand-order-$id-${_s(row['display_order'])}'),
       initialValue: _s(row['display_order']).isEmpty ? '1000' : _s(row['display_order']),
@@ -1010,19 +1010,9 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     final upload = IconButton(tooltip: 'اختيار/تغيير الشعار', visualDensity: VisualDensity.compact,
       onPressed: _saving || system ? null : () => _uploadLogo(row),
       icon: const Icon(Icons.photo_library_outlined, color: _brandPurple));
-    final controls = Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 7, runSpacing: 4,
+    final controls = Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 5, runSpacing: 2,
       children: [
-        Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('نوع النشاط', style: TextStyle(fontSize: 9, color: Colors.black54)), activityDropdown,
-        ]),
-        Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('مجموعة البراند', style: TextStyle(fontSize: 9, color: Colors.black54)), groupDropdown,
-        ]),
-        status, appVisibility,
-        Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('ترتيب الظهور', style: TextStyle(fontSize: 9, color: Colors.black54)), displayOrder,
-        ]),
-        logo, upload,
+        activityDropdown, groupDropdown, status, appVisibility, displayOrder, logo, upload,
       ]);
     return Padding(
       padding: const EdgeInsetsDirectional.only(start: 8, bottom: 6),
@@ -1056,10 +1046,12 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
               return Row(children: [
                 const SizedBox(width: 28, child: Icon(Icons.subdirectory_arrow_left, color: _brandPurple, size: 17)),
                 SizedBox(width: 92, child: code),
-                activityDropdown, const SizedBox(width: 6), groupDropdown, const SizedBox(width: 8),
-                Expanded(flex: 2, child: name), const SizedBox(width: 6),
-                Expanded(flex: 1, child: english), const SizedBox(width: 5),
-                status, appVisibility, displayOrder, const SizedBox(width: 5), logo, upload,
+                activityDropdown, const SizedBox(width: 5), groupDropdown, const SizedBox(width: 5),
+                Expanded(flex: 2, child: name), const SizedBox(width: 5),
+                Expanded(flex: 1, child: english), const SizedBox(width: 3),
+                status, appVisibility, displayOrder, const SizedBox(width: 3),
+                SizedBox(width: 46, child: Center(child: logo)),
+                SizedBox(width: 40, child: Center(child: upload)),
               ]);
             }),
           ),
@@ -1105,20 +1097,31 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   Widget _treeHeader() {
     return LayoutBuilder(builder: (context, constraints) {
       if (constraints.maxWidth < 850) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      const headingStyle = TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _brandPurple);
+      return Container(
+        margin: const EdgeInsetsDirectional.only(start: 8, end: 0, bottom: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5EFFB),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: _brandBorder),
+        ),
         child: Row(children: [
           const SizedBox(width: 28),
-          const SizedBox(width: 92, child: Text('كود البراند', style: TextStyle(fontWeight: FontWeight.w800))),
-          const SizedBox(width: 145, child: Text('نوع النشاط', style: TextStyle(fontWeight: FontWeight.w800))),
-          const SizedBox(width: 165, child: Text('مجموعة البراند', style: TextStyle(fontWeight: FontWeight.w800))),
-          const Expanded(flex: 2, child: Text('اسم البراند عربي', style: TextStyle(fontWeight: FontWeight.w800))),
-          const Expanded(flex: 1, child: Text('الاسم الإنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
-          const Text('نشط', style: TextStyle(fontWeight: FontWeight.w800)),
-          const Text('في التطبيق', style: TextStyle(fontWeight: FontWeight.w800)),
-          const SizedBox(width: 68, child: Text('ترتيب الظهور', style: TextStyle(fontWeight: FontWeight.w800))),
-          const SizedBox(width: 66, child: Text('الصورة', style: TextStyle(fontWeight: FontWeight.w800))),
-          const SizedBox(width: 42),
+          const SizedBox(width: 92, child: Text('كود البراند', style: headingStyle)),
+          const SizedBox(width: 145, child: Text('نوع النشاط', style: headingStyle)),
+          const SizedBox(width: 5),
+          const SizedBox(width: 165, child: Text('مجموعة البراند', style: headingStyle)),
+          const SizedBox(width: 5),
+          const Expanded(flex: 2, child: Text('اسم البراند عربي', style: headingStyle)),
+          const SizedBox(width: 5),
+          const Expanded(flex: 1, child: Text('الاسم الإنجليزي', style: headingStyle)),
+          const SizedBox(width: 3),
+          const SizedBox(width: 68, child: Center(child: Text('نشط', style: headingStyle))),
+          const SizedBox(width: 78, child: Center(child: Text('في التطبيق', style: headingStyle))),
+          const SizedBox(width: 62, child: Center(child: Text('الترتيب', style: headingStyle))),
+          const SizedBox(width: 46, child: Center(child: Text('الشعار', style: headingStyle))),
+          const SizedBox(width: 40),
         ]),
       );
     });
