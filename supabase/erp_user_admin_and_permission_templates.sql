@@ -94,6 +94,7 @@ create table if not exists public.erp_permission_template_rules (
  can_preview boolean not null default false,
  can_print boolean not null default false,
  can_import_excel boolean not null default false,
+ can_export_excel boolean not null default false,
  can_print_pdf boolean not null default false,
  show_in_quick_tasks boolean not null default false,
  unique(template_id,menu_name,submenu_name,page_name)
