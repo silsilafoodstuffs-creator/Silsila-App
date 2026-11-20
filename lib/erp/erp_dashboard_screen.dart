@@ -382,7 +382,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       final permissions = <String, bool>{};
       final quickAccess = <String>{};
       final actionPermissions = <String, bool>{};
-      const actionFields = <String, String>{
+      const legacyActionFields = <String, String>{
+        'إضافة': 'can_add', 'حفظ': 'can_save', 'تعديل': 'can_edit',
+        'حذف': 'can_delete', 'طباعة': 'can_print',
+        'تصدير Excel': 'can_export_excel', 'طباعة PDF': 'can_export_pdf',
+      };
+      const matrixActionFields = <String, String>{
         'تحديث': 'can_refresh', 'إضافة': 'can_add', 'حفظ': 'can_save',
         'تعديل': 'can_edit', 'حذف': 'can_delete', 'معاينة': 'can_preview',
         'طباعة': 'can_print', 'استيراد Excel': 'can_import_excel',
@@ -396,7 +401,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           final key = (row['menu_key'] ?? '').toString();
           permissions[key] = row['allow_access'] == true;
           if (row['allow_access'] == true && row['show_in_quick_tasks'] == true) quickAccess.add(key);
-          for (final action in actionFields.entries) {
+          for (final action in legacyActionFields.entries) {
             actionPermissions[key + '::' + action.key] = row[action.value] == true;
           }
         }
@@ -426,7 +431,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             } else {
               quickAccess.remove(key);
             }
-            for (final action in actionFields.entries) {
+            for (final action in matrixActionFields.entries) {
               actionPermissions[key + '::' + action.key] = row[action.value] == true;
             }
           }
