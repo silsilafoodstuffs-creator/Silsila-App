@@ -1601,7 +1601,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     return ErpScreenLayoutRuntime(
       screen: _page,
       child: ErpQuickTaskPermissionScope(
-        canPerform: _canPerformActionLabel,
+        canPerform: (label) => _canPerformActionLabel(label),
         child: Directionality(
       textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
       child: LayoutBuilder(builder: (context, c) {
