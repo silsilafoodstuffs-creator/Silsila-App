@@ -188,7 +188,7 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
       _heading('قواعد الحضور المتأخر — شرائح متتابعة'),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
         horizontalMargin: 5,
-        columnSpacing: 5,
+        columnSpacing: 2,
         dataRowMinHeight: 40,
         dataRowMaxHeight: 40,
         headingRowHeight: 40,
