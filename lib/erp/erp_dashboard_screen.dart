@@ -40,6 +40,7 @@ import 'screens/erp_cost_centers_screen.dart';
 import 'screens/erp_accounts_screen.dart';
 import 'screens/erp_journal_entries_screen.dart';
 import 'screens/erp_ledger_reports_screen.dart';
+import 'screens/erp_report_center_screen.dart';
 import 'screens/erp_movement_audit_screen.dart';
 import 'screens/erp_inventory_screen.dart';
 import 'screens/erp_stocktake_screen.dart';
