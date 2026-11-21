@@ -186,11 +186,11 @@ jobs:
           unzip -Z1 "$APK" | grep -qx 'AndroidManifest.xml'
           unzip -Z1 "$APK" | grep -q "classes"
 
-- name: Upload consolidated validation artifacts
+      - name: Upload consolidated validation artifacts
         if: always() && !cancelled()
         uses: actions/upload-artifact@v4
         with:
-          name: silsila-full-validation-\${{ github.run_number }}
+          name: silsila-full-validation-${{ github.run_number }}
           path: |
             build/web/
             build/app/outputs/flutter-apk/app-debug.apk
@@ -216,15 +216,15 @@ jobs:
             echo ""
             echo "| الفحص | الحالة |"
             echo "|---|---|"
-            echo "| اختبارات أدوات Python | $(status_icon '\${{ steps.python_tests.outcome }}') |"
-            echo "| تحليل Dart وFlutter | $(status_icon '\${{ steps.analyze.outcome }}') |"
-            echo "| اختبارات Flutter | $(status_icon '\${{ steps.flutter_tests.outcome }}') |"
-            echo "| اختبار شاشة فروع الشركة | $(status_icon '\${{ steps.branch_tests.outcome }}') |"
-            echo "| بناء نسخة Web | $(status_icon '\${{ steps.build_web.outcome }}') |"
-            echo "| التحقق من ملفات Web | $(status_icon '\${{ steps.verify_web.outcome }}') |"
-            echo "| اختبار WebView — كمبيوتر وموبايل | $(status_icon '\${{ steps.webview.outcome }}') |"
-            echo "| بناء Android Debug APK | $(status_icon '\${{ steps.android_debug.outcome }}') |"
-            echo "| التحقق من ملف APK وسلامته | $(status_icon '\${{ steps.verify_android.outcome }}') |"
+            echo "| اختبارات أدوات Python | $(status_icon '${{ steps.python_tests.outcome }}') |"
+            echo "| تحليل Dart وFlutter | $(status_icon '${{ steps.analyze.outcome }}') |"
+            echo "| اختبارات Flutter | $(status_icon '${{ steps.flutter_tests.outcome }}') |"
+            echo "| اختبار شاشة فروع الشركة | $(status_icon '${{ steps.branch_tests.outcome }}') |"
+            echo "| بناء نسخة Web | $(status_icon '${{ steps.build_web.outcome }}') |"
+            echo "| التحقق من ملفات Web | $(status_icon '${{ steps.verify_web.outcome }}') |"
+            echo "| اختبار WebView — كمبيوتر وموبايل | $(status_icon '${{ steps.webview.outcome }}') |"
+            echo "| بناء Android Debug APK | $(status_icon '${{ steps.android_debug.outcome }}') |"
+            echo "| التحقق من ملف APK وسلامته | $(status_icon '${{ steps.verify_android.outcome }}') |"
             echo ""
             echo "### معنى الألوان"
             echo "- 🟢 أخضر: الفحص نجح."
