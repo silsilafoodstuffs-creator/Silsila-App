@@ -694,9 +694,11 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
               ? const Center(child: Text('ستظهر بيانات الأصناف والفئات والصور بعد بدء الفرز الشامل.'))
                : DataTable2(
                     fixedTopRows: 1,
+                    columnSpacing: 2,
+                    horizontalMargin: 2,
                     fixedLeftColumns: 4,
                     minWidth: 2350,
-                    columnSpacing: 5,
+                    columnSpacing: 2,
                     headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                     columns: [
                       DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -875,7 +877,7 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                   fixedTopRows: 1,
                   fixedLeftColumns: 4,
                   minWidth: 1700,
-                  columnSpacing: 5,
+                  columnSpacing: 2,
                   columns: [
                     DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
                       const Text('الكل'),
