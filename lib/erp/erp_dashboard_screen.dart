@@ -4083,7 +4083,6 @@ class ErpScreenLayoutRuntime extends StatelessWidget {
         final primary = Color((profile['primary'] as int?) ?? const Color(0xFF3E007D).toARGB32());
         final accent = Color((profile['accent'] as int?) ?? const Color(0xFFFF27C3).toARGB32());
         final rowHeight = ((profile['rowHeight'] as num?)?.toDouble() ?? 40).clamp(28, 80).toDouble();
-        final spacing = ((profile['spacing'] as num?)?.toDouble() ?? 5).clamp(0, 30).toDouble();
         final radius = ((profile['cornerRadius'] as num?)?.toDouble() ?? 12).clamp(0, 30).toDouble();
         final buttonRadius = buttonStyle == 'pill' ? 28.0 : radius;
         final buttonFill = buttonStyle == 'glass' ? primary.withValues(alpha: .10) : buttonStyle == 'outline' ? Colors.transparent : primary;
@@ -4135,7 +4134,7 @@ class ErpScreenLayoutRuntime extends StatelessWidget {
             dataRowMinHeight: rowHeight,
             dataRowMaxHeight: rowHeight + 8,
             headingRowHeight: rowHeight,
-            columnSpacing: spacing <= 2 ? 6 : spacing * 2.8,
+            columnSpacing: 2,
             headingTextStyle: TextStyle(color: primary, fontWeight: FontWeight.w900, fontSize: 12),
             dividerThickness: tableStyle == 'minimal' ? .4 : tableStyle == 'outlined' ? 1.6 : 1,
             decoration: BoxDecoration(
