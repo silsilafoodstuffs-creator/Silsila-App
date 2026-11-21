@@ -387,20 +387,28 @@ class ErpScreenFrame extends StatelessWidget {
         }
 
         final headerTabs = tabsVisible && tabsPosition == 'below_title';
+        // Use the actual viewport width, not a fixed device class. Side rails
+        // consume valuable space on portrait tablets and narrow desktop windows,
+        // so relocate their controls above the workspace until there is room.
+        final viewportWidth = MediaQuery.sizeOf(context).width;
+        final useSideRails = viewportWidth >= 1180;
+        final effectiveContentWidth = applyContentWidth && viewportWidth >= 1440
+            ? contentWidth / 100
+            : 1.0;
         final contentRow = Row(
           mainAxisSize: MainAxisSize.max,
           crossAxisAlignment: shrinkWrap ? CrossAxisAlignment.start : CrossAxisAlignment.stretch,
           children: [
-            sideRail(left: false),
+            if (useSideRails) sideRail(left: false),
             Expanded(
               child: Center(
                 child: FractionallySizedBox(
-                  widthFactor: applyContentWidth ? contentWidth / 100 : 1,
+                  widthFactor: effectiveContentWidth,
                   child: Padding(padding: padding, child: child),
                 ),
               ),
             ),
-            sideRail(left: true),
+            if (useSideRails) sideRail(left: true),
           ],
         );
         final Widget content = shrinkWrap ? contentRow : Expanded(child: contentRow);
@@ -413,6 +421,12 @@ class ErpScreenFrame extends StatelessWidget {
               mainAxisSize: shrinkWrap ? MainAxisSize.min : MainAxisSize.max,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Side-rail controls become full-width panels on compact
+                // viewports; never let a 112–150px rail squeeze the data grid.
+                if (!useSideRails && tabsVisible && (tabsPosition == 'left' || tabsPosition == 'right')) tabsPanel(),
+                if (!useSideRails && tasksVisible && (tasksPosition == 'left' || tasksPosition == 'right')) tasksPanel(),
+                if (!useSideRails && dateVisible && (datePosition == 'left' || datePosition == 'right')) slotPanel(dateFilter),
+                if (!useSideRails && imageVisible && (imagesPosition == 'left' || imagesPosition == 'right')) slotPanel(imagePanel),
                 if (tabsVisible && tabsPosition == 'top') tabsPanel(),
                 if (tasksVisible && tasksPosition == 'top') tasksPanel(),
                 if (dateVisible && datePosition == 'top') slotPanel(dateFilter),
