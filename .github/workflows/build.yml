@@ -184,7 +184,7 @@ jobs:
             echo "ERROR: APK applicationId changed. Expected $EXPECTED_APP_ID, got $APP_ID"
             exit 1
           fi
-          test "$VERSION_CODE" -ge 2
+          test "$VERSION_CODE" -ge 5
 
           AAPT="$(find "$SDK/build-tools" -name aapt -type f | sort -V | tail -n 1)"
           if [ -z "$AAPT" ]; then
