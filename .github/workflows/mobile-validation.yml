@@ -152,6 +152,8 @@ jobs:
           BADGING="$("$AAPT" dump badging "$APK")"
           printf '%s\n' "$BADGING" | grep -q "application-icon-"
           printf '%s\n' "$BADGING" | grep -q "name='com.example.silsila_app'"
+          VERSION_CODE="$(printf '%s\n' "$BADGING" | sed -n "s/.*versionCode='\\([0-9]*\\)'.*/\\1/p")"
+          test "$VERSION_CODE" -ge 5
           sha256sum "$APK" | tee "${APK}.sha256"
 
       - name: Upload Android Release APK
