@@ -171,8 +171,30 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         return code;
       }
 
+      // Always fetch the selected activity independently of the broad catalog
+      // request. This prevents server row caps, cached partial catalogs, or
+      // mixed-activity pagination from silently omitting one activity.
+      final selectedCode = normalizeActivity(_selectedActivityCode);
+      final selectedActivityRows = await _db!.from('erp_item_categories')
+          .select('*')
+          .eq('company_id', company)
+          .eq('activity_code', selectedCode)
+          .order('category_code')
+          .limit(10000);
+      final catalogById = <String, Map<String, dynamic>>{
+        for (final row in catalog) _s(row['id']): row,
+      };
+      for (final raw in (selectedActivityRows as List)) {
+        if (raw is Map) {
+          final row = Map<String, dynamic>.from(raw);
+          final id = _s(row['id']);
+          if (id.isNotEmpty) catalogById[id] = row;
+        }
+      }
+      final completeCatalog = catalogById.values.toList(growable: false);
+
       final actualCodes = <String>{};
-      for (final row in catalog) {
+      for (final row in completeCatalog) {
         final code = normalizeActivity(_s(row['activity_code']));
         if (code.isNotEmpty) actualCodes.add(code);
       }
@@ -207,16 +229,13 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
               ? defaultActivity
               : sortedActualCodes.isNotEmpty ? sortedActualCodes.first : defaultActivity;
 
-      _companyCategories = catalog.map((row) => <String, dynamic>{
-        'id': row['id'],
-        'company_id': row['company_id'],
-        'activity_code': normalizeActivity(_s(row['activity_code'])),
-        'category_code': row['category_code'],
-        'parent_id': row['parent_id'],
-        'created_at': row['created_at'],
-      }).toList(growable: false);
+      // Keep complete source rows (including names, status, and visibility)
+      // for code generation and every downstream category workflow.
+      _companyCategories = completeCatalog
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList(growable: false);
 
-      _all = catalog.where((row) {
+      _all = completeCatalog.where((row) {
         final rawCode = normalizeActivity(_s(row['activity_code']));
         if (rawCode.isEmpty) return _selectedActivityCode == defaultActivity;
         return rawCode == _selectedActivityCode;
