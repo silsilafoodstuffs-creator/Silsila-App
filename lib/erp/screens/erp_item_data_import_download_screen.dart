@@ -877,6 +877,7 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                   fixedLeftColumns: 4,
                   minWidth: 1700,
                   columnSpacing: 2,
+                  horizontalMargin: 2,
                   columns: [
                     DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
                       const Text('الكل'),
