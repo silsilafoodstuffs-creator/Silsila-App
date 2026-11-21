@@ -22,6 +22,7 @@ import 'screens/hr_attendance_rules_screen.dart';
 import 'screens/erp_app_assets_screen.dart';
 import 'screens/erp_app_advertisements_screen.dart';
 import 'screens/erp_program_policies_screen.dart';
+import 'screens/erp_maintenance_center_screen.dart';
 import 'screens/erp_studio_published_designs_screen.dart';
 import 'screens/erp_supplier_deferred_commissions_screen.dart';
 import 'screens/erp_delegate_allocation_screen.dart';
@@ -570,6 +571,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   bool _canOpenScreen(String module, String group, String page) {
     if (_isSystemAdmin) return true;
+    // Maintenance tooling is reserved for the system administrator.
+    if (page == 'مركز الصيانة والتطوير') return false;
     if (page == 'ملخص إدارة موارد بشرية') return _hrDashboardAccessChecked && _hrDashboardAllowed;
     return _screenAccessPermissions[_screenPermissionKey(module, group, page)] == true;
   }
@@ -633,7 +636,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     final companyId = _appManagementCompanyId;
     final userId = Supabase.instance.client.auth.currentUser?.id;
     final key = _screenPermissionKey(module, group, page);
-    if (companyId == null || userId == null || !_canOpenScreen(module, group, page)) return;
+    final isCurrentScreen = _screenPermissionKey(_module, _group, _page) == key;
+    // A screen that is already open is available to this signed-in user.
+    if (companyId == null || userId == null ||
+        (!_isSystemAdmin && !_canOpenScreen(module, group, page) && !isCurrentScreen)) return;
     final add = !_quickAccessKeys.contains(key);
     setState(() {
       if (add) { _quickAccessKeys.add(key); } else { _quickAccessKeys.remove(key); }
@@ -682,7 +688,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   Widget _quickAccessScreenButton(String module, String group, String page) {
     final key = _screenPermissionKey(module, group, page);
-    final allowed = _canOpenScreen(module, group, page);
+    final isCurrentScreen = _screenPermissionKey(_module, _group, _page) == key;
+    final allowed = _isSystemAdmin || _canOpenScreen(module, group, page) || isCurrentScreen;
     final selected = _quickAccessKeys.contains(key);
     return IconButton(
       tooltip: !allowed ? 'الشاشة غير متاحة ضمن صلاحيات المستخدم' : selected ? 'إزالة من الوصول السريع' : 'إضافة إلى الوصول السريع',
@@ -1666,6 +1673,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                       _page == 'المستخدمين' ||
                       _page == 'قوالب صلاحيات المستخدمين' ||
                       _page == 'صلاحيات المستخدمين' ||
+                      _page == 'مركز الصيانة والتطوير' ||
                       _page == 'سياسات البرنامج' ||
                       _page == 'سلسلة ستوديو' ||
                       _page == 'شاشات الاستوديو المنشورة' ||
@@ -1701,6 +1709,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                                       ? SilsilaStudioScreen(companyId: _appManagementCompanyId, availableScreens: (_modules.values.expand((module) => module.values.expand((items) => items)).toSet().toList()..sort()))
                                       : _page == 'شاشات الاستوديو المنشورة'
                                       ? ErpStudioPublishedDesignsScreen(companyId: _appManagementCompanyId)
+                                      : _page == 'مركز الصيانة والتطوير'
+                                      ? const ErpMaintenanceCenterScreen()
                                       : _page == 'سياسات البرنامج'
                                       ? ErpProgramPoliciesScreen(
                                           companyId: _appManagementCompanyId,
