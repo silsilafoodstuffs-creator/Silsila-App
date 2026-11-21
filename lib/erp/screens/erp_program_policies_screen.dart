@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_center_toast.dart';
+import '../../core/app_theme.dart' show SilsilaThemeController;
 
 class ErpProgramPoliciesScreen extends StatefulWidget {
   const ErpProgramPoliciesScreen({super.key, required this.companyId});
@@ -93,6 +94,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'skip_purchase_order','category':'شرائية','ar':'تخطي أمر الشراء في فاتورة الشراء','en':'Skip purchase order in purchase invoice'},
     {'key':'supplier_bonus_variance','category':'شرائية','ar':'تحديد نسبة فروقات وارد حوافز الموردين','en':'Set supplier incentives incoming variance','value':'0.025%'},
     {'key':'national_id_required','category':'إدارية','ar':'الرقم القومي الزامي لتسجيل موظف جديد','en':'Require national ID for new employees','all':true},
+    {'key':'appearance.theme_preset','category':'الخطوط والألوان','ar':'الثيم الافتراضي','en':'Default theme','value':'glossy','options':['glossy','classic'],'mandatory':true,'all':true},
+    {'key':'appearance.dark_mode','category':'الخطوط والألوان','ar':'الوضع الداكن','en':'Dark mode','value':'false','options':['false','true'],'mandatory':true,'all':true},
     {'key':'appearance.language','category':'الخطوط والألوان','ar':'لغة واجهة البرنامج والتطبيقات','en':'Program and apps interface language','value':'العربية','options':['العربية','الإنجليزية'],'mandatory':true,'all':true},
     {'key':'appearance.header_background','category':'الخطوط والألوان','ar':'لون الهيدر في جميع الشاشات والتقارير','en':'Header background color','value':'#3E007D','mandatory':true,'all':true},
     {'key':'appearance.screen_background','category':'الخطوط والألوان','ar':'لون الخلفية في جميع الشاشات والتقارير','en':'Screen and report background color','value':'#FFFFFF','mandatory':true,'all':true},
@@ -322,6 +325,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         }
       }
       final programSettings = await db.from('erp_program_settings').select().eq('company_id', company).maybeSingle();
+      await SilsilaThemeController.selectPreset((values['appearance.theme_preset']?['value'] ?? 'glossy').toString());
+      await SilsilaThemeController.selectDark((values['appearance.dark_mode']?['value'] ?? 'false').toString() == 'true');
       _programNameController.text = (programSettings?['program_name'] ?? 'سلسلة').toString();
       _programLogoBase64 = programSettings?['logo_base64']?.toString();
       _programLogoMime = programSettings?['logo_mime_type']?.toString();
@@ -391,7 +396,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         throw StateError(error!);
       }
     }
-    for (final key in _appearancePolicyKeys.where((key) => key != 'appearance.language' && key != 'appearance.header_background' && key != 'appearance.screen_background')) {
+    for (final key in _appearancePolicyKeys.where((key) => key != 'appearance.theme_preset' && key != 'appearance.dark_mode' && key != 'appearance.language' && key != 'appearance.header_background' && key != 'appearance.screen_background')) {
       final style = _fontStyle(values[key]!);
       final size = double.tryParse((style['size'] ?? '').toString());
       final color = (style['color'] ?? '').toString().trim();
@@ -510,6 +515,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
      }
      final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??'','policy_code':_policyCodes[p['key']] }).toList();
       await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key');
+      await SilsilaThemeController.selectPreset((values['appearance.theme_preset']?['value'] ?? 'glossy').toString());
+      await SilsilaThemeController.selectDark((values['appearance.dark_mode']?['value'] ?? 'false').toString() == 'true');
       final settings = await db.from('erp_program_settings').select().eq('company_id',company).maybeSingle();
       await db.from('erp_program_settings').upsert({...?settings,'company_id':company,'program_name':_programNameController.text.trim().isEmpty?'سلسلة':_programNameController.text.trim(),'logo_base64':_programLogoBase64,'logo_mime_type':_programLogoMime,'updated_at':DateTime.now().toUtc().toIso8601String(),'updated_by':db.auth.currentUser?.id},onConflict:'company_id');
       if(mounted){setState(() { saving=false; _isEditing=false; _editSnapshot=''; message='تم الحفظ'; }); ErpCenterToast.show(context, 'تم الحفظ');} } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; }); rethrow;}
@@ -1080,6 +1087,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   }
 
   static const List<String> _appearancePolicyKeys = [
+    'appearance.theme_preset',
+    'appearance.dark_mode',
     'appearance.language',
     'appearance.header_background',
     'appearance.screen_background',
@@ -1244,7 +1253,19 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
             ...List.generate(rows.length, (index) {
               final p = rows[index];              final key = (p['key'] ?? '').toString();
               Widget editor;
-              if (key == 'appearance.language') {
+              if (key == 'appearance.theme_preset' || key == 'appearance.dark_mode') {
+                final isTheme = key == 'appearance.theme_preset';
+                final current = (p['value'] ?? (isTheme ? 'glossy' : 'false')).toString();
+                editor = SizedBox(width: 150, height: 40, child: DropdownButtonFormField<String>(
+                  value: current,
+                  isExpanded: true, isDense: true, itemHeight: 40,
+                  decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight:40,maxHeight:40), contentPadding: EdgeInsets.symmetric(horizontal:6,vertical:4), border: OutlineInputBorder()),
+                  items: isTheme
+                    ? const [DropdownMenuItem(value:'glossy',child:Text('Glossy فاخر')),DropdownMenuItem(value:'classic',child:Text('Classic كلاسيكي'))]
+                    : const [DropdownMenuItem(value:'false',child:Text('إيقاف')),DropdownMenuItem(value:'true',child:Text('تشغيل'))],
+                  onChanged: (v) { if (v != null) setState(() => p['value'] = v); },
+                ));
+              } else if (key == 'appearance.language') {
                 editor = SizedBox(width: 150, height: 40, child: DropdownButtonFormField<String>(
                   value: (p['value'] ?? 'العربية').toString(),
                   isExpanded: true, isDense: true, itemHeight: 48,
