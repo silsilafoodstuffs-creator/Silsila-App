@@ -69,6 +69,10 @@ void main() {
   });
 
   testWidgets('renders side-positioned tabs and actions', (tester) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     ErpScreenLayoutProfiles.profiles.value = {
       'اختبار الجانب': {
         'tabsPosition': 'right',
@@ -99,6 +103,10 @@ void main() {
     expect(actionX, lessThan(contentX), reason: 'RTL left rail should remain on the visual left.');
   });
   testWidgets('places date, image and sidebar slots from Studio profile', (tester) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     ErpScreenLayoutProfiles.profiles.value = {
       'اختبار العناصر': {
         'datePosition': 'left',
@@ -128,6 +136,17 @@ void main() {
     final contentX = tester.getTopLeft(find.text('المحتوى الرئيسي')).dx;
     expect(dateX, lessThan(contentX));
     expect(imageX, greaterThan(contentX));
+  });
+
+  testWidgets('keeps the sidebar visible as a full-width panel on compact viewports', (tester) async {
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    ErpScreenLayoutProfiles.profiles.value = {'اختبار الشريط المضغوط': {'showSidebar': true}};
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: Directionality(textDirection: TextDirection.rtl, child: ErpScreenFrame(title: 'اختبار الشريط المضغوط', sidebar: const Text('قائمة جانبية'), child: const Text('المحتوى'))))));
+    expect(find.text('قائمة جانبية'), findsOneWidget);
+    expect(find.text('المحتوى'), findsOneWidget);
   });
 
   testWidgets('supports shared tabs without duplicating a specialized screen title', (tester) async {
