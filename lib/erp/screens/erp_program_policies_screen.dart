@@ -1118,40 +1118,85 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   }
 
   Future<void> _chooseAppearanceColor(Map<String, dynamic> policy, {bool fontStyle = false}) async {
-    const swatches = <Color>[
-      Color(0xFF3E007D), Color(0xFF5E35B1), Color(0xFF7E57C2), Color(0xFF9575CD),
-      Color(0xFFFFA015), Color(0xFFFF8F00), Color(0xFFFF5722), Color(0xFFE53935),
-      Color(0xFFFF27C3), Color(0xFFD81B60), Color(0xFF8E24AA), Color(0xFF3949AB),
-      Color(0xFF039BE5), Color(0xFF00897B), Color(0xFF43A047), Color(0xFF795548),
-      Color(0xFF333333), Color(0xFF666666), Color(0xFF999999), Color(0xFFCCCCCC),
-      Color(0xFFF5EFFB), Color(0xFFFFFFFF),
-    ];
-    final current = fontStyle ? (_fontStyle(policy)['color'] ?? '#3E007D').toString() : (policy['value'] ?? '#FFFFFF').toString();
+    final initial = fontStyle
+        ? (_fontStyle(policy)['color'] ?? '#3E007D').toString()
+        : (policy['value'] ?? '#FFFFFF').toString();
+    final initialColor = _appearanceColor(initial);
+    final initialHsv = HSVColor.fromColor(initialColor);
     final selected = await showDialog<Color>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('اختيار اللون'),
-        content: SizedBox(width: 300, child: Wrap(
-          spacing: 8, runSpacing: 8,
-          children: swatches.map((color) => InkWell(
-            onTap: () => Navigator.pop(ctx, color),
-            child: Container(
-              width: 30, height: 30,              decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: Colors.black26)),
-              child: _appearanceColor(current).toARGB32() == color.toARGB32()
-                  ? Icon(Icons.check, size: 16, color: color.computeLuminance() < .45 ? Colors.white : Colors.black87)
-                  : null,
-            ),
-          )).toList(),        )),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء'))],
-      ),
+      builder: (ctx) => StatefulBuilder(builder: (ctx, refresh) {
+        HSVColor hsv = initialHsv;
+        String hex = '#${initialColor.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+        Color current = initialColor;
+        void update(HSVColor next) {
+          hsv = next; current = hsv.toColor();
+          hex = '#${current.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+          refresh(() {});
+        }
+        return AlertDialog(
+          title: const Text('لوحة اختيار الألوان الكاملة'),
+          content: SizedBox(width: 420, child: SingleChildScrollView(child: Column(
+            mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(height: 170, child: Row(children: [
+                SizedBox(width: 48, child: RotatedBox(quarterTurns: 3, child: Slider(
+                  value: hsv.hue, min: 0, max: 360, activeColor: current,
+                  onChanged: (v) => update(hsv.withHue(v)),
+                ))),
+                Expanded(child: LayoutBuilder(builder: (context, constraints) => GestureDetector(
+                  onPanDown: (d) => update(hsv.withSaturation((d.localPosition.dx / constraints.maxWidth).clamp(0.0,1.0)).withValue((1-d.localPosition.dy / constraints.maxHeight).clamp(0.0,1.0))),
+                  onPanUpdate: (d) => update(hsv.withSaturation((d.localPosition.dx / constraints.maxWidth).clamp(0.0,1.0)).withValue((1-d.localPosition.dy / constraints.maxHeight).clamp(0.0,1.0))),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.black26),
+                      gradient: LinearGradient(colors: [HSVColor.fromAHSV(1, hsv.hue, 1, 1).toColor(), Colors.white]),
+                    ),
+                    child: DecoratedBox(decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black]),
+                    )),
+                  ),
+                ))),
+              ])),
+              const SizedBox(height: 8),
+              Text('درجة اللون الحالية: $hex', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              Row(children: [
+                Container(width: 42, height: 34, decoration: BoxDecoration(color: current, borderRadius: BorderRadius.circular(7), border: Border.all(color: Colors.black26))),
+                const SizedBox(width: 8),
+                Expanded(child: TextFormField(
+                  initialValue: hex, textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(labelText: 'كود HEX', hintText: '#3E007D'),
+                  onChanged: (v) {
+                    final normalized = v.startsWith('#') ? v : '#$v';
+                    if (RegExp(r'^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$').hasMatch(normalized)) {
+                      current = _appearanceColor(normalized); hsv = HSVColor.fromColor(current); hex = normalized.toUpperCase(); refresh(() {});
+                    }
+                  },
+                )),
+              ]),
+              const SizedBox(height: 6),
+              Slider(value: hsv.saturation, onChanged: (v) => update(hsv.withSaturation(v))),
+              Slider(value: hsv.value, onChanged: (v) => update(hsv.withValue(v))),
+            ],
+          ))),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, current), child: const Text('اعتماد اللون')),
+          ],
+        );
+      }),
     );
     if (selected == null || !mounted) return;
-    final hex = '#${selected.toARGB32().toRadixString(16).substring(2).toUpperCase()}';    setState(() {
+    final hex = '#${selected.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+    setState(() {
       if (fontStyle) {
         final style = _fontStyle(policy)..['color'] = hex;
         policy['value'] = jsonEncode(style);
-      } else {
-        policy['value'] = hex;      }
+      } else { policy['value'] = hex; }
+      _appearanceColorController(policy, fontStyle: fontStyle).text = hex;
     });
   }
 
