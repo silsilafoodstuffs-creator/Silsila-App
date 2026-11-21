@@ -404,7 +404,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
           scrollDirection: Axis.horizontal,
           child: DataTable(
             headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40,
-            horizontalMargin: 5, columnSpacing: 5, dividerThickness: .7,
+            horizontalMargin: 5, columnSpacing: 2, dividerThickness: .7,
             headingTextStyle: const TextStyle(fontWeight: FontWeight.w800, color: _costPurple, fontSize: 12),
             columns: const [
               DataColumn(label: Text('تحديد')), DataColumn(label: Text('م')),
