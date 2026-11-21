@@ -13,7 +13,7 @@ class ErpStandardDataTable extends StatelessWidget {
     required this.columns,
     required this.rows,
     this.headingColor = const Color(0xFFF5EFFB),
-    this.headingHeight = 40,
+    this.headingHeight = 56,
     this.rowHeight = 40,
     this.horizontalMargin = 5,
     this.columnSpacing = 2,
