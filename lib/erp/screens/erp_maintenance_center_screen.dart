@@ -196,7 +196,7 @@ class ErpMaintenanceCenterScreen extends StatelessWidget {
                 const SizedBox(height: 7),
                 _commandTile(context, 'بناء نسخة الويب', 'flutter build web --release --base-href "/Silsila-App/"'),
                 const SizedBox(height: 7),
-                _commandTile(context, 'بناء APK تجريبي', 'flutter build apk --debug'),
+                _commandTile(context, 'بناء APK إصدار Release', 'flutter build apk --release'),
                 const SizedBox(height: 7),
                 _commandTile(context, 'تنسيق ملفات Dart', 'dart format .'),
                 const SizedBox(height: 14),
