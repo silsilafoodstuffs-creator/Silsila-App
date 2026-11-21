@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_standard_data_table.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -1218,9 +1219,8 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
         const SizedBox(height: 4),
         const Text('الوحدة الكبرى هي الافتراضية للشراء والبيع والتحويل والجرد، ويمكن تخصيص كل مخزن بصورة مستقلة.'),
         const SizedBox(height: 8),
-        SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
-          columnSpacing: 2,
-          headingRowColor: WidgetStateProperty.all(const Color(0xFFE9DDF5)),
+        SingleChildScrollView(scrollDirection: Axis.horizontal, child: ErpStandardDataTable(
+          headingColor: const Color(0xFFE9DDF5),
           columns: const [
             DataColumn(label: Text('م')),
             DataColumn(label: Text('كود فرع')),
