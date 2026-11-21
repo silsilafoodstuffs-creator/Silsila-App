@@ -14,7 +14,7 @@ class _ErpHrCompensationScreenState extends State<ErpHrCompensationScreen>{
   String get cid=>(widget.companyId??'').trim();
   String get table=>switch(widget.mode){'advances'=>'erp_hr_employee_advances','actions'=>'erp_hr_employee_actions','overtime'=>'erp_hr_overtime_requests','contracts'=>'erp_hr_employee_contracts','settlements'=>'erp_hr_end_of_service_settlements',_=>'erp_hr_performance_reviews'};
   String get dateColumn=>switch(widget.mode){'advances'=>'requested_on','actions'=>'action_date','overtime'=>'work_date','contracts'=>'start_date','settlements'=>'separation_date',_=>'period_start'};
-  bool get readOnly=>(widget.title??'').startsWith('كشف')||(widget.title??'').startsWith('تقرير')||(widget.title??'').startsWith('تسويات');
+  bool get readOnly=>(widget.title??'').startsWith('كشف')||(widget.title??'').startsWith('تقرير')||(widget.title??'').startsWith('تسويات')||widget.title=='ساعات العمل الإضافية'||widget.title=='تقييمات الأداء';
   bool get canCreate=>!readOnly&&widget.title!='تسوية سلفة';
   bool loading=false,saving=false;String? error,message;
   List<Map<String,dynamic>> rows=[],employees=[];
