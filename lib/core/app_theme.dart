@@ -152,8 +152,8 @@ class SilsilaTheme {
         dataRowMinHeight: 40,
         dataRowMaxHeight: 40,
         headingRowHeight: 40,
-        columnSpacing: 5,
-        horizontalMargin: 5,
+        columnSpacing: 2,
+        horizontalMargin: 2,
       ),
 
       inputDecorationTheme: InputDecorationTheme(
