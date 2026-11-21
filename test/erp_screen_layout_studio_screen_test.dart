@@ -34,8 +34,8 @@ void main() {
     expect(find.text('مكان الصور'), findsOneWidget);
     expect(find.text('مكان شريط التمرير'), findsOneWidget);
     expect(find.text('معاينة فورية للتخطيط'), findsOneWidget);
-    expect(find.text('من تاريخ — إلى تاريخ'), findsOneWidget);
-    expect(find.text('صور الأصناف'), findsOneWidget);
+    expect(find.text('مكان التاريخ والفلاتر الزمنية'), findsOneWidget);
+    expect(find.byIcon(Icons.image_outlined), findsOneWidget);
   });
 
   testWidgets('image visibility toggle updates the live preview', (tester) async {
@@ -49,10 +49,10 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('صور الأصناف'), findsOneWidget);
+    expect(find.byIcon(Icons.image_outlined), findsOneWidget);
     await tester.ensureVisible(find.text('الصور'));
     await tester.tap(find.text('الصور'));
     await tester.pumpAndSettle();
-    expect(find.text('صور الأصناف'), findsNothing);
+    expect(find.byIcon(Icons.image_outlined), findsNothing);
   });
 }
