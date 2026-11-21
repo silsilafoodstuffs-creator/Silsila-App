@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../services/erp_studio_draft_store.dart';
 import '../services/erp_studio_repository.dart';
@@ -47,6 +48,9 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   bool _busy = false;
   bool _dirty = false;
   String? _lastTestReport;
+  Map<String, bool> _permissions = const <String, bool>{};
+  bool _permissionsLoaded = false;
+  String? _permissionsError;
 
   static const _studioTabs = <String>[
     'لوحة الاستوديو',
@@ -77,15 +81,40 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   void initState() {
     super.initState();
     _nameController.text = _doc.name;
-    if (_companyId != null) {
-      _loadRemoteDesigns();
-    }
+    _loadStudioPermissions();
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
+  }
+
+  bool _allowed(String key) => _companyId == null || _permissions[key] == true;
+
+  Future<void> _loadStudioPermissions() async {
+    final company = _companyId;
+    if (company == null) {
+      _permissionsLoaded = true;
+      return;
+    }
+    try {
+      final permissions = await _repository.loadStudioPermissions(company);
+      if (!mounted) return;
+      setState(() {
+        _permissions = permissions;
+        _permissionsLoaded = true;
+        _permissionsError = null;
+      });
+      if (permissions['canAccess'] == true) await _loadRemoteDesigns();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _permissions = const <String, bool>{};
+        _permissionsLoaded = true;
+        _permissionsError = error.toString();
+      });
+    }
   }
 
   void _notice(String message, {bool error = false}) {
@@ -97,6 +126,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   void _change(StudioDocument next) {
+    if (!_allowed('canEdit')) {
+      _notice('ليست لديك صلاحية تعديل تصميمات الاستوديو.', error: true);
+      return;
+    }
     _undo.add(_doc);
     if (_undo.length > 60) _undo.removeAt(0);
     _redo.clear();
@@ -106,12 +139,18 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       _testedRevision = null;
       _lastTestReport = null;
     });
-    _store.save(_doc).catchError((Object error) {
-      _notice('تعذر حفظ نسخة العمل المحلية: $error', error: true);
-    });
+    if (_allowed('canSave')) {
+      _store.save(_doc).catchError((Object error) {
+        _notice('تعذر حفظ نسخة العمل المحلية: $error', error: true);
+      });
+    }
   }
 
   void _newDesign(String kind) {
+    if (!_allowed('canAdd')) {
+      _notice('ليست لديك صلاحية إنشاء تصميم جديد.', error: true);
+      return;
+    }
     final labels = <String, String>{
       'screen': 'شاشة جديدة',
       'report': 'تقرير جديد',
@@ -136,7 +175,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       _previewData = {};
       _activeTab = kind == 'report' ? 2 : kind == 'icon' ? 3 : kind == 'table' || kind == 'grid' || kind == 'tree' ? 4 : 1;
     });
-    _store.save(next);
+    if (_allowed('canSave')) _store.save(next);
   }
 
   Map<String, dynamic> _defaultProps(String type) {
@@ -219,49 +258,88 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   void _duplicateSelected() {
-    final selected = _doc.nodes.where((n) => _selectedIds.contains(n.id) && !n.locked).toList();
-    if (selected.isEmpty) return;
-    final copies = selected.map((node) => StudioNode(
-      id: '${node.type}_${DateTime.now().microsecondsSinceEpoch}_${selected.indexOf(node)}',
+    final ids = _doc.nodes.where((node) => _selectedIds.contains(node.id) && !node.locked).map((node) => node.id).toSet();
+    if (ids.isEmpty) return;
+    var expanded = true;
+    while (expanded) {
+      expanded = false;
+      for (final node in _doc.nodes) {
+        if (node.parentId != null && ids.contains(node.parentId) && ids.add(node.id)) expanded = true;
+      }
+    }
+    final originals = _doc.nodes.where((node) => ids.contains(node.id)).toList();
+    final stamp = DateTime.now().microsecondsSinceEpoch;
+    final idMap = <String, String>{for (var i = 0; i < originals.length; i++) originals[i].id: '${originals[i].type}_${stamp}_$i'};
+    final groupMap = <String, String>{};
+    for (final node in originals) {
+      if (node.groupId != null) groupMap.putIfAbsent(node.groupId!, () => 'group_${stamp}_${groupMap.length}');
+    }
+    final copies = originals.map((node) => StudioNode(
+      id: idMap[node.id]!,
       type: node.type,
       props: Map<String, dynamic>.from(node.props),
+      parentId: node.parentId == null ? null : idMap[node.parentId] ?? node.parentId,
+      groupId: node.groupId == null ? null : groupMap[node.groupId],
       hidden: node.hidden,
       locked: false,
     )).toList();
     _change(_doc.copyWith(nodes: [..._doc.nodes, ...copies]));
-    setState(() {
-      _selectedIds
-        ..clear()
-        ..addAll(copies.map((e) => e.id));
-    });
+    setState(() { _selectedIds..clear()..addAll(copies.map((node) => node.id)); });
   }
 
   void _deleteSelected() {
-    final removable = _doc.nodes.where((n) => _selectedIds.contains(n.id) && !n.locked).toList();
-    if (removable.isEmpty) {
-      _notice('لا توجد مكونات محددة قابلة للحذف.');
+    final removable = _doc.nodes.where((node) => _selectedIds.contains(node.id) && !node.locked).toList();
+    if (removable.isEmpty) { _notice('لا توجد مكونات محددة قابلة للحذف.'); return; }
+    final ids = removable.map((node) => node.id).toSet();
+    var expanded = true;
+    while (expanded) {
+      expanded = false;
+      for (final node in _doc.nodes) {
+        if (node.parentId != null && ids.contains(node.parentId) && ids.add(node.id)) expanded = true;
+      }
+    }
+    if (_doc.nodes.any((node) => ids.contains(node.id) && node.locked)) {
+      _notice('لا يمكن حذف المجموعة لأنها تحتوي على مكون مقفل. أزل القفل عن المكون أولاً.');
       return;
     }
-    final ids = removable.map((e) => e.id).toSet();
-    _change(_doc.copyWith(nodes: _doc.nodes.where((e) => !ids.contains(e.id)).toList()));
+    _change(_doc.copyWith(nodes: _doc.nodes.where((node) => !ids.contains(node.id)).toList()));
     setState(() => _selectedIds.clear());
   }
 
   void _groupSelected() {
-    if (_selectedIds.length < 2) {
-      _notice('حدد مكونين على الأقل لإنشاء مجموعة.');
-      return;
-    }
-    final groupId = 'group_${DateTime.now().microsecondsSinceEpoch}';
-    _change(_doc.copyWith(nodes: _doc.nodes.map((node) =>
-      _selectedIds.contains(node.id) && !node.locked ? node.copyWith(groupId: groupId) : node).toList()));
-    _notice('تم تجميع العناصر المحددة.');
+    final selected = _doc.nodes.where((node) => _selectedIds.contains(node.id) && !node.locked).toList();
+    if (selected.length < 2) { _notice('حدد مكونين على الأقل لإنشاء مجموعة.'); return; }
+    final groupId = 'group_' + DateTime.now().microsecondsSinceEpoch.toString();
+    final firstIndex = _doc.nodes.indexWhere((node) => _selectedIds.contains(node.id));
+    final selectedIds = selected.map((node) => node.id).toSet();
+    final remaining = _doc.nodes.where((node) => !selectedIds.contains(node.id)).toList();
+    final insertion = firstIndex.clamp(0, remaining.length).toInt();
+    final group = StudioNode(id: groupId, type: 'container', props: {'label': 'مجموعة عناصر', 'padding': 8});
+    remaining.insert(insertion, group);
+    final children = selected.map((node) => node.copyWith(clearGroup: true, parentId: groupId)).toList();
+    remaining.insertAll(insertion + 1, children);
+    _change(_doc.copyWith(nodes: remaining));
+    setState(() { _selectedIds..clear()..add(groupId); });
+    _notice('تم إنشاء حاوية مجموعة؛ ويمكن إنشاء مجموعات متداخلة داخلها.');
   }
 
   void _ungroupSelected() {
     if (_selectedIds.isEmpty) return;
-    _change(_doc.copyWith(nodes: _doc.nodes.map((node) =>
-      _selectedIds.contains(node.id) && !node.locked ? node.copyWith(clearGroup: true) : node).toList()));
+    final selectedGroups = _doc.nodes
+        .where((node) => _selectedIds.contains(node.id) && node.type == 'container' && !node.locked)
+        .map((node) => node.id).toSet();
+    final next = <StudioNode>[];
+    for (final node in _doc.nodes) {
+      if (selectedGroups.contains(node.id)) continue;
+      if (node.parentId != null && selectedGroups.contains(node.parentId)) {
+        next.add(node.copyWith(clearParent: true));
+      } else if (_selectedIds.contains(node.id) && !node.locked) {
+        next.add(node.copyWith(clearParent: true, clearGroup: true));
+      } else {
+        next.add(node);
+      }
+    }
+    _change(_doc.copyWith(nodes: next));
   }
 
   void _finishResize(StudioNode node) {
@@ -279,7 +357,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   void _toggleHidden(StudioNode node) => _updateNode(node, hidden: !node.hidden);
 
   void _undoChange() {
-    if (_undo.isEmpty) return;
+    if (!_allowed('canEdit') || _undo.isEmpty) return;
     _redo.add(_doc);
     setState(() {
       _doc = _undo.removeLast();
@@ -290,7 +368,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   void _redoChange() {
-    if (_redo.isEmpty) return;
+    if (!_allowed('canEdit') || _redo.isEmpty) return;
     _undo.add(_doc);
     setState(() {
       _doc = _redo.removeLast();
@@ -301,6 +379,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _saveLocal() async {
+    if (!_allowed('canSave')) {
+      _notice('ليست لديك صلاحية حفظ مسودات الاستوديو.', error: true);
+      return;
+    }
     setState(() => _busy = true);
     try {
       await _store.save(_doc);
@@ -313,6 +395,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _saveCloud() async {
+    if (!_allowed('canSave')) {
+      _notice('ليست لديك صلاحية الحفظ المركزي.', error: true);
+      return;
+    }
     final company = _companyId;
     if (company == null) {
       _notice('يجب اختيار شركة نشطة قبل الحفظ المركزي.', error: true);
@@ -349,6 +435,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _syncPendingDrafts() async {
+    if (!_allowed('canSave')) {
+      _notice('ليست لديك صلاحية مزامنة المسودات.', error: true);
+      return;
+    }
     final company = _companyId;
     if (company == null) {
       _notice('يجب اختيار شركة نشطة لمزامنة المسودات.', error: true);
@@ -455,6 +545,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _importJson() async {
+    if (!_allowed('canEdit')) {
+      _notice('ليست لديك صلاحية استيراد تصميمات للتعديل.', error: true);
+      return;
+    }
     final controller = TextEditingController();
     final accepted = await showDialog<bool>(
       context: context,
@@ -495,8 +589,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
         _dirty = true;
         _testedRevision = null;
       });
-      await _store.save(imported);
-      _notice('تم التحقق من التصميم واستيراده كمسودة محلية.');
+      if (_allowed('canSave')) await _store.save(imported);
+      _notice(_allowed('canSave')
+          ? 'تم التحقق من التصميم واستيراده كمسودة محلية.'
+          : 'تم التحقق من التصميم وفتحه مؤقتاً؛ لا تملك صلاحية حفظ المسودات.');
     } catch (e) {
       _notice('رفض الاستيراد: $e', error: true);
     } finally {
@@ -526,7 +622,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       final decoded = StudioDocument.fromJson(Map<String, dynamic>.from(raw));
       final revision = (row['revision'] as num?)?.toInt() ?? 0;
       final next = decoded.copyWith(remoteId: id, remoteRevision: revision);
-      await _store.save(next);
+      if (_allowed('canSave')) await _store.save(next);
       if (!mounted) return;
       setState(() {
         _doc = next;
@@ -564,6 +660,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _restoreVersion(int revision) async {
+    if (!_allowed('canEdit')) {
+      _notice('ليست لديك صلاحية استعادة إصدارات التصميم.', error: true);
+      return;
+    }
     final company = _companyId;
     final id = _remoteDesignId;
     if (company == null || id == null) return;
@@ -592,6 +692,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _runTests() async {
+    if (!_allowed('canPreview')) {
+      _notice('ليست لديك صلاحية معاينة واختبار التصميم.', error: true);
+      return;
+    }
     setState(() => _busy = true);
     final errors = <String>[];
     final notes = <String>[];
@@ -640,6 +744,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _approveDesign() async {
+    if (!_allowed('canEdit')) {
+      _notice('ليست لديك صلاحية اعتماد التصميم.', error: true);
+      return;
+    }
     final company = _companyId;
     final id = _remoteDesignId;
     if (company == null || id == null) {
@@ -664,6 +772,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _publishDesign() async {
+    if (!_allowed('canEdit')) {
+      _notice('ليست لديك صلاحية نشر التصميم.', error: true);
+      return;
+    }
     final company = _companyId;
     final id = _remoteDesignId;
     if (company == null || id == null) return;
@@ -685,6 +797,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
   }
 
   Future<void> _previewSource() async {
+    if (!_allowed('canPreview')) {
+      _notice('ليست لديك صلاحية معاينة مصادر البيانات.', error: true);
+      return;
+    }
     final company = _companyId;
     final source = _selectedSource;
     if (company == null || source == null) {
@@ -743,68 +859,73 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_companyId != null && !_permissionsLoaded) {
+      return const Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+    if (_companyId != null && !_allowed('canAccess')) {
+      return Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('سلسلة ستوديو'),
+            backgroundColor: _studioPurple,
+            foregroundColor: Colors.white,
+          ),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.lock_outline, size: 44, color: _studioPurple),
+                  const SizedBox(height: 12),
+                  Text(
+                    _permissionsError == null
+                        ? 'ليس لديك تصريح للدخول إلى سلسلة ستوديو.'
+                        : 'تعذر التحقق من صلاحيات سلسلة ستوديو: $_permissionsError',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _permissionsLoaded ? _loadStudioPermissions : null,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('إعادة التحقق'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     final wide = MediaQuery.sizeOf(context).width >= 1050;
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: _studioCanvas,
         appBar: AppBar(
-          title: const Text('سلسلة ستوديو', style: TextStyle(fontWeight: FontWeight.w900, shadows: [Shadow(color: Color(0x88FF27C3), blurRadius: 12)])),
-          backgroundColor: Colors.transparent,
+          title: const Text('سلسلة ستوديو'),
+          backgroundColor: _studioPurple,
           foregroundColor: Colors.white,
-          elevation: 0,
-          flexibleSpace: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF16002D), Color(0xFF3E007D), Color(0xFF7020A0)]),
-              boxShadow: [BoxShadow(color: Color(0x443E007D), blurRadius: 18, offset: Offset(0, 5))],
-            ),
-          ),
-          actions: wide ? [
-            IconButton(tooltip: 'تراجع', onPressed: _undo.isEmpty ? null : _undoChange, icon: const Icon(Icons.undo)),
-            IconButton(tooltip: 'إعادة', onPressed: _redo.isEmpty ? null : _redoChange, icon: const Icon(Icons.redo)),
+          actions: [
+            IconButton(tooltip: 'تراجع', onPressed: !_allowed('canEdit') || _undo.isEmpty ? null : _undoChange, icon: const Icon(Icons.undo)),
+            IconButton(tooltip: 'إعادة', onPressed: !_allowed('canEdit') || _redo.isEmpty ? null : _redoChange, icon: const Icon(Icons.redo)),
             IconButton(tooltip: 'فتح المسودات المحلية', onPressed: _openLocalDrafts, icon: const Icon(Icons.folder_open)),
-            IconButton(tooltip: 'استيراد JSON', onPressed: _importJson, icon: const Icon(Icons.file_open)),
+            IconButton(tooltip: 'استيراد JSON', onPressed: _allowed('canEdit') ? _importJson : null, icon: const Icon(Icons.file_open)),
             IconButton(tooltip: 'تصدير JSON', onPressed: _exportJson, icon: const Icon(Icons.code)),
-            IconButton(tooltip: 'حفظ محلي', onPressed: _busy ? null : _saveLocal, icon: const Icon(Icons.save_outlined)),
-            IconButton(tooltip: 'حفظ مركزي ومزامنة', onPressed: _busy ? null : _syncPendingDrafts, icon: const Icon(Icons.cloud_sync_outlined)),
-          ] : [
-            IconButton(tooltip: 'تراجع', onPressed: _undo.isEmpty ? null : _undoChange, icon: const Icon(Icons.undo)),
-            IconButton(tooltip: 'حفظ محلي', onPressed: _busy ? null : _saveLocal, icon: const Icon(Icons.save_outlined)),
-            PopupMenuButton<String>(
-              tooltip: 'المزيد من أدوات الاستوديو',
-              onSelected: (value) {
-                switch (value) {
-                  case 'redo': _redoChange(); break;
-                  case 'drafts': _openLocalDrafts(); break;
-                  case 'import': _importJson(); break;
-                  case 'export': _exportJson(); break;
-                  case 'sync': if (!_busy) _syncPendingDrafts(); break;
-                }
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'redo', child: Text('إعادة')),
-                PopupMenuItem(value: 'drafts', child: Text('فتح المسودات المحلية')),
-                PopupMenuItem(value: 'import', child: Text('استيراد JSON')),
-                PopupMenuItem(value: 'export', child: Text('تصدير JSON')),
-                PopupMenuItem(value: 'sync', child: Text('حفظ مركزي ومزامنة')),
-              ],
-            ),
+            IconButton(tooltip: 'حفظ محلي', onPressed: _busy || !_allowed('canSave') ? null : _saveLocal, icon: const Icon(Icons.save_outlined)),
+            IconButton(tooltip: 'حفظ مركزي ومزامنة', onPressed: _busy || !_allowed('canSave') ? null : _syncPendingDrafts, icon: const Icon(Icons.cloud_sync_outlined)),
           ],
         ),
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFFBF8FF), Color(0xFFF3ECFB), Color(0xFFFFF7FC)]),
-          ),
-          child: Column(children: [
+        body: Column(children: [
           Container(
-            margin: const EdgeInsets.fromLTRB(8, 8, 8, 6),
+            color: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFFF27C3).withValues(alpha: .22)),
-              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.white, Color(0xFFF9F3FF), Color(0xFFFFF7FD)]),
-              boxShadow: [BoxShadow(color: const Color(0xFF3E007D).withValues(alpha: .10), blurRadius: 14, offset: const Offset(0, 4))],
-            ),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: [
@@ -814,14 +935,10 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
                     child: ChoiceChip(
                       label: Text(_studioTabs[i]),
                       selected: _activeTab == i,
-                      selectedColor: _studioPurple,
-                      backgroundColor: Colors.white,
-                      showCheckmark: false,
-                      side: BorderSide(color: _activeTab == i ? const Color(0xFFFF27C3) : const Color(0xFFE7DDF1), width: _activeTab == i ? 1.2 : .8),
-                      elevation: _activeTab == i ? 3 : 0,
+                      selectedColor: const Color(0xFFF0E7FA),
                       labelStyle: TextStyle(
-                        color: _activeTab == i ? Colors.white : _studioPurple,
-                        fontWeight: FontWeight.w800,
+                        color: _activeTab == i ? _studioPurple : Colors.black87,
+                        fontWeight: FontWeight.w700,
                       ),
                       onSelected: (_) => setState(() => _activeTab = i),
                     ),
@@ -838,7 +955,6 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
           if (_activeTab == 9) _approvalPanel(),
           if (_activeTab != 6) _statusBar(),
         ]),
-        ),
       ),
     );
   }
@@ -1006,6 +1122,18 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     );
   }
 
+  int _nodeDepth(StudioNode node) {
+    final byId = <String, StudioNode>{for (final item in _doc.nodes) item.id: item};
+    final visited = <String>{};
+    var parentId = node.parentId;
+    var depth = 0;
+    while (parentId != null && visited.add(parentId)) {
+      depth++;
+      parentId = byId[parentId]?.parentId;
+    }
+    return depth;
+  }
+
   Widget _canvas() => Container(
     margin: const EdgeInsets.all(8),
     decoration: BoxDecoration(
@@ -1048,6 +1176,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
               ),
               child: ListTile(
                 dense: true,
+                contentPadding: EdgeInsetsDirectional.only(start: 8 + (_nodeDepth(node) * 18), end: 8),
                 leading: Row(mainAxisSize: MainAxisSize.min, children: [
                   Checkbox(
                     value: _selectedIds.contains(node.id),
@@ -1106,6 +1235,23 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     ]),
   );
 
+  Future<void> _pickImageForNode(StudioNode node) async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: false, withData: true);
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.single;
+    final bytes = file.bytes;
+    if (bytes == null || bytes.isEmpty) { _notice('تعذر قراءة الصورة المختارة.', error: true); return; }
+    if (bytes.length > 512 * 1024) { _notice('حجم صورة التصميم يجب ألا يتجاوز 512 كيلوبايت.', error: true); return; }
+    final extension = (file.extension ?? '').toLowerCase();
+    const mimeTypes = <String, String>{'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','gif':'image/gif'};
+    final mime = mimeTypes[extension];
+    if (mime == null) { _notice('الصيغ المدعومة: JPG وPNG وWEBP وGIF.', error: true); return; }
+    final props = Map<String, dynamic>.from(node.props)
+      ..['url'] = 'data:$mime;base64,' + base64Encode(bytes)
+      ..['alt'] = file.name;
+    _updateNode(node, props: props);
+    _notice('تم إدراج الصورة في التصميم. احفظ التصميم لمزامنة الصورة معه.');
+  }
   Widget _properties() {
     final node = _selected;
     if (node == null) {
@@ -1150,6 +1296,15 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
                 }
                 _updateNode(node, props: props);
               },
+            ),
+          ),
+        if (node.type == 'image')
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: OutlinedButton.icon(
+              onPressed: _busy ? null : () => _pickImageForNode(node),
+              icon: const Icon(Icons.add_photo_alternate_outlined),
+              label: const Text('رفع صورة من الجهاز'),
             ),
           ),
         const SizedBox(height: 10),
@@ -1232,9 +1387,9 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
               ..addIfNotNull(value);
           }),
         )),
-        FilledButton.icon(onPressed: _busy ? null : _previewSource, icon: const Icon(Icons.preview), label: const Text('معاينة المصدر')),
-        FilledButton.icon(onPressed: _applyBinding, icon: const Icon(Icons.link), label: const Text('ربط بالمكون')),
-        OutlinedButton.icon(onPressed: _clearBinding, icon: const Icon(Icons.link_off), label: const Text('إلغاء الربط')),
+        FilledButton.icon(onPressed: _busy || !_allowed('canPreview') ? null : _previewSource, icon: const Icon(Icons.preview), label: const Text('معاينة المصدر')),
+        FilledButton.icon(onPressed: _allowed('canEdit') ? _applyBinding : null, icon: const Icon(Icons.link), label: const Text('ربط بالمكون')),
+        OutlinedButton.icon(onPressed: _allowed('canEdit') ? _clearBinding : null, icon: const Icon(Icons.link_off), label: const Text('إلغاء الربط')),
       ]),
       const SizedBox(height: 14),
       if (_selectedSource != null) ...[
@@ -1329,7 +1484,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
         title: Text('الإصدار ${version['revision']}'),
         subtitle: Text('${version['change_note'] ?? 'بدون ملاحظة'} • ${version['created_at']}'),
         trailing: TextButton(
-          onPressed: _busy ? null : () => _restoreVersion((version['revision'] as num).toInt()),
+          onPressed: _busy || !_allowed('canEdit') ? null : () => _restoreVersion((version['revision'] as num).toInt()),
           child: const Text('استعادة'),
         ),
       ))),
@@ -1353,12 +1508,12 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       OutlinedButton.icon(onPressed: _busy ? null : _saveCloud, icon: const Icon(Icons.cloud_upload), label: const Text('حفظ مركزي')),
       OutlinedButton.icon(onPressed: _busy ? null : _runTests, icon: const Icon(Icons.fact_check), label: const Text('اختبار الإصدار الحالي')),
       FilledButton.icon(
-        onPressed: _busy || _remoteStatus == 'published' ? null : _approveDesign,
+        onPressed: _busy || !_allowed('canEdit') || _remoteStatus == 'published' ? null : _approveDesign,
         icon: const Icon(Icons.verified),
         label: const Text('اعتماد التصميم'),
       ),
       FilledButton.icon(
-        onPressed: _busy || _remoteStatus != 'approved' ? null : _publishDesign,
+        onPressed: _busy || !_allowed('canEdit') || _remoteStatus != 'approved' ? null : _publishDesign,
         icon: const Icon(Icons.publish),
         label: const Text('نشر التصميم'),
       ),
@@ -1383,8 +1538,15 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
     ]),
   );
 
+  bool _commandAllowed(String label) {
+    if (label == 'تصميم جديد') return _allowed('canAdd');
+    if (label == 'المعاينة' || label == 'المحرر' || label == 'اختبار') return _allowed('canPreview');
+    if (label == 'حفظ مركزي') return _allowed('canSave');
+    return _allowed('canEdit');
+  }
+
   Widget _command(String label, IconData icon, VoidCallback action) => OutlinedButton.icon(
-    onPressed: _busy ? null : action,
+    onPressed: _busy || !_commandAllowed(label) ? null : action,
     icon: Icon(icon, size: 16),
     label: Text(label),
     style: OutlinedButton.styleFrom(
