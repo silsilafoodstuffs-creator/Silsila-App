@@ -429,6 +429,9 @@ class ErpScreenFrame extends StatelessWidget {
                 if (!useSideRails && tasksVisible && (tasksPosition == 'left' || tasksPosition == 'right')) tasksPanel(),
                 if (!useSideRails && dateVisible && (datePosition == 'left' || datePosition == 'right')) slotPanel(dateFilter),
                 if (!useSideRails && imageVisible && (imagesPosition == 'left' || imagesPosition == 'right')) slotPanel(imagePanel),
+                // Compact layouts cannot host a side rail; keep the optional
+                // sidebar available as a full-width panel instead of dropping it.
+                if (!useSideRails && showSidebar && sidebar != null) slotPanel(sidebar),
                 if (tabsVisible && tabsPosition == 'top') tabsPanel(),
                 if (tasksVisible && tasksPosition == 'top') tasksPanel(),
                 if (dateVisible && datePosition == 'top') slotPanel(dateFilter),
