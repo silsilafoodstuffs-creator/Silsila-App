@@ -539,7 +539,7 @@ class SilsilaApp extends StatelessWidget {
           dataRowMinHeight: 40,
           dataRowMaxHeight: 40,
           horizontalMargin: 5,
-          columnSpacing: 5,
+          columnSpacing: 2,
           dividerThickness: 0.7,
           headingRowColor: WidgetStatePropertyAll(Color(0xFFF3E9FB)),
           headingTextStyle: TextStyle(
