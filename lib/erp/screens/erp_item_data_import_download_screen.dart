@@ -698,7 +698,6 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                     horizontalMargin: 2,
                     fixedLeftColumns: 4,
                     minWidth: 2350,
-                    columnSpacing: 2,
                     headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                     columns: [
                       DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
