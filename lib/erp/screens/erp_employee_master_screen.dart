@@ -925,6 +925,6 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       _employeeDocumentsSection(),
       ]))),
       _employeeGrid(),
-    ])),
+    ]))),
   );
 }
