@@ -615,7 +615,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
     child: ErpScreenFrame(
       title: 'بيانات الموظفين', profileKey: widget.layoutScreenKey ?? 'بيانات الموظفين',
       subtitle: 'دليل العاملين وبياناتهم الوظيفية والشخصية', icon: Icons.badge_outlined,
-      applyContentWidth: false, actions: _employeeActions(), padding: EdgeInsets.zero,
+      applyContentWidth: false, actions: [_employeeToolbar()], padding: EdgeInsets.zero,
       child: Padding(padding: const EdgeInsets.all(8), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       if (_cid.isEmpty) Padding(padding: const EdgeInsets.only(bottom: 8), child: TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة UUID', border: OutlineInputBorder()), onSubmitted: (_) => _load())),
       if (_loading) const LinearProgressIndicator(),
