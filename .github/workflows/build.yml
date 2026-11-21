@@ -113,103 +113,11 @@ jobs:
         run: |
           flutter pub get
 
-      - name: Generate and verify Silsila App Icon sources
-        run: |
-          set -euo pipefail
-          dart run flutter_launcher_icons
-          echo "Generated launcher resources:"
-          find android/app/src/main/res -maxdepth 2 -type f -iname '*launcher*' -print | sort
-          test -s android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          test -s android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          test -s android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          test -s android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          test -s android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-
-      - name: Configure permanent signing key
+      - name: Prepare signed Release APK and Silsila launcher icon
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-        run: |
-          set -e
-          test -n "$ANDROID_KEYSTORE_BASE64"
-          test -n "$ANDROID_KEYSTORE_PASSWORD"
-
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/silsila-upload-key.jks
-
-          cat > android/key.properties <<EOF
-          storePassword=$ANDROID_KEYSTORE_PASSWORD
-          keyPassword=$ANDROID_KEYSTORE_PASSWORD
-          keyAlias=silsila
-          storeFile=silsila-upload-key.jks
-          EOF
-
-          python3 - <<'PY'
-          from pathlib import Path
-
-          p = Path("android/app/build.gradle.kts")
-          if not p.exists():
-              raise SystemExit("Kotlin Gradle file not found")
-
-          s = p.read_text()
-
-          imports = (
-              "import java.util.Properties\n"
-              "import java.io.FileInputStream\n"
-          )
-          if "import java.util.Properties" not in s:
-              s = imports + s
-
-          import re
-          ndk_line = '    ndkVersion = "27.0.12077973"'
-          s, replacements = re.subn(r'(?m)^[ \t]*ndkVersion[ \t]*=[^\r\n]*', ndk_line, s)
-          if replacements == 0:
-              marker = "android {"
-              if marker not in s:
-                  raise SystemExit("Android configuration not found")
-              s = s.replace(marker, marker + "\n" + ndk_line, 1)
-
-          props = """
-          val keystoreProperties = Properties()
-          val keystorePropertiesFile = rootProject.file("key.properties")
-          if (keystorePropertiesFile.exists()) {
-              keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-          }
-
-          """
-          if "val keystoreProperties = Properties()" not in s:
-              marker = "android {"
-              if marker not in s:
-                  raise SystemExit("Android configuration not found")
-              s = s.replace(marker, props + marker, 1)
-
-          signing = """
-              signingConfigs {
-                  create("release") {
-                      keyAlias = keystoreProperties["keyAlias"] as String
-                      keyPassword = keystoreProperties["keyPassword"] as String
-                      storeFile = file(keystoreProperties["storeFile"] as String)
-                      storePassword = keystoreProperties["storePassword"] as String
-                  }
-              }
-
-          """
-          if 'create("release")' not in s:
-              marker = "    buildTypes {"
-              if marker not in s:
-                  raise SystemExit("Build types configuration not found")
-              s = s.replace(marker, signing + marker, 1)
-
-          debug = 'signingConfig = signingConfigs.getByName("debug")'
-          release = 'signingConfig = signingConfigs.getByName("release")'
-
-          if debug in s:
-              s = s.replace(debug, release, 1)
-          elif release not in s:
-              raise SystemExit("Could not configure release signing")
-
-          p.write_text(s)
-          print("Permanent signing configuration prepared")
-          PY
+        run: bash tools/prepare_android_release.sh
 
       - name: Test catalog image matching
         run: python3 -m unittest tools/catalog_import/test_import_real_product_images.py -v
