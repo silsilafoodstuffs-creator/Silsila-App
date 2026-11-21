@@ -4,6 +4,27 @@ import '../services/erp_screen_layout_profiles.dart';
 const _erpFramePurple = Color(0xFF3E007D);
 const _erpFrameOrange = Color(0xFFFFA015);
 
+
+/// Supplies a screen-specific layout profile to nested ERP screen frames.
+class ErpScreenLayoutScope extends InheritedWidget {
+  const ErpScreenLayoutScope({
+    super.key,
+    required this.screen,
+    required this.profile,
+    required super.child,
+  });
+
+  final String screen;
+  final Map<String, dynamic> profile;
+
+  static ErpScreenLayoutScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ErpScreenLayoutScope>();
+
+  @override
+  bool updateShouldNotify(ErpScreenLayoutScope oldWidget) =>
+      oldWidget.screen != screen || oldWidget.profile != profile;
+}
+
 /// Shared ERP page frame. Saved Studio layout profiles are applied live here.
 class ErpScreenFrame extends StatelessWidget {
   const ErpScreenFrame({
@@ -50,10 +71,11 @@ class ErpScreenFrame extends StatelessWidget {
     return ValueListenableBuilder<Map<String, dynamic>>(
       valueListenable: ErpScreenLayoutProfiles.profiles,
       builder: (context, profiles, _) {
-        final key = profileKey ?? title;
-        final raw = profiles[key] is Map
+        final layoutScope = ErpScreenLayoutScope.maybeOf(context);
+        final key = layoutScope?.screen ?? profileKey ?? title;
+        final raw = layoutScope?.profile ?? (profiles[key] is Map
             ? profiles[key] as Map
-            : profiles['*'] is Map ? profiles['*'] as Map : const {};
+            : profiles['*'] is Map ? profiles['*'] as Map : const {});
         final profile = Map<String, dynamic>.from(raw);
         final showTitle = (profile['showTitle'] as bool? ?? true) && showFrameTitle;
         final showTabs = profile['showTabs'] as bool? ?? true;
