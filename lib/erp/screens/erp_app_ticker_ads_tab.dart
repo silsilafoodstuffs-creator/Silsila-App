@@ -472,8 +472,8 @@ class _ErpAppTickerAdsTabState extends State<ErpAppTickerAdsTab> {
                     : DataTable2(
                         minWidth: 470,
                         fixedTopRows: 1,
-                        columnSpacing: 6,
-                        horizontalMargin: 6,
+                        columnSpacing: 2,
+                        horizontalMargin: 2,
                         headingRowHeight: 42,
                         dataRowHeight: 70,
                         showCheckboxColumn: false,
