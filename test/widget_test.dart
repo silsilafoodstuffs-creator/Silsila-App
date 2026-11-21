@@ -74,7 +74,7 @@ void main() {
     expect(theme.appBarTheme.elevation, greaterThanOrEqualTo(5));
     expect(theme.dataTableTheme.dataRowMinHeight, 40);
     expect(theme.dataTableTheme.dataRowMaxHeight, 40);
-    expect(theme.dataTableTheme.columnSpacing, 5);
+    expect(theme.dataTableTheme.columnSpacing, 2);
   });
 
   testWidgets('white surfaces render the white-background Silsila logo',
