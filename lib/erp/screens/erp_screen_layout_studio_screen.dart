@@ -74,12 +74,12 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
 
   Future<void> _load() async {
     try {
-      await ErpScreenLayoutProfiles.load();
+      await ErpScreenLayoutProfiles.load(companyId: widget.companyId);
       final company = widget.companyId;
       if (company != null && company.trim().isNotEmpty) {
         try {
           final remote = await _repository.loadLayoutProfiles(company);
-          await ErpScreenLayoutProfiles.mergeRemote(remote);
+          await ErpScreenLayoutProfiles.mergeRemote(remote, companyId: company);
         } catch (error) {
           _syncMessage = 'تعذر تحميل التخطيطات المركزية؛ تم الاحتفاظ بالنسخ المحلية: $error';
         }
@@ -166,12 +166,12 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   };
 
   Future<void> _save() async {
-    await ErpScreenLayoutProfiles.save(_profileKey, _serialize());
+    await ErpScreenLayoutProfiles.save(_profileKey, _serialize(), companyId: company);
     final company = widget.companyId;
     if (company != null && company.trim().isNotEmpty) {
       try {
         await _repository.saveLayoutProfile(companyId: company, profileKey: _profileKey, profile: _serialize());
-        await ErpScreenLayoutProfiles.markSynced(_profileKey);
+        await ErpScreenLayoutProfiles.markSynced(_profileKey, companyId: company);
         _syncMessage = 'تم حفظ التخطيط محلياً ومركزياً.';
       } catch (error) {
         _syncMessage = 'حُفظ التخطيط محلياً، والمزامنة المركزية معلقة: $error';
@@ -194,7 +194,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
         return;
       }
     }
-    await ErpScreenLayoutProfiles.reset(_profileKey);
+    await ErpScreenLayoutProfiles.reset(_profileKey, companyId: company);
     if (!mounted) return;
     setState(() { _profiles = Map<String, dynamic>.from(ErpScreenLayoutProfiles.profiles.value); _apply(_current); });
   }
@@ -206,7 +206,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
       return;
     }
     try {
-      final pending = ErpScreenLayoutProfiles.pendingProfiles();
+      final pending = ErpScreenLayoutProfiles.pendingProfiles(companyId: company);
       var synced = 0;
       final errors = <String>[];
       for (final entry in pending.entries) {
