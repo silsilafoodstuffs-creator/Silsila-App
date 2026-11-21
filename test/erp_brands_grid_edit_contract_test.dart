@@ -13,7 +13,7 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('Arabic brand names can be edited directly from their grid cells', () {
+  test('the unified brand name can be edited directly from its grid cell', () {
     expect(source, contains("_gridEditingOnlyId = id;"));
     expect(source, contains("_gridEditing && (_gridEditingOnlyId == null || _gridEditingOnlyId == id) && !system"));
     expect(source, contains("TextField(controller: ar"));
@@ -22,11 +22,16 @@ void main() {
     expect(source, contains("_saveGridNames(onlyId:_gridEditingOnlyId)"));
   });
 
-  test('single-row grid editing restricts the Arabic name field to the selected brand', () {
-    final arabicCell = source.indexOf("SizedBox(width: 94, child: _gridEditing");
-    expect(arabicCell, greaterThanOrEqualTo(0));
-    final arabicCellSource = source.substring(arabicCell, arabicCell + 1000);
-    expect(arabicCellSource, contains("_gridEditingOnlyId == id"));
+  test('single-row grid editing exposes one name field only for the selected brand', () {
+    final nameCell = source.indexOf("DataCell(_brandGridField(SizedBox(width: 94");
+    expect(nameCell, greaterThanOrEqualTo(0));
+    final nameCellSource = source.substring(nameCell, nameCell + 1500);
+    expect(nameCellSource, contains("_gridEditingOnlyId == id"));
+    expect(nameCellSource, contains("TextField(controller: ar"));
+    expect(nameCellSource, isNot(contains("TextField(controller: en")));
+    // Keep the legacy English value intact in the RPC payload; it is no longer
+    // a separately editable field in the user interface.
+    expect(source, contains("'brand_name_en': _gridEnglishControllers[id]!.text.trim()"));
   });
 
   test('brand name updates are atomic, company-scoped and preserve protected records', () {
