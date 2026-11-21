@@ -93,6 +93,43 @@ jobs:
           grep -q 'flutter_bootstrap.js' build/web/index.html
           grep -q 'سلسلة' build/web/index.html
 
+      - name: Install Chromium browser test dependencies
+        run: |
+          npm install --no-save --no-package-lock playwright source-map
+          npx playwright install chromium
+
+      - name: Test Silsila Web in desktop and mobile browser viewports
+        id: mobile_webview
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/silsila-web/Silsila-App
+          cp -a build/web/. /tmp/silsila-web/Silsila-App/
+          python3 -m http.server 8765 --directory /tmp/silsila-web >/tmp/silsila-web-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:8765/Silsila-App/ >/dev/null; then break; fi
+            sleep 1
+          done
+          node tools/web_view_test.mjs http://127.0.0.1:8765/Silsila-App/
+
+      - name: Write desktop + mobile browser test summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Silsila Web — Browser Viewport Validation"
+            echo ""
+            echo "| Viewport | Result |"
+            echo "|---|---|"
+            echo "| Desktop Chromium | ${{ steps.mobile_webview.outcome }} |"
+            echo "| Mobile Chromium (390×844) | ${{ steps.mobile_webview.outcome }} |"
+            echo ""
+            echo "The browser test checks Flutter canvas rendering, page errors, failed requests, bootstrap versioning, and stale offline caches."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload Web build
         if: always()
         uses: actions/upload-artifact@v4
