@@ -2,6 +2,25 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'erp_center_toast.dart';
 
+ 
+/// Provides the current screen's action permissions to shared task buttons.
+class ErpQuickTaskPermissionScope extends InheritedWidget {
+  const ErpQuickTaskPermissionScope({
+    super.key,
+    required this.canPerform,
+    required super.child,
+  });
+
+  final bool Function(String label) canPerform;
+
+  static ErpQuickTaskPermissionScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ErpQuickTaskPermissionScope>();
+
+  @override
+  bool updateShouldNotify(ErpQuickTaskPermissionScope oldWidget) =>
+      oldWidget.canPerform != canPerform;
+}
+
 /// Semantic action kinds keep button styling independent from localized labels.
 enum ErpQuickTaskKind {
   update,
@@ -156,6 +175,10 @@ class ErpQuickTaskButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final permissionScope = ErpQuickTaskPermissionScope.maybeOf(context);
+    if (permissionScope != null && !permissionScope.canPerform(label)) {
+      return const SizedBox.shrink();
+    }
     final color = _color;
     return Padding(
       padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
