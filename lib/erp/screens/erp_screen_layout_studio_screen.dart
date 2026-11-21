@@ -166,8 +166,8 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   };
 
   Future<void> _save() async {
-    await ErpScreenLayoutProfiles.save(_profileKey, _serialize(), companyId: company);
     final company = widget.companyId;
+    await ErpScreenLayoutProfiles.save(_profileKey, _serialize(), companyId: company);
     if (company != null && company.trim().isNotEmpty) {
       try {
         await _repository.saveLayoutProfile(companyId: company, profileKey: _profileKey, profile: _serialize());
