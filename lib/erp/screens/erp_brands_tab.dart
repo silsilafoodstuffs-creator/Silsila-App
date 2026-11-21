@@ -1449,8 +1449,6 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                       minWidth: 650,
                       columnSpacing: 2,
                       horizontalMargin: 2,
-                      columnSpacing: 2,
-                      horizontalMargin: 2,
                       headingRowHeight: 42,
                       dataRowHeight: compactMobile ? 40 : 60,
                       showCheckboxColumn: false,
