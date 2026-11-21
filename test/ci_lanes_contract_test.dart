@@ -61,22 +61,37 @@ void main() {
     final deploy = File('.github/workflows/deploy.yml').readAsStringSync();
     final preview = File('.github/workflows/web-preview-validation.yml').readAsStringSync();
     final release = File('.github/workflows/build.yml').readAsStringSync();
-    // Keep the lightweight Flutter validation lane and make the Debug APK
-    // build a separately visible, bounded step with an integrity-checked artifact.
+    // Keep Android validation independent while requiring a signed production APK.
     expect(mobile, contains('name: Silsila Mobile App Validation'));
     expect(mobile, contains('flutter test --reporter expanded'));
     expect(mobile, contains('Analyze Dart code'));
     expect(mobile, contains('Set up Java 17 for Android Gradle'));
-    expect(mobile, contains('Build Android Debug APK'));
-    expect(mobile, contains('timeout-minutes: 20'));
+    expect(mobile, contains('Build Android Release APK'));
+    expect(mobile, contains('timeout-minutes: 25'));
+    expect(mobile, contains('flutter build apk --release'));
+    expect(mobile, isNot(contains('--debug')));
+    expect(mobile, contains('Prepare signed Release APK and Silsila launcher icon'));
     expect(mobile, contains('Verify Android APK and calculate SHA-256'));
-    expect(mobile, contains('Upload Android Debug APK'));
+    expect(mobile, contains('Upload Android Release APK'));
     expect(mobile, contains('Write Android build result summary'));
     expect(release, contains('name: Build Silsila Android App'));
     expect(release, contains('flutter build apk --release'));
     expect(release, contains('Verify APK signature'));
     expect(release, contains('Verify APK identity, version, and launcher icon'));
     expect(release, contains('silsila-android-apk'));
+    expect(release, contains('tools/prepare_android_release.sh'));
+    expect(release, contains('flutter build apk --release'));
+    final full = File('.github/workflows/full-validation.yml').readAsStringSync();
+    final releaseSetup = File('tools/prepare_android_release.sh').readAsStringSync();
+    final maintenance = File('lib/erp/screens/erp_maintenance_center_screen.dart').readAsStringSync();
+    expect(full, contains('flutter build apk --release'));
+    expect(full, isNot(contains('--debug')));
+    expect(full, contains('app-release.apk'));
+    expect(releaseSetup, contains('dart run flutter_launcher_icons'));
+    expect(releaseSetup, contains('ANDROID_KEYSTORE_BASE64'));
+    expect(releaseSetup, contains('signingConfig = signingConfigs.getByName("release")'));
+    expect(maintenance, contains('flutter build apk --release'));
+    expect(maintenance, isNot(contains('flutter build apk --debug')));
 
     expect(web, contains('name: Silsila Web App Validation'));
     expect(web, contains('flutter build web --release'));
