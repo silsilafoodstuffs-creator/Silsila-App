@@ -5,6 +5,8 @@ import '../widgets/erp_keyboard_navigation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_catalog_tree_card.dart';
+import '../widgets/erp_standard_data_table.dart';
 import '../services/erp_workspace_records_service.dart';
 import '../services/erp_screen_layout_profiles.dart';
 import '../services/erp_excel_export_service.dart';
@@ -600,16 +602,16 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     final level = _rowLevel(row);
     final active = row['is_active'] == true;
     final visible = row['show_in_app'] == true;
-    return Padding(
-      padding: EdgeInsetsDirectional.only(start: depth * 18, bottom: 6),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
-        decoration: BoxDecoration(
-          color: _selectedId == id ? const Color(0xFFF0E7FA) : level == 0 ? const Color(0xFFEDE1F8) : level == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: _selectedId == id ? _catPurple : const Color(0xFFE8E1EF)),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    return ErpCatalogTreeCard(
+      depth: depth,
+      selected: _selectedId == id,
+      backgroundColor: level == 0 ? const Color(0xFFEDE1F8) : level == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3),
+      selectedColor: const Color(0xFFF0E7FA),
+      borderColor: const Color(0xFFE8E1EF),
+      selectedBorderColor: _catPurple,
+      onTap: () => setState(() => _selectedId = id),
+      padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
             SizedBox(width: 34, child: IconButton(
               padding: EdgeInsets.zero, visualDensity: VisualDensity.compact,
@@ -670,7 +672,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                 style: const TextStyle(fontSize: 10, color: Colors.black54))),
           if (expanded) ...children.where(_branchMatches).map((child) => _treeNode(child, depth + 1)),
         ]),
-      ),
     );
   }
 
@@ -820,8 +821,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                             : SingleChildScrollView(
                                 scrollDirection: Axis.horizontal,
                                 child: SingleChildScrollView(
-                                  child: DataTable(
-                                    headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                                  child: ErpStandardDataTable(
+                                    headingColor: const Color(0xFFF5EFFB),
                                     columns: const [
                                       DataColumn(label: Text('كود الفئة')),
                                       DataColumn(label: Text('اسم الفئة عربي')),
