@@ -18,7 +18,7 @@ void main() {
       ),
     );
 
-    final button = tester.widget<FilledButton>(find.byType(FilledButton));
+    final button = tester.widget<FilledButton>(find.byWidgetPredicate((widget) => widget is FilledButton));
     expect(
       button.style?.backgroundColor?.resolve({}),
       const Color(0xFF18865A),
