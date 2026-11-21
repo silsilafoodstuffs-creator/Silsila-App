@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_catalog_tree_card.dart';
 import '../services/erp_accounts_repository.dart';
 
 class ErpAccountsScreen extends StatefulWidget {
@@ -323,20 +324,24 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Card(
-          color: depth == 0 ? const Color(0xFFEDE1F8) : depth == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3),
-          margin: EdgeInsets.only(left: depth * 20.0, bottom: 5),
-          child: InkWell(
-            onDoubleTap: () {
-              if (!hasChildren) return;
-              setState(() {
-                if (expanded) { _expandedAccounts.remove(id); }
-                else { _expandedAccounts.add(id); }
-              });
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-              child: Row(
+        ErpCatalogTreeCard(
+          depth: depth,
+          selected: false,
+          backgroundColor: depth == 0 ? const Color(0xFFEDE1F8) : depth == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3),
+          selectedColor: depth == 0 ? const Color(0xFFEDE1F8) : depth == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3),
+          borderColor: Colors.transparent,
+          selectedBorderColor: Colors.transparent,
+          indentPerLevel: 20,
+          bottomSpacing: 5,
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+          onDoubleTap: () {
+            if (!hasChildren) return;
+            setState(() {
+              if (expanded) { _expandedAccounts.remove(id); }
+              else { _expandedAccounts.add(id); }
+            });
+          },
+          child: Row(
                 children: [
                   SizedBox(
                     width: 34,
@@ -391,8 +396,6 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
                   ),
                 ],
               ),
-            ),
-          ),
         ),
         if (hasChildren && expanded) ...children.map((child) => _buildTreeNode(child, depth + 1, path)),
       ],
