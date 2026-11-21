@@ -156,7 +156,9 @@ class ErpScreenFrame extends StatelessWidget {
           dataTableTheme: baseTheme.dataTableTheme.copyWith(
             dataRowMinHeight: rowHeight,
             dataRowMaxHeight: rowHeight + 8,
-            headingRowHeight: rowHeight,
+            // Header labels need more vertical room than the fixed 40px data rows.
+            // This prevents Arabic headings from being clipped or cramped when wrapping.
+            headingRowHeight: rowHeight + 16,
             columnSpacing: 2,
             headingTextStyle: TextStyle(color: primary, fontWeight: FontWeight.w900, fontSize: 12),
             dataTextStyle: const TextStyle(fontSize: 12),
