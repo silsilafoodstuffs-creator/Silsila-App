@@ -1308,7 +1308,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
   Widget _masterGrid(){
     final codeField=_isType?'type_code_display':_isUser?'user_code':'template_code_display';
     return SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
-      headingRowHeight:57,dataRowMinHeight:57,dataRowMaxHeight:57,horizontalMargin:12,columnSpacing: 2,headingRowColor:WidgetStateProperty.all(const Color(0xFFF0E8F8)),
+      headingRowHeight:40,dataRowMinHeight:40,dataRowMaxHeight:40,horizontalMargin:12,columnSpacing: 2,headingRowColor:WidgetStateProperty.all(const Color(0xFFF0E8F8)),
       columns:[
         const DataColumn(label:Text('م')),DataColumn(label:Text(_isType?'كود النوع':_isUser?'كود المستخدم':'كود القالب')),
         if(!_isUser)const DataColumn(label:Text('اسم عربي')),if(!_isUser)const DataColumn(label:Text('اسم إنجليزي')),
