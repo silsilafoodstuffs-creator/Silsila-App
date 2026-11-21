@@ -36,6 +36,7 @@ import 'services/cart_service.dart';
 import 'services/activity_service.dart';
 import 'services/app_language.dart';
 import 'widgets/silsila_white_logo.dart';
+import 'core/app_theme.dart' show SilsilaThemePresets, SilsilaThemeController;
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
@@ -52,6 +53,7 @@ Future<void> main() async {
   // Start the first frame immediately. Secure-storage reads and network
   // initialization must never block Flutter's initial render on mobile.
   unawaited(SilsilaLanguage.load());
+  unawaited(SilsilaThemeController.load());
   final startupFuture = _initializeSupabase();
   runApp(SilsilaApp(startupFuture: startupFuture));
 }
@@ -285,7 +287,9 @@ class SilsilaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<Locale>(
+    return AnimatedBuilder(
+      animation: Listenable.merge([SilsilaThemeController.preset, SilsilaThemeController.mode]),
+      builder: (context, _) => ValueListenableBuilder<Locale>(
       valueListenable: SilsilaLanguage.locale,
       builder: (context, currentLocale, _) => MaterialApp(
       locale: currentLocale,
@@ -325,7 +329,7 @@ class SilsilaApp extends StatelessWidget {
       ),
       title: 'سلسلة Silsila',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
+      theme: SilsilaThemeController.resolve(ThemeData(
         useMaterial3: true,
         buttonTheme: const ButtonThemeData(height: 42, alignedDropdown: true, padding: EdgeInsets.symmetric(horizontal: 8)),
         fontFamily: 'Tajawal',
@@ -636,7 +640,9 @@ class SilsilaApp extends StatelessWidget {
             borderRadius: BorderRadius.circular(13),
           ),
         ),
-      ),
+      )),
+      darkTheme: SilsilaThemePresets.dark(ThemeData(useMaterial3: true, fontFamily: 'Tajawal')),
+      themeMode: SilsilaThemeController.mode.value,
       home: kIsWeb
           ? FutureBuilder<void>(
               future: startupFuture,
@@ -651,6 +657,7 @@ class SilsilaApp extends StatelessWidget {
               textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
               child: const WelcomeScreen(),
             ),
+      ),
       ),
     );
   }
