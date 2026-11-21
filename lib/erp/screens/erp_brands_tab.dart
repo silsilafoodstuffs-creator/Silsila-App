@@ -674,7 +674,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
               ]),
               Expanded(child: filtered.isEmpty ? const Center(child: Text('لا توجد براندات متاحة مطابقة للبحث.'))
                 : DataTable2(
-                  minWidth: 820, columnSpacing: 2, horizontalMargin: 2, headingRowHeight: 42,
+                  minWidth: 820, columnSpacing: 2, horizontalMargin: 2, headingRowHeight: 40,
                   dataRowHeight: 48, showCheckboxColumn: false,
                   headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                   columns: const [
