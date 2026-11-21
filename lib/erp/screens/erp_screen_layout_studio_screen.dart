@@ -296,7 +296,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
               {'glossy':'Glossy لامع','glass':'Glass شفاف','neon':'Neon مضيء','pill':'Pill دائري','outline':'Outline محدد'},
               (v)=>setState(()=>_buttonStyle=v??_buttonStyle)),
             _choice('ستايل الجداول',_tableStyle,['glass','neon','minimal','outlined'],
-              {'glass':'Glass زجاجي','neon':'Neon مضيء','striped':'Striped صفوف متبادلة','minimal':'Minimal هادئ','outlined':'Outlined بحدود'},
+              {'glass':'Glass زجاجي','neon':'Neon مضيء','minimal':'Minimal هادئ','outlined':'Outlined بحدود'},
               (v)=>setState(()=>_tableStyle=v??_tableStyle)),
             _choice('ستايل الأشجار',_treeStyle,['neon','nested_cards','compact','outlined'],
               {'neon':'Neon متوهج','nested_cards':'Nested Cards متداخل','compact':'Compact مضغوط','outlined':'Outlined محدد'},
