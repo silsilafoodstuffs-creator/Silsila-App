@@ -254,7 +254,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    unawaited(ErpScreenLayoutProfiles.load().catchError((Object _) {}));
+    unawaited(ErpScreenLayoutProfiles.load(companyId: _appManagementCompanyId).catchError((Object _) {}));
     if (widget.initialPage == 'بيانات الشركة') {
       _module = 'إعدادات عامة';
       _group = 'بيانات أساسية';
@@ -301,6 +301,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       if (!mounted) return;
       setState(() {
         _appManagementCompanyId = companyId;
+        unawaited(ErpScreenLayoutProfiles.load(companyId: companyId).catchError((Object _) {}));
         _managedAppIds
           ..clear()
           ..addAll(registryRows);
