@@ -62,7 +62,7 @@ void main() {
     expect(find.byIcon(Icons.table_rows_outlined), findsOneWidget);
   });
 
-  testWidgets('standard ERP data table enforces the shared 40px row contract', (tester) async {
+  testWidgets('standard ERP data table keeps a readable header and shared 40px data rows', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -80,7 +80,7 @@ void main() {
     );
 
     final table = tester.widget<DataTable>(find.byType(DataTable));
-    expect(table.headingRowHeight, 40);
+    expect(table.headingRowHeight, 56);
     expect(table.dataRowMinHeight, 40);
     expect(table.dataRowMaxHeight, 40);
     expect(table.horizontalMargin, 5);
