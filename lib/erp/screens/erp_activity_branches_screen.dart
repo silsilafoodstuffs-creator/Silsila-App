@@ -271,7 +271,7 @@ class _ErpActivityBranchesScreenState extends State<ErpActivityBranchesScreen> {
       ]),
       if (branches.isEmpty) const Padding(padding: EdgeInsets.all(8), child: Text('لا توجد فروع لهذا النشاط بعد.', style: TextStyle(fontSize: 11, color: Colors.black54))),
       if (branches.isNotEmpty) SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
-        headingRowHeight: 34, dataRowMinHeight: 38, dataRowMaxHeight: 42, columnSpacing: 2,
+        headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40, columnSpacing: 2,
         columns: const [
           DataColumn(label: Text('م')), DataColumn(label: Text('كود')),
           DataColumn(label: Text('اسم الفرع عربي')), DataColumn(label: Text('English')),
@@ -307,7 +307,7 @@ class _ErpActivityBranchesScreenState extends State<ErpActivityBranchesScreen> {
         ]),
         if (warehouses.isEmpty) const Text('لا توجد مخازن مسجلة لهذا الفرع.', style: TextStyle(fontSize: 10, color: Colors.black54)),
         if (warehouses.isNotEmpty) SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
-          headingRowHeight: 30, dataRowMinHeight: 36, dataRowMaxHeight: 40, columnSpacing: 2,
+          headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40, columnSpacing: 2,
           columns: const [
             DataColumn(label: Text('م')), DataColumn(label: Text('كود')),
             DataColumn(label: Text('اسم المخزن عربي')), DataColumn(label: Text('English')),
