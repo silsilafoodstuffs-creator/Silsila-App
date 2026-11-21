@@ -212,7 +212,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
       for (final entry in pending.entries) {
         try {
           await _repository.saveLayoutProfile(companyId: company, profileKey: entry.key, profile: entry.value);
-          await ErpScreenLayoutProfiles.markSynced(entry.key);
+          await ErpScreenLayoutProfiles.markSynced(entry.key, companyId: company);
           synced++;
         } catch (error) {
           errors.add('${entry.key}: $error');
