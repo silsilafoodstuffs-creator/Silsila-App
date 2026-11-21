@@ -27,7 +27,7 @@ void main() {
   test('every explicit ERP DataTable column spacing is exactly 2px', () {
     for (final path in spacingFiles) {
       final source = File(path).readAsStringSync();
-      for (final match in RegExp(r'columnSpacing:\\s*([^,\\n]+)').allMatches(source)) {
+      for (final match in RegExp(r'columnSpacing:\s*([^,\n]+)').allMatches(source)) {
         expect(match.group(1)!.trim(), '2', reason: '$path must not override the 2px global column gap');
       }
     }
@@ -40,8 +40,8 @@ void main() {
       'lib/erp/screens/erp_item_data_import_download_screen.dart',
     ]) {
       final source = File(path).readAsStringSync();
-      final tableCount = RegExp(r'DataTable2\\(').allMatches(source).length;
-      final spacingCount = RegExp(r'columnSpacing:\\s*2').allMatches(source).length;
+      final tableCount = RegExp(r'DataTable2\(').allMatches(source).length;
+      final spacingCount = RegExp(r'columnSpacing:\s*2').allMatches(source).length;
       expect(spacingCount, greaterThanOrEqualTo(tableCount), reason: '$path must set spacing explicitly on every DataTable2');
     }
   });
