@@ -68,7 +68,6 @@ class ErpScreenFrame extends StatelessWidget {
         final tabsPosition = profile['tabsPosition'] as String? ?? 'below_title';
         final tasksPosition = profile['tasksPosition'] as String? ?? 'below_title';
         final rowHeight = ((profile['rowHeight'] as num?)?.toDouble() ?? 40).clamp(28, 80).toDouble();
-        final spacing = ((profile['spacing'] as num?)?.toDouble() ?? 5).clamp(0, 30).toDouble();
         final radius = ((profile['cornerRadius'] as num?)?.toDouble() ?? 12).clamp(0, 30).toDouble();
         final contentWidth = ((profile['contentWidth'] as num?)?.toDouble() ?? 100).clamp(40, 100).toDouble();
         final themePreset = profile['themePreset'] as String? ?? 'glossy_neon_luxury';
@@ -132,7 +131,7 @@ class ErpScreenFrame extends StatelessWidget {
             dataRowMinHeight: rowHeight,
             dataRowMaxHeight: rowHeight,
             headingRowHeight: rowHeight,
-            columnSpacing: spacing,
+            columnSpacing: 2,
             headingTextStyle: TextStyle(color: primary, fontWeight: FontWeight.w900, fontSize: 12),
             dividerThickness: tableStyle == 'minimal' ? .4 : tableStyle == 'outlined' ? 1.6 : 1,
             decoration: BoxDecoration(
