@@ -44,7 +44,7 @@ concurrency:
 
 jobs:
   validate-all:
-    name: Analyze, test, and build Android + Web
+    name: Analyze, test, and build Android Release + Web
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -114,6 +114,12 @@ jobs:
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
+      - name: Prepare signed Release APK and Silsila launcher icon
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: bash tools/prepare_android_release.sh
+
       - name: Analyze all application and test Dart code
         id: analyze
         run: flutter analyze lib test --no-fatal-infos --no-fatal-warnings
@@ -169,25 +175,33 @@ jobs:
 
       # Keep Android build and artifact collection running even when WebView
       # fails, so one failed browser assertion does not hide other build results.
-      - name: Build Android debug APK
-        id: android_debug
+      - name: Build Android Release APK
+        id: android_release
         if: always() && !cancelled()
-        # First-run Gradle dependency downloads can take several minutes; fail
-        # this step explicitly if the Android build genuinely stalls.
-        timeout-minutes: 20
-        run: flutter build apk --debug --verbose
+        timeout-minutes: 25
+        run: flutter build apk --release --verbose
 
       - name: Verify Android APK output and integrity
         id: verify_android
-        if: always() && !cancelled() && steps.android_debug.outcome == 'success'
+        if: always() && !cancelled() && steps.android_release.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
-          APK="build/app/outputs/flutter-apk/app-debug.apk"
+          APK="build/app/outputs/flutter-apk/app-release.apk"
           test -s "$APK"
           unzip -tq "$APK"
           unzip -Z1 "$APK" | grep -qx 'AndroidManifest.xml'
           unzip -Z1 "$APK" | grep -q "classes"
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          APKSIGNER="$(find "$SDK/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          OUTPUT="$("$APKSIGNER" verify --verbose --print-certs "$APK")"
+          ACTUAL="$(printf '%s\\n' "$OUTPUT" | sed -n 's/.*certificate SHA-256 digest: *//Ip' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          EXPECTED="a69301fe3009183301d1751aa99ef8d9025c696e2870e4dfb5fd9732be4d8e42"
+          test "$ACTUAL" = "$EXPECTED"
+          AAPT="$(find "$SDK/build-tools" -name aapt -type f | sort -V | tail -n 1)"
+          BADGING="$("$AAPT" dump badging "$APK")"
+          printf '%s\\n' "$BADGING" | grep -q "application-icon-"
+          printf '%s\\n' "$BADGING" | grep -q "name='com.example.silsila_app'"
           sha256sum "$APK" | tee "${APK}.sha256"
 
       - name: Upload consolidated validation artifacts
@@ -197,8 +211,8 @@ jobs:
           name: silsila-full-validation-${{ github.run_number }}
           path: |
             build/web/
-            build/app/outputs/flutter-apk/app-debug.apk
-            build/app/outputs/flutter-apk/app-debug.apk.sha256
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/flutter-apk/app-release.apk.sha256
           if-no-files-found: warn
           retention-days: 7
 
@@ -227,7 +241,7 @@ jobs:
             echo "| بناء نسخة Web | $(status_icon '${{ steps.build_web.outcome }}') |"
             echo "| التحقق من ملفات Web | $(status_icon '${{ steps.verify_web.outcome }}') |"
             echo "| اختبار WebView — كمبيوتر وموبايل | $(status_icon '${{ steps.webview.outcome }}') |"
-            echo "| بناء Android Debug APK | $(status_icon '${{ steps.android_debug.outcome }}') |"
+            echo "| بناء Android Debug APK | $(status_icon '${{ steps.android_release.outcome }}') |"
             echo "| التحقق من ملف APK وسلامته | $(status_icon '${{ steps.verify_android.outcome }}') |"
             echo ""
             echo "### معنى الألوان"
