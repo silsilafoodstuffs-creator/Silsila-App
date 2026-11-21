@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:silsila_app/erp/widgets/erp_quick_task_button.dart';
 
 void main() {
-  testWidgets('ERP quick task buttons use a glossy gradient without changing actions',
+  testWidgets('ERP quick task buttons use semantic action colors without changing actions',
       (tester) async {
     var pressed = false;
     await tester.pumpWidget(
@@ -18,15 +18,11 @@ void main() {
       ),
     );
 
-    final glossySurface = tester.widget<Container>(
-      find.byWidgetPredicate((widget) =>
-          widget is Container &&
-          widget.decoration is BoxDecoration &&
-          (widget.decoration! as BoxDecoration).gradient != null),
+    final button = tester.widget<FilledButton>(find.byType(FilledButton));
+    expect(
+      button.style?.backgroundColor?.resolve({}),
+      const Color(0xFF18865A),
     );
-    final decoration = glossySurface.decoration! as BoxDecoration;
-    expect(decoration.gradient, isA<LinearGradient>());
-    expect(decoration.boxShadow, isNotEmpty);
 
     expect(find.text('إضافة'), findsOneWidget);
     await tester.tap(find.text('إضافة'));
