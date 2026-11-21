@@ -18,6 +18,7 @@ concurrency:
       - "pubspec.lock"
       - "android/**"
       - "supabase/migrations/**"
+      - "tools/prepare_android_release.sh"
   workflow_dispatch:
     inputs:
       test_login:
