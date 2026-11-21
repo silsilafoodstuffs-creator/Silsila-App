@@ -108,6 +108,7 @@ jobs:
         run: flutter analyze lib test --no-fatal-infos --no-fatal-warnings
 
       - name: Run complete Flutter test suite
+        id: test
         run: flutter test --reporter expanded
 
 
