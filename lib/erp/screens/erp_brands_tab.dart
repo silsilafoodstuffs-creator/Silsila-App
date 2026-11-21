@@ -674,7 +674,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
               ]),
               Expanded(child: filtered.isEmpty ? const Center(child: Text('لا توجد براندات متاحة مطابقة للبحث.'))
                 : DataTable2(
-                  minWidth: 820, columnSpacing: 10, horizontalMargin: 8, headingRowHeight: 42,
+                  minWidth: 820, columnSpacing: 2, horizontalMargin: 2, headingRowHeight: 42,
                   dataRowHeight: 48, showCheckboxColumn: false,
                   headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                   columns: const [
@@ -1111,11 +1111,16 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
 
               return Row(children: [
                 SizedBox(width: 28, child: Text('${index + 1}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800))),
+                const SizedBox(width: 2),
                 SizedBox(width: 92, child: _brandGridField(code)),
-                activityDropdown, const SizedBox(width: 2), groupDropdown, const SizedBox(width: 2),
-                SizedBox(width: 220, child: _brandGridField(name)), const SizedBox(width: 2),
-                status, appVisibility, displayOrder, const SizedBox(width: 2),
-                SizedBox(width: 50, child: Center(child: logo)),
+                const SizedBox(width: 2), activityDropdown,
+                const SizedBox(width: 2), groupDropdown,
+                const SizedBox(width: 2), SizedBox(width: 220, child: _brandGridField(name)),
+                const SizedBox(width: 2), status,
+                const SizedBox(width: 2), appVisibility,
+                const SizedBox(width: 2), displayOrder,
+                const SizedBox(width: 2), SizedBox(width: 50, child: Center(child: logo)),
+                const SizedBox(width: 2),
                 const Expanded(child: SizedBox.shrink()),
               ]);
             }),
@@ -1210,7 +1215,9 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
         child: Column(children: [
           Row(children: [
             const SizedBox(width: 28, child: Text('م', textAlign: TextAlign.center, style: headingStyle)),
+            const SizedBox(width: 2),
             const SizedBox(width: 92, child: Text('كود البراند', style: headingStyle)),
+            const SizedBox(width: 2),
             const SizedBox(width: 145, child: Text('نوع النشاط', style: headingStyle)),
             const SizedBox(width: 2),
             const SizedBox(width: 165, child: Text('مجموعة البراند', style: headingStyle)),
@@ -1218,20 +1225,26 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
             const SizedBox(width: 220, child: Text('اسم البراند/الماركة', style: headingStyle)),
             const SizedBox(width: 2),
             const SizedBox(width: 68, child: Center(child: Text('نشط', style: headingStyle))),
+            const SizedBox(width: 2),
             const SizedBox(width: 78, child: Center(child: Text('في التطبيق', style: headingStyle))),
+            const SizedBox(width: 2),
             const SizedBox(width: 62, child: Center(child: Text('الترتيب', style: headingStyle))),
+            const SizedBox(width: 2),
             const SizedBox(width: 50, child: Center(child: Text('الشعار', style: headingStyle))),
+            const SizedBox(width: 2),
             const Expanded(child: SizedBox.shrink()),
           ]),
           const SizedBox(height: 4),
           Row(children: [
-            const SizedBox(width: 28), filter('code', 92, 'بحث الكود'),
-            filter('activity', 145, 'بحث النشاط'), const SizedBox(width: 2),
+            const SizedBox(width: 28), const SizedBox(width: 2), filter('code', 92, 'بحث الكود'),
+            const SizedBox(width: 2), filter('activity', 145, 'بحث النشاط'), const SizedBox(width: 2),
             filter('group', 165, 'بحث المجموعة'), const SizedBox(width: 2),
             SizedBox(width: 220, child: filter('name', 220, 'بحث الاسم العربي')),
-            const SizedBox(width: 2),
-            const SizedBox(width: 68), const SizedBox(width: 78),
-            const SizedBox(width: 62), const SizedBox(width: 50), const Expanded(child: SizedBox.shrink()),
+            const SizedBox(width: 2), const SizedBox(width: 68),
+            const SizedBox(width: 2), const SizedBox(width: 78),
+            const SizedBox(width: 2), const SizedBox(width: 62),
+            const SizedBox(width: 2), const SizedBox(width: 50),
+            const SizedBox(width: 2), const Expanded(child: SizedBox.shrink()),
           ]),
         ]),
       )),
@@ -1328,7 +1341,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 child: SizedBox(
                   width: 1125,
                   child: DataTable2(
-                  minWidth: 1125, columnSpacing: 2, horizontalMargin: 8,
+                  minWidth: 1125, columnSpacing: 2, horizontalMargin: 2,
                   headingRowHeight: 44, dataRowHeight: compactMobile ? 40 : 54, showCheckboxColumn: false,
                   headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                   columns: const [
@@ -1434,6 +1447,8 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                   : DataTable2(
                       fixedTopRows: 1,
                       minWidth: 650,
+                      columnSpacing: 2,
+                      horizontalMargin: 2,
                       columnSpacing: 2,
                       horizontalMargin: 2,
                       headingRowHeight: 42,
