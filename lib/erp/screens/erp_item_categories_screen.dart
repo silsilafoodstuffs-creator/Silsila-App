@@ -20,7 +20,18 @@ const _catCanvas = Color(0xFFF7F5FA);
 String _normalizeActivityCode(String value) {
   final code = value.trim().toUpperCase();
   if (code.isEmpty) return '';
-  final legacy = RegExp(r'^ACT0*(\\d{1,3})
+  final legacy = RegExp(r'^ACT0*(\d{1,3})$').firstMatch(code);
+  if (legacy != null) {
+    final number = int.tryParse(legacy.group(1)!);
+    if (number != null) return number.toString().padLeft(2, '0');
+  }
+  if (RegExp(r'^\d{1,3}$').hasMatch(code)) {
+    final number = int.tryParse(code);
+    if (number != null) return number.toString().padLeft(2, '0');
+  }
+  return code;
+}
+
 class ErpItemCategoriesScreen extends StatefulWidget {
   const ErpItemCategoriesScreen({super.key, this.companyId, this.initialCatalogTab = 0, this.hideHeaderAndTabs = false});
   final int initialCatalogTab;
