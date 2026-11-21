@@ -163,7 +163,7 @@ class StudioComponentRegistry {
             headingRowHeight: 40,
             dataRowMinHeight: 38,
             dataRowMaxHeight: 48,
-            columnSpacing: 12,
+            columnSpacing: 2,
             columns: columns.map((key) => DataColumn(label: Text(key))).toList(),
             rows: tableRows.take(100).map((row) => DataRow(
               cells: columns.map((key) => DataCell(Text((row[key] ?? '').toString()))).toList(),
