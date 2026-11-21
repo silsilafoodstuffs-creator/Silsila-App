@@ -1,4 +1,4 @@
-name: Silsila Android APK + Flutter Validation
+name: Silsila Mobile App Validation
 
 on:
   pull_request:
@@ -105,6 +105,7 @@ jobs:
         run: flutter pub get
 
       - name: Analyze Dart code
+        id: analyze
         run: flutter analyze lib test --no-fatal-infos --no-fatal-warnings
 
       - name: Run complete Flutter test suite
