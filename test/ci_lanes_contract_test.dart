@@ -61,13 +61,17 @@ void main() {
     final deploy = File('.github/workflows/deploy.yml').readAsStringSync();
     final preview = File('.github/workflows/web-preview-validation.yml').readAsStringSync();
     final release = File('.github/workflows/build.yml').readAsStringSync();
-    // The signed production APK is built only by build.yml; no separate debug APK workflow exists.
-
+    // Keep the lightweight Flutter validation lane and make the Debug APK
+    // build a separately visible, bounded step with an integrity-checked artifact.
     expect(mobile, contains('name: Silsila Mobile App Validation'));
     expect(mobile, contains('flutter test --reporter expanded'));
-    expect(mobile, isNot(contains('flutter build apk')));
-    expect(mobile, contains('Flutter analyze + tests'));
-    expect(mobile, isNot(contains('Set up Java 17')));
+    expect(mobile, contains('Analyze Dart code'));
+    expect(mobile, contains('Set up Java 17 for Android Gradle'));
+    expect(mobile, contains('Build Android Debug APK'));
+    expect(mobile, contains('timeout-minutes: 20'));
+    expect(mobile, contains('Verify Android APK and calculate SHA-256'));
+    expect(mobile, contains('Upload Android Debug APK'));
+    expect(mobile, contains('Write Android build result summary'));
     expect(release, contains('name: Build Silsila Android App'));
     expect(release, contains('flutter build apk --release'));
     expect(release, contains('Verify APK signature'));
