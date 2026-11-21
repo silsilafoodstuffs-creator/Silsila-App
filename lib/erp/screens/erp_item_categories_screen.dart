@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../services/erp_workspace_records_service.dart';
+import '../services/erp_screen_layout_profiles.dart';
 import '../services/erp_excel_export_service.dart';
 import 'erp_brands_tab.dart';
 
@@ -432,6 +433,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     } catch (_) { return null; }
   }
 
+  bool get _showCategoryImages => ErpScreenLayoutProfiles.forScreen('فئات الأصناف')['showImages'] as bool? ?? true;
+
   Uint8List? _categoryImageBytes(Map<String,dynamic> row) =>
       _imageBytes[_s(row['id'])] ?? _decodeBytea(row['image_data']);
 
@@ -622,7 +625,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
               decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'اسم الفئة عربي'),
               onTap: () => setState(() => _selectedId = id))),
             const SizedBox(width: 8),
-            _imagePreview(row, size: 48),
+            if (_showCategoryImages) _imagePreview(row, size: 48),
           ]),
           Padding(
             padding: const EdgeInsetsDirectional.only(start: 34, top: 4),
@@ -863,7 +866,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                               cells: [
                                 DataCell(Text(_s(r['category_code']))),
                                 DataCell(SizedBox(width: 170, child: TextField(controller: _ar.putIfAbsent(id, () => TextEditingController(text: _s(r['category_name']))), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none)))),
-                                DataCell(_imagePreview(r, size: 48)),
+                                DataCell(_showCategoryImages ? _imagePreview(r, size: 48) : const SizedBox.shrink()),
                                 DataCell(Text(['رئيسية', 'فرعية', 'ثانوية'][_rowLevel(r)])),
                                 DataCell(Checkbox(shape: const CircleBorder(), value: r['is_active'] == true, activeColor: _catPurple, onChanged: _editing ? (v) => setState(() => r['is_active'] = v == true) : null)),
                                 DataCell(Checkbox(shape: const CircleBorder(), value: r['show_in_app'] == true, activeColor: _catOrange, onChanged: _editing ? (v) => setState(() => r['show_in_app'] = v == true) : null)),
