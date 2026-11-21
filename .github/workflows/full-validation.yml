@@ -169,12 +169,71 @@ jobs:
       - name: Build Android debug APK
         id: android_debug
         if: always() && !cancelled()
+        # First-run Gradle dependency downloads can take several minutes; fail
+        # this step explicitly if the Android build genuinely stalls.
+        timeout-minutes: 20
         run: flutter build apk --debug --verbose
 
-      - name: Verify Android APK output
+      - name: Verify Android APK output and integrity
         id: verify_android
         if: always() && !cancelled() && steps.android_debug.outcome == 'success'
-        run: test -s build/app/outputs/flutter-apk/app-debug.apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="build/app/outputs/flutter-apk/app-debug.apk"
+          test -s "$APK"
+          unzip -tq "$APK"
+          unzip -Z1 "$APK" | grep -qx 'AndroidManifest.xml'
+          unzip -Z1 "$APK" | grep -Eq '^classes[0-9]*\\.dex
+
+      - name: Upload consolidated validation artifacts
+        if: always() && !cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: silsila-full-validation-${{ github.run_number }}
+          path: |
+            build/web/
+            build/app/outputs/flutter-apk/app-debug.apk
+            build/app/outputs/flutter-apk/app-debug.apk.sha256
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Write consolidated validation summary
+        if: always()
+        shell: bash
+        run: |
+          status_icon() {
+            case "$1" in
+              success) echo "🟢 ناجح" ;;
+              failure) echo "🔴 فاشل" ;;
+              cancelled) echo "⚪ أُلغي" ;;
+              skipped) echo "⚪ تم تخطيه" ;;
+              *) echo "🟡 لم يُنفّذ / قيد الانتظار" ;;
+            esac
+          }
+          {
+            echo "## 🧪 Silsila Full Validation — نتيجة الاختبارات"
+            echo ""
+            echo "| الفحص | الحالة |"
+            echo "|---|---|"
+            echo "| اختبارات أدوات Python | $(status_icon '${{ steps.python_tests.outcome }}') |"
+            echo "| تحليل Dart وFlutter | $(status_icon '${{ steps.analyze.outcome }}') |"
+            echo "| اختبارات Flutter | $(status_icon '${{ steps.flutter_tests.outcome }}') |"
+            echo "| اختبار شاشة فروع الشركة | $(status_icon '${{ steps.branch_tests.outcome }}') |"
+            echo "| بناء نسخة Web | $(status_icon '${{ steps.build_web.outcome }}') |"
+            echo "| التحقق من ملفات Web | $(status_icon '${{ steps.verify_web.outcome }}') |"
+            echo "| اختبار WebView — كمبيوتر وموبايل | $(status_icon '${{ steps.webview.outcome }}') |"
+            echo "| بناء Android Debug APK | $(status_icon '${{ steps.android_debug.outcome }}') |"
+            echo "| التحقق من ملف APK | $(status_icon '${{ steps.verify_android.outcome }}') |"
+            echo ""
+            echo "### معنى الألوان"
+            echo "- 🟢 أخضر: الفحص نجح."
+            echo "- 🔴 أحمر: الفحص فشل."
+            echo "- 🟡 أصفر: لم يبدأ أو لم تتوفر نتيجة بعد."
+            echo "- ⚪ رمادي: تم تخطي الفحص أو إلغاؤه."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          sha256sum "$APK" | tee "${APK}.sha256"
 
       - name: Upload consolidated validation artifacts
         if: always() && !cancelled()
