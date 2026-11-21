@@ -1155,8 +1155,10 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(children: [
                 SizedBox(width: 28, child: Text('$index', textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900))),
+                const SizedBox(width: 2),
                 SizedBox(width: 92, child: Text(groupCode, overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: _brandPurple))),
+                const SizedBox(width: 2),
                 SizedBox(width: 145, child: Text(record == null ? '' : _activityName(_s(record['activity_code'])), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Colors.black54))),
                 const SizedBox(width: 2),
                 const SizedBox(width: 165),
@@ -1169,12 +1171,16 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                 const SizedBox(width: 2),
                 SizedBox(width: 68, child: Center(child: Text('${children.length}',
                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)))),
+                const SizedBox(width: 2),
                 const SizedBox(width: 78),
+                const SizedBox(width: 2),
                 const SizedBox(width: 62),
+                const SizedBox(width: 2),
                 SizedBox(width: 46, child: record == null ? const SizedBox.shrink() : IconButton(
                   tooltip: 'إضافة براندات للمجموعة', visualDensity: VisualDensity.compact, padding: EdgeInsets.zero,
                   onPressed: _saving ? null : () => _openGroupBrandPicker(record!),
                   icon: const Icon(Icons.add_circle_outline, color: _brandPurple, size: 18))),
+                const SizedBox(width: 2),
                 SizedBox(width: 40, child: record == null ? const SizedBox.shrink() : PopupMenuButton<String>(
                   tooltip: 'إدارة المجموعة', padding: EdgeInsets.zero, enabled: !_saving && !isDefault,
                   icon: const Icon(Icons.more_vert, size: 18, color: _brandPurple),
