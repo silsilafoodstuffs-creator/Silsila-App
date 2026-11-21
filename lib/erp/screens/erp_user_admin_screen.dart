@@ -1184,7 +1184,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
                     dataRowMinHeight: 40,
                     dataRowMaxHeight: 40,
                     horizontalMargin: 5,
-                    columnSpacing: 5,
+                    columnSpacing: 2,
                     headingRowColor: WidgetStateProperty.all(const Color(0xFFF0E8F8)),
                     columns: const [
                       DataColumn(label: Text('م')),
@@ -1362,7 +1362,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
   Widget _masterGrid(){
     final codeField=_isType?'type_code_display':_isUser?'user_code':'template_code_display';
     return SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
-      headingRowHeight: 40,dataRowMinHeight: 40,dataRowMaxHeight: 40,horizontalMargin: 5,columnSpacing: 5,headingRowColor:WidgetStateProperty.all(const Color(0xFFF0E8F8)),
+      headingRowHeight: 40,dataRowMinHeight: 40,dataRowMaxHeight: 40,horizontalMargin: 5,columnSpacing: 2,headingRowColor:WidgetStateProperty.all(const Color(0xFFF0E8F8)),
       columns:[
         const DataColumn(label:Text('م')),DataColumn(label:Text(_isType?'كود النوع':_isUser?'كود المستخدم':'كود القالب')),
         if(!_isUser)const DataColumn(label:Text('اسم عربي')),if(!_isUser)const DataColumn(label:Text('اسم إنجليزي')),
@@ -1531,7 +1531,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       ]),
       const SizedBox(height:8),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
-        headingRowHeight: 40,dataRowMinHeight: 40,dataRowMaxHeight: 40,horizontalMargin: 5,columnSpacing: 5,
+        headingRowHeight: 40,dataRowMinHeight: 40,dataRowMaxHeight: 40,horizontalMargin: 5,columnSpacing: 2,
         columns:[const DataColumn(label:Text('القائمة الرئيسية / الفرعية / الشاشة')),for(final action in _userAdminActions)DataColumn(label:SizedBox(width:48,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800))))],
         rows:_rules.map((rule)=>DataRow(cells:[
           DataCell(SizedBox(width:250,child:Row(children:[
