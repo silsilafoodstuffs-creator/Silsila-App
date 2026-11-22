@@ -1176,85 +1176,88 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                   const DataColumn(label: Text('يظهر في التطبيق')),
                                   const DataColumn(label: Text('حذف')),
                                 ],
-                                rows: [
-                                  for (var i = 0; i < visibleRows.length; i++)
-                                    DataRow(
-                                      selected: _selectedId == _s(visibleRows[i]['id']),
-                                      onSelectChanged: (_) => setState(() => _selectedId = _s(visibleRows[i]['id'])),
-                                      cells: [
-                                        DataCell(SizedBox(width: 38, child: Text('${i + 1}',
-                                          textAlign: TextAlign.center))),
-                                        DataCell(SizedBox(width: 112, child: Align(
-                                          alignment: AlignmentDirectional.centerStart,
-                                          child: Text(_s(visibleRows[i]['category_code']),
-                                            style: const TextStyle(fontWeight: FontWeight.w700, color: _catPurple)),
-                                        ))),
-                                        DataCell(SizedBox(
-                                          width: 220,
-                                          height: 36,
-                                          child: Center(child: TextField(
-                                            controller: _ar.putIfAbsent(_s(visibleRows[i]['id']),
-                                              () => TextEditingController(text: _s(visibleRows[i]['category_name']))),
-                                            enabled: _editing,
-                                            textAlignVertical: TextAlignVertical.center,
-                                            decoration: const InputDecoration(
-                                              isDense: true, border: InputBorder.none,
-                                              contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                            ),
-                                          )),
+                                rows: visibleRows.asMap().entries.map((entry) {
+                                  final i = entry.key;
+                                  final row = entry.value;
+                                  final id = _s(row['id']);
+                                  return DataRow(
+                                    selected: _selectedId == id,
+                                    onSelectChanged: (_) => setState(() => _selectedId = id),
+                                    cells: [
+                                      DataCell(SizedBox(width: 38, child: Text('${i + 1}',
+                                        textAlign: TextAlign.center))),
+                                      DataCell(SizedBox(width: 112, child: Align(
+                                        alignment: AlignmentDirectional.centerStart,
+                                        child: Text(_s(row['category_code']),
+                                          style: const TextStyle(fontWeight: FontWeight.w700, color: _catPurple)),
+                                      ))),
+                                      DataCell(SizedBox(
+                                        width: 220,
+                                        height: 36,
+                                        child: Center(child: TextField(
+                                          controller: _ar.putIfAbsent(id,
+                                            () => TextEditingController(text: _s(row['category_name']))),
+                                          enabled: _editing,
+                                          textAlignVertical: TextAlignVertical.center,
+                                          decoration: const InputDecoration(
+                                            isDense: true, border: InputBorder.none,
+                                            contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                          ),
                                         )),
-                                        DataCell(SizedBox(width: 72, child: IconButton(
-                                          tooltip: 'معاينة بيانات الفئة',
-                                          visualDensity: VisualDensity.compact,
-                                          onPressed: () => _showCategoryPreview(visibleRows[i]),
-                                          icon: const Icon(Icons.visibility_outlined, size: 19, color: _catPurple),
-                                        ))),
-                                        DataCell(SizedBox(width: 142, child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            _imagePreview(visibleRows[i], size: 34),
-                                            IconButton(
-                                              tooltip: 'اختيار صورة من الجهاز',
-                                              visualDensity: VisualDensity.compact,
-                                              onPressed: _editing ? () => _pickImage(visibleRows[i], source: ImageSource.gallery) : null,
-                                              icon: const Icon(Icons.photo_library_outlined, size: 18, color: _catPurple),
-                                            ),
-                                            IconButton(
-                                              tooltip: 'تصوير صورة للفئة',
-                                              visualDensity: VisualDensity.compact,
-                                              onPressed: _editing ? () => _pickImage(visibleRows[i], source: ImageSource.camera) : null,
-                                              icon: const Icon(Icons.photo_camera_outlined, size: 18, color: _catOrange),
-                                            ),
-                                          ],
-                                        ))),
-                                        DataCell(Checkbox(
-                                          shape: const CircleBorder(),
-                                          visualDensity: VisualDensity.compact,
-                                          value: visibleRows[i]['is_active'] == true,
-                                          activeColor: _catPurple,
-                                          onChanged: _editing ? (value) => setState(() {
-                                            visibleRows[i]['is_active'] = value == true;
-                                            if (value != true) visibleRows[i]['show_in_app'] = false;
-                                          }) : null,
-                                        )),
-                                        DataCell(Checkbox(
-                                          shape: const CircleBorder(),
-                                          visualDensity: VisualDensity.compact,
-                                          value: visibleRows[i]['show_in_app'] == true && visibleRows[i]['is_active'] == true,
-                                          activeColor: _catOrange,
-                                          onChanged: _editing && visibleRows[i]['is_active'] == true
-                                              ? (value) => setState(() => visibleRows[i]['show_in_app'] = value == true)
-                                              : null,
-                                        )),
-                                        DataCell(IconButton(
-                                          tooltip: 'حذف الفئة',
-                                          visualDensity: VisualDensity.compact,
-                                          onPressed: _editing ? () => _deleteCategoryRow(visibleRows[i]) : null,
-                                          icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFB42318), size: 19),
-                                        )),
-                                      ],
-                                    ),
-                                ],
+                                      )),
+                                      DataCell(SizedBox(width: 72, child: IconButton(
+                                        tooltip: 'معاينة بيانات الفئة',
+                                        visualDensity: VisualDensity.compact,
+                                        onPressed: () => _showCategoryPreview(row),
+                                        icon: const Icon(Icons.visibility_outlined, size: 19, color: _catPurple),
+                                      ))),
+                                      DataCell(SizedBox(width: 142, child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          _imagePreview(row, size: 34),
+                                          IconButton(
+                                            tooltip: 'اختيار صورة من الجهاز',
+                                            visualDensity: VisualDensity.compact,
+                                            onPressed: _editing ? () => _pickImage(row, source: ImageSource.gallery) : null,
+                                            icon: const Icon(Icons.photo_library_outlined, size: 18, color: _catPurple),
+                                          ),
+                                          IconButton(
+                                            tooltip: 'تصوير صورة للفئة',
+                                            visualDensity: VisualDensity.compact,
+                                            onPressed: _editing ? () => _pickImage(row, source: ImageSource.camera) : null,
+                                            icon: const Icon(Icons.photo_camera_outlined, size: 18, color: _catOrange),
+                                          ),
+                                        ],
+                                      ))),
+                                      DataCell(Checkbox(
+                                        shape: const CircleBorder(),
+                                        visualDensity: VisualDensity.compact,
+                                        value: row['is_active'] == true,
+                                        activeColor: _catPurple,
+                                        onChanged: _editing ? (value) => setState(() {
+                                          row['is_active'] = value == true;
+                                          if (value != true) row['show_in_app'] = false;
+                                        }) : null,
+                                      )),
+                                      DataCell(Checkbox(
+                                        shape: const CircleBorder(),
+                                        visualDensity: VisualDensity.compact,
+                                        value: row['show_in_app'] == true && row['is_active'] == true,
+                                        activeColor: _catOrange,
+                                        onChanged: _editing && row['is_active'] == true
+                                            ? (value) => setState(() => row['show_in_app'] = value == true)
+                                            : null,
+                                      )),
+                                      DataCell(IconButton(
+                                        tooltip: 'حذف الفئة',
+                                        visualDensity: VisualDensity.compact,
+                                        onPressed: _editing ? () => _deleteCategoryRow(row) : null,
+                                        icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFB42318), size: 19),
+                                      )),
+                                    ],
+                                  );
+                                }).toList(),
+
                               ),
                             ),
                           ),
