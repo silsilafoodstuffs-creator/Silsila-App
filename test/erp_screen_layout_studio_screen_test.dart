@@ -21,10 +21,13 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+    await tester.tap(find.byType(DropdownButtonFormField<String>).at(2));
     await tester.pumpAndSettle();
     expect(find.text('شاشة اختبار مخصصة'), findsOneWidget);
-    await tester.tap(find.text('شاشة اختبار مخصصة'));
+    await tester.tap(find.text('شاشة اختبار مخصصة').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('عرض'));
     await tester.pumpAndSettle();
 
     expect(find.text('مواضع عناصر الشاشة'), findsOneWidget);
@@ -49,6 +52,8 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('عرض'));
+    await tester.pumpAndSettle();
     expect(find.byIcon(Icons.image_outlined), findsOneWidget);
     await tester.ensureVisible(find.text('الصور'));
     await tester.tap(find.text('الصور'));
