@@ -65,7 +65,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'code_policy.salary_element','category':'تكويدية','ar':'عناصر المرتبات','en':'Payroll elements','value':'Elm + 3 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'ui_dimensions','category':'برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
     {'key':'ui_reorder','category':'برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
-    {'key':'ui_layout_standard','category':'برمجية','ar':'المعيار الموحد لارتفاع الخانات والصفوف والمسافات بين الخانات والأعمدة','en':'Global standard for cell/row height and cell/column spacing','value':'{"row_height":40,"field_height":40,"column_spacing":2}','mandatory':true,'all':true},
+    {'key':'ui_layout_standard','category':'برمجية','ar':'المعيار الموحد لارتفاع الخانات والصفوف والمسافات بين الخانات والأعمدة','en':'Global standard for cell/row height and cell/column spacing','value':'{"row_height":40,"field_height":36,"column_spacing":4}','mandatory':true,'all':true},
     {'key':'ui_dropdown_item_height','category':'برمجية','ar':'الارتفاع القياسي لكل اختيار داخل القوائم المنسدلة','en':'Standard dropdown option height','value':'40 بكسل','all':true},
     {'key':'ui_field_label_alignment','category':'برمجية','ar':'موضع اسم الخانة بالنسبة إلى القيمة أو الاختيار','en':'Field label alignment','value':'اسم الخانة على يمين القيمة أو الاختيار في صف واحد متناسق','all':true},
     {'key':'ui_mobile_header_compact','category':'برمجية','ar':'ارتفاع الهيدر في شاشات الموبايل','en':'Compact mobile screen headers','value':'هيدر مدمج بارتفاع مناسب دون فراغات أو ارتفاع مبالغ فيه','all':true},
@@ -291,8 +291,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           'user_ids': List<String>.from((row['user_ids'] as List?) ?? const []), 'mandatory': true,
         };
       }
-      // Enforce the project-wide UI standard: adjacent table columns are
-      // separated by exactly 2 logical pixels for every user and screen.
+      // Enforce the project-wide UI standard for every user and screen:
+      // 40px data rows, 36px input fields, and 4px spacing.
       final layoutPolicy = values['ui_layout_standard'];
       if (layoutPolicy != null) {
         Map<String, dynamic>? parsedLayout;
@@ -300,17 +300,20 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           final decoded = jsonDecode((layoutPolicy['value'] ?? '').toString());
           if (decoded is Map) parsedLayout = Map<String, dynamic>.from(decoded);
         } catch (_) {}
-        final rowHeight = int.tryParse((parsedLayout?['row_height'] ?? 40).toString()) ?? 40;
-        final fieldHeight = int.tryParse((parsedLayout?['field_height'] ?? 40).toString()) ?? 40;
+        const rowHeight = 40;
+        const fieldHeight = 36;
         final previousSpacing = int.tryParse((parsedLayout?['column_spacing'] ?? '').toString());
+        final previousRowHeight = int.tryParse((parsedLayout?['row_height'] ?? '').toString());
+        final previousFieldHeight = int.tryParse((parsedLayout?['field_height'] ?? '').toString());
         layoutPolicy['value'] = jsonEncode({
           'row_height': rowHeight,
           'field_height': fieldHeight,
-          'column_spacing': 2,
+          'column_spacing': 4,
         });
         layoutPolicy['enabled'] = true;
         layoutPolicy['all'] = true;
-        if (parsedLayout == null || previousSpacing != 2) {
+        if (parsedLayout == null || previousSpacing != 4 ||
+            previousRowHeight != rowHeight || previousFieldHeight != fieldHeight) {
           await db.from('erp_program_policies').upsert({
             'company_id': company,
             'policy_key': 'ui_layout_standard',
@@ -1365,17 +1368,17 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       if (decoded is Map) {
         return {
           'row_height': int.tryParse((decoded['row_height'] ?? 40).toString()) ?? 40,
-          'field_height': int.tryParse((decoded['field_height'] ?? 40).toString()) ?? 40,
-          'column_spacing': 2,
+          'field_height': 36,
+          'column_spacing': 4,
         };
       }
     } catch (_) {}
-    return {'row_height': 40, 'field_height': 40, 'column_spacing': 2};
+    return {'row_height': 40, 'field_height': 36, 'column_spacing': 4};
   }
 
   void _updateLayoutDimension(Map<String, dynamic> policy, String key, int value) {
     final dimensions = _layoutDimensions(policy);
-    dimensions[key] = key == 'column_spacing' ? 2 : value;
+    dimensions[key] = value;
     policy['value'] = jsonEncode(dimensions);
     setState(() {});
   }
@@ -1403,11 +1406,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,      children: [
-        selector('ارتفاع الصفوف', 'row_height', [30, 35, 40, 45, 50, 55, 60, 70, 80, 100]),
+        selector('ارتفاع الصفوف', 'row_height', [40]),
         const SizedBox(height: 3),
-        selector('ارتفاع الخانات', 'field_height', [20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100]),
+        selector('ارتفاع الخانات', 'field_height', [36]),
         const SizedBox(height: 3),
-        selector('المسافة بين الأعمدة', 'column_spacing', [2]),
+        selector('المسافة بين الأعمدة', 'column_spacing', [4]),
       ],
     );  }
 
