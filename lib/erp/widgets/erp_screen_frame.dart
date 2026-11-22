@@ -258,7 +258,7 @@ class ErpScreenFrame extends StatelessWidget {
         }
 
         Widget tabsPanel({bool vertical = false}) => Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          margin: EdgeInsets.symmetric(horizontal: spacing, vertical: spacing / 2),
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -299,7 +299,7 @@ class ErpScreenFrame extends StatelessWidget {
         Widget titleHeader({bool includeTabs = false}) {
           if (!showTitle && !includeTabs) return const SizedBox.shrink();
           return Container(
-            margin: const EdgeInsets.fromLTRB(10, 8, 10, 5),
+            margin: EdgeInsets.fromLTRB(spacing, spacing + 3, spacing, spacing),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               gradient: headerGradient,
@@ -469,7 +469,7 @@ class ErpScreenFrame extends StatelessWidget {
                 if (tasksVisible && tasksPosition == 'bottom') tasksPanel(),
                 if (showFooter && footer != null)
                   Container(
-                    margin: const EdgeInsets.fromLTRB(10, 2, 10, 8),
+                    margin: EdgeInsets.fromLTRB(spacing, 2, spacing, spacing + 3),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                     decoration: BoxDecoration(
                       color: Colors.white,
