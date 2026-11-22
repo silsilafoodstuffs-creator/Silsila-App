@@ -23,12 +23,14 @@ class ErpOperationalDocumentsScreen extends StatefulWidget {
     this.initialDocumentType,
     this.initialDocumentId,
     this.previewOnly = false,
+    this.initialTab = 0,
   });
   final String? initialCompanyId;
   final ErpOperationalKind kind;
   final String? initialDocumentType;
   final String? initialDocumentId;
   final bool previewOnly;
+  final int initialTab;
 
   @override
   State<ErpOperationalDocumentsScreen> createState() => _ErpOperationalDocumentsScreenState();
@@ -79,6 +81,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   bool _loading = false;
   String? _error;
   String? _message;
+  int _invoiceSelectedTab = 0;
+  final List<GlobalKey> _invoiceSectionKeys = List<GlobalKey>.generate(5, (_) => GlobalKey());
 
   String get _title {
     if (widget.kind == ErpOperationalKind.purchase) return 'مستندات المشتريات';
@@ -179,6 +183,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     _documentType = widget.initialDocumentType ?? 'invoice';
     _selectedDocumentId = widget.initialDocumentId;
     _paymentType = 'آجل';
+    _invoiceSelectedTab = widget.initialTab.clamp(0, 4);
     if (widget.previewOnly) {
       _company.text = '';
       _documentType = 'invoice';
@@ -1932,12 +1937,13 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     ),
   );
 
-  Widget _invoiceCard(String title, IconData icon, Widget child) {
+  Widget _invoiceCard(String title, IconData icon, Widget child, {Key? key}) {
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
     final accent = theme.colorScheme.secondary;
     final radius = (ErpScreenLayoutProfiles.forScreen('فاتورة بيع')['cornerRadius'] as num?)?.toDouble() ?? 12;
     return Card(
+      key: key,
       elevation: theme.cardTheme.elevation ?? 1,
       color: theme.cardTheme.color ?? Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius), side: BorderSide(color: accent.withValues(alpha: .28))),
@@ -1991,6 +1997,17 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       case 'طباعة PDF': return rounded ? Icons.picture_as_pdf_rounded : Icons.picture_as_pdf_outlined;
       default: return Icons.circle_outlined;
     }
+  }
+
+  void _selectInvoiceTab(int index) {
+    if (index < 0 || index >= _invoiceSectionKeys.length) return;
+    setState(() => _invoiceSelectedTab = index);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = _invoiceSectionKeys[index].currentContext;
+      if (target != null) {
+        Scrollable.ensureVisible(target, duration: const Duration(milliseconds: 280), curve: Curves.easeOutCubic, alignment: .04);
+      }
+    });
   }
 
   List<Widget> _orderedProfileWidgets(
@@ -2509,6 +2526,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         showFrameTitle: false,
         applyContentWidth: false,
         padding: EdgeInsets.zero,
+        tabs: const ['بيانات الفاتورة','الأصناف','الخصومات والملاحظات','الملخص','الفواتير السابقة'],
+        selectedTab: _invoiceSelectedTab,
+        onTabSelected: _selectInvoiceTab,
         child: Builder(builder: (styledContext) => _buildSalesInvoiceScreen(styledContext)),
       );
     }
