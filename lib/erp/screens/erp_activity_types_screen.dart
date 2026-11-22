@@ -76,13 +76,17 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
         return;
       }
       _resolvedCompanyId = companyId;
-      final company = await db.from('erp_companies')
-          .select('legal_name,trade_name')
-          .eq('id', companyId)
-          .maybeSingle();
-      _companyName = ((company?['trade_name'] ?? '').toString().trim().isNotEmpty)
-          ? company!['trade_name'].toString().trim()
-          : (company?['legal_name'] ?? 'الشركة الحالية').toString().trim();
+      try {
+        final company = await db.from('erp_companies')
+            .select('legal_name,trade_name')
+            .eq('id', companyId)
+            .maybeSingle();
+        _companyName = ((company?['trade_name'] ?? '').toString().trim().isNotEmpty)
+            ? company!['trade_name'].toString().trim()
+            : (company?['legal_name'] ?? 'الشركة الحالية').toString().trim();
+      } catch (_) {
+        _companyName = 'الشركة الحالية';
+      }
       var data = <Map<String, String>>[];
       try {
         data = await _service.listPage(companyId: companyId, pageKey: _pageKey);
