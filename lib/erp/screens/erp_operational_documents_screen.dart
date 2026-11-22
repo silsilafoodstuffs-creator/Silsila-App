@@ -12,6 +12,8 @@ import '../services/erp_operational_documents_repository.dart';
 import '../services/erp_item_unit_conversion.dart';
 import '../services/erp_operational_accounting_repository.dart';
 import 'erp_operational_account_mappings_screen.dart';
+import '../widgets/erp_screen_frame.dart';
+import '../services/erp_screen_layout_profiles.dart';
 
 class ErpOperationalDocumentsScreen extends StatefulWidget {
   const ErpOperationalDocumentsScreen({
@@ -1957,7 +1959,13 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: Color(0xFFE1D9EB))),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: Color(0xFF3E007D), width: 1.5)),
     );
-    return Directionality(
+    return ErpScreenFrame(
+      title: 'فاتورة بيع',
+      profileKey: 'فاتورة بيع',
+      showFrameTitle: false,
+      applyContentWidth: false,
+      padding: EdgeInsets.zero,
+      child: Builder(builder: (styledContext) => Directionality(
       textDirection: TextDirection.rtl,
       child: Focus(
         autofocus: true,
@@ -2368,6 +2376,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             style: TextStyle(color: Colors.black54, fontSize: 12)),
         ]),
       ),
+    )),
     );
   }
 
