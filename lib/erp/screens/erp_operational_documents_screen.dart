@@ -1231,7 +1231,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                             }
                             return KeyEventResult.ignored;
                           },
-                          child: DropdownButtonFormField<String>(itemHeight: 48, 
+                          child: DropdownButtonFormField<String>(itemHeight: 48, isExpanded: true, 
                             value: selectedUnitId,
                             isDense: true,
                             isExpanded: true,
@@ -2581,7 +2581,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.primary.withValues(alpha: .08)),
               headingTextStyle: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w900, fontSize: 12),
               border: invoiceGridStyle == 'outlined' ? TableBorder.all(color: screenPrimary.withValues(alpha: .18)) : null,
-              dataRowMinHeight: Theme.of(context).dataTableTheme.dataRowMinHeight ?? 40, dataRowMaxHeight: Theme.of(context).dataTableTheme.dataRowMaxHeight ?? 40, horizontalMargin: 5, columnSpacing: Theme.of(context).dataTableTheme.columnSpacing ?? 2,
+              dataRowMinHeight: Theme.of(context).dataTableTheme.dataRowMinHeight ?? 40, dataRowMaxHeight: Theme.of(context).dataTableTheme.dataRowMaxHeight ?? 40, horizontalMargin: 5, columnSpacing: 2,
               columns: const [DataColumn(label: Text('م.')), DataColumn(label: Text('الكود')), DataColumn(label: Text('الصنف')), DataColumn(label: Text('الوحدة')), DataColumn(label: Text('الكمية')), DataColumn(label: Text('سعر الوحدة')), DataColumn(label: Text('الخصم')), DataColumn(label: Text('خصم %')), DataColumn(label: Text('الضريبة')), DataColumn(label: Text('الإجمالي')), DataColumn(label: Text(''))],
               rows: List<DataRow>.generate(_pendingLines.length, (index) {
                 final line = _pendingLines[index];
