@@ -288,7 +288,6 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
           enableFilter:true,
           enableSearch:true,
           requestFocusOnTap:true,
-          expandedInsets:EdgeInsets.zero,
           textStyle:const TextStyle(fontSize:11),
           inputDecorationTheme:const InputDecorationTheme(
             isDense:true,
