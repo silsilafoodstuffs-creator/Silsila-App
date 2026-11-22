@@ -444,7 +444,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
             _choice('مكان أزرار المهام',_tasksPosition,['top','below_title','bottom','hidden'],{'top':'أعلى الشاشة','below_title':'أسفل العنوان','bottom':'أسفل الشاشة','hidden':'مخفي'},(v)=>setState(()=>_tasksPosition=v??_tasksPosition)),
             _choice('مكان التاريخ والفلاتر الزمنية',_datePosition,_positions.keys.toList(),_positions,(v)=>setState(()=>_datePosition=v??_datePosition)),
             _choice('مكان الصور',_imagesPosition,_positions.keys.toList(),_positions,(v)=>setState(()=>_imagesPosition=v??_imagesPosition)),
-            _choice('مكان شريط التمرير',_scrollPosition,_positions.keys.toList(),_positions,(v)=>setState(()=>_scrollPosition=v??_scrollPosition)),
+            _choice('مكان شريط التمرير',_scrollPosition,['right','left','hidden'],{'right':'يمين المحتوى','left':'يسار المحتوى','hidden':'مخفي'},(v)=>setState(()=>_scrollPosition=v??_scrollPosition)),
           ]),
           _section('إظهار وإخفاء المكونات',Icons.visibility_outlined,[
             Wrap(spacing:8,runSpacing:0,children:[
