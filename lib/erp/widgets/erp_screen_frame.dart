@@ -89,6 +89,8 @@ class ErpScreenFrame extends StatelessWidget {
         final tabsPosition = profile['tabsPosition'] as String? ?? 'below_title';
         final tasksPosition = profile['tasksPosition'] as String? ?? 'below_title';
         final rowHeight = ((profile['rowHeight'] as num?)?.toDouble() ?? 40).clamp(28, 80).toDouble();
+        final columnSpacing = ((profile['columnSpacing'] as num?)?.toDouble() ?? 2).clamp(0, 24).toDouble();
+        final fontFamily = profile['fontFamily'] as String?;
         final spacing = ((profile['spacing'] as num?)?.toDouble() ?? 5).clamp(0, 30).toDouble();
         final radius = ((profile['cornerRadius'] as num?)?.toDouble() ?? 12).clamp(0, 30).toDouble();
         final contentWidth = ((profile['contentWidth'] as num?)?.toDouble() ?? 100).clamp(40, 100).toDouble();
@@ -115,6 +117,7 @@ class ErpScreenFrame extends StatelessWidget {
         final baseTheme = Theme.of(context);
         final themed = baseTheme.copyWith(
           colorScheme: baseTheme.colorScheme.copyWith(primary: primary, secondary: accent),
+          textTheme: fontFamily == null || fontFamily.isEmpty ? baseTheme.textTheme : baseTheme.textTheme.apply(fontFamily: fontFamily),
           cardTheme: CardThemeData(
             color: themePreset == 'platinum' ? const Color(0xFFF8F9FC) : Colors.white,
             elevation: isLuxury ? 5 : 1,
@@ -159,7 +162,7 @@ class ErpScreenFrame extends StatelessWidget {
             // Header labels need more vertical room than the fixed 40px data rows.
             // This prevents Arabic headings from being clipped or cramped when wrapping.
             headingRowHeight: rowHeight + 16,
-            columnSpacing: 2,
+            columnSpacing: columnSpacing,
             headingTextStyle: TextStyle(color: primary, fontWeight: FontWeight.w900, fontSize: 12),
             dataTextStyle: const TextStyle(fontSize: 12),
             dividerThickness: tableStyle == 'minimal' ? .4 : 1,
