@@ -813,6 +813,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       if (mounted) setState(() => _error = 'تعذر التحقق من سياسة نواقص العملاء؛ أوقف الجلب احتياطيًا: $e');
       return;
     }
+    final shortageLayout = ErpScreenLayoutProfiles.forScreen(_title);
+    final shortageGridStyle = shortageLayout['gridStyle'] as String? ?? 'compact';
+    final shortagePrimary = Theme.of(context).colorScheme.primary;
     DateTime from = DateTime(DateTime.now().year, DateTime.now().month, 1);
     DateTime to = DateTime.now();
     var loading = false;
@@ -867,7 +870,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   rows: List<DataRow>.generate(shortages.length, (index) {
                     final row = shortages[index];
                     final remaining = (_n(row['requested_quantity']) - _n(row['fulfilled_quantity'])).clamp(0, double.infinity);
-                    return DataRow(color: invoiceGridStyle == 'striped' && index.isOdd ? WidgetStateProperty.all(screenPrimary.withValues(alpha: .045)) : null, cells: [
+                    return DataRow(color: shortageGridStyle == 'striped' && index.isOdd ? WidgetStateProperty.all(shortagePrimary.withValues(alpha: .045)) : null, cells: [
                       DataCell(Text((shortages.length - index).toString())),
                       DataCell(Text(_s(row['source_date']))),
                       DataCell(Text(_s(row['source_document_number']))),
@@ -2331,6 +2334,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     final screenPrimary = screenTheme.colorScheme.primary;
     final screenAccent = screenTheme.colorScheme.secondary;
     final layoutProfile = ErpScreenLayoutProfiles.forScreen(_title);
+    final invoiceGridStyle = layoutProfile['gridStyle'] as String? ?? 'compact';
+    final invoiceSpacing = (layoutProfile['spacing'] as num?)?.toDouble() ?? 5.0;
     final matches = _rows.where((row) => _s(row['id']) == _selectedDocumentId);
     final doc = matches.isEmpty ? <String, dynamic>{} : matches.first;
     final hasDraft = doc.isNotEmpty && _s(doc['status']) == 'draft';
