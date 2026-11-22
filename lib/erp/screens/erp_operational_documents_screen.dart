@@ -22,11 +22,13 @@ class ErpOperationalDocumentsScreen extends StatefulWidget {
     this.kind = ErpOperationalKind.purchase,
     this.initialDocumentType,
     this.initialDocumentId,
+    this.previewOnly = false,
   });
   final String? initialCompanyId;
   final ErpOperationalKind kind;
   final String? initialDocumentType;
   final String? initialDocumentId;
+  final bool previewOnly;
 
   @override
   State<ErpOperationalDocumentsScreen> createState() => _ErpOperationalDocumentsScreenState();
@@ -177,7 +179,28 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     _documentType = widget.initialDocumentType ?? 'invoice';
     _selectedDocumentId = widget.initialDocumentId;
     _paymentType = 'آجل';
-    if (widget.initialDocumentId != null) {
+    if (widget.previewOnly) {
+      _company.text = '';
+      _documentType = 'invoice';
+      _selectedDocumentId = 'preview-invoice';
+      _isTaxInvoice = true;
+      _partyId = 'preview-customer';
+      _warehouseId = 'preview-warehouse';
+      _documentNumber.text = 'INV-PREVIEW-001';
+      _partyCode.text = 'CUS-001';
+      _notes.text = 'معاينة تصميم فقط — لا يتم حفظ أي بيانات';
+      _rows = <Map<String,dynamic>>[{'id':'preview-invoice','status':'draft','document_type':'invoice','document_number':'INV-PREVIEW-001','auto_number':'INV-PREVIEW-001','grand_total':286.00,'paid_total':0.0,'document_date':DateTime.now().toIso8601String(),'notes':'معاينة تصميم فقط'}];
+      _pendingLines = <Map<String,dynamic>>[
+        {'item_id':'preview-item-1','item_code':'ITM-001','item_name':'أرز مصري فاخر 1 كجم','quantity':12.0,'unit_id':'preview-unit-1','unit_name':'كرتونة','unit_code':'CTN','conversion_factor':12.0,'base_price':18.0,'policy_price':20.0,'adjusted_price':19.0,'unit_price':19.0,'discount':12.0,'discount_percent':5.26,'tax_rate':14.0,'tax':31.92},
+        {'item_id':'preview-item-2','item_code':'ITM-002','item_name':'زيت خليط 1 لتر','quantity':6.0,'unit_id':'preview-unit-2','unit_name':'كرتونة','unit_code':'CTN','conversion_factor':6.0,'base_price':32.0,'policy_price':34.0,'adjusted_price':33.0,'unit_price':33.0,'discount':6.0,'discount_percent':3.03,'tax_rate':14.0,'tax':27.72},
+      ];
+      _unitsByItem = {
+        'preview-item-1':[{'id':'preview-unit-1','unit_name':'كرتونة','unit_code':'CTN','conversion_factor':12.0}],
+        'preview-item-2':[{'id':'preview-unit-2','unit_name':'كرتونة','unit_code':'CTN','conversion_factor':6.0}],
+      };
+      _invoiceDiscountAmount.text = '12';
+      _invoiceDiscountPercent.text = '2.0';
+    } else if (widget.initialDocumentId != null) {
       // Load once when opening a specific document; scheduling a second load
       // here can race the initial company load and overwrite selected state.
       WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -321,6 +344,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _load({bool clearMessage = true}) async {
+    if (widget.previewOnly) return;
     if (_company.text.trim().isEmpty) {
       setState(() => _error = 'أدخل معرّف الشركة أولًا.');
       return;
@@ -544,6 +568,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _createDraft() async {
+    if (widget.previewOnly) return;
     if (_partyId == null || _warehouseId == null) {
       setState(() => _error = 'أكمل الطرف والمخزن.');
       return;
@@ -666,6 +691,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _openCampaignPicker(String campaignType) async {
+    if (widget.previewOnly) return;
     if (widget.kind != ErpOperationalKind.sales || _company.text.trim().isEmpty || _partyId == null) {
       setState(() => _error = 'اختر العميل وحمّل بيانات الشركة قبل جلب العروض.');
       return;
@@ -755,6 +781,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _openCustomerShortages() async {
+    if (widget.previewOnly) return;
     if (widget.kind != ErpOperationalKind.sales || _company.text.trim().isEmpty || _partyId == null) {
       setState(() => _error = 'اختر العميل وحمّل بيانات الشركة قبل جلب نواقص العميل.');
       return;
@@ -862,6 +889,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _openItemPicker({List<Map<String, dynamic>>? sourceItems, String? sourceTitle}) async {
+    if (widget.previewOnly) return;
     List<Map<String, dynamic>> pickerItems = List<Map<String, dynamic>>.from(sourceItems ?? _items);
     if (_saving || _loading) return;
     var selectedDoc = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
@@ -1445,6 +1473,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _savePendingLines() async {
+    if (widget.previewOnly) return;
     if (_selectedDocumentId == null || _pendingLines.isEmpty) {
       setState(() => _error = 'اختر الأصناف باستخدام F1 أولًا قبل الحفظ.');
       return;
@@ -1549,6 +1578,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _postAccounting(Map<String, dynamic> row) async {
+    if (widget.previewOnly) return;
     final number = _s(row['document_number']);
     final yes = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('ترحيل الأثر المحاسبي'),
@@ -1574,6 +1604,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _post(Map<String, dynamic> row) async {
+    if (widget.previewOnly) return;
     final number = _s(row['document_number']);    final yes = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('تأكيد الترحيل'),
       content: Text('سيتم ترحيل المستند $number وإنشاء حركات مخزنية فعلية. لا يمكن إعادة ترحيله بعد نجاح العملية.'),      actions: [
@@ -1594,6 +1625,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   void _showSalesQuickPreview() {
+    if (widget.previewOnly) return;
     final rows = _pendingLines.isNotEmpty ? _pendingLines : _lines;
     showDialog<void>(context: context, builder: (ctx) => AlertDialog(
       title: Text('معاينة ' + _salesDocumentTitle(_documentType)),
@@ -1611,6 +1643,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _printSalesQuickPdf() async {
+    if (widget.previewOnly) return;
     try {
       final rows = _pendingLines.isNotEmpty ? _pendingLines : _lines;
       final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
@@ -1628,6 +1661,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _importSalesQuickExcel() async {
+    if (widget.previewOnly) return;
     if (_selectedDocumentId == null) { setState(() => _error = 'أنشئ مسودة أو اختر فاتورة بحالة مسودة قبل استيراد الأصناف.'); return; }
     try {
       final picked = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: const ['xlsx'], withData: true);
@@ -1672,6 +1706,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _exportOperationalDocuments() async {
+    if (widget.previewOnly) return;
     try {
       final sourceLines = _pendingLines.isNotEmpty ? _pendingLines : _lines;
       final importTemplateRows = sourceLines.map((line) {
@@ -1744,6 +1779,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _deleteSelectedSalesDraft() async {
+    if (widget.previewOnly) return;
     final id = _selectedDocumentId;
     if (id == null) { setState(() => _error = 'اختر مسودة أولًا.'); return; }
     final rows = _rows.where((row) => _s(row['id']) == id);
@@ -1816,6 +1852,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _openCustomerPicker() async {
+    if (widget.previewOnly) return;
     final selected = await _searchLookup(
       title: 'اختيار العميل — F1 أو دبل كليك',
       rows: _parties,
@@ -1830,6 +1867,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _openWarehousePicker() async {
+    if (widget.previewOnly) return;
     if (!_canChangeWarehouse) {
       setState(() => _message = 'تغيير المخزن غير مسموح لهذا المستخدم؛ يلزم منحه الصلاحية من إدارة المستخدمين.');
       return;
@@ -1844,6 +1882,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _openRepresentativePicker() async {
+    if (widget.previewOnly) return;
     if (!_canChangeSalesRep) {
       setState(() => _message = 'تغيير المندوب غير مسموح لهذا المستخدم؛ يلزم منحه الصلاحية من إدارة المستخدمين.');
       return;
