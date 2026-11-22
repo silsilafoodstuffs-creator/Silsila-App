@@ -651,13 +651,13 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                 ]),
                 // الصف الثاني: وسائل الاتصال والعملة.
                 Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Expanded(child: _field(_phone, 'موبايل الشركة 1', Icons.phone_outlined, keyboard: TextInputType.phone)),
+                  Expanded(flex: 2, child: _field(_phone, 'موبايل الشركة 1', Icons.phone_outlined, keyboard: TextInputType.phone)),
                   const SizedBox(width: 8),
-                  Expanded(child: _field(_phone2, 'موبايل الشركة 2', Icons.phone_android_outlined, keyboard: TextInputType.phone)),
+                  Expanded(flex: 2, child: _field(_phone2, 'موبايل الشركة 2', Icons.phone_android_outlined, keyboard: TextInputType.phone)),
                   const SizedBox(width: 8),
-                  Expanded(flex: 1, child: _field(_email, 'البريد الإلكتروني للشركة', Icons.email_outlined, keyboard: TextInputType.emailAddress)),
+                  Expanded(flex: 3, child: _field(_email, 'البريد الإلكتروني للشركة', Icons.email_outlined, keyboard: TextInputType.emailAddress)),
                   const SizedBox(width: 8),
-                  Expanded(child: _currencyField()),
+                  Expanded(flex: 2, child: _currencyField()),
                 ]),
                 // الصف الثالث: البيانات القانونية قبل العنوان.
                 Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
