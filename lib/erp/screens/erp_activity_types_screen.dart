@@ -125,8 +125,13 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       final mergedByCode = <String, Map<String, String>>{};
       for (final raw in (masterRows as List)) {
         final master = Map<String, dynamic>.from(raw as Map);
-        final code = (master['code'] ?? '').toString().trim().toUpperCase();
-        if (code.isEmpty) continue;
+        final rawCode = (master['code'] ?? '').toString().trim().toUpperCase();
+        if (rawCode.isEmpty) continue;
+        final code = rawCode.startsWith('ACT')
+            ? 'ACT' + rawCode.substring(3).padLeft(3, '0')
+            : (int.tryParse(rawCode) != null
+                ? 'ACT' + rawCode.padLeft(3, '0')
+                : rawCode);
         final workspace = workspaceByCode[code];
         mergedByCode[code] = <String, String>{
           'ترتيب السطر': workspace?['ترتيب السطر'] ?? (master['sort_order'] ?? '').toString(),
