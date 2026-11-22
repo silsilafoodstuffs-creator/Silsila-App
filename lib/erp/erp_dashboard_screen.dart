@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'services/erp_screen_layout_profiles.dart';
+import 'services/erp_studio_repository.dart';
 import 'services/erp_print_support.dart';
 import 'widgets/erp_center_toast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -277,6 +278,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     _loadManagedAppsFromCloud();
   }
 
+  Future<void> _loadRemoteScreenLayoutProfiles(String companyId) async {
+    try {
+      await ErpScreenLayoutProfiles.load(companyId: companyId);
+      final remote = await ErpStudioRepository().loadLayoutProfiles(companyId);
+      await ErpScreenLayoutProfiles.mergeRemote(remote, companyId: companyId);
+    } catch (_) {
+      // Local profiles remain available if the central layout table is offline.
+    }
+  }
+
   Future<void> _loadManagedAppsFromCloud() async {
     if (!mounted) return;
     setState(() {
@@ -315,7 +326,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       if (!mounted) return;
       setState(() {
         _appManagementCompanyId = companyId;
-        unawaited(ErpScreenLayoutProfiles.load(companyId: companyId).catchError((Object _) {}));
+        unawaited(_loadRemoteScreenLayoutProfiles(companyId));
         _managedAppIds
           ..clear()
           ..addAll(registryRows);
