@@ -2236,9 +2236,13 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Widget _salesInvoiceLineCard(BuildContext context, int index) {
-    final line = _pendingLines[index];
+    final rows = _pendingLines.isNotEmpty ? _pendingLines : _lines;
+    final line = rows[index];
+    final editable = _pendingLines.isNotEmpty;
+    final discount = _n(line['discount'] ?? line['discount_amount']);
+    final tax = _n(line['tax'] ?? line['tax_amount']);
     final gross = _n(line['quantity']) * _n(line['unit_price']);
-    final total = (gross - _n(line['discount']) - _invoiceDiscountForLine(index) + _n(line['tax'])).clamp(0, double.infinity);
+    final total = (gross - discount - (editable ? _invoiceDiscountForLine(index) : 0) + tax).clamp(0, double.infinity);
     final primary = Theme.of(context).colorScheme.primary;
     return Card(
       child: Padding(
@@ -2249,17 +2253,20 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           const SizedBox(height: 6),
           Row(children: [
             Expanded(child: Text('السعر: ${_money(line['unit_price'])} ج.م', style: const TextStyle(fontSize: 11))),
-            IconButton(tooltip: 'حذف الصنف', onPressed: () => _removePendingInvoiceLine(index), icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18)),
+            if (editable) IconButton(tooltip: 'حذف الصنف', onPressed: () => _removePendingInvoiceLine(index), icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18)),
           ]),
-          TextFormField(
-            key: ValueKey('sales-view-qty-$index-${_s(line['item_id'])}'),
-            initialValue: _money(line['quantity']),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'الكمية', isDense: true),
-            onChanged: (value) => _updatePendingLine(index, quantity: double.tryParse(value) ?? 0),
-          ),
+          if (editable)
+            TextFormField(
+              key: ValueKey('sales-view-qty-$index-${_s(line['item_id'])}'),
+              initialValue: _money(line['quantity']),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'الكمية', isDense: true),
+              onChanged: (value) => _updatePendingLine(index, quantity: double.tryParse(value) ?? 0),
+            )
+          else
+            Text('الكمية: ${_money(line['quantity'])}', style: const TextStyle(fontSize: 11)),
           const SizedBox(height: 5),
-          Text('الخصم: ${_money(line['discount'])} • الضريبة: ${_money(line['tax'])}', style: const TextStyle(fontSize: 10)),
+          Text('الخصم: ${_money(discount)} • الضريبة: ${_money(tax)}', style: const TextStyle(fontSize: 10)),
           Text('الإجمالي: ${_money(total)} ج.م', style: TextStyle(color: primary, fontWeight: FontWeight.w900)),
         ]),
       ),
@@ -2267,14 +2274,15 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Widget _salesInvoiceAlternateLinesView(BuildContext context, String view) {
+    final rows = _pendingLines.isNotEmpty ? _pendingLines : _lines;
     if (view == 'tree') {
       return Column(children: [
-        for (var index = 0; index < _pendingLines.length; index++)
+        for (var index = 0; index < rows.length; index++)
           Card(
             child: ExpansionTile(
-              key: ValueKey('sales-line-tree-$index-${_s(_pendingLines[index]['item_id'])}'),
-              title: Text(_s(_pendingLines[index]['item_name']), style: const TextStyle(fontWeight: FontWeight.w800)),
-              subtitle: Text('${_s(_pendingLines[index]['item_code'])} • الكمية: ${_money(_pendingLines[index]['quantity'])}'),
+              key: ValueKey('sales-line-tree-$index-${_s(rows[index]['item_id'])}'),
+              title: Text(_s(rows[index]['item_name']), style: const TextStyle(fontWeight: FontWeight.w800)),
+              subtitle: Text('${_s(rows[index]['item_code'])} • الكمية: ${_money(rows[index]['quantity'])}'),
               children: [
                 Padding(padding: const EdgeInsets.all(10), child: _salesInvoiceLineCard(context, index)),
               ],
@@ -2286,7 +2294,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       spacing: 8,
       runSpacing: 8,
       children: [
-        for (var index = 0; index < _pendingLines.length; index++)
+        for (var index = 0; index < rows.length; index++)
           SizedBox(width: 235, child: _salesInvoiceLineCard(context, index)),
       ],
     );
@@ -2297,9 +2305,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             padding: const EdgeInsets.all(12),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const Text('ملخص الأصناف', style: TextStyle(fontWeight: FontWeight.w900)),
-              Text('عدد البنود: ${_pendingLines.length}'),
-              Text('إجمالي الكميات: ${_money(_pendingLines.fold<double>(0, (sum, line) => sum + _n(line['quantity'])))}'),
-              Text('قيمة الأصناف: ${_money(_pendingGross)} ج.م'),
+              Text('عدد البنود: ${rows.length}'),
+              Text('إجمالي الكميات: ${_money(rows.fold<double>(0, (sum, line) => sum + _n(line['quantity'])))}'),
+              Text('قيمة الأصناف: ${_money(rows.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price'])))} ج.م'),
             ]),
           ),
         );
@@ -2583,7 +2591,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 ]);
               }),
             )),
-            if (_pendingLines.isNotEmpty && (layoutProfile['view'] as String? ?? 'table') != 'table')
+            if ((_pendingLines.isNotEmpty || _lines.isNotEmpty) && (layoutProfile['view'] as String? ?? 'table') != 'table')
               _salesInvoiceAlternateLinesView(context, layoutProfile['view'] as String),
             if (_lines.isNotEmpty) ...[
               const SizedBox(height: 10),
