@@ -620,7 +620,6 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
           ])),
         ),
         const SizedBox(height: 8),
-        const SizedBox(height: 8),
         if (_error != null) _notice(_error!, Colors.red),
         if (_message != null) _notice(_message!, Colors.green),
         if (_loading)
