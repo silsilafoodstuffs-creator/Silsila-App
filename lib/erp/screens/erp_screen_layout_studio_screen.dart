@@ -339,10 +339,6 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
             ),
             const Text('اختر المسار من القوائم الأربع ثم اضغط عرض لاستحضار نموذج معاينة الشاشة والتبويب المحددين.',style:TextStyle(fontSize:11,color:Colors.black54)),
           ]),
-          _section('الشاشة المستهدفة',Icons.web_asset_outlined,[
-            _choice('تطبيق الإعداد على',_screen,_screens,{for(final s in _screens)s:s},(v){if(v==null)return;setState((){_screen=v;_apply(_current);});}),
-            const Text('اختيار «كل الشاشات» يحدد القيم الافتراضية العامة، ويمكن تخصيص كل شاشة بصورة مستقلة.',style:TextStyle(fontSize:11,color:Colors.black54)),
-          ]),
           _section('مكتبة الأنماط الاحترافية',Icons.auto_awesome,[
             _choice('الثيم العام',_themePreset,
               ['glossy_neon_luxury','neon_purple','glass_orange','platinum','royal_violet','classic'],
