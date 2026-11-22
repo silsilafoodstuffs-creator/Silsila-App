@@ -1209,15 +1209,21 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                           onPressed: () => _showCategoryPreview(visibleRows[i]),
                                           icon: const Icon(Icons.visibility_outlined, size: 19, color: _catPurple),
                                         ))),
-                                        DataCell(SizedBox(width: 112, child: Row(
+                                        DataCell(SizedBox(width: 142, child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             _imagePreview(visibleRows[i], size: 34),
                                             IconButton(
-                                              tooltip: 'اختيار صورة الفئة',
+                                              tooltip: 'اختيار صورة من الجهاز',
                                               visualDensity: VisualDensity.compact,
                                               onPressed: _editing ? () => _pickImage(visibleRows[i], source: ImageSource.gallery) : null,
                                               icon: const Icon(Icons.photo_library_outlined, size: 18, color: _catPurple),
+                                            ),
+                                            IconButton(
+                                              tooltip: 'تصوير صورة للفئة',
+                                              visualDensity: VisualDensity.compact,
+                                              onPressed: _editing ? () => _pickImage(visibleRows[i], source: ImageSource.camera) : null,
+                                              icon: const Icon(Icons.photo_camera_outlined, size: 18, color: _catOrange),
                                             ),
                                           ],
                                         ))),
