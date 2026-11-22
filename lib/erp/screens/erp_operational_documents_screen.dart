@@ -2115,8 +2115,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     if (widget.previewOnly || _company.text.trim().isEmpty || itemId.isEmpty) {
       return Future<Uint8List?>.value(null);
     }
+    final cacheKey = '${_company.text.trim()}:$itemId';
     return _invoiceImageFutures.putIfAbsent(
-      itemId,
+      cacheKey,
       () => _inventoryImageRepo.fetchItemImage(_company.text.trim(), itemId).catchError((Object _) => null),
     );
   }
