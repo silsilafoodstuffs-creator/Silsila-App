@@ -3,6 +3,7 @@ import '../widgets/erp_screen_frame.dart';
 import '../services/erp_screen_layout_profiles.dart';
 import '../services/erp_studio_repository.dart';
 import '../services/erp_menu_catalog.dart';
+import 'erp_operational_documents_screen.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
@@ -335,6 +336,18 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
                 _headerChoice('التبويب',_tab,_tabs,(v)=>setState(()=>_tab=v??_tab)),
                 const SizedBox(width:8),
                 ElevatedButton.icon(onPressed:()=>setState(()=>_previewRequested=true),icon:const Icon(Icons.visibility_outlined),label:const Text('عرض')),
+                const SizedBox(width:6),
+                OutlinedButton.icon(
+                  onPressed: _screen == 'فاتورة بيع' ? () => Navigator.of(context).push(MaterialPageRoute<void>(
+                    builder: (_) => ErpOperationalDocumentsScreen(
+                      kind: ErpOperationalKind.sales,
+                      initialDocumentType: 'invoice',
+                      previewOnly: true,
+                    ),
+                  )) : null,
+                  icon: const Icon(Icons.open_in_new_rounded),
+                  label: const Text('معاينة فاتورة البيع الأصلية'),
+                ),
               ]),
             ),
             const Text('اختر المسار من القوائم الأربع ثم اضغط عرض لاستحضار نموذج معاينة الشاشة والتبويب المحددين.',style:TextStyle(fontSize:11,color:Colors.black54)),
