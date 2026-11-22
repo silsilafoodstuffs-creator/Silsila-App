@@ -18,7 +18,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(const MaterialApp(
-      home: Scaffold(body: ErpScreenLayoutStudioScreen(availableScreens: const ['شاشة اختبار مخصصة'])),
+      home: Scaffold(body: ErpScreenLayoutStudioScreen()),
     ));
     await tester.pumpAndSettle();
 
