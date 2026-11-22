@@ -353,7 +353,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
                       kind: ErpOperationalKind.sales,
                       initialDocumentType: 'invoice',
                       previewOnly: true,
-                      initialTab: _tabs.indexOf(_tab).clamp(0, 4),
+                      initialTab: _tabs.indexOf(_tab).clamp(0, 4).toInt(),
                     ),
                   )) : null,
                   icon: const Icon(Icons.open_in_new_rounded),
