@@ -2148,7 +2148,13 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                           ? Icon(Icons.inventory_2_outlined, size: 28, color: primary)
                           : ClipRRect(
                               borderRadius: BorderRadius.circular(9),
-                              child: Image.memory(snapshot.data!, fit: BoxFit.cover, width: 64, height: 56),
+                              child: Image.memory(
+                                snapshot.data!,
+                                fit: BoxFit.cover,
+                                width: 64,
+                                height: 56,
+                                errorBuilder: (context, error, stackTrace) => Icon(Icons.inventory_2_outlined, size: 28, color: primary),
+                              ),
                             ),
                     ),
                   ),
