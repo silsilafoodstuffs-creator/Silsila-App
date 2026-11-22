@@ -1959,13 +1959,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: Color(0xFFE1D9EB))),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: Color(0xFF3E007D), width: 1.5)),
     );
-    return ErpScreenFrame(
-      title: 'فاتورة بيع',
-      profileKey: 'فاتورة بيع',
-      showFrameTitle: false,
-      applyContentWidth: false,
-      padding: EdgeInsets.zero,
-      child: Builder(builder: (styledContext) => Directionality(
+    return Directionality(
       textDirection: TextDirection.rtl,
       child: Focus(
         autofocus: true,
@@ -2245,7 +2239,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             if (_pendingLines.isNotEmpty) SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
               headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
               headingTextStyle: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 12),
-              dataRowMinHeight: 40, dataRowMaxHeight: 40, horizontalMargin: 5, columnSpacing: 2,
+              dataRowMinHeight: Theme.of(context).dataTableTheme.dataRowMinHeight ?? 40, dataRowMaxHeight: Theme.of(context).dataTableTheme.dataRowMaxHeight ?? 40, horizontalMargin: 5, columnSpacing: Theme.of(context).dataTableTheme.columnSpacing ?? 2,
               columns: const [DataColumn(label: Text('م.')), DataColumn(label: Text('الكود')), DataColumn(label: Text('الصنف')), DataColumn(label: Text('الوحدة')), DataColumn(label: Text('الكمية')), DataColumn(label: Text('سعر الوحدة')), DataColumn(label: Text('الخصم')), DataColumn(label: Text('خصم %')), DataColumn(label: Text('الضريبة')), DataColumn(label: Text('الإجمالي')), DataColumn(label: Text(''))],
               rows: List<DataRow>.generate(_pendingLines.length, (index) {
                 final line = _pendingLines[index];
@@ -2376,7 +2370,6 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             style: TextStyle(color: Colors.black54, fontSize: 12)),
         ]),
       ),
-    )),
     );
   }
 
@@ -2384,7 +2377,14 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   Widget build(BuildContext context) {
     ErpKeyboardNavigation.registerActions(add: _createDraft, save: _savePendingLines);
     if (widget.kind == ErpOperationalKind.sales) {
-      return _buildSalesInvoiceScreen(context);
+      return ErpScreenFrame(
+        title: 'فاتورة بيع',
+        profileKey: 'فاتورة بيع',
+        showFrameTitle: false,
+        applyContentWidth: false,
+        padding: EdgeInsets.zero,
+        child: Builder(builder: (styledContext) => _buildSalesInvoiceScreen(styledContext)),
+      );
     }
     final draftCount = _rows.where((r) => _s(r['status']) == 'draft').length;
     return Directionality(textDirection: TextDirection.rtl, child: Focus(
