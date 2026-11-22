@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../services/erp_workspace_records_service.dart';
+import '../services/erp_company_settings_repository.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as excel;
@@ -27,6 +28,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
   String? _message;
   String? _resolvedCompanyId;
   String _companyName = '';
+  String? _companyLogoUrl;
   String? get _companyId => (_resolvedCompanyId?.trim().isNotEmpty == true) ? _resolvedCompanyId!.trim() : ((widget.companyId?.trim().isNotEmpty == true) ? widget.companyId!.trim() : null);
   static const _pageKey = 'أنواع الأنشطة'; // Keep the persisted workspace key unchanged for backward compatibility.
 
@@ -87,6 +89,17 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       } catch (_) {
         _companyName = 'الشركة الحالية';
       }
+      _companyLogoUrl = null;
+      try {
+        final profileSettings = await ErpCompanySettingsRepository(client: db)
+            .getSetting(companyId: companyId, key: 'company_profile_extra');
+        final logoPath = (profileSettings?['logo_path'] ?? '').toString().trim();
+        if (logoPath.isNotEmpty) {
+          _companyLogoUrl = await db.storage
+              .from('erp-company-assets')
+              .createSignedUrl(logoPath, 900);
+        }
+      } catch (_) {}
       var data = <Map<String, String>>[];
       try {
         data = await _service.listPage(companyId: companyId, pageKey: _pageKey);
@@ -510,26 +523,54 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       if (!widget.hideHeader) Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), decoration: const BoxDecoration(color: Color(0xFF3E007D), borderRadius: BorderRadius.vertical(top: Radius.circular(10))), child: const Row(children: [Icon(Icons.category_outlined, color: Colors.white), SizedBox(width: 8), Text('أنواع الأنشطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)), Spacer(), Text('إدارة البرنامج • بيانات أساسية', style: TextStyle(color: Colors.white70, fontSize: 11))])),
       Padding(
         padding: const EdgeInsets.fromLTRB(8, 6, 8, 2),
-        child: InputDecorator(
-          decoration: const InputDecoration(labelText: 'الشركة', isDense: true,
-            border: OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 4)),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: (_companyId ?? '').isEmpty ? null : _companyId,
-              isExpanded: true, isDense: true,
-              icon: const Icon(Icons.lock_outline, size: 16, color: Color(0xFF6F42C1)),
-              hint: Text(_loading ? 'جارٍ تحميل الشركة...' : 'لا توجد شركة مرتبطة'),
-              items: (_companyId ?? '').isEmpty ? const [] : [
-                DropdownMenuItem<String>(value: _companyId,
-                  child: Text(_companyName.isEmpty ? 'الشركة الحالية' : _companyName,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700))),
-              ],
-              onChanged: null,
-            ),
-          ),
-        ),
+        child: LayoutBuilder(builder: (context, constraints) {
+          final selectorWidth = (constraints.maxWidth * .25).clamp(150.0, 300.0);
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              const Text('الشركة', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF3E007D))),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: selectorWidth,
+                height: 36,
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    isDense: true, border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: (_companyId ?? '').isEmpty ? null : _companyId,
+                      isExpanded: true, isDense: true,
+                      icon: const Icon(Icons.lock_outline, size: 16, color: Color(0xFF6F42C1)),
+                      hint: Text(_loading ? 'جارٍ تحميل الشركة...' : 'لا توجد شركة مرتبطة', overflow: TextOverflow.ellipsis),
+                      items: (_companyId ?? '').isEmpty ? const [] : [
+                        DropdownMenuItem<String>(value: _companyId,
+                          child: Text(_companyName.isEmpty ? 'الشركة الحالية' : _companyName,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w700))),
+                      ],
+                      onChanged: null,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                width: 36, height: 36,
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: _companyLogoUrl == null
+                    ? const Icon(Icons.business_rounded, color: Color(0xFF6F42C1), size: 24)
+                    : Image.network(_companyLogoUrl!, fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.business_rounded, color: Color(0xFF6F42C1), size: 24)),
+              ),
+            ],
+          );
+        }),
       ),
       Container(color: Colors.white, padding: const EdgeInsets.all(8), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
         _task('تحديث', Icons.refresh_rounded, const Color(0xFF2475B8), _loading || _saving ? null : _load),
@@ -548,7 +589,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       if (_loading) const LinearProgressIndicator(minHeight: 2),
       Expanded(
         child: SingleChildScrollView(
-          child: Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: ErpStandardDataTable(headingColor: const Color(0xFFF1EAF9), rowHeight: 36, columns: const [DataColumn(label: Text('م')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('نوع النشاط')), DataColumn(label: Text('معاينة صورة النشاط')), DataColumn(label: Text('نشط')), DataColumn(label: Text('يظهر في التطبيق')), DataColumn(label: Text('إجراءات'))], rows: [
+          child: Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: ErpStandardDataTable(headingColor: const Color(0xFFF1EAF9), rowHeight: 40, columns: const [DataColumn(label: Text('م')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('نوع النشاط')), DataColumn(label: Text('معاينة صورة النشاط')), DataColumn(label: Text('نشط')), DataColumn(label: Text('يظهر في التطبيق')), DataColumn(label: Text('إجراءات'))], rows: [
         for (var i = 0; i < _rows.length; i++) DataRow(cells: [
           DataCell(SizedBox(width: 38, child: Text('${i + 1}', textAlign: TextAlign.center))),
           DataCell(SizedBox(width: 82, child: Align(alignment: AlignmentDirectional.centerStart, child: Text(_rows[i]['كود النشاط'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6F42C1)))))),
