@@ -12,12 +12,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: SingleChildScrollView(
-            child: ErpOperationalDocumentsScreen(
-              key: ValueKey('${kind.name}-${documentType ?? 'default'}'),
-              kind: kind,
-              initialDocumentType: documentType,
-            ),
+          body: ErpOperationalDocumentsScreen(
+            key: ValueKey('${kind.name}-${documentType ?? 'default'}'),
+            kind: kind,
+            initialDocumentType: documentType,
           ),
         ),
       ),
