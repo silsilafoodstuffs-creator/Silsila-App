@@ -69,7 +69,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
 
   List<String> get _mainModules => ErpMenuCatalog.modules.keys.toList();
   List<String> get _subMenus => (ErpMenuCatalog.modules[_mainModule]?.keys ?? const <String>['بيانات أساسية','حركات','تقارير']).toList();
-  List<String> get _menuScreens => <String>{...(ErpMenuCatalog.modules[_mainModule]?[_subMenu] ?? _fallbackScreens), ...widget.availableScreens.where((screen) => screen.trim().isNotEmpty)}.toList();
+  List<String> get _menuScreens => (ErpMenuCatalog.modules[_mainModule]?[_subMenu] ?? _fallbackScreens).toList();
   List<String> get _tabs => _screen == 'فاتورة بيع'
       ? const ['بيانات الفاتورة','الأصناف','الخصومات والملاحظات','الملخص','الفواتير السابقة']
       : const ['الرئيسية','البيانات','التفاصيل','المرفقات'];
