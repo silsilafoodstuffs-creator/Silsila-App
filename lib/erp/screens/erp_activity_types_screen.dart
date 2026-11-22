@@ -70,7 +70,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
         if (mounted) setState(() {
           _rows.clear();
           _message = userId == null
-              ? 'سجّل الدخول إلى النظام لعرض بيانات الأنشطة وحفظها.'
+              ? 'سجّل الدخول إلى النظام لعرض أنواع الأنشطة وحفظها.'
               : 'لا توجد شركة نشطة مرتبطة بالمستخدم الحالي.';
         });
         return;
@@ -145,7 +145,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
           ..addAll(data)
           ..sort((a, b) => (int.tryParse(a['ترتيب السطر'] ?? '') ?? 0)
               .compareTo(int.tryParse(b['ترتيب السطر'] ?? '') ?? 0));
-        _message = data.isEmpty ? 'لا توجد أنواع أنشطة محفوظة بعد؛ يمكنك إضافة أول نشاط.' : 'تم تحديث بيانات الأنشطة.';
+        _message = data.isEmpty ? 'لا توجد أنواع أنشطة محفوظة بعد؛ يمكنك إضافة أول نشاط.' : 'تم تحديث أنواع الأنشطة.';
       });
     } catch (e) {
       if (mounted) setState(() => _message = 'تعذر تحميل الأنشطة: $e');
@@ -244,7 +244,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
         }, onConflict: 'code');
       }
       await _load();
-      if (mounted) setState(() { _editing = false; _message = 'تم حفظ جميع صفوف بيانات الأنشطة في قاعدة البيانات.'; });
+      if (mounted) setState(() { _editing = false; _message = 'تم حفظ جميع صفوف أنواع الأنشطة في قاعدة البيانات.'; });
     } catch (e) {
       if (mounted) setState(() => _message = 'تعذر الحفظ: ${e.toString()}');
     } finally {
@@ -297,7 +297,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     final count = _rows.length;
     final yes = await _confirmActivityDelete(
       title: 'تحذير: حذف الجريد بالكامل',
-      message: 'هل ترغب في حذف جميع بيانات الأنشطة بالكامل؟ عدد الصفوف: $count. سيؤثر ذلك على قائمة الأنشطة المرتبطة بالتطبيق، ولا يمكن التراجع عن العملية.',
+      message: 'هل ترغب في حذف جميع أنواع الأنشطة بالكامل؟ عدد الصفوف: $count. سيؤثر ذلك على قائمة الأنشطة المرتبطة بالتطبيق، ولا يمكن التراجع عن العملية.',
     );
     if (!yes || !mounted) return;
     setState(() => _saving = true);
@@ -445,7 +445,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     if (_rows.isEmpty) { setState(() => _message = 'لا توجد بيانات لتصديرها.'); return; }
     try {
       final workbook = excel.Excel.createExcel();
-      final sheet = workbook['بيانات الأنشطة'];
+      final sheet = workbook['أنواع الأنشطة'];
       const keys = ['ترتيب السطر', 'كود النشاط', 'اسم النشاط عربي', 'نشط', 'يظهر في التطبيق'];
       sheet.appendRow(keys.map((key) => excel.TextCellValue(key)).toList());
       for (final row in _rows) {
@@ -454,7 +454,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       final bytes = workbook.encode();
       if (bytes == null) throw StateError('تعذر إنشاء ملف Excel.');
       final saved = await FilePicker.platform.saveFile(
-        dialogTitle: 'تصدير بيانات الأنشطة',
+        dialogTitle: 'تصدير أنواع الأنشطة',
         fileName: 'silsila_activity_types.xlsx',
         type: FileType.custom,
         allowedExtensions: ['xlsx'],
@@ -473,7 +473,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       const keys = ['ترتيب السطر', 'كود النشاط', 'اسم النشاط عربي', 'نشط', 'يظهر في التطبيق'];
       final doc = pw.Document();
       doc.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, theme: pw.ThemeData.withFont(base: font, bold: font), build: (_) => [
-        ErpPrintSupport.text('سلسلة — بيانات الأنشطة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+        ErpPrintSupport.text('سلسلة — أنواع الأنشطة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 12),
         pw.TableHelper.fromTextArray(headers: keys, data: ErpPrintSupport.normalizeTable(_rows.map((row) => keys.map((key) => row[key] ?? '').toList()).toList())),
       ]));
@@ -485,7 +485,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('معاينة بيانات الأنشطة'),
+        title: const Text('معاينة أنواع الأنشطة'),
         content: SizedBox(
           width: 560,
           child: SingleChildScrollView(
@@ -507,7 +507,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
   Widget build(BuildContext context) {
     ErpKeyboardNavigation.registerActions(add: _new, save: _save);
     return Directionality(textDirection: TextDirection.rtl, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (!widget.hideHeader) Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), decoration: const BoxDecoration(color: Color(0xFF3E007D), borderRadius: BorderRadius.vertical(top: Radius.circular(10))), child: const Row(children: [Icon(Icons.category_outlined, color: Colors.white), SizedBox(width: 8), Text('بيانات الأنشطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)), Spacer(), Text('إدارة البرنامج • بيانات أساسية', style: TextStyle(color: Colors.white70, fontSize: 11))])),
+      if (!widget.hideHeader) Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), decoration: const BoxDecoration(color: Color(0xFF3E007D), borderRadius: BorderRadius.vertical(top: Radius.circular(10))), child: const Row(children: [Icon(Icons.category_outlined, color: Colors.white), SizedBox(width: 8), Text('أنواع الأنشطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)), Spacer(), Text('إدارة البرنامج • بيانات أساسية', style: TextStyle(color: Colors.white70, fontSize: 11))])),
       Padding(
         padding: const EdgeInsets.fromLTRB(8, 6, 8, 2),
         child: InputDecorator(
@@ -668,7 +668,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
         }, onConflict: 'code');
       }
       await _load();
-      if (mounted) setState(() { _editing = false; _message = 'تم حفظ جميع صفوف بيانات الأنشطة في قاعدة البيانات.'; });
+      if (mounted) setState(() { _editing = false; _message = 'تم حفظ جميع صفوف أنواع الأنشطة في قاعدة البيانات.'; });
     } catch (e) {
       if (mounted) setState(() => _message = 'تعذر الحفظ: ${e.toString()}');
     } finally {
@@ -721,7 +721,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     final count = _rows.length;
     final yes = await _confirmActivityDelete(
       title: 'تحذير: حذف الجريد بالكامل',
-      message: 'هل ترغب في حذف جميع بيانات الأنشطة بالكامل؟ عدد الصفوف: $count. سيؤثر ذلك على قائمة الأنشطة المرتبطة بالتطبيق، ولا يمكن التراجع عن العملية.',
+      message: 'هل ترغب في حذف جميع أنواع الأنشطة بالكامل؟ عدد الصفوف: $count. سيؤثر ذلك على قائمة الأنشطة المرتبطة بالتطبيق، ولا يمكن التراجع عن العملية.',
     );
     if (!yes || !mounted) return;
     setState(() => _saving = true);
@@ -795,7 +795,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     if (_rows.isEmpty) { setState(() => _message = 'لا توجد بيانات لتصديرها.'); return; }
     try {
       final workbook = excel.Excel.createExcel();
-      final sheet = workbook['بيانات الأنشطة'];
+      final sheet = workbook['أنواع الأنشطة'];
       const keys = ['ترتيب السطر', 'كود النشاط', 'اسم النشاط عربي', 'نشط', 'يظهر في التطبيق'];
       sheet.appendRow(keys.map((key) => excel.TextCellValue(key)).toList());
       for (final row in _rows) {
@@ -804,7 +804,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       final bytes = workbook.encode();
       if (bytes == null) throw StateError('تعذر إنشاء ملف Excel.');
       final saved = await FilePicker.platform.saveFile(
-        dialogTitle: 'تصدير بيانات الأنشطة',
+        dialogTitle: 'تصدير أنواع الأنشطة',
         fileName: 'silsila_activity_types.xlsx',
         type: FileType.custom,
         allowedExtensions: ['xlsx'],
@@ -823,7 +823,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       const keys = ['ترتيب السطر', 'كود النشاط', 'اسم النشاط عربي', 'نشط', 'يظهر في التطبيق'];
       final doc = pw.Document();
       doc.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, theme: pw.ThemeData.withFont(base: font, bold: font), build: (_) => [
-        ErpPrintSupport.text('سلسلة — بيانات الأنشطة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+        ErpPrintSupport.text('سلسلة — أنواع الأنشطة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 12),
         pw.TableHelper.fromTextArray(headers: keys, data: ErpPrintSupport.normalizeTable(_rows.map((row) => keys.map((key) => row[key] ?? '').toList()).toList())),
       ]));
@@ -835,7 +835,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('معاينة بيانات الأنشطة'),
+        title: const Text('معاينة أنواع الأنشطة'),
         content: SizedBox(
           width: 560,
           child: SingleChildScrollView(
@@ -857,7 +857,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
   Widget build(BuildContext context) {
     ErpKeyboardNavigation.registerActions(add: _new, save: _save);
     return Directionality(textDirection: TextDirection.rtl, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (!widget.hideHeader) Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), decoration: const BoxDecoration(color: Color(0xFF3E007D), borderRadius: BorderRadius.vertical(top: Radius.circular(10))), child: const Row(children: [Icon(Icons.category_outlined, color: Colors.white), SizedBox(width: 8), Text('بيانات الأنشطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)), Spacer(), Text('إدارة البرنامج • بيانات أساسية', style: TextStyle(color: Colors.white70, fontSize: 11))])),
+      if (!widget.hideHeader) Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), decoration: const BoxDecoration(color: Color(0xFF3E007D), borderRadius: BorderRadius.vertical(top: Radius.circular(10))), child: const Row(children: [Icon(Icons.category_outlined, color: Colors.white), SizedBox(width: 8), Text('أنواع الأنشطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)), Spacer(), Text('إدارة البرنامج • بيانات أساسية', style: TextStyle(color: Colors.white70, fontSize: 11))])),
       Padding(
         padding: const EdgeInsets.fromLTRB(8, 6, 8, 2),
         child: InputDecorator(
