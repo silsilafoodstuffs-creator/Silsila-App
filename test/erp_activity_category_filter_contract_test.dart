@@ -29,4 +29,28 @@ void main() {
     expect(categoryScreen, contains("Map<String, dynamic>.from(row)"));
     expect(categoryScreen, contains("_selectedActivityCode = displayCodes.contains(wanted)"));
   });
+  test('main, sub and secondary category tabs share the compact activity grid contract', () {
+    expect(categoryScreen, contains("String _viewMode = 'grid';"));
+    expect(categoryScreen, contains("MediaQuery.sizeOf(context).width * 0.25"));
+    expect(categoryScreen, contains("DataColumn(label: Text('كود فئة $levelName'))"));
+    expect(categoryScreen, contains("DataColumn(label: Text('اسم الفئة'))"));
+    expect(categoryScreen, contains("DataColumn(label: Text('معاينة'))"));
+    expect(categoryScreen, contains("DataColumn(label: Text('صورة الفئة'))"));
+    expect(categoryScreen, contains("DataColumn(label: Text('نشط'))"));
+    expect(categoryScreen, contains("DataColumn(label: Text('يظهر في التطبيق'))"));
+    expect(categoryScreen, contains("DataColumn(label: Text('حذف'))"));
+    expect(categoryScreen, contains('rowHeight: 40'));
+  });
+
+  test('category recoding follows policy segments and keeps stable UUID relationships', () {
+    expect(categoryScreen, contains("eq('policy_key', 'code_generation_registry')"));
+    expect(categoryScreen, contains("segments['main']"));
+    expect(categoryScreen, contains("segments['sub']"));
+    expect(categoryScreen, contains("segments['secondary']"));
+    expect(categoryScreen, contains("update({'category_code': code})"));
+    expect(categoryScreen, contains(".eq('id', _s(row['id']))"));
+    expect(categoryScreen, contains("final roots = ordered(rows.where((row) => row['parent_id'] == null).toList());"));
+    expect(categoryScreen, contains("subsByRoot[rootId] = subs;"));
+  });
+
 }
