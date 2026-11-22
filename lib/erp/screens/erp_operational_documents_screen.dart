@@ -2313,18 +2313,6 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     final screenPrimary = screenTheme.colorScheme.primary;
     final screenAccent = screenTheme.colorScheme.secondary;
     final layoutProfile = ErpScreenLayoutProfiles.forScreen('فاتورة بيع');
-    final invoiceHeaderStyle = layoutProfile['headerStyle'] as String? ?? 'glossy';
-    final invoiceGridStyle = layoutProfile['gridStyle'] as String? ?? 'compact';
-    final invoiceSpacing = (layoutProfile['spacing'] as num?)?.toDouble() ?? 5;
-    final invoiceDarkHeader = invoiceHeaderStyle == 'glossy' || invoiceHeaderStyle == 'neon';
-    final invoiceHeaderGradient = switch (invoiceHeaderStyle) {
-      'glass' => LinearGradient(colors: [Colors.white, screenPrimary.withValues(alpha: .06), screenAccent.withValues(alpha: .05)]),
-      'neon' => LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [const Color(0xFF16002D), screenPrimary, screenAccent.withValues(alpha: .78)]),
-      'minimal' => const LinearGradient(colors: [Colors.white, Colors.white]),
-      _ => LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [screenPrimary.withValues(alpha: .88), screenPrimary, screenAccent.withValues(alpha: .65)]),
-    };
-    final invoiceHeaderForeground = invoiceDarkHeader ? Colors.white : screenPrimary;
-
     final matches = _rows.where((row) => _s(row['id']) == _selectedDocumentId);
     final doc = matches.isEmpty ? <String, dynamic>{} : matches.first;
     final hasDraft = doc.isNotEmpty && _s(doc['status']) == 'draft';
@@ -2374,29 +2362,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           return KeyEventResult.ignored;
         },
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              gradient: invoiceHeaderGradient,
-              borderRadius: BorderRadius.circular((layoutProfile['cornerRadius'] as num?)?.toDouble() ?? 12),
-              border: Border.all(color: invoiceDarkHeader ? screenAccent.withValues(alpha: .72) : screenPrimary.withValues(alpha: .20)),
-              boxShadow: [BoxShadow(color: screenPrimary.withValues(alpha: invoiceDarkHeader ? .22 : .08), blurRadius: invoiceDarkHeader ? 18 : 8, offset: const Offset(0, 2)), if (invoiceDarkHeader) BoxShadow(color: screenAccent.withValues(alpha: .14), blurRadius: 14)],
-            ),
-            child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, spacing: 12, runSpacing: 12, children: [
-              if (layoutProfile['showTitle'] as bool? ?? true) Row(mainAxisSize: MainAxisSize.min, children: [
-                Container(width: 40, height: 40, decoration: BoxDecoration(color: screenAccent.withValues(alpha: invoiceDarkHeader ? .20 : .10), borderRadius: BorderRadius.circular(10)),
-                  child: Icon(Icons.receipt_long_rounded, color: invoiceDarkHeader ? Colors.white : screenPrimary, size: 24)),
-                const SizedBox(width: 12),
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(_title, key: const ValueKey('operational-document-title'), style: TextStyle(color: invoiceHeaderForeground, fontWeight: FontWeight.w900, fontSize: 22)),
-                  const SizedBox(height: 3),
-                  Text('سلسلة • بنربط السوق ببعضه', style: TextStyle(color: invoiceDarkHeader ? const Color(0xFFE9DDF5) : screenPrimary.withValues(alpha: .65), fontSize: 12)),
-                ]),
-              ]),
-              const SizedBox.shrink(),
-            ]),
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           if (_loading) const LinearProgressIndicator(minHeight: 3),
           if (_error != null) _notice(_error!, Colors.red),
           if (_message != null) _notice(_message!, Colors.green),
