@@ -2265,7 +2265,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               boxShadow: [BoxShadow(color: screenPrimary.withValues(alpha: invoiceDarkHeader ? .22 : .08), blurRadius: invoiceDarkHeader ? 18 : 8, offset: const Offset(0, 2)), if (invoiceDarkHeader) BoxShadow(color: screenAccent.withValues(alpha: .14), blurRadius: 14)],
             ),
             child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, spacing: 12, runSpacing: 12, children: [
-              Row(mainAxisSize: MainAxisSize.min, children: [
+              if (layoutProfile['showTitle'] as bool? ?? true) Row(mainAxisSize: MainAxisSize.min, children: [
                 Container(width: 40, height: 40, decoration: BoxDecoration(color: screenAccent.withValues(alpha: invoiceDarkHeader ? .20 : .10), borderRadius: BorderRadius.circular(10)),
                   child: Icon(Icons.receipt_long_rounded, color: invoiceDarkHeader ? Colors.white : screenPrimary, size: 24)),
                 const SizedBox(width: 12),
