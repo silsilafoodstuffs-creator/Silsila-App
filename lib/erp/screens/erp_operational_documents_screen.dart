@@ -1933,17 +1933,21 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   );
 
   Widget _invoiceCard(String title, IconData icon, Widget child) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final accent = theme.colorScheme.secondary;
+    final radius = (ErpScreenLayoutProfiles.forScreen('فاتورة بيع')['cornerRadius'] as num?)?.toDouble() ?? 12;
     return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: const BorderSide(color: Color(0xFFE8E1F0))),
+      elevation: theme.cardTheme.elevation ?? 1,
+      color: theme.cardTheme.color ?? Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius), side: BorderSide(color: accent.withValues(alpha: .28))),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
-            Icon(icon, color: const Color(0xFF3E007D), size: 19),
+            Icon(icon, color: primary, size: 19),
             const SizedBox(width: 7),
-            Expanded(child: Text(title, style: const TextStyle(color: Color(0xFF3E007D), fontSize: 14, fontWeight: FontWeight.w900))),
+            Expanded(child: Text(title, style: TextStyle(color: primary, fontSize: 14, fontWeight: FontWeight.w900))),
           ]),
           const SizedBox(height: 9),
           child,
