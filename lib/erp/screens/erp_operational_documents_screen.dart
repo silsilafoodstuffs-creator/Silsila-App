@@ -2593,7 +2593,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   DataCell(Text((index + 1).toString())),
                   DataCell(Text(_s(line['item_code']))),
                   DataCell(SizedBox(width: 170, child: Text(_s(line['item_name']), maxLines: 2, overflow: TextOverflow.ellipsis))),
-                  DataCell(SizedBox(width: 110, child: DropdownButtonFormField<String>(itemHeight: 48, 
+                  DataCell(SizedBox(width: 110, child: DropdownButtonFormField<String>(itemHeight: 48, isExpanded: true, 
                     value: units.any((u) => _s(u['id']) == _s(line['unit_id'])) ? _s(line['unit_id']) : (units.isNotEmpty ? _s(units.first['id']) : null),
                     isDense: true, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 5)),
                     items: units.map((u) => DropdownMenuItem<String>(value: _s(u['id']), child: Text(_s(u['unit_name']).isEmpty ? _s(u['unit_code']) : _s(u['unit_name']), overflow: TextOverflow.ellipsis))).toList(),
