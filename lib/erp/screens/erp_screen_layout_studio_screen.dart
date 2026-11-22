@@ -54,6 +54,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   double _spacing = 5;
   double _columnSpacing = 2;
   String _fontFamily = 'Tajawal';
+  List<String> _salesActionOrder = ["تحديث","حفظ","إضافة","تعديل","حذف","معاينة","طباعة","استيراد Excel","تصدير Excel","طباعة PDF"];
   double _contentWidth = 100;
   double _cornerRadius = 12;
   Color _primary = _purple;
@@ -149,6 +150,9 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     _spacing = (value['spacing'] as num?)?.toDouble() ?? 5;
     _columnSpacing = (value['columnSpacing'] as num?)?.toDouble() ?? 2;
     _fontFamily = value['fontFamily'] as String? ?? 'Tajawal';
+    final savedActions = value['salesActionOrder'];
+    if (savedActions is List) _salesActionOrder = savedActions.map((item) => item.toString()).where((item) => ["تحديث","حفظ","إضافة","تعديل","حذف","معاينة","طباعة","استيراد Excel","تصدير Excel","طباعة PDF"].contains(item)).toList();
+    if (_salesActionOrder.length != 10) _salesActionOrder = ["تحديث","حفظ","إضافة","تعديل","حذف","معاينة","طباعة","استيراد Excel","تصدير Excel","طباعة PDF"];
     _contentWidth = (value['contentWidth'] as num?)?.toDouble() ?? 100;
     _cornerRadius = (value['cornerRadius'] as num?)?.toDouble() ?? 12;
     _showTitle = value['showTitle'] as bool? ?? true;
@@ -169,7 +173,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     'scrollPosition':_scrollPosition, 'gridStyle':_gridStyle,
     'themePreset':_themePreset, 'headerStyle':_headerStyle,
     'buttonStyle':_buttonStyle, 'tableStyle':_tableStyle, 'treeStyle':_treeStyle,
-    'rowHeight':_rowHeight, 'spacing':_spacing, 'columnSpacing':_columnSpacing, 'fontFamily':_fontFamily, 'contentWidth':_contentWidth,
+    'rowHeight':_rowHeight, 'spacing':_spacing, 'columnSpacing':_columnSpacing, 'fontFamily':_fontFamily, 'salesActionOrder':_salesActionOrder, 'contentWidth':_contentWidth,
     'cornerRadius':_cornerRadius, 'showTitle':_showTitle, 'showTabs':_showTabs,
     'showTasks':_showTasks, 'showDate':_showDate, 'showFooter':_showFooter,
     'showImages':_showImages, 'showSidebar':_showSidebar, 'showScroll':_showScroll,
@@ -376,6 +380,31 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
             _choice('نمط العرض',_view,_views.keys.toList(),_views,(v)=>setState(()=>_view=v??_view)),
             _choice('شكل Grid Data',_gridStyle,['compact','comfortable','striped','outlined'],{'compact':'مضغوط','comfortable':'مريح','striped':'صفوف متبادلة','outlined':'حدود كاملة'},(v)=>setState(()=>_gridStyle=v??_gridStyle)),
             _toggle('إظهار الشريط الجانبي',_showSidebar,(v)=>setState(()=>_showSidebar=v)),
+          ]),
+          _section('ترتيب أزرار فاتورة البيع',Icons.swap_vert,[
+            const Text('اسحب العناصر لتغيير ترتيب ظهور الأزرار في الهيدر الفعلي لفاتورة البيع.',style:TextStyle(fontSize:11,color:Colors.black54)),
+            const SizedBox(height:6),
+            ReorderableListView(
+              shrinkWrap:true,
+              physics:const NeverScrollableScrollPhysics(),
+              buildDefaultDragHandles:false,
+              onReorder:(oldIndex,newIndex)=>setState((){
+                if(newIndex>oldIndex)newIndex--;
+                final item=_salesActionOrder.removeAt(oldIndex);
+                _salesActionOrder.insert(newIndex,item);
+              }),
+              children:[
+                for(var index=0;index<_salesActionOrder.length;index++)
+                  ListTile(
+                    key:ValueKey('sales-action-${_salesActionOrder[index]}'),
+                    dense:true,
+                    visualDensity:VisualDensity.compact,
+                    leading:const Icon(Icons.drag_indicator,color:_purple),
+                    title:Text(_salesActionOrder[index],style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700)),
+                    trailing:ReorderableDragStartListener(index:index,child:const Icon(Icons.drag_handle)),
+                  ),
+              ],
+            ),
           ]),
           _section('مواضع عناصر الشاشة',Icons.open_with,[
             _choice('مكان التبويبات',_tabsPosition,_positions.keys.toList(),_positions,(v)=>setState(()=>_tabsPosition=v??_tabsPosition)),
