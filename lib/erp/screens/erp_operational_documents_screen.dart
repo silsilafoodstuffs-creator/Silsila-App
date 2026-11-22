@@ -2045,52 +2045,52 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     final actions = <String, Widget>{
       'تحديث': FilledButton.icon(
         onPressed: widget.previewOnly || _loading ? null : _load,
-        icon: const Icon(_salesActionIcon('تحديث'), size: 16), label: const Text('تحديث'),
+        icon: Icon(_salesActionIcon('تحديث'), size: 16), label: const Text('تحديث'),
         style: FilledButton.styleFrom(backgroundColor: const Color(0xFF2475B8), foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
       ),
       'حفظ': FilledButton.icon(
         onPressed: widget.previewOnly || _saving ? null : (_selectedDocumentId == null ? _createDraft : _savePendingLines),
-        icon: const Icon(_salesActionIcon('حفظ'), size: 16), label: const Text('حفظ'),
+        icon: Icon(_salesActionIcon('حفظ'), size: 16), label: const Text('حفظ'),
         style: FilledButton.styleFrom(backgroundColor: const Color(0xFF3E007D), foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
       ),
       'إضافة': FilledButton.icon(
         onPressed: widget.previewOnly || _loading || _saving ? null : _createDraft,
-        icon: const Icon(_salesActionIcon('إضافة'), size: 16), label: const Text('إضافة'),
+        icon: Icon(_salesActionIcon('إضافة'), size: 16), label: const Text('إضافة'),
         style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16834A), foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
       ),
       'تعديل': FilledButton.icon(
         onPressed: widget.previewOnly || _selectedDocumentId == null ? null : () => _loadLines(_selectedDocumentId!),
-        icon: const Icon(_salesActionIcon('تعديل'), size: 16), label: const Text('تعديل'),
+        icon: Icon(_salesActionIcon('تعديل'), size: 16), label: const Text('تعديل'),
         style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
       ),
       'حذف': FilledButton.icon(
         onPressed: widget.previewOnly || _selectedDocumentId == null ? null : _deleteSelectedSalesDraft,
-        icon: const Icon(_salesActionIcon('حذف'), size: 16), label: const Text('حذف'),
+        icon: Icon(_salesActionIcon('حذف'), size: 16), label: const Text('حذف'),
         style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318), foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
       ),
       'معاينة': FilledButton.icon(
         onPressed: widget.previewOnly ? null : _showSalesQuickPreview,
-        icon: const Icon(_salesActionIcon('معاينة'), size: 16), label: const Text('معاينة'),
+        icon: Icon(_salesActionIcon('معاينة'), size: 16), label: const Text('معاينة'),
         style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6E2BA6), foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
       ),
       'طباعة': FilledButton.icon(
         onPressed: widget.previewOnly ? null : _printSalesQuickPdf,
-        icon: const Icon(_salesActionIcon('طباعة'), size: 16), label: const Text('طباعة'),
+        icon: Icon(_salesActionIcon('طباعة'), size: 16), label: const Text('طباعة'),
         style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF27C3), foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
       ),
       'استيراد Excel': FilledButton.icon(
         onPressed: widget.previewOnly ? null : _importSalesQuickExcel,
-        icon: const Icon(_salesActionIcon('استيراد Excel'), size: 16), label: const Text('استيراد Excel'),
+        icon: Icon(_salesActionIcon('استيراد Excel'), size: 16), label: const Text('استيراد Excel'),
         style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16834A), foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
       ),
       'تصدير Excel': FilledButton.icon(
         onPressed: widget.previewOnly || _loading ? null : _exportOperationalDocuments,
-        icon: const Icon(_salesActionIcon('تصدير Excel'), size: 16), label: const Text('تصدير Excel'),
+        icon: Icon(_salesActionIcon('تصدير Excel'), size: 16), label: const Text('تصدير Excel'),
         style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16834A), foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
       ),
       'طباعة PDF': FilledButton.icon(
         onPressed: widget.previewOnly ? null : _printSalesQuickPdf,
-        icon: const Icon(_salesActionIcon('طباعة PDF'), size: 16), label: const Text('طباعة PDF'),
+        icon: Icon(_salesActionIcon('طباعة PDF'), size: 16), label: const Text('طباعة PDF'),
         style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
       ),
     };
