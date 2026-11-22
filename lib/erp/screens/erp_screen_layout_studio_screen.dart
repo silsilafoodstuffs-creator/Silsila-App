@@ -275,17 +275,23 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text(label,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800)),
         const SizedBox(height:3),
-        DropdownButtonFormField<String>(
-          value: keys.contains(value) ? value : (keys.isEmpty ? null : keys.first),
-          isExpanded:true,
-          isDense:true,
-          decoration:const InputDecoration(
-            border:OutlineInputBorder(),
+        DropdownMenu<String>(
+          width:190,
+          menuHeight:320,
+          initialSelection: keys.contains(value) ? value : (keys.isEmpty ? null : keys.first),
+          enableFilter:true,
+          enableSearch:true,
+          requestFocusOnTap:true,
+          expandedInsets:EdgeInsets.zero,
+          textStyle:const TextStyle(fontSize:11),
+          inputDecorationTheme:const InputDecorationTheme(
+            isDense:true,
             contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:7),
             constraints:BoxConstraints(minHeight:40,maxHeight:40),
+            border:OutlineInputBorder(),
           ),
-          items:keys.map((key)=>DropdownMenuItem(value:key,child:Text(key,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11)))).toList(),
-          onChanged:onChanged,
+          dropdownMenuEntries:keys.map((key)=>DropdownMenuEntry<String>(value:key,label:key)).toList(),
+          onSelected:onChanged,
         ),
       ]),
     );
