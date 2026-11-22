@@ -2381,6 +2381,20 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         },
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const SizedBox(height: 8),
+          if (widget.previewOnly)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: screenAccent.withValues(alpha: .08),
+                borderRadius: BorderRadius.circular(invoiceRadius),
+                border: Border.all(color: screenAccent.withValues(alpha: .35)),
+              ),
+              child: Row(children: [
+                Icon(Icons.visibility_outlined, color: screenPrimary, size: 18),
+                const SizedBox(width: 7),
+                const Expanded(child: Text('معاينة آمنة — بيانات تجريبية فقط، جميع عمليات الحفظ والترحيل معطّلة.',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
+              ]),
+            ),
           if (_loading) const LinearProgressIndicator(minHeight: 3),
           if (_error != null) _notice(_error!, Colors.red),
           if (_message != null) _notice(_message!, Colors.green),
@@ -2717,7 +2731,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         dateFilter: _salesDateFilter(context),
         imagePanel: _salesImagePanel(context),
         sidebar: _salesSummarySidebar(context),
-        footer: const Text('سلسلة • فاتورة البيع • معاينة وتخصيص التخطيط دون تغيير وظائف المستند.'),
+        footer: widget.previewOnly ? const Text('معاينة فقط • بيانات تجريبية • لا يتم الحفظ أو الترحيل.') : null,
         tabs: const ['بيانات الفاتورة','الأصناف','الخصومات والملاحظات','الملخص','الفواتير السابقة'],
         selectedTab: _invoiceSelectedTab,
         onTabSelected: _selectInvoiceTab,
