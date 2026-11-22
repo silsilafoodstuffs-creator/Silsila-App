@@ -1949,7 +1949,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   );
 
   Widget _invoiceCard(String title, IconData icon, Widget child, {Key? key}) {
-    final profile = ErpScreenLayoutProfiles.forScreen('فاتورة بيع');
+    final profile = ErpScreenLayoutProfiles.forScreen(_title);
     final primary = Color((profile['primary'] as int?) ?? const Color(0xFF3E007D).toARGB32());
     final accent = Color((profile['accent'] as int?) ?? const Color(0xFFFF27C3).toARGB32());
     final radius = (profile['cornerRadius'] as num?)?.toDouble() ?? 12;
@@ -2002,7 +2002,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   IconData _salesActionIcon(String action) {
-    final preset = ErpScreenLayoutProfiles.forScreen('فاتورة بيع')['iconPreset'] as String? ?? 'rounded';
+    final preset = ErpScreenLayoutProfiles.forScreen(_title)['iconPreset'] as String? ?? 'rounded';
     final rounded = preset == 'rounded';
     switch (action) {
       case 'تحديث': return rounded ? Icons.refresh_rounded : Icons.refresh;
@@ -2034,7 +2034,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     Map<String, Widget> widgets,
     String orderKey,
   ) {
-    final saved = ErpScreenLayoutProfiles.forScreen('فاتورة بيع')[orderKey];
+    final saved = ErpScreenLayoutProfiles.forScreen(_title)[orderKey];
     final requested = saved is List ? saved.map((value) => value.toString()).toList() : <String>[];
     final keys = <String>[
       ...requested.where(widgets.containsKey),
@@ -2044,7 +2044,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   List<Widget> _orderedSalesActionWidgets(BuildContext context, String status) {
-    final saved = ErpScreenLayoutProfiles.forScreen('فاتورة بيع')['salesActionOrder'];
+    final saved = ErpScreenLayoutProfiles.forScreen(_title)['salesActionOrder'];
     final requested = saved is List ? saved.map((value) => value.toString()).toList() : <String>[];
     final actions = <String, Widget>{
       'تحديث': FilledButton.icon(
@@ -2124,7 +2124,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
 
   Widget _salesImagePanel(BuildContext context) {
     final rows = _pendingLines.isNotEmpty ? _pendingLines : _lines;
-    final primary = Color((ErpScreenLayoutProfiles.forScreen('فاتورة بيع')['primary'] as int?) ?? const Color(0xFF3E007D).toARGB32());
+    final primary = Color((ErpScreenLayoutProfiles.forScreen(_title)['primary'] as int?) ?? const Color(0xFF3E007D).toARGB32());
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 150, maxWidth: 340),
       child: Wrap(
@@ -2169,7 +2169,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   Widget _salesSummarySidebar(BuildContext context) {
     final rows = _pendingLines.isNotEmpty ? _pendingLines : _lines;
     final gross = rows.fold<double>(0, (sum, row) => sum + _n(row['quantity']) * _n(row['unit_price']));
-    final primary = Color((ErpScreenLayoutProfiles.forScreen('فاتورة بيع')['primary'] as int?) ?? const Color(0xFF3E007D).toARGB32());
+    final primary = Color((ErpScreenLayoutProfiles.forScreen(_title)['primary'] as int?) ?? const Color(0xFF3E007D).toARGB32());
     return SizedBox(
       width: 170,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -2185,7 +2185,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   Widget _salesDateFilter(BuildContext context) {
     final dateText = _documentDate.day.toString().padLeft(2, '0') + '/' +
         _documentDate.month.toString().padLeft(2, '0') + '/' + _documentDate.year.toString();
-    final primary = Color((ErpScreenLayoutProfiles.forScreen('فاتورة بيع')['primary'] as int?) ?? const Color(0xFF3E007D).toARGB32());
+    final primary = Color((ErpScreenLayoutProfiles.forScreen(_title)['primary'] as int?) ?? const Color(0xFF3E007D).toARGB32());
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 190, maxWidth: 260),
       child: InkWell(
@@ -2330,7 +2330,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     final screenTheme = Theme.of(context);
     final screenPrimary = screenTheme.colorScheme.primary;
     final screenAccent = screenTheme.colorScheme.secondary;
-    final layoutProfile = ErpScreenLayoutProfiles.forScreen('فاتورة بيع');
+    final layoutProfile = ErpScreenLayoutProfiles.forScreen(_title);
     final matches = _rows.where((row) => _s(row['id']) == _selectedDocumentId);
     final doc = matches.isEmpty ? <String, dynamic>{} : matches.first;
     final hasDraft = doc.isNotEmpty && _s(doc['status']) == 'draft';
@@ -2707,10 +2707,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       final hasDraft = currentDocument.isNotEmpty && _s(currentDocument['status']) == 'draft';
       final invoiceStatus = currentDocument.isEmpty ? _salesDocumentTitle(_documentType) + ' جديدة' : hasDraft ? 'مسودة' : _s(currentDocument['status']) == 'posted' ? 'معتمدة / مرحلة' : _s(currentDocument['status']);
       return ErpScreenFrame(
-        title: 'فاتورة بيع',
+        title: _title,
         subtitle: 'سلسلة • بنربط السوق ببعضه',
         icon: Icons.receipt_long_rounded,
-        profileKey: 'فاتورة بيع',
+        profileKey: _title,
         scrollContent: true,
         padding: EdgeInsets.zero,
         actions: _orderedSalesActionWidgets(context, invoiceStatus),
