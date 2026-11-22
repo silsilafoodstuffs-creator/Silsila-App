@@ -1942,8 +1942,16 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     final primary = theme.colorScheme.primary;
     final accent = theme.colorScheme.secondary;
     final radius = (ErpScreenLayoutProfiles.forScreen('فاتورة بيع')['cornerRadius'] as num?)?.toDouble() ?? 12;
+    final sectionKey = key ?? switch (title) {
+      'بيانات المستند والعميل' => _invoiceSectionKeys[0],
+      'تفاصيل الأصناف' => _invoiceSectionKeys[1],
+      'الخصم والملاحظات' => _invoiceSectionKeys[2],
+      'ملخص الحسابات' => _invoiceSectionKeys[3],
+      'إعدادات الاتصال والفواتير السابقة' => _invoiceSectionKeys[4],
+      _ => null,
+    };
     return Card(
-      key: key,
+      key: sectionKey,
       elevation: theme.cardTheme.elevation ?? 1,
       color: theme.cardTheme.color ?? Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius), side: BorderSide(color: accent.withValues(alpha: .28))),
