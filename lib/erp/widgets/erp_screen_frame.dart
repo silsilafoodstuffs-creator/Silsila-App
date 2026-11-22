@@ -43,6 +43,7 @@ class ErpScreenFrame extends StatelessWidget {
     this.showFrameTitle = true,
     this.applyContentWidth = true,
     this.shrinkWrap = false,
+    this.scrollContent = false,
     required this.child,
     this.footer,
     this.padding = const EdgeInsets.all(12),
@@ -62,6 +63,7 @@ class ErpScreenFrame extends StatelessWidget {
   final bool showFrameTitle;
   final bool applyContentWidth;
   final bool shrinkWrap;
+  final bool scrollContent;
   final Widget child;
   final Widget? footer;
   final EdgeInsetsGeometry padding;
@@ -84,6 +86,8 @@ class ErpScreenFrame extends StatelessWidget {
         final showDate = profile['showDate'] as bool? ?? true;
         final showImages = profile['showImages'] as bool? ?? true;
         final showSidebar = profile['showSidebar'] as bool? ?? false;
+        final showScroll = profile['showScroll'] as bool? ?? true;
+        final scrollPosition = profile['scrollPosition'] as String? ?? 'right';
         final datePosition = profile['datePosition'] as String? ?? 'top';
         final imagesPosition = profile['imagesPosition'] as String? ?? 'right';
         final tabsPosition = profile['tabsPosition'] as String? ?? 'below_title';
@@ -409,7 +413,16 @@ class ErpScreenFrame extends StatelessWidget {
               child: Center(
                 child: FractionallySizedBox(
                   widthFactor: effectiveContentWidth,
-                  child: Padding(padding: padding, child: child),
+                  child: Padding(
+                    padding: padding,
+                    child: scrollContent
+                        ? Scrollbar(
+                            thumbVisibility: showScroll && scrollPosition != 'hidden',
+                            scrollbarOrientation: scrollPosition == 'left' ? ScrollbarOrientation.left : ScrollbarOrientation.right,
+                            child: SingleChildScrollView(child: child),
+                          )
+                        : child,
+                  ),
                 ),
               ),
             ),
