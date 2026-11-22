@@ -153,17 +153,17 @@ class SilsilaTheme {
         dataRowMinHeight: 40,
         dataRowMaxHeight: 40,
         headingRowHeight: 40,
-        columnSpacing: 2,
-        horizontalMargin: 2,
+        columnSpacing: 4,
+        horizontalMargin: 4,
       ),
 
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        constraints: const BoxConstraints(minHeight: 40, maxHeight: 40),
+        constraints: const BoxConstraints(minHeight: 36, maxHeight: 36),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 9,
-          vertical: 4,
+          horizontal: 8,
+          vertical: 3,
         ),
         hintStyle: const TextStyle(
           fontFamily: 'Tajawal',
@@ -218,7 +218,7 @@ class SilsilaTheme {
         surfaceTintColor: Colors.transparent,
         margin: const EdgeInsets.symmetric(
           horizontal: 0,
-          vertical: 6,
+          vertical: 4,
         ),
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
