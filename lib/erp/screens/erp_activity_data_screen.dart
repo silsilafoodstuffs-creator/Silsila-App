@@ -50,7 +50,7 @@ class _ErpActivityDataScreenState extends State<ErpActivityDataScreen> {
             child: const Row(children: [
               Icon(Icons.account_tree_outlined, color: Colors.white),
               SizedBox(width: 8),
-              Text('أنواع الأنشطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)),
+              Text('أنواع وفئات الأنشطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)),
               Spacer(),
               Text('إدارة البرنامج • بيانات أساسية', style: TextStyle(color: Colors.white70, fontSize: 11)),
             ]),
