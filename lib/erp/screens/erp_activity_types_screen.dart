@@ -593,8 +593,8 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
         for (var i = 0; i < _rows.length; i++) DataRow(cells: [
           DataCell(SizedBox(width: 38, child: Text('${i + 1}', textAlign: TextAlign.center))),
           DataCell(SizedBox(width: 82, child: Align(alignment: AlignmentDirectional.centerStart, child: Text(_rows[i]['كود النشاط'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6F42C1)))))),
-          DataCell(SizedBox(height: 32, width: 220, child: Center(child: TextFormField(initialValue: _rows[i]['اسم النشاط عربي'] ?? '', key: ValueKey('activity-ar-$i-${_rows[i]['كود النشاط']}'), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 2, horizontal: 4)), onChanged: (v) => _rows[i]['اسم النشاط عربي'] = v)))),
-          DataCell(SizedBox(width: 150, height: 32, child: Row(mainAxisSize: MainAxisSize.min, children: [
+          DataCell(SizedBox(height: 36, width: 220, child: Center(child: TextFormField(initialValue: _rows[i]['اسم النشاط عربي'] ?? '', key: ValueKey('activity-ar-$i-${_rows[i]['كود النشاط']}'), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 2, horizontal: 4)), onChanged: (v) => _rows[i]['اسم النشاط عربي'] = v)))),
+          DataCell(SizedBox(width: 150, height: 36, child: Row(mainAxisSize: MainAxisSize.min, children: [
             FutureBuilder<String?>(
               future: _signedActivityImageUrl(_rows[i]['مسار صورة النشاط'] ?? ''),
               builder: (context, snapshot) => Container(
