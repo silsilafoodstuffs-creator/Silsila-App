@@ -4173,7 +4173,6 @@ class ErpScreenLayoutRuntime extends StatelessWidget {
         final primary = Color((profile['primary'] as int?) ?? const Color(0xFF3E007D).toARGB32());
         final accent = Color((profile['accent'] as int?) ?? const Color(0xFFFF27C3).toARGB32());
         final rowHeight = ((profile['rowHeight'] as num?)?.toDouble() ?? 40).clamp(28, 80).toDouble();
-        final columnSpacing = ((profile['columnSpacing'] as num?)?.toDouble() ?? 2).clamp(0, 24).toDouble();
         final fontFamily = profile['fontFamily'] as String?;
         final spacing = ((profile['spacing'] as num?)?.toDouble() ?? 5).clamp(0, 30).toDouble();
         final radius = ((profile['cornerRadius'] as num?)?.toDouble() ?? 12).clamp(0, 30).toDouble();
@@ -4240,7 +4239,7 @@ class ErpScreenLayoutRuntime extends StatelessWidget {
             dataRowMinHeight: rowHeight,
             dataRowMaxHeight: rowHeight + 8,
             headingRowHeight: rowHeight + 16,
-            columnSpacing: columnSpacing,
+            columnSpacing: 2,
             headingTextStyle: TextStyle(color: primary, fontWeight: FontWeight.w900, fontSize: 12),
             dividerThickness: tableStyle == 'minimal' ? .4 : tableStyle == 'outlined' ? 1.6 : 1,
             decoration: BoxDecoration(
