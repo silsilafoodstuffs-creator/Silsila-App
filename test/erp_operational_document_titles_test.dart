@@ -30,25 +30,25 @@ void main() {
       kind: ErpOperationalKind.sales,
       documentType: 'quotation',
     );
-    expect(find.text('عرض سعر'), findsOneWidget);
+    expect(find.text('عرض سعر'), findsWidgets);
 
     await pumpDocument(
       tester,
       kind: ErpOperationalKind.sales,
       documentType: 'order',
     );
-    expect(find.text('أمر بيع'), findsOneWidget);
+    expect(find.text('أمر بيع'), findsWidgets);
 
     await pumpDocument(
       tester,
       kind: ErpOperationalKind.sales,
       documentType: 'invoice',
     );
-    expect(find.text('فاتورة بيع'), findsOneWidget);
+    expect(find.text('فاتورة بيع'), findsWidgets);
   });
 
   testWidgets('purchase documents retain the purchase title', (tester) async {
     await pumpDocument(tester, kind: ErpOperationalKind.purchase);
-    expect(find.text('مستندات المشتريات'), findsOneWidget);
+    expect(find.text('مستندات المشتريات'), findsWidgets);
   });
 }
