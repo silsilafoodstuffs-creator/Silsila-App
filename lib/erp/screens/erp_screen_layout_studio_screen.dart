@@ -25,11 +25,6 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     'بيانات الشركة', 'المستخدمين', 'الملخص التنفيذي', 'شاشة المبيعات',
     'شاشة المشتريات', 'شاشة الحسابات المالية', 'شاشة الموارد البشرية',
   ];
-  List<String> get _screens => <String>{
-    _defaultScreen,
-    ..._fallbackScreens,
-    ...widget.availableScreens.where((screen) => screen.trim().isNotEmpty),
-  }.toList();
   static const _views = <String, String>{
     'tree': 'شجرة', 'table': 'جدول بيانات', 'grid': 'شبكي - بطاقات', 'split': 'تقسيم جانبي',
   };
