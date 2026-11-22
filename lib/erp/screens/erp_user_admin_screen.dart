@@ -280,10 +280,16 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   }
 
   Map<String, dynamic> _normalizeActivityPermissionRow(Map<String, dynamic> row) {
-    if (row['menu_name'] == 'إعدادات عامة' &&
-        row['submenu_name'] == 'بيانات أساسية' &&
-        row['page_name'] == 'بيانات الأنشطة') {
-      return {...row, 'page_name': 'أنواع الأنشطة'};
+    if (row['menu_name'] == 'إعدادات عامة' && row['submenu_name'] == 'بيانات أساسية') {
+      const legacyPages = <String, String>{
+        'بيانات الأنشطة': 'أنواع وفئات الأنشطة',
+        'أنواع الأنشطة': 'أنواع وفئات الأنشطة',
+        'الفروع': 'فروع الشركة',
+        'المستخدمين': 'شاشات المستخدمين',
+      };
+      final oldPage = row['page_name']?.toString();
+      final currentPage = legacyPages[oldPage];
+      if (currentPage != null) return {...row, 'page_name': currentPage};
     }
     return row;
   }
