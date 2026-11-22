@@ -2191,6 +2191,101 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     );
   }
 
+  void _removePendingInvoiceLine(int index) {
+    if (index < 0 || index >= _pendingLines.length) return;
+    setState(() {
+      _pendingLines.removeAt(index);
+      if (_pendingGross <= 0) {
+        _invoiceDiscountAmount.text = '0';
+        _invoiceDiscountPercent.text = '0';
+      } else {
+        final percent = double.tryParse(_invoiceDiscountPercent.text.trim()) ?? 0;
+        _invoiceDiscountAmount.text = (_pendingGross * percent / 100).toStringAsFixed(2);
+      }
+      _recalculatePendingTax();
+    });
+  }
+
+  Widget _salesInvoiceLineCard(BuildContext context, int index) {
+    final line = _pendingLines[index];
+    final gross = _n(line['quantity']) * _n(line['unit_price']);
+    final total = (gross - _n(line['discount']) - _invoiceDiscountForLine(index) + _n(line['tax'])).clamp(0, double.infinity);
+    final primary = Theme.of(context).colorScheme.primary;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(9),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text(_s(line['item_name']), maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: primary, fontWeight: FontWeight.w900)),
+          Text(_s(line['item_code']), style: const TextStyle(fontSize: 10, color: Colors.black54)),
+          const SizedBox(height: 6),
+          Row(children: [
+            Expanded(child: Text('السعر: ${_money(line['unit_price'])} ج.م', style: const TextStyle(fontSize: 11))),
+            IconButton(tooltip: 'حذف الصنف', onPressed: () => _removePendingInvoiceLine(index), icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18)),
+          ]),
+          TextFormField(
+            key: ValueKey('sales-view-qty-$index-${_s(line['item_id'])}'),
+            initialValue: _money(line['quantity']),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'الكمية', isDense: true),
+            onChanged: (value) => _updatePendingLine(index, quantity: double.tryParse(value) ?? 0),
+          ),
+          const SizedBox(height: 5),
+          Text('الخصم: ${_money(line['discount'])} • الضريبة: ${_money(line['tax'])}', style: const TextStyle(fontSize: 10)),
+          Text('الإجمالي: ${_money(total)} ج.م', style: TextStyle(color: primary, fontWeight: FontWeight.w900)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _salesInvoiceAlternateLinesView(BuildContext context, String view) {
+    if (view == 'tree') {
+      return Column(children: [
+        for (var index = 0; index < _pendingLines.length; index++)
+          Card(
+            child: ExpansionTile(
+              key: ValueKey('sales-line-tree-$index-${_s(_pendingLines[index]['item_id'])}'),
+              title: Text(_s(_pendingLines[index]['item_name']), style: const TextStyle(fontWeight: FontWeight.w800)),
+              subtitle: Text('${_s(_pendingLines[index]['item_code'])} • الكمية: ${_money(_pendingLines[index]['quantity'])}'),
+              children: [
+                Padding(padding: const EdgeInsets.all(10), child: _salesInvoiceLineCard(context, index)),
+              ],
+            ),
+          ),
+      ]);
+    }
+    final grid = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (var index = 0; index < _pendingLines.length; index++)
+          SizedBox(width: 235, child: _salesInvoiceLineCard(context, index)),
+      ],
+    );
+    if (view == 'split') {
+      return LayoutBuilder(builder: (context, constraints) {
+        final summary = Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const Text('ملخص الأصناف', style: TextStyle(fontWeight: FontWeight.w900)),
+              Text('عدد البنود: ${_pendingLines.length}'),
+              Text('إجمالي الكميات: ${_money(_pendingLines.fold<double>(0, (sum, line) => sum + _n(line['quantity'])))}'),
+              Text('قيمة الأصناف: ${_money(_pendingGross)} ج.م'),
+            ]),
+          ),
+        );
+        return constraints.maxWidth < 720
+            ? Column(children: [grid, const SizedBox(height: 8), summary])
+            : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(flex: 3, child: grid),
+                const SizedBox(width: 10),
+                Expanded(flex: 1, child: summary),
+              ]);
+      });
+    }
+    return grid;
+  }
+
   Widget _buildSalesInvoiceScreen(BuildContext context) {
     final screenTheme = Theme.of(context);
     final screenPrimary = screenTheme.colorScheme.primary;
@@ -2457,7 +2552,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   SizedBox(height: 8), Text('لم تتم إضافة أصناف بعد', style: TextStyle(fontWeight: FontWeight.w800)),
                   SizedBox(height: 4), Text('اضغط F1 أو زر اختيار الأصناف لفتح نافذة الاختيار.', style: TextStyle(color: Colors.black54, fontSize: 12)),
                 ])),
-            if (_pendingLines.isNotEmpty) SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
+            if (_pendingLines.isNotEmpty && (layoutProfile['view'] as String? ?? 'table') == 'table') SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
               headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.primary.withValues(alpha: .08)),
               headingTextStyle: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w900, fontSize: 12),
               border: invoiceGridStyle == 'outlined' ? TableBorder.all(color: screenPrimary.withValues(alpha: .18)) : null,
@@ -2493,6 +2588,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 ]);
               }),
             )),
+            if (_pendingLines.isNotEmpty && (layoutProfile['view'] as String? ?? 'table') != 'table')
+              _salesInvoiceAlternateLinesView(context, layoutProfile['view'] as String),
             if (_lines.isNotEmpty) ...[
               const SizedBox(height: 10),
               Text('بنود محفوظة في ${_salesDocumentTitle(_documentType)}', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
