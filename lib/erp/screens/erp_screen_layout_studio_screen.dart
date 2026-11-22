@@ -318,19 +318,19 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
                 _headerChoice('القائمة الرئيسية',_mainModule,_mainModules,(v){
                   if(v==null)return;
                   setState((){_mainModule=v;_subMenu=_subMenus.first;_screen=_menuScreens.first;_tab=_tabs.first;_apply(_current);});
-                })),
+                }),
                 const SizedBox(width:8),
                 _headerChoice('القائمة الفرعية',_subMenu,_subMenus,(v){
                   if(v==null)return;
                   setState(()=>_subMenu=v);
                   final nextScreens=_menuScreens;
                   setState((){_screen=nextScreens.first;_tab=_tabs.first;_apply(_current);});
-                })),
+                }),
                 const SizedBox(width:8),
                 _headerChoice('الشاشة',_screen,_menuScreens,(v){
                   if(v==null)return;
                   setState((){_screen=v;_tab=_tabs.first;_apply(_current);});
-                })),
+                }),
                 const SizedBox(width:8),
                 _headerChoice('التبويب',_tab,_tabs,(v)=>setState(()=>_tab=v??_tab)),
                 const SizedBox(width:8),
