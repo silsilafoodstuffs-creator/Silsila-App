@@ -524,7 +524,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       Padding(
         padding: const EdgeInsets.fromLTRB(8, 6, 8, 2),
         child: LayoutBuilder(builder: (context, constraints) {
-          final selectorWidth = (constraints.maxWidth * .25).clamp(150.0, 300.0);
+          final selectorWidth = constraints.maxWidth * .25;
           return Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
