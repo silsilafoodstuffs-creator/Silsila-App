@@ -2690,8 +2690,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       final invoiceStatus = currentDocument.isEmpty ? _salesDocumentTitle(_documentType) + ' جديدة' : hasDraft ? 'مسودة' : _s(currentDocument['status']) == 'posted' ? 'معتمدة / مرحلة' : _s(currentDocument['status']);
       return ErpScreenFrame(
         title: 'فاتورة بيع',
+        subtitle: 'سلسلة • بنربط السوق ببعضه',
+        icon: Icons.receipt_long_rounded,
         profileKey: 'فاتورة بيع',
-        showFrameTitle: false,
         scrollContent: true,
         padding: EdgeInsets.zero,
         actions: _orderedSalesActionWidgets(context, invoiceStatus),
