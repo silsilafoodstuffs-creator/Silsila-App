@@ -22,7 +22,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(DropdownButtonFormField<String>).at(2));
+    await tester.tap(find.byType(DropdownMenu<String>).at(2));
     await tester.pumpAndSettle();
     expect(find.text('مرتجع مبيعات'), findsWidgets);
     await tester.tap(find.text('مرتجع مبيعات').last);
