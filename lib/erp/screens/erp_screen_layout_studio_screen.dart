@@ -54,6 +54,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   double _spacing = 5;
   double _columnSpacing = 2;
   String _fontFamily = 'Tajawal';
+  String _iconPreset = 'rounded';
   List<String> _salesActionOrder = ["تحديث","حفظ","إضافة","تعديل","حذف","معاينة","طباعة","استيراد Excel","تصدير Excel","طباعة PDF"];
   List<String> _salesFieldOrder = ["مصدر المستند","نوع البيع / السداد","المخزن","اسم العميل","مندوب المبيعات"];
   double _contentWidth = 100;
@@ -151,6 +152,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     _spacing = (value['spacing'] as num?)?.toDouble() ?? 5;
     _columnSpacing = (value['columnSpacing'] as num?)?.toDouble() ?? 2;
     _fontFamily = value['fontFamily'] as String? ?? 'Tajawal';
+    _iconPreset = value['iconPreset'] as String? ?? 'rounded';
     final savedActions = value['salesActionOrder'];
     if (savedActions is List) _salesActionOrder = savedActions.map((item) => item.toString()).where((item) => ["تحديث","حفظ","إضافة","تعديل","حذف","معاينة","طباعة","استيراد Excel","تصدير Excel","طباعة PDF"].contains(item)).toList();
     if (_salesActionOrder.length != 10) _salesActionOrder = ["تحديث","حفظ","إضافة","تعديل","حذف","معاينة","طباعة","استيراد Excel","تصدير Excel","طباعة PDF"];
@@ -177,7 +179,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     'scrollPosition':_scrollPosition, 'gridStyle':_gridStyle,
     'themePreset':_themePreset, 'headerStyle':_headerStyle,
     'buttonStyle':_buttonStyle, 'tableStyle':_tableStyle, 'treeStyle':_treeStyle,
-    'rowHeight':_rowHeight, 'spacing':_spacing, 'columnSpacing':_columnSpacing, 'fontFamily':_fontFamily, 'salesActionOrder':_salesActionOrder, 'salesFieldOrder':_salesFieldOrder, 'contentWidth':_contentWidth,
+    'rowHeight':_rowHeight, 'spacing':_spacing, 'columnSpacing':_columnSpacing, 'fontFamily':_fontFamily, 'iconPreset':_iconPreset, 'salesActionOrder':_salesActionOrder, 'salesFieldOrder':_salesFieldOrder, 'contentWidth':_contentWidth,
     'cornerRadius':_cornerRadius, 'showTitle':_showTitle, 'showTabs':_showTabs,
     'showTasks':_showTasks, 'showDate':_showDate, 'showFooter':_showFooter,
     'showImages':_showImages, 'showSidebar':_showSidebar, 'showScroll':_showScroll,
@@ -381,6 +383,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
           ]),
           _section('طريقة عرض البيانات',Icons.view_quilt_outlined,[
             _choice('خط الشاشة',_fontFamily,['Tajawal','Cairo','Arial'],{'Tajawal':'Tajawal','Cairo':'Cairo','Arial':'Arial'},(v)=>setState(()=>_fontFamily=v??_fontFamily)),
+            _choice('شكل الأيقونات',_iconPreset,['rounded','outline'],{'rounded':'دائرية ممتلئة','outline':'خطية Outline'},(v)=>setState(()=>_iconPreset=v??_iconPreset)),
             _choice('نمط العرض',_view,_views.keys.toList(),_views,(v)=>setState(()=>_view=v??_view)),
             _choice('شكل Grid Data',_gridStyle,['compact','comfortable','striped','outlined'],{'compact':'مضغوط','comfortable':'مريح','striped':'صفوف متبادلة','outlined':'حدود كاملة'},(v)=>setState(()=>_gridStyle=v??_gridStyle)),
             _toggle('إظهار الشريط الجانبي',_showSidebar,(v)=>setState(()=>_showSidebar=v)),
