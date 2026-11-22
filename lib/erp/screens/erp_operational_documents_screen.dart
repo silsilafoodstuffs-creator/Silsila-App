@@ -2191,10 +2191,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   Text('سلسلة • بنربط السوق ببعضه', style: TextStyle(color: invoiceDarkHeader ? const Color(0xFFE9DDF5) : screenPrimary.withValues(alpha: .65), fontSize: 12)),
                 ]),
               ]),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(mainAxisSize: MainAxisSize.min, children: _orderedSalesActionWidgets(context, status)),
-              ),
+              const SizedBox.shrink(),
             ]),
           ),
           const SizedBox(height: 12),
@@ -2538,12 +2535,16 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   Widget build(BuildContext context) {
     ErpKeyboardNavigation.registerActions(add: _createDraft, save: _savePendingLines);
     if (widget.kind == ErpOperationalKind.sales) {
+      final selected = _rows.where((row) => _s(row['id']) == _selectedDocumentId);
+      final currentDocument = selected.isEmpty ? <String, dynamic>{} : selected.first;
+      final hasDraft = currentDocument.isNotEmpty && _s(currentDocument['status']) == 'draft';
+      final invoiceStatus = currentDocument.isEmpty ? _salesDocumentTitle(_documentType) + ' جديدة' : hasDraft ? 'مسودة' : _s(currentDocument['status']) == 'posted' ? 'معتمدة / مرحلة' : _s(currentDocument['status']);
       return ErpScreenFrame(
         title: 'فاتورة بيع',
         profileKey: 'فاتورة بيع',
         showFrameTitle: false,
-        applyContentWidth: false,
         padding: EdgeInsets.zero,
+        actions: _orderedSalesActionWidgets(context, invoiceStatus),
         tabs: const ['بيانات الفاتورة','الأصناف','الخصومات والملاحظات','الملخص','الفواتير السابقة'],
         selectedTab: _invoiceSelectedTab,
         onTabSelected: _selectInvoiceTab,
