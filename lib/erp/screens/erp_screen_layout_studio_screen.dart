@@ -41,7 +41,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   String _view = 'table';
   String _tabsPosition = 'below_title';
   String _tasksPosition = 'below_title';
-  String _datePosition = 'top';
+  String _datePosition = 'below_title';
   String _imagesPosition = 'right';
   String _scrollPosition = 'right';
   String _gridStyle = 'compact';
@@ -145,7 +145,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     _view = value['view'] as String? ?? 'table';
     _tabsPosition = value['tabsPosition'] as String? ?? 'below_title';
     _tasksPosition = value['tasksPosition'] as String? ?? 'below_title';
-    _datePosition = value['datePosition'] as String? ?? 'top';
+    _datePosition = value['datePosition'] as String? ?? 'below_title';
     _imagesPosition = value['imagesPosition'] as String? ?? 'right';
     _scrollPosition = value['scrollPosition'] as String? ?? 'right';
     _gridStyle = value['gridStyle'] as String? ?? 'compact';
