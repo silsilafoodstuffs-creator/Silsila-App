@@ -305,6 +305,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         final previousSpacing = int.tryParse((parsedLayout?['column_spacing'] ?? '').toString());
         final previousRowHeight = int.tryParse((parsedLayout?['row_height'] ?? '').toString());
         final previousFieldHeight = int.tryParse((parsedLayout?['field_height'] ?? '').toString());
+        final previousVerticalSpacing = int.tryParse((parsedLayout?['vertical_spacing'] ?? '').toString());
         layoutPolicy['value'] = jsonEncode({
           'row_height': rowHeight,
           'field_height': fieldHeight,
@@ -314,7 +315,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         layoutPolicy['enabled'] = true;
         layoutPolicy['all'] = true;
         if (parsedLayout == null || previousSpacing != 4 ||
-            previousRowHeight != rowHeight || previousFieldHeight != fieldHeight) {
+            previousRowHeight != rowHeight || previousFieldHeight != fieldHeight ||
+            previousVerticalSpacing != 2) {
           await db.from('erp_program_policies').upsert({
             'company_id': company,
             'policy_key': 'ui_layout_standard',
