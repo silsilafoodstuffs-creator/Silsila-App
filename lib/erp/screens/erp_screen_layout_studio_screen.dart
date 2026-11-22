@@ -71,7 +71,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   List<String> get _subMenus => (ErpMenuCatalog.modules[_mainModule]?.keys ?? const <String>['بيانات أساسية','حركات','تقارير']).toList();
   List<String> get _menuScreens => <String>{...(ErpMenuCatalog.modules[_mainModule]?[_subMenu] ?? _fallbackScreens), ...widget.availableScreens.where((screen) => screen.trim().isNotEmpty)}.toList();
   List<String> get _tabs => _screen == 'فاتورة بيع'
-      ? const ['بيانات الفاتورة','الأصناف','المدفوعات','الملاحظات','المرفقات']
+      ? const ['بيانات الفاتورة','الأصناف','الخصومات والملاحظات','الملخص','الفواتير السابقة']
       : const ['الرئيسية','البيانات','التفاصيل','المرفقات'];
   String get _profileKey => _screen == _defaultScreen ? '*' : _screen;
 
@@ -353,6 +353,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
                       kind: ErpOperationalKind.sales,
                       initialDocumentType: 'invoice',
                       previewOnly: true,
+                      initialTab: _tabs.indexOf(_tab).clamp(0, 4),
                     ),
                   )) : null,
                   icon: const Icon(Icons.open_in_new_rounded),
