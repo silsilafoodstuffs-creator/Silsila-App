@@ -22,6 +22,7 @@ import 'screens/erp_app_advertisements_screen.dart';
 import 'screens/erp_program_policies_screen.dart';
 import 'screens/erp_maintenance_center_screen.dart';
 import 'screens/erp_studio_published_designs_screen.dart';
+import 'screens/erp_screen_layout_studio_screen.dart';
 import 'screens/erp_supplier_deferred_commissions_screen.dart';
 import 'screens/erp_delegate_allocation_screen.dart';
 import 'screens/erp_company_profile_screen.dart';
@@ -1692,6 +1693,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                       _page == 'سياسات البرنامج' ||
                       _page == 'سلسلة ستوديو' ||
                       _page == 'شاشات الاستوديو المنشورة' ||
+                      _page == 'استحضار وتخصيص الشاشات' ||
                       _page == 'بيانات المخازن' ||
                       _page == 'دليل المخازن والفروع' ||
                       _page == 'دليل المخازن' ||
@@ -1722,6 +1724,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                                       ? ErpCostCentersScreen(companyId: _appManagementCompanyId)
                                        : _page == 'سلسلة ستوديو'
                                       ? SilsilaStudioScreen(companyId: _appManagementCompanyId, availableScreens: (_modules.values.expand((module) => module.values.expand((items) => items)).toSet().toList()..sort()))
+                                      : _page == 'استحضار وتخصيص الشاشات'
+                                      ? ErpScreenLayoutStudioScreen(companyId: _appManagementCompanyId, availableScreens: (_modules.values.expand((module) => module.values.expand((items) => items)).toSet().toList()..sort()))
                                       : _page == 'شاشات الاستوديو المنشورة'
                                       ? ErpStudioPublishedDesignsScreen(companyId: _appManagementCompanyId)
                                       : _page == 'مركز الصيانة والتطوير'
