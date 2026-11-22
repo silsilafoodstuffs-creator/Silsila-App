@@ -63,6 +63,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   bool _showTitle = true, _showTabs = true, _showTasks = true, _showDate = true;
   bool _showFooter = true, _showImages = true, _showSidebar = false, _showScroll = true;
   bool _loading = true;
+  bool _previewRequested = false;
   Map<String, dynamic> _profiles = {};
 
   List<String> get _mainModules => ErpMenuCatalog.modules.keys.toList();
@@ -334,7 +335,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
                 const SizedBox(width:8),
                 _headerChoice('التبويب',_tab,_tabs,(v)=>setState(()=>_tab=v??_tab)),
                 const SizedBox(width:8),
-                ElevatedButton.icon(onPressed:()=>setState((){}),icon:const Icon(Icons.visibility_outlined),label:const Text('عرض')),
+                ElevatedButton.icon(onPressed:()=>setState(()=>_previewRequested=true),icon:const Icon(Icons.visibility_outlined),label:const Text('عرض')),
               ]),
             ),
             const Text('اختر المسار من القوائم الأربع ثم اضغط عرض لاستحضار نموذج معاينة الشاشة والتبويب المحددين.',style:TextStyle(fontSize:11,color:Colors.black54)),
@@ -399,7 +400,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
                 InkWell(onTap:()=>setState(()=>_accent=c),child:Container(width:25,height:25,decoration:BoxDecoration(color:c,shape:BoxShape.circle,border:Border.all(color:Colors.black12)))),
             ]),
           ]),
-          _section('معاينة فورية للتخطيط',Icons.preview_outlined,[
+          if(_previewRequested) _section('معاينة فورية للتخطيط',Icons.preview_outlined,[
             Container(
               padding:const EdgeInsets.all(10),
               decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(_cornerRadius),border:Border.all(color:_primary.withValues(alpha:.35)),boxShadow:const [BoxShadow(color:Color(0x10000000),blurRadius:5)]),
