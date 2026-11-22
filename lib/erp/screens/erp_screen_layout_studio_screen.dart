@@ -258,6 +258,27 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
       )),
     ]));
 
+  Widget _headerChoice(String label, String value, List<String> keys, ValueChanged<String?> onChanged) =>
+    SizedBox(
+      width: 190,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text(label,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800)),
+        const SizedBox(height:3),
+        DropdownButtonFormField<String>(
+          value: keys.contains(value) ? value : (keys.isEmpty ? null : keys.first),
+          isExpanded:true,
+          isDense:true,
+          decoration:const InputDecoration(
+            border:OutlineInputBorder(),
+            contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:7),
+            constraints:BoxConstraints(minHeight:40,maxHeight:40),
+          ),
+          items:keys.map((key)=>DropdownMenuItem(value:key,child:Text(key,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11)))).toList(),
+          onChanged:onChanged,
+        ),
+      ]),
+    );
+
   Widget _toggle(String label, bool value, ValueChanged<bool> onChanged) => SizedBox(
     width: 190, child: CheckboxListTile(
       dense:true, contentPadding:EdgeInsets.zero, controlAffinity:ListTileControlAffinity.leading,
@@ -294,24 +315,24 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: [
-                SizedBox(width:190,child:_choice('القائمة الرئيسية',_mainModule,_mainModules,{for(final s in _mainModules)s:s},(v){
+                _headerChoice('القائمة الرئيسية',_mainModule,_mainModules,(v){
                   if(v==null)return;
                   setState((){_mainModule=v;_subMenu=_subMenus.first;_screen=_menuScreens.first;_tab=_tabs.first;_apply(_current);});
                 })),
                 const SizedBox(width:8),
-                SizedBox(width:170,child:_choice('القائمة الفرعية',_subMenu,_subMenus,{for(final s in _subMenus)s:s},(v){
+                _headerChoice('القائمة الفرعية',_subMenu,_subMenus,(v){
                   if(v==null)return;
                   setState(()=>_subMenu=v);
                   final nextScreens=_menuScreens;
                   setState((){_screen=nextScreens.first;_tab=_tabs.first;_apply(_current);});
                 })),
                 const SizedBox(width:8),
-                SizedBox(width:190,child:_choice('الشاشة',_screen,_menuScreens,{for(final s in _menuScreens)s:s},(v){
+                _headerChoice('الشاشة',_screen,_menuScreens,(v){
                   if(v==null)return;
                   setState((){_screen=v;_tab=_tabs.first;_apply(_current);});
                 })),
                 const SizedBox(width:8),
-                SizedBox(width:170,child:_choice('التبويب',_tab,_tabs,{for(final s in _tabs)s:s},(v)=>setState(()=>_tab=v??_tab))),
+                _headerChoice('التبويب',_tab,_tabs,(v)=>setState(()=>_tab=v??_tab)),
                 const SizedBox(width:8),
                 ElevatedButton.icon(onPressed:()=>setState((){}),icon:const Icon(Icons.visibility_outlined),label:const Text('عرض')),
               ]),
