@@ -2107,6 +2107,52 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     ];
   }
 
+  Widget _salesImagePanel(BuildContext context) {
+    final rows = _pendingLines.isNotEmpty ? _pendingLines : _lines;
+    final primary = Theme.of(context).colorScheme.primary;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 150, maxWidth: 340),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: rows.isEmpty
+            ? [const Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.image_outlined, size: 28), Text('صور الأصناف')])]
+            : rows.map((row) => SizedBox(
+                width: 92,
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Container(
+                    width: 64, height: 56,
+                    decoration: BoxDecoration(
+                      color: primary.withValues(alpha: .07),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: primary.withValues(alpha: .18)),
+                    ),
+                    child: Icon(Icons.inventory_2_outlined, size: 28, color: primary),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(_s(row['item_name']), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
+                ]),
+              )).toList(),
+      ),
+    );
+  }
+
+  Widget _salesSummarySidebar(BuildContext context) {
+    final rows = _pendingLines.isNotEmpty ? _pendingLines : _lines;
+    final gross = rows.fold<double>(0, (sum, row) => sum + _n(row['quantity']) * _n(row['unit_price']));
+    final primary = Theme.of(context).colorScheme.primary;
+    return SizedBox(
+      width: 170,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('ملخص الفاتورة', style: TextStyle(color: primary, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 6),
+        Text('عدد الأصناف: ${rows.length}', style: const TextStyle(fontSize: 11)),
+        Text('قيمة الأصناف: ${_money(gross)} ج.م', style: const TextStyle(fontSize: 11)),
+        Text('حالة المستند: ${_selectedDocumentId == null ? 'جديد' : 'مسودة / محدد'}', style: const TextStyle(fontSize: 11)),
+      ]),
+    );
+  }
+
   Widget _salesDateFilter(BuildContext context) {
     final dateText = _documentDate.day.toString().padLeft(2, '0') + '/' +
         _documentDate.month.toString().padLeft(2, '0') + '/' + _documentDate.year.toString();
@@ -2561,6 +2607,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         padding: EdgeInsets.zero,
         actions: _orderedSalesActionWidgets(context, invoiceStatus),
         dateFilter: _salesDateFilter(context),
+        imagePanel: _salesImagePanel(context),
+        sidebar: _salesSummarySidebar(context),
+        footer: const Text('سلسلة • فاتورة البيع • معاينة وتخصيص التخطيط دون تغيير وظائف المستند.'),
         tabs: const ['بيانات الفاتورة','الأصناف','الخصومات والملاحظات','الملخص','الفواتير السابقة'],
         selectedTab: _invoiceSelectedTab,
         onTabSelected: _selectInvoiceTab,
