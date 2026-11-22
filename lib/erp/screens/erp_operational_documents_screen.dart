@@ -1231,7 +1231,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                             }
                             return KeyEventResult.ignored;
                           },
-                          child: DropdownButtonFormField<String>(itemHeight: 48, isExpanded: true, 
+                          child: DropdownButtonFormField<String>(
+                            itemHeight: 48,
                             value: selectedUnitId,
                             isDense: true,
                             isExpanded: true,
