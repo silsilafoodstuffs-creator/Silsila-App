@@ -638,6 +638,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _applyPriceList() async {
+    if (widget.previewOnly) return;
     final quantity = double.tryParse(_quantity.text.trim()) ?? 0;
     final selected = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
     final partyId = selected.isNotEmpty
@@ -1569,6 +1570,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _loadLines(String documentId) async {
+    if (widget.previewOnly) return;
     try {
       final rows = await _repo.fetchLines(documentId, widget.kind);
       if (mounted) setState(() => _lines = rows);
