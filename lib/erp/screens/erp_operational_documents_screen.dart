@@ -2107,6 +2107,44 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     ];
   }
 
+  Widget _salesDateFilter(BuildContext context) {
+    final dateText = _documentDate.day.toString().padLeft(2, '0') + '/' +
+        _documentDate.month.toString().padLeft(2, '0') + '/' + _documentDate.year.toString();
+    final primary = Theme.of(context).colorScheme.primary;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 190, maxWidth: 260),
+      child: InkWell(
+        onTap: widget.previewOnly || _saving ? null : () async {
+          final chosen = await showDatePicker(
+            context: context,
+            initialDate: _documentDate,
+            firstDate: DateTime(2000),
+            lastDate: DateTime(2100),
+          );
+          if (chosen == null || !mounted) return;
+          setState(() {
+            _documentDate = chosen;
+            final day = chosen.toIso8601String().substring(0, 10);
+            final period = _fiscalPeriods.where((p) =>
+                day.compareTo(_s(p['starts_on'])) >= 0 &&
+                day.compareTo(_s(p['ends_on'])) <= 0);
+            _fiscalPeriodId = period.isEmpty ? null : _s(period.first['id']);
+            _fiscalYear.text = period.isEmpty ? chosen.year.toString() : _s(period.first['period_name']);
+          });
+        },
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: 'تاريخ المستند',
+            prefixIcon: const Icon(Icons.calendar_month_outlined),
+            isDense: true,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: Text(dateText, style: TextStyle(fontWeight: FontWeight.w800, color: primary)),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSalesInvoiceScreen(BuildContext context) {
     final screenTheme = Theme.of(context);
     final screenPrimary = screenTheme.colorScheme.primary;
@@ -2217,21 +2255,6 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 ),
                 child: LayoutBuilder(builder: (context, headerConstraints) {
                   final compactHeader = headerConstraints.maxWidth < 680;
-                  final dateField = InkWell(
-                    onTap: _saving ? null : () async {
-                      final chosen = await showDatePicker(context: context, initialDate: _documentDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
-                      if (chosen == null || !mounted) return;
-                      setState(() {
-                        _documentDate = chosen;
-                        final day = chosen.toIso8601String().substring(0,10);
-                        final period = _fiscalPeriods.where((p) => day.compareTo(_s(p['starts_on'])) >= 0 && day.compareTo(_s(p['ends_on'])) <= 0);
-                        _fiscalPeriodId = period.isEmpty ? null : _s(period.first['id']);
-                        _fiscalYear.text = period.isEmpty ? chosen.year.toString() : _s(period.first['period_name']);
-                      });
-                    },
-                    child: InputDecorator(decoration: field('تاريخ المستند', suffix: const Icon(Icons.calendar_month_outlined)),
-                      child: Text(dateText, style: const TextStyle(fontWeight: FontWeight.w800))),
-                  );
                   final titleBlock = Column(mainAxisSize: MainAxisSize.min, children: [
                     Text(_salesDocumentTitle(_documentType), textAlign: TextAlign.center,
                       style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
@@ -2275,20 +2298,13 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   if (compactHeader) {
                     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                       titleBlock,
-                      const SizedBox(height: 10),
-                      dateField,
                       const SizedBox(height: 8),
                       serialAndFiscal,
                     ]);
                   }
                   return Row(children: [
-                    Expanded(flex: 2, child: dateField),
-                    const SizedBox(width: 12),
                     Expanded(flex: 3, child: titleBlock),
                     const SizedBox(width: 12),
-                    // Fiscal period sits above the manual serial. The fiscal selector
-                    // is one-third narrower, while the serial column uses half its
-                    // former flex weight on desktop.
                     Expanded(flex: 1, child: serialAndFiscal),
                   ]);
                 }),
@@ -2545,6 +2561,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         showFrameTitle: false,
         padding: EdgeInsets.zero,
         actions: _orderedSalesActionWidgets(context, invoiceStatus),
+        dateFilter: _salesDateFilter(context),
         tabs: const ['بيانات الفاتورة','الأصناف','الخصومات والملاحظات','الملخص','الفواتير السابقة'],
         selectedTab: _invoiceSelectedTab,
         onTabSelected: _selectInvoiceTab,
