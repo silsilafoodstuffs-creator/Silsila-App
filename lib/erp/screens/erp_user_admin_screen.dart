@@ -279,13 +279,22 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     }
   }
 
+  Map<String, dynamic> _normalizeActivityPermissionRow(Map<String, dynamic> row) {
+    if (row['menu_name'] == 'إعدادات عامة' &&
+        row['submenu_name'] == 'بيانات أساسية' &&
+        row['page_name'] == 'بيانات الأنشطة') {
+      return {...row, 'page_name': 'أنواع الأنشطة'};
+    }
+    return row;
+  }
+
   Future<void> _loadRules() async {
     if(_selectedId==null)return;
     try {
       final result=await _db!.from('erp_permission_template_rules').select()
           .eq('company_id',_company).eq('template_id',_selectedId!)
           .order('menu_name').order('submenu_name').order('page_name');
-      final loaded=(result as List).map((x)=>Map<String,dynamic>.from(x)).toList();
+      final loaded=(result as List).map((x)=>_normalizeActivityPermissionRow(Map<String,dynamic>.from(x))).toList();
       if(loaded.isEmpty) {
         // A new/legacy template may not have rule rows yet. Build an editable
         // in-memory matrix for every menu, submenu and page so the grid is never
@@ -318,7 +327,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   Future<void> _loadUserRules() async {
     if(_selectedUserId==null)return;
     try { final result=await _db!.from('erp_user_permission_matrix').select().eq('company_id',_company);
-      if(mounted)setState(()=>_rules=(result as List).map((x)=>Map<String,dynamic>.from(x)).toList());
+      if(mounted)setState(()=>_rules=(result as List).map((x)=>_normalizeActivityPermissionRow(Map<String,dynamic>.from(x))).toList());
     } catch(e){if(mounted)setState(()=>_error='تعذر تحميل صلاحيات المستخدم: $e');}
   }
 
