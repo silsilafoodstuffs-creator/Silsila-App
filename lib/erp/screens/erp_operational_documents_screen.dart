@@ -2754,7 +2754,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         }
         return KeyEventResult.ignored;
       },
-      child: Column(
+      child: SingleChildScrollView(child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(_title, key: const ValueKey('operational-document-title'), style: const TextStyle(color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900)),
@@ -3281,7 +3281,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           ))));
         }),
       ],
-    )));
+    ))));
   }
 
   Widget _notice(String text, Color color) => Container(
