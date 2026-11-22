@@ -2053,6 +2053,20 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Widget _buildSalesInvoiceScreen(BuildContext context) {
+    final screenTheme = Theme.of(context);
+    final screenPrimary = screenTheme.colorScheme.primary;
+    final screenAccent = screenTheme.colorScheme.secondary;
+    final layoutProfile = ErpScreenLayoutProfiles.forScreen('فاتورة بيع');
+    final invoiceHeaderStyle = layoutProfile['headerStyle'] as String? ?? 'glossy';
+    final invoiceDarkHeader = invoiceHeaderStyle == 'glossy' || invoiceHeaderStyle == 'neon';
+    final invoiceHeaderGradient = switch (invoiceHeaderStyle) {
+      'glass' => const LinearGradient(colors: [Color(0xFFFFFFFF), Color(0xFFF2E9FC), Color(0xFFFFF5FA)]),
+      'neon' => const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF16002D), Color(0xFF3E007D), Color(0xFF8B1CB8)]),
+      'minimal' => const LinearGradient(colors: [Colors.white, Colors.white]),
+      _ => const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF26004F), Color(0xFF3E007D), Color(0xFF6120A0)]),
+    };
+    final invoiceHeaderForeground = invoiceDarkHeader ? Colors.white : screenPrimary;
+
     final matches = _rows.where((row) => _s(row['id']) == _selectedDocumentId);
     final doc = matches.isEmpty ? <String, dynamic>{} : matches.first;
     final hasDraft = doc.isNotEmpty && _s(doc['status']) == 'draft';
@@ -2104,20 +2118,20 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(begin: Alignment.centerRight, end: Alignment.centerLeft, colors: [Colors.white, Color(0xFFFAF8FC)]),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE8E1F0)),
-              boxShadow: const [BoxShadow(color: Color(0x083E007D), blurRadius: 8, offset: Offset(0, 2))],
+              gradient: invoiceHeaderGradient,
+              borderRadius: BorderRadius.circular((layoutProfile['cornerRadius'] as num?)?.toDouble() ?? 12),
+              border: Border.all(color: invoiceDarkHeader ? screenAccent.withValues(alpha: .72) : screenPrimary.withValues(alpha: .20)),
+              boxShadow: [BoxShadow(color: screenPrimary.withValues(alpha: invoiceDarkHeader ? .22 : .08), blurRadius: invoiceDarkHeader ? 18 : 8, offset: const Offset(0, 2)), if (invoiceDarkHeader) BoxShadow(color: screenAccent.withValues(alpha: .14), blurRadius: 14)],
             ),
             child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, spacing: 12, runSpacing: 12, children: [
               Row(mainAxisSize: MainAxisSize.min, children: [
-                Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFFF5EFFB), borderRadius: BorderRadius.circular(10)),
-                  child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF3E007D), size: 24)),
+                Container(width: 40, height: 40, decoration: BoxDecoration(color: screenAccent.withValues(alpha: invoiceDarkHeader ? .20 : .10), borderRadius: BorderRadius.circular(10)),
+                  child: Icon(Icons.receipt_long_rounded, color: invoiceDarkHeader ? Colors.white : screenPrimary, size: 24)),
                 const SizedBox(width: 12),
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(_title, key: const ValueKey('operational-document-title'), style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 22)),
+                  Text(_title, key: const ValueKey('operational-document-title'), style: TextStyle(color: invoiceHeaderForeground, fontWeight: FontWeight.w900, fontSize: 22)),
                   const SizedBox(height: 3),
-                  const Text('سلسلة • بنربط السوق ببعضه', style: TextStyle(color: Color(0xFF7B6A8E), fontSize: 12)),
+                  Text('سلسلة • بنربط السوق ببعضه', style: TextStyle(color: invoiceDarkHeader ? const Color(0xFFE9DDF5) : screenPrimary.withValues(alpha: .65), fontSize: 12)),
                 ]),
               ]),
               SingleChildScrollView(
