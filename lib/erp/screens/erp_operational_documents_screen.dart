@@ -183,7 +183,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     _documentType = widget.initialDocumentType ?? 'invoice';
     _selectedDocumentId = widget.initialDocumentId;
     _paymentType = 'آجل';
-    _invoiceSelectedTab = widget.initialTab.clamp(0, 4);
+    _invoiceSelectedTab = widget.initialTab.clamp(0, 4).toInt();
     if (widget.previewOnly) {
       _company.text = '';
       _documentType = 'invoice';
