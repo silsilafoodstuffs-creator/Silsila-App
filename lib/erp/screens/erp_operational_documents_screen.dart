@@ -2290,14 +2290,17 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           ),
       ]);
     }
-    final grid = Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (var index = 0; index < rows.length; index++)
-          SizedBox(width: 235, child: _salesInvoiceLineCard(context, index)),
-      ],
-    );
+    final grid = LayoutBuilder(builder: (context, constraints) {
+      final cardWidth = constraints.maxWidth < 520 ? constraints.maxWidth : 235.0;
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (var index = 0; index < rows.length; index++)
+            SizedBox(width: cardWidth, child: _salesInvoiceLineCard(context, index)),
+        ],
+      );
+    });
     if (view == 'split') {
       return LayoutBuilder(builder: (context, constraints) {
         final summary = Card(
