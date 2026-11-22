@@ -438,7 +438,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             .select('menu_key,allow_access,show_in_quick_tasks,can_add,can_save,can_edit,can_delete,can_print,can_export_excel,can_export_pdf')
             .eq('company_id', companyId).eq('user_id', userId);
         for (final row in (rows as List).whereType<Map<String, dynamic>>()) {
-          final key = (row['menu_key'] ?? '').toString();
+          final key = _normalizeScreenPermissionKey((row['menu_key'] ?? '').toString());
           permissions[key] = row['allow_access'] == true;
           if (row['allow_access'] == true && row['show_in_quick_tasks'] == true) quickAccess.add(key);
           for (final action in legacyActionFields.entries) {
@@ -476,7 +476,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               .eq('company_id', companyId)
               .eq('user_id', erpUserId);
           for (final row in (matrix as List).whereType<Map<String, dynamic>>()) {
-            final key = '${row['menu_name']}::${row['submenu_name']}::${row['page_name']}';
+            final key = _normalizeScreenPermissionKey(
+              '${row['menu_name']}::${row['submenu_name']}::${row['page_name']}',
+            );
             permissions[key] = row['can_access'] == true;
             if (row['can_access'] == true && row['show_in_quick_tasks'] == true) {
               quickAccess.add(key);
@@ -503,7 +505,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           ..clear()
           ..addAll((savedQuickAccess as List)
               .whereType<Map<String, dynamic>>()
-              .map((row) => (row['menu_key'] ?? '').toString())
+              .map((row) => _normalizeScreenPermissionKey((row['menu_key'] ?? '').toString()))
               .where((key) => key.isNotEmpty));
       } catch (_) {
         // Keep legacy permission-backed favorites available on older installs.
@@ -594,7 +596,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     }
   }
 
-  String _screenPermissionKey(String module, String group, String page) => '$module::$group::$page';
+  String _normalizeScreenPermissionKey(String key) {
+    const legacyActivityKey = 'إعدادات عامة::بيانات أساسية::بيانات الأنشطة';
+    const currentActivityKey = 'إعدادات عامة::بيانات أساسية::أنواع الأنشطة';
+    return key == legacyActivityKey ? currentActivityKey : key;
+  }
+
+  String _screenPermissionKey(String module, String group, String page) =>
+      _normalizeScreenPermissionKey('$module::$group::$page');
 
   bool _canOpenScreen(String module, String group, String page) {
     if (_isSystemAdmin) return true;
