@@ -53,7 +53,6 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   String _treeStyle = 'neon';
   double _rowHeight = 40;
   double _spacing = 5;
-  double _columnSpacing = 2;
   String _fontFamily = 'Tajawal';
   String _iconPreset = 'rounded';
   List<String> _salesActionOrder = ["تحديث","حفظ","إضافة","تعديل","حذف","معاينة","طباعة","استيراد Excel","تصدير Excel","طباعة PDF"];
@@ -157,7 +156,6 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     _treeStyle = value['treeStyle'] as String? ?? 'neon';
     _rowHeight = (value['rowHeight'] as num?)?.toDouble() ?? 40;
     _spacing = (value['spacing'] as num?)?.toDouble() ?? 5;
-    _columnSpacing = (value['columnSpacing'] as num?)?.toDouble() ?? 2;
     _fontFamily = value['fontFamily'] as String? ?? 'Tajawal';
     _iconPreset = value['iconPreset'] as String? ?? 'rounded';
     final savedActions = value['salesActionOrder'];
@@ -186,7 +184,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     'scrollPosition':_scrollPosition, 'gridStyle':_gridStyle,
     'themePreset':_themePreset, 'headerStyle':_headerStyle,
     'buttonStyle':_buttonStyle, 'tableStyle':_tableStyle, 'treeStyle':_treeStyle,
-    'rowHeight':_rowHeight, 'spacing':_spacing, 'columnSpacing':_columnSpacing, 'fontFamily':_fontFamily, 'iconPreset':_iconPreset, 'salesActionOrder':_salesActionOrder, 'salesFieldOrder':_salesFieldOrder, 'contentWidth':_contentWidth,
+    'rowHeight':_rowHeight, 'spacing':_spacing, 'columnSpacing':2, 'fontFamily':_fontFamily, 'iconPreset':_iconPreset, 'salesActionOrder':_salesActionOrder, 'salesFieldOrder':_salesFieldOrder, 'contentWidth':_contentWidth,
     'cornerRadius':_cornerRadius, 'showTitle':_showTitle, 'showTabs':_showTabs,
     'showTasks':_showTasks, 'showDate':_showDate, 'showFooter':_showFooter,
     'showImages':_showImages, 'showSidebar':_showSidebar, 'showScroll':_showScroll,
@@ -478,7 +476,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
           _section('الأبعاد والمسافات',Icons.aspect_ratio,[
             _slider('ارتفاع الصف والحقل',_rowHeight,32,64,' px',(v)=>setState(()=>_rowHeight=v)),
             _slider('المسافة بين العناصر',_spacing,0,20,' px',(v)=>setState(()=>_spacing=v)),
-            _slider('المسافة بين أعمدة الجريد',_columnSpacing,0,24,' px',(v)=>setState(()=>_columnSpacing=v)),
+            const Padding(padding:EdgeInsets.symmetric(vertical:3),child:Row(children:[SizedBox(width:150,child:Text('المسافة بين أعمدة الجريد',style:TextStyle(fontSize:12,fontWeight:FontWeight.w700))),Expanded(child:Text('2 px • معيار موحد ثابت',style:TextStyle(fontSize:11,color:Colors.black54)))])),
             _slider('عرض منطقة المحتوى',_contentWidth,60,100,'%',(v)=>setState(()=>_contentWidth=v)),
             _slider('استدارة الزوايا',_cornerRadius,0,24,' px',(v)=>setState(()=>_cornerRadius=v)),
           ]),
