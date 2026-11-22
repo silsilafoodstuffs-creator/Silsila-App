@@ -65,7 +65,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'code_policy.salary_element','category':'تكويدية','ar':'عناصر المرتبات','en':'Payroll elements','value':'Elm + 3 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'ui_dimensions','category':'برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
     {'key':'ui_reorder','category':'برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
-    {'key':'ui_layout_standard','category':'برمجية','ar':'المعيار الموحد لارتفاع الخانات والصفوف والمسافات بين الخانات والأعمدة','en':'Global standard for cell/row height and cell/column spacing','value':'{"row_height":40,"field_height":36,"column_spacing":4}','mandatory':true,'all':true},
+    {'key':'ui_layout_standard','category':'برمجية','ar':'المعيار الموحد لارتفاع الخانات والصفوف والمسافات بين الخانات والأعمدة','en':'Global standard for cell/row height and cell/column spacing','value':'{"row_height":40,"field_height":36,"column_spacing":4,"vertical_spacing":2}','mandatory':true,'all':true},
     {'key':'ui_dropdown_item_height','category':'برمجية','ar':'الارتفاع القياسي لكل اختيار داخل القوائم المنسدلة','en':'Standard dropdown option height','value':'40 بكسل','all':true},
     {'key':'ui_field_label_alignment','category':'برمجية','ar':'موضع اسم الخانة بالنسبة إلى القيمة أو الاختيار','en':'Field label alignment','value':'اسم الخانة على يمين القيمة أو الاختيار في صف واحد متناسق','all':true},
     {'key':'ui_mobile_header_compact','category':'برمجية','ar':'ارتفاع الهيدر في شاشات الموبايل','en':'Compact mobile screen headers','value':'هيدر مدمج بارتفاع مناسب دون فراغات أو ارتفاع مبالغ فيه','all':true},
@@ -309,6 +309,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           'row_height': rowHeight,
           'field_height': fieldHeight,
           'column_spacing': 4,
+          'vertical_spacing': 2,
         });
         layoutPolicy['enabled'] = true;
         layoutPolicy['all'] = true;
@@ -1370,10 +1371,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           'row_height': int.tryParse((decoded['row_height'] ?? 40).toString()) ?? 40,
           'field_height': 36,
           'column_spacing': 4,
+          'vertical_spacing': 2,
         };
       }
     } catch (_) {}
-    return {'row_height': 40, 'field_height': 36, 'column_spacing': 4};
+    return {'row_height': 40, 'field_height': 36, 'column_spacing': 4, 'vertical_spacing': 2};
   }
 
   void _updateLayoutDimension(Map<String, dynamic> policy, String key, int value) {
@@ -1411,6 +1413,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         selector('ارتفاع الخانات', 'field_height', [36]),
         const SizedBox(height: 3),
         selector('المسافة بين الأعمدة', 'column_spacing', [4]),
+        const SizedBox(height: 3),
+        selector('المسافة أعلى وأسفل الخانة', 'vertical_spacing', [2]),
       ],
     );  }
 
