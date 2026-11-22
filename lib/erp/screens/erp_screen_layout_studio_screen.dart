@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/erp_screen_frame.dart';
 import '../services/erp_screen_layout_profiles.dart';
 import '../services/erp_studio_repository.dart';
+import '../services/erp_menu_catalog.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
@@ -37,7 +38,10 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     'right': 'يمين الشاشة', 'left': 'يسار الشاشة', 'bottom': 'أسفل الشاشة', 'hidden': 'مخفي',
   };
 
-  String _screen = _defaultScreen;
+  String _mainModule = 'مبيعات';
+  String _subMenu = 'حركات';
+  String _tab = 'بيانات الفاتورة';
+  String _screen = 'فاتورة بيع';
   String _view = 'table';
   String _tabsPosition = 'below_title';
   String _tasksPosition = 'below_title';
@@ -61,6 +65,12 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   bool _loading = true;
   Map<String, dynamic> _profiles = {};
 
+  List<String> get _mainModules => ErpMenuCatalog.modules.keys.toList();
+  List<String> get _subMenus => (ErpMenuCatalog.modules[_mainModule]?.keys ?? const <String>['بيانات أساسية','حركات','تقارير']).toList();
+  List<String> get _menuScreens => (ErpMenuCatalog.modules[_mainModule]?[_subMenu] ?? _fallbackScreens).toList();
+  List<String> get _tabs => _screen == 'فاتورة بيع'
+      ? const ['بيانات الفاتورة','الأصناف','المدفوعات','الملاحظات','المرفقات']
+      : const ['الرئيسية','البيانات','التفاصيل','المرفقات'];
   String get _profileKey => _screen == _defaultScreen ? '*' : _screen;
 
   Map<String, dynamic> get _current => Map<String, dynamic>.from(_profiles[_profileKey] is Map
@@ -280,6 +290,34 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
       child:_loading?const Center(child:CircularProgressIndicator()):SingleChildScrollView(
         padding:const EdgeInsets.all(4),
         child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          _section('استحضار الشاشة من هيكل البرنامج',Icons.account_tree_outlined,[
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                SizedBox(width:190,child:_choice('القائمة الرئيسية',_mainModule,_mainModules,{for(final s in _mainModules)s:s},(v){
+                  if(v==null)return;
+                  setState((){_mainModule=v;_subMenu=_subMenus.first;_screen=_menuScreens.first;_tab=_tabs.first;_apply(_current);});
+                })),
+                const SizedBox(width:8),
+                SizedBox(width:170,child:_choice('القائمة الفرعية',_subMenu,_subMenus,{for(final s in _subMenus)s:s},(v){
+                  if(v==null)return;
+                  setState(()=>_subMenu=v);
+                  final nextScreens=_menuScreens;
+                  setState((){_screen=nextScreens.first;_tab=_tabs.first;_apply(_current);});
+                })),
+                const SizedBox(width:8),
+                SizedBox(width:190,child:_choice('الشاشة',_screen,_menuScreens,{for(final s in _menuScreens)s:s},(v){
+                  if(v==null)return;
+                  setState((){_screen=v;_tab=_tabs.first;_apply(_current);});
+                })),
+                const SizedBox(width:8),
+                SizedBox(width:170,child:_choice('التبويب',_tab,_tabs,{for(final s in _tabs)s:s},(v)=>setState(()=>_tab=v??_tab))),
+                const SizedBox(width:8),
+                ElevatedButton.icon(onPressed:()=>setState((){}),icon:const Icon(Icons.visibility_outlined),label:const Text('عرض')),
+              ]),
+            ),
+            const Text('اختر المسار من القوائم الأربع ثم اضغط عرض لاستحضار نموذج معاينة الشاشة والتبويب المحددين.',style:TextStyle(fontSize:11,color:Colors.black54)),
+          ]),
           _section('الشاشة المستهدفة',Icons.web_asset_outlined,[
             _choice('تطبيق الإعداد على',_screen,_screens,{for(final s in _screens)s:s},(v){if(v==null)return;setState((){_screen=v;_apply(_current);});}),
             const Text('اختيار «كل الشاشات» يحدد القيم الافتراضية العامة، ويمكن تخصيص كل شاشة بصورة مستقلة.',style:TextStyle(fontSize:11,color:Colors.black54)),
@@ -350,10 +388,11 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
               decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(_cornerRadius),border:Border.all(color:_primary.withValues(alpha:.35)),boxShadow:const [BoxShadow(color:Color(0x10000000),blurRadius:5)]),
               child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
                 if(_showTitle)Text(_screen,style:TextStyle(color:_primary,fontWeight:FontWeight.w900,fontSize:17)),
+                Text('$_mainModule  /  $_subMenu  /  $_tab',style:TextStyle(color:_primary.withValues(alpha:.75),fontSize:10,fontWeight:FontWeight.w700)),
                 if(_showTabs)Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Wrap(spacing:5,children:['بيانات','حركات','تقارير'].map((t)=>Chip(label:Text(t),backgroundColor:_primary.withValues(alpha:.10),side:BorderSide(color:_primary))).toList())),
                 if(_showTasks)Wrap(spacing:5,children:['تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','Excel','PDF'].map((t)=>Container(padding:const EdgeInsets.symmetric(horizontal:9,vertical:6),decoration:BoxDecoration(color:_accent.withValues(alpha:.16),borderRadius:BorderRadius.circular(7)),child:Text(t,style:const TextStyle(fontSize:10)))).toList()),
                 const SizedBox(height:8),
-                Container(height:_rowHeight,alignment:Alignment.centerRight,padding:const EdgeInsets.symmetric(horizontal:8),color:_primary.withValues(alpha:.06),child:Text('صف بيانات تجريبي • ${_views[_view]} • ${_gridStyle}',style:const TextStyle(fontSize:11))),
+                Container(height:_rowHeight,alignment:Alignment.centerRight,padding:const EdgeInsets.symmetric(horizontal:8),color:_primary.withValues(alpha:.06),child:Text(_screen == 'فاتورة بيع' ? 'معاينة فاتورة البيع • تبويب $_tab • ${_views[_view]} • ${_gridStyle}' : 'معاينة $_screen • تبويب $_tab • ${_views[_view]} • ${_gridStyle}',style:const TextStyle(fontSize:11))),
                 if(_showImages)const Align(alignment:Alignment.centerLeft,child:Icon(Icons.image_outlined,size:30,color:Colors.black38)),
                 if(_showFooter)const Text('معلومات الصفحة • إجمالي السجلات • حالة التحميل',style:TextStyle(fontSize:10,color:Colors.black54)),
               ]),
