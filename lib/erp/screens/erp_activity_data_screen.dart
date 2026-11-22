@@ -16,7 +16,7 @@ class ErpActivityDataScreen extends StatefulWidget {
 class _ErpActivityDataScreenState extends State<ErpActivityDataScreen> {
   int _selectedTab = 0;
   static const _tabs = <String>[
-    'بيانات الأنشطة',
+    'أنواع الأنشطة',
     'الفئة الرئيسية',
     'الفئة الفرعية',
     'الفئة الثانوية',
@@ -27,7 +27,7 @@ class _ErpActivityDataScreenState extends State<ErpActivityDataScreen> {
   Widget build(BuildContext context) {
     ErpKeyboardNavigation.registerActions();
     final children = <Widget>[
-      ErpActivityTypesScreen(key: ValueKey('activity-data-${widget.companyId}'), companyId: widget.companyId, hideHeader: true),
+      ErpActivityTypesScreen(key: ValueKey('activity-types-${widget.companyId}'), companyId: widget.companyId, hideHeader: true),
       for (var tab = 0; tab < 4; tab++)
         ErpItemCategoriesScreen(
           key: ValueKey('activity-category-$tab-${widget.companyId}'),
@@ -50,7 +50,7 @@ class _ErpActivityDataScreenState extends State<ErpActivityDataScreen> {
             child: const Row(children: [
               Icon(Icons.account_tree_outlined, color: Colors.white),
               SizedBox(width: 8),
-              Text('بيانات الأنشطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)),
+              Text('أنواع الأنشطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)),
               Spacer(),
               Text('إدارة البرنامج • بيانات أساسية', style: TextStyle(color: Colors.white70, fontSize: 11)),
             ]),
