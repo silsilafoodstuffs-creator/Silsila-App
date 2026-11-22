@@ -429,7 +429,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     final hierarchicalDigits = pathSegments.join();
     final draft = <String,dynamic>{
       'id':'draft-${DateTime.now().microsecondsSinceEpoch}', 'company_id':_company, 'activity_code':_selectedActivityCode,
-      'category_code':'Cat$hierarchicalDigits', 'category_name':'','category_name_en':'',
+      'category_code':'$_selectedActivityCode$hierarchicalDigits', 'category_name':'','category_name_en':'',
       'parent_id':parentId,'is_active':true,'show_in_app':true,'image_url':null,'image_data':null,'image_mime_type':null,'_draft':true,
     };
     setState(() { _editing = true; _all.add(draft); _selectedId = _s(draft['id']); _expandedIds.add(_s(parentId)); _expandedIds.add(_s(draft['id'])); _syncControllers(); });
@@ -709,7 +709,10 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   @override
   Future<void> _showCategoryPreview(Map<String, dynamic> row) async {
     final parent = _parentOf(row);
-    final activity = _activities.where((a) => a['code'] == _s(row['activity_code'])).firstOrNull;
+    Map<String, String>? activity;
+    for (final candidate in _activities) {
+      if (candidate['code'] == _s(row['activity_code'])) { activity = candidate; break; }
+    }
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -1046,7 +1049,10 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       _rowLevel(row) == _catalogTab && _matchesSearch(row)).toList()
       ..sort((a, b) => _s(a['category_code']).compareTo(_s(b['category_code'])));
     final levelName = const ['رئيسية', 'فرعية', 'ثانوية'][_catalogTab.clamp(0, 2)];
-    final selectedRow = visibleRows.where((row) => _s(row['id']) == _selectedId).firstOrNull;
+    Map<String, dynamic>? selectedRow;
+    for (final row in visibleRows) {
+      if (_s(row['id']) == _selectedId) { selectedRow = row; break; }
+    }
     final actions = <Widget>[
       _task('تحديث', Icons.refresh_rounded, _loading || _saving ? null : _load),
       _task('إضافة', Icons.add_circle_outline_rounded, _saving || _editing ? null : _add),
