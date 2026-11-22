@@ -96,4 +96,30 @@ void main() {
     expect(find.text('الخصومات والملاحظات'), findsWidgets);
   });
 
+  testWidgets('invoice preview switches to the configured tree view', (tester) async {
+    tester.view.physicalSize = const Size(1500, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    ErpScreenLayoutProfiles.profiles.value = <String, dynamic>{
+      'فاتورة بيع': <String, dynamic>{'view': 'tree'},
+    };
+
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: ErpOperationalDocumentsScreen(
+          kind: ErpOperationalKind.sales,
+          initialDocumentType: 'invoice',
+          previewOnly: true,
+          initialTab: 1,
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ExpansionTile), findsNWidgets(2));
+    expect(find.text('أرز مصري فاخر 1 كجم'), findsWidgets);
+  });
+
 }
