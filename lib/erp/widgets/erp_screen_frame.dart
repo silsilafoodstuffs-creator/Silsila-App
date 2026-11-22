@@ -416,11 +416,13 @@ class ErpScreenFrame extends StatelessWidget {
                   child: Padding(
                     padding: padding,
                     child: scrollContent
-                        ? Scrollbar(
-                            thumbVisibility: showScroll && scrollPosition != 'hidden',
-                            scrollbarOrientation: scrollPosition == 'left' ? ScrollbarOrientation.left : ScrollbarOrientation.right,
-                            child: SingleChildScrollView(child: child),
-                          )
+                        ? (showScroll && scrollPosition != 'hidden'
+                            ? Scrollbar(
+                                thumbVisibility: false,
+                                scrollbarOrientation: scrollPosition == 'left' ? ScrollbarOrientation.left : ScrollbarOrientation.right,
+                                child: SingleChildScrollView(child: child),
+                              )
+                            : SingleChildScrollView(child: child))
                         : child,
                   ),
                 ),
