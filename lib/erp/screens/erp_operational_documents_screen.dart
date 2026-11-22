@@ -220,6 +220,13 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     } else if (_company.text.trim().isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _load());
     }
+    if (_invoiceSelectedTab > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final target = _invoiceSectionKeys[_invoiceSelectedTab].currentContext;
+        if (target != null) Scrollable.ensureVisible(target, duration: const Duration(milliseconds: 280), alignment: .04);
+      });
+    }
   }
   @override
   void didUpdateWidget(covariant ErpOperationalDocumentsScreen oldWidget) {
