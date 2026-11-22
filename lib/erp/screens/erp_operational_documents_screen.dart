@@ -1971,6 +1971,19 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     );
   }
 
+  List<Widget> _orderedProfileWidgets(
+    Map<String, Widget> widgets,
+    String orderKey,
+  ) {
+    final saved = ErpScreenLayoutProfiles.forScreen('فاتورة بيع')[orderKey];
+    final requested = saved is List ? saved.map((value) => value.toString()).toList() : <String>[];
+    final keys = <String>[
+      ...requested.where(widgets.containsKey),
+      ...widgets.keys.where((key) => !requested.contains(key)),
+    ];
+    return keys.map((key) => widgets[key]!).toList(growable: false);
+  }
+
   List<Widget> _orderedSalesActionWidgets(BuildContext context, String status) {
     final saved = ErpScreenLayoutProfiles.forScreen('فاتورة بيع')['salesActionOrder'];
     final requested = saved is List ? saved.map((value) => value.toString()).toList() : <String>[];
@@ -2213,8 +2226,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 }),
               ),
               const SizedBox(height: 12),
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                box(DropdownButtonFormField<String>(itemHeight: 48, 
+              Wrap(spacing: 8, runSpacing: 8, children: _orderedProfileWidgets(<String, Widget>{
+                'مصدر المستند': box(DropdownButtonFormField<String>(itemHeight: 48,
                   value: _sourceChannel,
                   isExpanded: true, decoration: field('مصدر المستند'),
                   items: const [
@@ -2227,7 +2240,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   ],
                   onChanged: hasDraft || _sourceDocumentIds.isNotEmpty ? null : (v) => setState(() => _sourceChannel = v ?? 'manual'),
                 )),
-                box(DropdownButtonFormField<String>(itemHeight: 48, 
+                'نوع البيع / السداد': box(DropdownButtonFormField<String>(itemHeight: 48,
                   value: const ['نقدي','آجل','بيع مباشر'].contains(_paymentType) ? _paymentType : 'آجل',
                   isExpanded: true, decoration: field('نوع البيع / السداد'),
                   items: const [
@@ -2237,10 +2250,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   ],
                   onChanged: hasDraft || !_canChangePaymentType ? null : (v) => setState(() => _paymentType = v ?? 'آجل'),
                 )),
-                box(_lookupInput(label: 'المخزن', value: _warehouseLabel(_warehouseId), enabled: !hasDraft && _canChangeWarehouse, onOpen: _openWarehousePicker), width: warehouseFieldWidth),
-                box(_lookupInput(label: 'اسم العميل', value: _partyLabel(_partyId), enabled: !hasDraft, onOpen: _openCustomerPicker), width: customerFieldWidth),
-                box(_lookupInput(label: 'مندوب المبيعات', value: _firstOrEmpty(_representatives.where((r) => _s(r['id']) == _salesRepId).map((r) => _s(r['rep_code']) + ' — ' + _s(r['rep_name']))), enabled: !hasDraft && _canChangeSalesRep, onOpen: _openRepresentativePicker), width: customerFieldWidth),
-              ]),
+                'المخزن': box(_lookupInput(label: 'المخزن', value: _warehouseLabel(_warehouseId), enabled: !hasDraft && _canChangeWarehouse, onOpen: _openWarehousePicker), width: warehouseFieldWidth),
+                'اسم العميل': box(_lookupInput(label: 'اسم العميل', value: _partyLabel(_partyId), enabled: !hasDraft, onOpen: _openCustomerPicker), width: customerFieldWidth),
+                'مندوب المبيعات': box(_lookupInput(label: 'مندوب المبيعات', value: _firstOrEmpty(_representatives.where((r) => _s(r['id']) == _salesRepId).map((r) => _s(r['rep_code']) + ' — ' + _s(r['rep_name']))), enabled: !hasDraft && _canChangeSalesRep, onOpen: _openRepresentativePicker), width: customerFieldWidth),
+              }, 'salesFieldOrder')),
               if (['invoice', 'order'].contains(_documentType)) ...[
                 const SizedBox(height: 8),
                 Align(alignment: Alignment.centerRight, child: OutlinedButton.icon(
