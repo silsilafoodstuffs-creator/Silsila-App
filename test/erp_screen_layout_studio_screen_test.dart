@@ -8,7 +8,7 @@ import 'package:silsila_app/erp/screens/erp_operational_documents_screen.dart';
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    ErpScreenLayoutProfiles.profiles.value = <String, dynamic>{};
+    ErpScreenLayoutProfiles.resetForTesting();
   });
 
   testWidgets('shows layout controls and live placement preview', (tester) async {
@@ -24,8 +24,8 @@ void main() {
 
     await tester.tap(find.byType(DropdownButtonFormField<String>).at(2));
     await tester.pumpAndSettle();
-    expect(find.text('شاشة اختبار مخصصة'), findsOneWidget);
-    await tester.tap(find.text('شاشة اختبار مخصصة').last);
+    expect(find.text('مرتجع مبيعات'), findsWidgets);
+    await tester.tap(find.text('مرتجع مبيعات').last);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('عرض'));
