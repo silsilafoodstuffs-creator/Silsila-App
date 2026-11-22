@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -67,7 +68,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   final Set<String> _expandedIds = <String>{};
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  String _viewMode = 'tree';
+  String _viewMode = 'grid';
 
   @override
   void initState() {
@@ -161,13 +162,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       const activityNames = <String, String>{
         '01': 'مواد غذائية', '02': 'لوازم بناء', '03': 'ملابس واكسسوارات',
         '04': 'أجهزة وإلكترونيات', '05': 'سيارات ومعدات', '06': 'خدمات شحن ونقل',
-        '07': 'أثاث وديكورات', '08': 'أدوات كهربائية', '09': 'مكتبات وقرطاسية',
-        '10': 'مستلزمات طبية', '11': 'مستحضرات تجميل وعناية',
-        '12': 'زراعة ومستلزمات زراعية', '13': 'قطع غيار ومستلزمات صيانة',
-        '14': 'مستلزمات فندقية ومطاعم', '15': 'تعبئة وتغليف',
-        '16': 'منظفات ومستلزمات نظافة', '17': 'مستلزمات حيوانات وأعلاف',
-        '18': 'خدمات نقل وتوصيل', '19': 'أنشطة أخرى',
-        '20': 'كتب ومطبوعات',
+        '07': 'أثاث وديكورات', '08': 'مستلزمات طبية', '09': 'زراعة ومستلزمات زراعية',
+        '10': 'مستلزمات حيوانات وأعلاف', '11': 'أنشطة أخرى', '12': 'كتب ومطبوعات',
       };
 
       // Normalize both legacy activity identifiers and the current two-digit
@@ -217,7 +213,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       // Always include active, visible activities from the authoritative master.
       try {
         final masterRows = await _db!.from('activity_types')
-            .select('code,is_active,show_in_app')
+            .select('code,name,is_active,show_in_app')
             .eq('is_active', true)
             .eq('show_in_app', true)
             .order('code');
@@ -711,7 +707,83 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Future<void> _showCategoryPreview(Map<String, dynamic> row) async {
+    final parent = _parentOf(row);
+    final activity = _activities.where((a) => a['code'] == _s(row['activity_code'])).firstOrNull;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('معاينة الفئة'),
+        content: SizedBox(
+          width: 340,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _imagePreview(row, size: 112),
+              const SizedBox(height: 12),
+              _previewLine('الكود', _s(row['category_code'])),
+              _previewLine('اسم الفئة', _s(row['category_name'])),
+              _previewLine('نوع النشاط', activity?['name'] ?? _s(row['activity_code'])),
+              _previewLine('الفئة الأب', parent == null ? '—' : _s(parent['category_name'])),
+              _previewLine('الحالة', row['is_active'] == true ? 'نشطة' : 'غير نشطة'),
+              _previewLine('الظهور في التطبيق', row['show_in_app'] == true ? 'نعم' : 'لا'),
+            ],
+          ),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
+      ),
+    );
+  }
+
+  Widget _previewLine(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    child: Row(children: [
+      SizedBox(width: 112, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800, color: _catPurple))),
+      Expanded(child: Text(value.isEmpty ? '—' : value, textAlign: TextAlign.start)),
+    ]),
+  );
+
+  Future<void> _deleteCategoryRow(Map<String, dynamic> row) async {
+    if (!_editing) {
+      setState(() => _error = 'اضغط «تعديل» أولًا قبل حذف الفئات.');
+      return;
+    }
+    setState(() => _selectedId = _s(row['id']));
+    await _delete();
+  }
+
+  Future<void> _recodeCategories() async {
+    if (_db == null || (_company ?? '').isEmpty) {
+      setState(() => _error = 'حدد الشركة أولًا.');
+      return;
+    }
+    if (_editing || _saving) {
+      setState(() => _error = 'احفظ التعديلات الحالية أو ألغِها قبل إعادة التكويد.');
+      return;
+    }
+    final rows = _all.where((row) => row['_draft'] != true).toList();
+    if (rows.length != _all.length) {
+      setState(() => _error = 'احفظ الفئات الجديدة أولًا قبل إعادة التكويد.');
+      return;
+    }
+    setState(() { _saving = true; _error = null; _message = 'جارٍ إعادة تكويد الفئات حسب السياسات الهرمية…'; });
+    try {
+      final policyRow = await _db!.from('erp_program_policies')
+          .select('policy_value')
+          .eq('company_id', _company!)
+          .eq('policy_key', 'code_generation_registry')
+          .maybeSingle();
+      final rawPolicy = policyRow?['policy_value'];
+      final policy = rawPolicy is String ? jsonDecode(rawPolicy) : rawPolicy;
+      final segments = policy is Map ? policy['category_segments'] : null;
+      final mainDigits = int.tryParse('${segments is Map ? segments['main'] : ''}') ?? 2;
+      final subDigits = int.tryParse('${segments is Map ? segments['sub'] : ''}') ?? 2;
+      final secondaryDigits = int.tryParse('${segments is Map ? segments['secondary'] : ''}') ?? 2;
+      if (mainDigits != 2 || subDigits != 2 || secondaryDigits != 2) {
+        throw StateError('سياسة تكويد الفئات الحالية لا تطابق بنية الكود الهرمي المعتمدة (2+2+2).');
+      }
+      final activityCode = _normalizeActivityCode(_selectedActivityCode);
+      if (!RegExp(r'^\d{2}
     ErpKeyboardNavigation.registerActions(add: _catalogTab == 3 ? null : _add, save: _catalogTab == 3 ? null : _save);
     Map<String, dynamic>? selectedRow;
     for (final row in _all) {
@@ -891,6 +963,288 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                   ),
                                 ),
                               ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+}
+).hasMatch(activityCode)) {
+        throw StateError('كود النشاط المحدد غير صالح لإعادة تكويد الفئات.');
+      }
+      List<Map<String, dynamic>> ordered(List<Map<String, dynamic>> source) {
+        final result = source.toList();
+        result.sort((a, b) {
+          final byCode = _s(a['category_code']).compareTo(_s(b['category_code']));
+          return byCode != 0 ? byCode : _s(a['id']).compareTo(_s(b['id']));
+        });
+        return result;
+      }
+      Future<void> saveCode(Map<String, dynamic> row, String code) async {
+        if (_s(row['category_code']) == code) return;
+        await _db!.from('erp_item_categories')
+            .update({'category_code': code})
+            .eq('id', _s(row['id']))
+            .eq('company_id', _company!);
+        row['category_code'] = code;
+      }
+      String segment(int index) => index.toString().padLeft(2, '0');
+
+      final roots = ordered(rows.where((row) => row['parent_id'] == null).toList());
+      if (roots.length > 99) throw StateError('عدد الفئات الرئيسية يتجاوز 99؛ لا يمكن ترقيمها بمقطعين.');
+      for (var i = 0; i < roots.length; i++) {
+        await saveCode(roots[i], activityCode + segment(i + 1));
+      }
+
+      var subCount = 0;
+      final subsByRoot = <String, List<Map<String, dynamic>>>{};
+      for (final root in roots) {
+        final rootId = _s(root['id']);
+        final subs = ordered(rows.where((row) => _s(row['parent_id']) == rootId).toList());
+        if (subs.length > 99) throw StateError('الفئة «${_s(root['category_name'])}» لديها أكثر من 99 فئة فرعية.');
+        subsByRoot[rootId] = subs;
+        for (var i = 0; i < subs.length; i++) {
+          await saveCode(subs[i], _s(root['category_code']) + segment(i + 1));
+          subCount++;
+        }
+      }
+
+      var secondaryCount = 0;
+      for (final subs in subsByRoot.values) {
+        for (final sub in subs) {
+          final subId = _s(sub['id']);
+          final secondary = ordered(rows.where((row) => _s(row['parent_id']) == subId).toList());
+          if (secondary.length > 99) throw StateError('الفئة «${_s(sub['category_name'])}» لديها أكثر من 99 فئة ثانوية.');
+          for (var i = 0; i < secondary.length; i++) {
+            await saveCode(secondary[i], _s(sub['category_code']) + segment(i + 1));
+            secondaryCount++;
+          }
+        }
+      }
+      await _load();
+      if (mounted) {
+        setState(() {
+          _editing = false;
+          _message = 'اكتملت إعادة التكويد دون حذف أي سجل: ${roots.length} رئيسية، ${subCount} فرعية، ${secondaryCount} ثانوية.';
+        });
+      }
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذرت إعادة تكويد الفئات: $error');
+      await _load();
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Widget build(BuildContext context) {
+    ErpKeyboardNavigation.registerActions(add: _add, save: _save);
+    final activityFieldWidth = (MediaQuery.sizeOf(context).width * 0.25)
+        .clamp(180.0, 320.0).toDouble();
+    final visibleRows = _all.where((row) =>
+      _rowLevel(row) == _catalogTab && _matchesSearch(row)).toList()
+      ..sort((a, b) => _s(a['category_code']).compareTo(_s(b['category_code'])));
+    final levelName = const ['رئيسية', 'فرعية', 'ثانوية'][_catalogTab.clamp(0, 2)];
+    final selectedRow = visibleRows.where((row) => _s(row['id']) == _selectedId).firstOrNull;
+    final actions = <Widget>[
+      _task('تحديث', Icons.refresh_rounded, _loading || _saving ? null : _load),
+      _task('إضافة', Icons.add_circle_outline_rounded, _saving || _editing ? null : _add),
+      _task('حفظ', Icons.save_outlined, _saving || !_editing ? null : _save),
+      _task('تعديل', Icons.edit_outlined, _saving || _editing || _all.isEmpty ? null : () => setState(() => _editing = true)),
+      _task('حذف', Icons.delete_outline_rounded, _saving || !_editing ? null : _delete),
+      _task('معاينة', Icons.preview_outlined, selectedRow == null ? null : () => _showCategoryPreview(selectedRow)),
+      _task('إعادة تكويد', Icons.numbers_rounded, _saving || _editing ? null : _recodeCategories),
+      _task('تصدير Excel', Icons.file_download_outlined, _saving ? null : _exportCategoriesExcel),
+      _task('نقل الصور للقاعدة', Icons.cloud_download_outlined, _saving || _loading ? null : _migrateImages),
+      _task('صور حقيقية', Icons.photo_library_outlined, _saving || _loading ? null : _importRealCategoryImages),
+    ];
+    final tabs = widget.hideHeaderAndTabs
+        ? const <String>[]
+        : const ['الفئة الرئيسية', 'الفئة الفرعية', 'الفئة الثانوية', 'البراندات/الماركات'];
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: ErpScreenFrame(
+        title: 'فئات الأصناف',
+        profileKey: 'فئات الأصناف',
+        showFrameTitle: !widget.hideHeaderAndTabs,
+        subtitle: 'إدارة الفئات الرئيسية والفرعية والثانوية والبراندات/الماركات',
+        icon: Icons.account_tree_outlined,
+        tabs: tabs,
+        selectedTab: _catalogTab,
+        onTabSelected: (tab) {
+          if (_saving) return;
+          setState(() {
+            _catalogTab = tab;
+            if (tab < 3) {
+              _level = tab;
+              _parentFilter = null;
+              _selectedId = null;
+            }
+          });
+        },
+        actions: actions,
+        applyContentWidth: false,
+        padding: const EdgeInsets.all(4),
+        child: _catalogTab == 3
+            ? ErpBrandsTab(key: const ValueKey('brands-tab'), companyId: _company ?? '')
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 7, 12, 5),
+                    child: Row(
+                      children: [
+                        const SizedBox(
+                          width: 58,
+                          child: Text('نوع النشاط', style: TextStyle(
+                            fontWeight: FontWeight.w800, color: _catPurple,
+                          )),
+                        ),
+                        SizedBox(
+                          width: activityFieldWidth,
+                          child: DropdownButtonFormField<String>(
+                            itemHeight: 40,
+                            value: _selectedActivityCode,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                            ),
+                            items: _activities.map((activity) => DropdownMenuItem<String>(
+                              value: activity['code'],
+                              child: Text('${activity['code']} - ${activity['name']}',
+                                maxLines: 1, overflow: TextOverflow.ellipsis),
+                            )).toList(),
+                            onChanged: _editing || _loading || _saving ? null : (value) {
+                              if (value == null) return;
+                              setState(() {
+                                _selectedActivityCode = value;
+                                _parentFilter = null;
+                                _selectedId = null;
+                              });
+                              _load();
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text('الفئات ${levelName == 'رئيسية' ? 'الرئيسية' : levelName == 'فرعية' ? 'الفرعية' : 'الثانوية'}',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: _catPurple)),
+                        const Spacer(),
+                        Text('${visibleRows.length} فئة',
+                          style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                      ],
+                    ),
+                  ),
+                  if (_error != null)
+                    Padding(padding: const EdgeInsets.all(7), child: Text(_error!,
+                      style: const TextStyle(color: Colors.red, fontSize: 12))),
+                  if (_message != null)
+                    Padding(padding: const EdgeInsets.all(7), child: Text(_message!,
+                      style: const TextStyle(color: Color(0xFF3E007D), fontSize: 11))),
+                  const SizedBox(height: 3),
+                  Expanded(
+                    child: _loading
+                        ? const Center(child: CircularProgressIndicator())
+                        : Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(color: const Color(0xFFE4DDED)),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: ErpStandardDataTable(
+                                headingColor: const Color(0xFFF1EAF9),
+                                rowHeight: 40,
+                                columns: [
+                                  const DataColumn(label: Text('م')),
+                                  DataColumn(label: Text('كود فئة $levelName')),
+                                  const DataColumn(label: Text('اسم الفئة')),
+                                  const DataColumn(label: Text('معاينة')),
+                                  const DataColumn(label: Text('صورة الفئة')),
+                                  const DataColumn(label: Text('نشط')),
+                                  const DataColumn(label: Text('يظهر في التطبيق')),
+                                  const DataColumn(label: Text('حذف')),
+                                ],
+                                rows: [
+                                  for (var i = 0; i < visibleRows.length; i++)
+                                    DataRow(
+                                      selected: _selectedId == _s(visibleRows[i]['id']),
+                                      onSelectChanged: (_) => setState(() => _selectedId = _s(visibleRows[i]['id'])),
+                                      cells: [
+                                        DataCell(SizedBox(width: 38, child: Text('${i + 1}',
+                                          textAlign: TextAlign.center))),
+                                        DataCell(SizedBox(width: 112, child: Align(
+                                          alignment: AlignmentDirectional.centerStart,
+                                          child: Text(_s(visibleRows[i]['category_code']),
+                                            style: const TextStyle(fontWeight: FontWeight.w700, color: _catPurple)),
+                                        ))),
+                                        DataCell(SizedBox(
+                                          width: 220,
+                                          height: 36,
+                                          child: Center(child: TextField(
+                                            controller: _ar.putIfAbsent(_s(visibleRows[i]['id']),
+                                              () => TextEditingController(text: _s(visibleRows[i]['category_name']))),
+                                            enabled: _editing,
+                                            textAlignVertical: TextAlignVertical.center,
+                                            decoration: const InputDecoration(
+                                              isDense: true, border: InputBorder.none,
+                                              contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                            ),
+                                          )),
+                                        )),
+                                        DataCell(SizedBox(width: 72, child: IconButton(
+                                          tooltip: 'معاينة بيانات الفئة',
+                                          visualDensity: VisualDensity.compact,
+                                          onPressed: () => _showCategoryPreview(visibleRows[i]),
+                                          icon: const Icon(Icons.visibility_outlined, size: 19, color: _catPurple),
+                                        ))),
+                                        DataCell(SizedBox(width: 112, child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            _imagePreview(visibleRows[i], size: 34),
+                                            IconButton(
+                                              tooltip: 'اختيار صورة الفئة',
+                                              visualDensity: VisualDensity.compact,
+                                              onPressed: _editing ? () => _pickImage(visibleRows[i], source: ImageSource.gallery) : null,
+                                              icon: const Icon(Icons.photo_library_outlined, size: 18, color: _catPurple),
+                                            ),
+                                          ],
+                                        ))),
+                                        DataCell(Checkbox(
+                                          shape: const CircleBorder(),
+                                          visualDensity: VisualDensity.compact,
+                                          value: visibleRows[i]['is_active'] == true,
+                                          activeColor: _catPurple,
+                                          onChanged: _editing ? (value) => setState(() {
+                                            visibleRows[i]['is_active'] = value == true;
+                                            if (value != true) visibleRows[i]['show_in_app'] = false;
+                                          }) : null,
+                                        )),
+                                        DataCell(Checkbox(
+                                          shape: const CircleBorder(),
+                                          visualDensity: VisualDensity.compact,
+                                          value: visibleRows[i]['show_in_app'] == true && visibleRows[i]['is_active'] == true,
+                                          activeColor: _catOrange,
+                                          onChanged: _editing && visibleRows[i]['is_active'] == true
+                                              ? (value) => setState(() => visibleRows[i]['show_in_app'] = value == true)
+                                              : null,
+                                        )),
+                                        DataCell(IconButton(
+                                          tooltip: 'حذف الفئة',
+                                          visualDensity: VisualDensity.compact,
+                                          onPressed: _editing ? () => _deleteCategoryRow(visibleRows[i]) : null,
+                                          icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFB42318), size: 19),
+                                        )),
+                                      ],
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
                   ),
                 ],
               ),
