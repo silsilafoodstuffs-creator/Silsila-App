@@ -2123,7 +2123,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
 
   Widget _salesImagePanel(BuildContext context) {
     final rows = _pendingLines.isNotEmpty ? _pendingLines : _lines;
-    final primary = Theme.of(context).colorScheme.primary;
+    final primary = Color((ErpScreenLayoutProfiles.forScreen('فاتورة بيع')['primary'] as int?) ?? const Color(0xFF3E007D).toARGB32());
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 150, maxWidth: 340),
       child: Wrap(
@@ -2162,7 +2162,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   Widget _salesSummarySidebar(BuildContext context) {
     final rows = _pendingLines.isNotEmpty ? _pendingLines : _lines;
     final gross = rows.fold<double>(0, (sum, row) => sum + _n(row['quantity']) * _n(row['unit_price']));
-    final primary = Theme.of(context).colorScheme.primary;
+    final primary = Color((ErpScreenLayoutProfiles.forScreen('فاتورة بيع')['primary'] as int?) ?? const Color(0xFF3E007D).toARGB32());
     return SizedBox(
       width: 170,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -2178,7 +2178,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   Widget _salesDateFilter(BuildContext context) {
     final dateText = _documentDate.day.toString().padLeft(2, '0') + '/' +
         _documentDate.month.toString().padLeft(2, '0') + '/' + _documentDate.year.toString();
-    final primary = Theme.of(context).colorScheme.primary;
+    final primary = Color((ErpScreenLayoutProfiles.forScreen('فاتورة بيع')['primary'] as int?) ?? const Color(0xFF3E007D).toARGB32());
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 190, maxWidth: 260),
       child: InkWell(
