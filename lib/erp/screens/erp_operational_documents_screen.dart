@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_print_support.dart';
 import '../services/erp_excel_export_service.dart';
@@ -14,6 +15,7 @@ import '../services/erp_operational_accounting_repository.dart';
 import 'erp_operational_account_mappings_screen.dart';
 import '../widgets/erp_screen_frame.dart';
 import '../services/erp_screen_layout_profiles.dart';
+import '../services/erp_inventory_master_repository.dart';
 
 class ErpOperationalDocumentsScreen extends StatefulWidget {
   const ErpOperationalDocumentsScreen({
@@ -39,6 +41,8 @@ class ErpOperationalDocumentsScreen extends StatefulWidget {
 class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsScreen> {
   final _repo = ErpOperationalDocumentsRepository();
   final _accountingRepo = ErpOperationalAccountingRepository();
+  final _inventoryImageRepo = ErpInventoryMasterRepository();
+  final Map<String, Future<Uint8List?>> _invoiceImageFutures = <String, Future<Uint8List?>>{};
   final _company = TextEditingController();
   final _documentNumber = TextEditingController();
   final _fiscalYear = TextEditingController(text: DateTime.now().year.toString());
@@ -2107,6 +2111,16 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     ];
   }
 
+  Future<Uint8List?> _invoiceItemImage(String itemId) {
+    if (widget.previewOnly || _company.text.trim().isEmpty || itemId.isEmpty) {
+      return Future<Uint8List?>.value(null);
+    }
+    return _invoiceImageFutures.putIfAbsent(
+      itemId,
+      () => _inventoryImageRepo.fetchItemImage(_company.text.trim(), itemId).catchError((Object _) => null),
+    );
+  }
+
   Widget _salesImagePanel(BuildContext context) {
     final rows = _pendingLines.isNotEmpty ? _pendingLines : _lines;
     final primary = Theme.of(context).colorScheme.primary;
@@ -2127,7 +2141,15 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: primary.withValues(alpha: .18)),
                     ),
-                    child: Icon(Icons.inventory_2_outlined, size: 28, color: primary),
+                    child: FutureBuilder<Uint8List?>(
+                      future: _invoiceItemImage(_s(row['item_id'])),
+                      builder: (context, snapshot) => snapshot.data == null
+                          ? Icon(Icons.inventory_2_outlined, size: 28, color: primary)
+                          : ClipRRect(
+                              borderRadius: BorderRadius.circular(9),
+                              child: Image.memory(snapshot.data!, fit: BoxFit.cover, width: 64, height: 56),
+                            ),
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(_s(row['item_name']), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
