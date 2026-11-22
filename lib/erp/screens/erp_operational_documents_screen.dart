@@ -2395,8 +2395,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   SizedBox(height: 4), Text('اضغط F1 أو زر اختيار الأصناف لفتح نافذة الاختيار.', style: TextStyle(color: Colors.black54, fontSize: 12)),
                 ])),
             if (_pendingLines.isNotEmpty) SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
-              headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
-              headingTextStyle: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 12),
+              headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.primary.withValues(alpha: .08)),
+              headingTextStyle: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w900, fontSize: 12),
               dataRowMinHeight: Theme.of(context).dataTableTheme.dataRowMinHeight ?? 40, dataRowMaxHeight: Theme.of(context).dataTableTheme.dataRowMaxHeight ?? 40, horizontalMargin: 5, columnSpacing: Theme.of(context).dataTableTheme.columnSpacing ?? 2,
               columns: const [DataColumn(label: Text('م.')), DataColumn(label: Text('الكود')), DataColumn(label: Text('الصنف')), DataColumn(label: Text('الوحدة')), DataColumn(label: Text('الكمية')), DataColumn(label: Text('سعر الوحدة')), DataColumn(label: Text('الخصم')), DataColumn(label: Text('خصم %')), DataColumn(label: Text('الضريبة')), DataColumn(label: Text('الإجمالي')), DataColumn(label: Text(''))],
               rows: List<DataRow>.generate(_pendingLines.length, (index) {
