@@ -2198,6 +2198,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     final layoutProfile = ErpScreenLayoutProfiles.forScreen('فاتورة بيع');
     final invoiceHeaderStyle = layoutProfile['headerStyle'] as String? ?? 'glossy';
     final invoiceGridStyle = layoutProfile['gridStyle'] as String? ?? 'compact';
+    final invoiceSpacing = (layoutProfile['spacing'] as num?)?.toDouble() ?? 5;
     final invoiceDarkHeader = invoiceHeaderStyle == 'glossy' || invoiceHeaderStyle == 'neon';
     final invoiceHeaderGradient = switch (invoiceHeaderStyle) {
       'glass' => LinearGradient(colors: [Colors.white, screenPrimary.withValues(alpha: .06), screenAccent.withValues(alpha: .05)]),
@@ -2356,7 +2357,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 }),
               ),
               const SizedBox(height: 12),
-              Wrap(spacing: 8, runSpacing: 8, children: _orderedProfileWidgets(<String, Widget>{
+              Wrap(spacing: invoiceSpacing, runSpacing: invoiceSpacing, children: _orderedProfileWidgets(<String, Widget>{
                 'مصدر المستند': box(DropdownButtonFormField<String>(itemHeight: 48,
                   value: _sourceChannel,
                   isExpanded: true, decoration: field('مصدر المستند'),
