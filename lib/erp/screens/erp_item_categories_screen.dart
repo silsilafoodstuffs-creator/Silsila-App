@@ -1048,18 +1048,19 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     final visibleRows = _all.where((row) =>
       _rowLevel(row) == _catalogTab && _matchesSearch(row)).toList()
       ..sort((a, b) => _s(a['category_code']).compareTo(_s(b['category_code'])));
-    final levelName = const ['رئيسية', 'فرعية', 'ثانوية'][_catalogTab.clamp(0, 2)];
+    final levelName = _catalogTab == 1 ? 'فرعية' : _catalogTab == 2 ? 'ثانوية' : 'رئيسية';
     Map<String, dynamic>? selectedRow;
     for (final row in visibleRows) {
       if (_s(row['id']) == _selectedId) { selectedRow = row; break; }
     }
+    final previewRow = selectedRow;
     final actions = <Widget>[
       _task('تحديث', Icons.refresh_rounded, _loading || _saving ? null : _load),
       _task('إضافة', Icons.add_circle_outline_rounded, _saving || _editing ? null : _add),
       _task('حفظ', Icons.save_outlined, _saving || !_editing ? null : _save),
       _task('تعديل', Icons.edit_outlined, _saving || _editing || _all.isEmpty ? null : () => setState(() => _editing = true)),
       _task('حذف', Icons.delete_outline_rounded, _saving || !_editing ? null : _delete),
-      _task('معاينة', Icons.preview_outlined, selectedRow == null ? null : () => _showCategoryPreview(selectedRow)),
+      _task('معاينة', Icons.preview_outlined, previewRow == null ? null : () => _showCategoryPreview(previewRow)),
       _task('إعادة تكويد', Icons.numbers_rounded, _saving || _editing ? null : _recodeCategories),
       _task('تصدير Excel', Icons.file_download_outlined, _saving ? null : _exportCategoriesExcel),
       _task('نقل الصور للقاعدة', Icons.cloud_download_outlined, _saving || _loading ? null : _migrateImages),
