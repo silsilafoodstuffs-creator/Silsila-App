@@ -49,6 +49,9 @@ jobs:
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
+          # Each retry gets its own artifact name. GitHub Pages rejects multiple
+          # artifacts with the default name when a deployment job is re-run.
+          name: silsila-pages-${{ github.run_id }}-${{ github.run_attempt }}
           path: build/web
 
       # The Pages artifact upload completes before the Actions artifact-list API
@@ -67,7 +70,7 @@ jobs:
               -H "Accept: application/vnd.github+json" \
               "${API_URL}")"
             if printf '%s' "${RESPONSE}" | jq -e \
-              '.artifacts[]? | select(.name == "github-pages" and .expired == false)' >/dev/null; then
+              '.artifacts[]? | select(.name == "silsila-pages-'"${GITHUB_RUN_ID}"'-'"${GITHUB_RUN_ATTEMPT}"'" and .expired == false)' >/dev/null; then
               echo "GitHub Pages artifact is visible to the deployment API."
               exit 0
             fi
@@ -80,6 +83,8 @@ jobs:
       - name: Publish Web Preview
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: silsila-pages-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Verify published Web Preview responds
         shell: bash
