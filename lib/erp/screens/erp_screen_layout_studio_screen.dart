@@ -383,7 +383,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
             const Text('تؤثر الاختيارات على إطار الشاشة ومكونات Material المشتركة. تحريك التبويبات وشريط المهام يعمل في الإطار الموحد؛ تغيير بنية Grid/Tree أو نقل التاريخ والصور داخل شاشة مخصصة يحتاج Adapter للشاشة.',style:TextStyle(fontSize:11,color:Colors.black54)),
           ]),
           _section('طريقة عرض البيانات',Icons.view_quilt_outlined,[
-            _choice('خط الشاشة',_fontFamily,['Tajawal','Cairo','Arial'],{'Tajawal':'Tajawal','Cairo':'Cairo','Arial':'Arial'},(v)=>setState(()=>_fontFamily=v??_fontFamily)),
+            _choice('خط الشاشة',_fontFamily,['Tajawal','Kufam'],{'Tajawal':'Tajawal','Kufam':'Kufam'},(v)=>setState(()=>_fontFamily=v??_fontFamily)),
             _choice('شكل الأيقونات',_iconPreset,['rounded','outline'],{'rounded':'دائرية ممتلئة','outline':'خطية Outline'},(v)=>setState(()=>_iconPreset=v??_iconPreset)),
             _choice('نمط العرض',_view,_views.keys.toList(),_views,(v)=>setState(()=>_view=v??_view)),
             _choice('شكل Grid Data',_gridStyle,['compact','comfortable','striped','outlined'],{'compact':'مضغوط','comfortable':'مريح','striped':'صفوف متبادلة','outlined':'حدود كاملة'},(v)=>setState(()=>_gridStyle=v??_gridStyle)),
