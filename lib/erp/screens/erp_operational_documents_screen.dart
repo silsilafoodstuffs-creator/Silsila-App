@@ -2180,7 +2180,6 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     final net = hasPendingPreview
         ? (gross - lineDiscounts - invoiceDiscount + taxTotal).clamp(0, double.infinity)
         : _n(doc['grand_total']);
-    final dateText = _documentDate.day.toString().padLeft(2, '0') + '/' + _documentDate.month.toString().padLeft(2, '0') + '/' + _documentDate.year.toString();
     final invoiceRadius = (layoutProfile['cornerRadius'] as num?)?.toDouble() ?? 12;
     InputDecoration field(String label, {Widget? suffix, String? helperText}) => InputDecoration(
       labelText: label, helperText: helperText, suffixIcon: suffix, isDense: true, filled: true,
