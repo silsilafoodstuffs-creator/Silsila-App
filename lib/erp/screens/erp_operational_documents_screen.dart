@@ -2115,10 +2115,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     final invoiceHeaderStyle = layoutProfile['headerStyle'] as String? ?? 'glossy';
     final invoiceDarkHeader = invoiceHeaderStyle == 'glossy' || invoiceHeaderStyle == 'neon';
     final invoiceHeaderGradient = switch (invoiceHeaderStyle) {
-      'glass' => const LinearGradient(colors: [Color(0xFFFFFFFF), Color(0xFFF2E9FC), Color(0xFFFFF5FA)]),
-      'neon' => const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF16002D), Color(0xFF3E007D), Color(0xFF8B1CB8)]),
+      'glass' => LinearGradient(colors: [Colors.white, screenPrimary.withValues(alpha: .06), screenAccent.withValues(alpha: .05)]),
+      'neon' => LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [const Color(0xFF16002D), screenPrimary, screenAccent.withValues(alpha: .78)]),
       'minimal' => const LinearGradient(colors: [Colors.white, Colors.white]),
-      _ => const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF26004F), Color(0xFF3E007D), Color(0xFF6120A0)]),
+      _ => LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [screenPrimary.withValues(alpha: .88), screenPrimary, screenAccent.withValues(alpha: .65)]),
     };
     final invoiceHeaderForeground = invoiceDarkHeader ? Colors.white : screenPrimary;
 
@@ -2143,12 +2143,14 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         ? (gross - lineDiscounts - invoiceDiscount + taxTotal).clamp(0, double.infinity)
         : _n(doc['grand_total']);
     final dateText = _documentDate.day.toString().padLeft(2, '0') + '/' + _documentDate.month.toString().padLeft(2, '0') + '/' + _documentDate.year.toString();
+    final invoiceRadius = (layoutProfile['cornerRadius'] as num?)?.toDouble() ?? 12;
     InputDecoration field(String label, {Widget? suffix, String? helperText}) => InputDecoration(
-      labelText: label, helperText: helperText, suffixIcon: suffix, isDense: true, filled: true, fillColor: const Color(0xFFFCFBFE),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 11, vertical: 13),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: Color(0xFFE1D9EB))),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: Color(0xFFE1D9EB))),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: Color(0xFF3E007D), width: 1.5)),
+      labelText: label, helperText: helperText, suffixIcon: suffix, isDense: true, filled: true,
+      fillColor: screenTheme.inputDecorationTheme.fillColor ?? screenPrimary.withValues(alpha: .025),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(invoiceRadius), borderSide: BorderSide(color: screenPrimary.withValues(alpha: .22))),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(invoiceRadius), borderSide: BorderSide(color: screenPrimary.withValues(alpha: .22))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(invoiceRadius), borderSide: BorderSide(color: screenAccent, width: 1.5)),
     );
     return Directionality(
       textDirection: TextDirection.rtl,
