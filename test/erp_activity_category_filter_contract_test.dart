@@ -32,7 +32,7 @@ void main() {
   test('main, sub and secondary category tabs share the compact activity grid contract', () {
     expect(categoryScreen, contains("String _viewMode = 'grid';"));
     expect(categoryScreen, contains("MediaQuery.sizeOf(context).width * 0.25"));
-    expect(categoryScreen, contains("DataColumn(label: Text('كود فئة $levelName'))"));
+    expect(categoryScreen, contains(r"DataColumn(label: Text('كود فئة $levelName'))"));
     expect(categoryScreen, contains("DataColumn(label: Text('اسم الفئة'))"));
     expect(categoryScreen, contains("DataColumn(label: Text('معاينة'))"));
     expect(categoryScreen, contains("DataColumn(label: Text('صورة الفئة'))"));
