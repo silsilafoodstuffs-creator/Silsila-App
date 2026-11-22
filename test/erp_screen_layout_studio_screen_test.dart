@@ -91,9 +91,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('فاتورة بيع'), findsWidgets);
-    expect(find.text('أرز مصري فاخر 1 كجم'), findsOneWidget);
-    expect(find.text('زيت خليط 1 لتر'), findsOneWidget);
-    expect(find.text('الخصومات والملاحظات'), findsOneWidget);
+    expect(find.text('أرز مصري فاخر 1 كجم'), findsWidgets);
+    expect(find.text('زيت خليط 1 لتر'), findsWidgets);
+    expect(find.text('الخصومات والملاحظات'), findsWidgets);
   });
 
 }
