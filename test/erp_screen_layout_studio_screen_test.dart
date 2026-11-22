@@ -24,8 +24,8 @@ void main() {
 
     await tester.tap(find.byType(DropdownMenu<String>).at(2));
     await tester.pumpAndSettle();
-    expect(find.text('مرتجع مبيعات'), findsWidgets);
-    await tester.tap(find.text('مرتجع مبيعات').last);
+    expect(find.text('عروض الأصناف'), findsWidgets);
+    await tester.tap(find.text('عروض الأصناف').last);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('عرض'));
