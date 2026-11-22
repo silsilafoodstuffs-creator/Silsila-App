@@ -2604,6 +2604,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         title: 'فاتورة بيع',
         profileKey: 'فاتورة بيع',
         showFrameTitle: false,
+        scrollContent: true,
         padding: EdgeInsets.zero,
         actions: _orderedSalesActionWidgets(context, invoiceStatus),
         dateFilter: _salesDateFilter(context),
