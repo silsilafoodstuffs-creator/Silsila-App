@@ -288,6 +288,11 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
           initialSelection: keys.contains(value) ? value : (keys.isEmpty ? null : keys.first),
           enableFilter:true,
           enableSearch:true,
+          filterCallback:(entries,filter){
+            final query=filter.trim().toLowerCase();
+            if(query.isEmpty || query==value.toLowerCase()) return entries;
+            return entries.where((entry)=>entry.label.toLowerCase().contains(query)).toList();
+          },
           requestFocusOnTap:true,
           textStyle:const TextStyle(fontSize:11),
           inputDecorationTheme:const InputDecorationTheme(
