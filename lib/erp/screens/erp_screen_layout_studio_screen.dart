@@ -3,6 +3,7 @@ import '../widgets/erp_screen_frame.dart';
 import '../services/erp_screen_layout_profiles.dart';
 import '../services/erp_studio_repository.dart';
 import '../services/erp_menu_catalog.dart';
+import '../services/erp_operational_documents_repository.dart';
 import 'erp_operational_documents_screen.dart';
 
 const _purple = Color(0xFF3E007D);
