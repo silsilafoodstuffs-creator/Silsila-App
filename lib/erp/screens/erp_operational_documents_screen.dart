@@ -863,7 +863,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   rows: List<DataRow>.generate(shortages.length, (index) {
                     final row = shortages[index];
                     final remaining = (_n(row['requested_quantity']) - _n(row['fulfilled_quantity'])).clamp(0, double.infinity);
-                    return DataRow(cells: [
+                    return DataRow(color: invoiceGridStyle == 'striped' && index.isOdd ? WidgetStateProperty.all(screenPrimary.withValues(alpha: .045)) : null, cells: [
                       DataCell(Text((shortages.length - index).toString())),
                       DataCell(Text(_s(row['source_date']))),
                       DataCell(Text(_s(row['source_document_number']))),
@@ -2197,6 +2197,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     final screenAccent = screenTheme.colorScheme.secondary;
     final layoutProfile = ErpScreenLayoutProfiles.forScreen('فاتورة بيع');
     final invoiceHeaderStyle = layoutProfile['headerStyle'] as String? ?? 'glossy';
+    final invoiceGridStyle = layoutProfile['gridStyle'] as String? ?? 'compact';
     final invoiceDarkHeader = invoiceHeaderStyle == 'glossy' || invoiceHeaderStyle == 'neon';
     final invoiceHeaderGradient = switch (invoiceHeaderStyle) {
       'glass' => LinearGradient(colors: [Colors.white, screenPrimary.withValues(alpha: .06), screenAccent.withValues(alpha: .05)]),
@@ -2458,6 +2459,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             if (_pendingLines.isNotEmpty) SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
               headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.primary.withValues(alpha: .08)),
               headingTextStyle: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w900, fontSize: 12),
+              border: invoiceGridStyle == 'outlined' ? TableBorder.all(color: screenPrimary.withValues(alpha: .18)) : null,
               dataRowMinHeight: Theme.of(context).dataTableTheme.dataRowMinHeight ?? 40, dataRowMaxHeight: Theme.of(context).dataTableTheme.dataRowMaxHeight ?? 40, horizontalMargin: 5, columnSpacing: Theme.of(context).dataTableTheme.columnSpacing ?? 2,
               columns: const [DataColumn(label: Text('م.')), DataColumn(label: Text('الكود')), DataColumn(label: Text('الصنف')), DataColumn(label: Text('الوحدة')), DataColumn(label: Text('الكمية')), DataColumn(label: Text('سعر الوحدة')), DataColumn(label: Text('الخصم')), DataColumn(label: Text('خصم %')), DataColumn(label: Text('الضريبة')), DataColumn(label: Text('الإجمالي')), DataColumn(label: Text(''))],
               rows: List<DataRow>.generate(_pendingLines.length, (index) {
