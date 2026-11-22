@@ -153,7 +153,7 @@ class SilsilaTheme {
         dataRowMinHeight: 40,
         dataRowMaxHeight: 40,
         headingRowHeight: 40,
-        columnSpacing: 4,
+        columnSpacing: 2,
         horizontalMargin: 4,
       ),
 
