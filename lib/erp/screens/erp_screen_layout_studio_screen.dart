@@ -282,6 +282,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
         Text(label,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800)),
         const SizedBox(height:3),
         DropdownMenu<String>(
+          key:ValueKey('$label:$value'),
           width:190,
           menuHeight:320,
           initialSelection: keys.contains(value) ? value : (keys.isEmpty ? null : keys.first),
