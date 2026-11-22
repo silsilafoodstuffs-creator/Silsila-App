@@ -151,10 +151,19 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
   }
 
   void _normalizeActivityCodes(List<Map<String, String>> rows) {
-    // Preserve the canonical ACT### code; shortening it breaks category links.
+    // Preserve canonical ACT### identifiers. Older workspace snapshots may
+    // contain only the numeric suffix; normalize those to the master key.
     for (final row in rows) {
       final raw = (row['كود النشاط'] ?? '').trim().toUpperCase();
-      if (RegExp(r'^ACT[0-9]{3}
+      if (raw.startsWith('ACT') && raw.length >= 4 &&
+          int.tryParse(raw.substring(3)) != null &&
+          raw.length <= 6) {
+        row['كود النشاط'] = 'ACT' + raw.substring(3).padLeft(3, '0');
+      } else if (int.tryParse(raw) != null && raw.length <= 3) {
+        row['كود النشاط'] = 'ACT' + raw.padLeft(3, '0');
+      }
+    }
+  }
 
   String _nextActivityCode() {
     var maxCode = 0;
@@ -387,7 +396,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       if (sheet.rows.isEmpty) throw StateError('ورقة Excel فارغة.');
       final headers = sheet.rows.first.map((cell) => cell?.value?.toString().trim() ?? '').toList();
       final imported = <Map<String, String>>[];
-      var nextNumber = int.tryParse(_nextActivityCode()) ?? 1;
+      var nextNumber = int.tryParse(_nextActivityCode().substring(3)) ?? 1;
       for (final row in sheet.rows.skip(1)) {
         final values = <String, String>{};
         for (var i = 0; i < headers.length && i < row.length; i++) {
