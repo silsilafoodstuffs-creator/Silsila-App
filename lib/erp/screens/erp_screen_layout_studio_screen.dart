@@ -55,6 +55,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
   double _columnSpacing = 2;
   String _fontFamily = 'Tajawal';
   List<String> _salesActionOrder = ["تحديث","حفظ","إضافة","تعديل","حذف","معاينة","طباعة","استيراد Excel","تصدير Excel","طباعة PDF"];
+  List<String> _salesFieldOrder = ["مصدر المستند","نوع البيع / السداد","المخزن","اسم العميل","مندوب المبيعات"];
   double _contentWidth = 100;
   double _cornerRadius = 12;
   Color _primary = _purple;
@@ -153,6 +154,9 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     final savedActions = value['salesActionOrder'];
     if (savedActions is List) _salesActionOrder = savedActions.map((item) => item.toString()).where((item) => ["تحديث","حفظ","إضافة","تعديل","حذف","معاينة","طباعة","استيراد Excel","تصدير Excel","طباعة PDF"].contains(item)).toList();
     if (_salesActionOrder.length != 10) _salesActionOrder = ["تحديث","حفظ","إضافة","تعديل","حذف","معاينة","طباعة","استيراد Excel","تصدير Excel","طباعة PDF"];
+    final savedFields = value['salesFieldOrder'];
+    if (savedFields is List) _salesFieldOrder = savedFields.map((item) => item.toString()).where((item) => ["مصدر المستند","نوع البيع / السداد","المخزن","اسم العميل","مندوب المبيعات"].contains(item)).toList();
+    if (_salesFieldOrder.length != 5) _salesFieldOrder = ["مصدر المستند","نوع البيع / السداد","المخزن","اسم العميل","مندوب المبيعات"];
     _contentWidth = (value['contentWidth'] as num?)?.toDouble() ?? 100;
     _cornerRadius = (value['cornerRadius'] as num?)?.toDouble() ?? 12;
     _showTitle = value['showTitle'] as bool? ?? true;
@@ -173,7 +177,7 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
     'scrollPosition':_scrollPosition, 'gridStyle':_gridStyle,
     'themePreset':_themePreset, 'headerStyle':_headerStyle,
     'buttonStyle':_buttonStyle, 'tableStyle':_tableStyle, 'treeStyle':_treeStyle,
-    'rowHeight':_rowHeight, 'spacing':_spacing, 'columnSpacing':_columnSpacing, 'fontFamily':_fontFamily, 'salesActionOrder':_salesActionOrder, 'contentWidth':_contentWidth,
+    'rowHeight':_rowHeight, 'spacing':_spacing, 'columnSpacing':_columnSpacing, 'fontFamily':_fontFamily, 'salesActionOrder':_salesActionOrder, 'salesFieldOrder':_salesFieldOrder, 'contentWidth':_contentWidth,
     'cornerRadius':_cornerRadius, 'showTitle':_showTitle, 'showTabs':_showTabs,
     'showTasks':_showTasks, 'showDate':_showDate, 'showFooter':_showFooter,
     'showImages':_showImages, 'showSidebar':_showSidebar, 'showScroll':_showScroll,
@@ -401,6 +405,31 @@ class _ErpScreenLayoutStudioScreenState extends State<ErpScreenLayoutStudioScree
                     visualDensity:VisualDensity.compact,
                     leading:const Icon(Icons.drag_indicator,color:_purple),
                     title:Text(_salesActionOrder[index],style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700)),
+                    trailing:ReorderableDragStartListener(index:index,child:const Icon(Icons.drag_handle)),
+                  ),
+              ],
+            ),
+          ]),
+          _section('ترتيب خانات بيانات فاتورة البيع',Icons.view_agenda_outlined,[
+            const Text('اسحب الخانات لتغيير ترتيب ظهورها في منطقة بيانات المستند والعميل.',style:TextStyle(fontSize:11,color:Colors.black54)),
+            const SizedBox(height:6),
+            ReorderableListView(
+              shrinkWrap:true,
+              physics:const NeverScrollableScrollPhysics(),
+              buildDefaultDragHandles:false,
+              onReorder:(oldIndex,newIndex)=>setState((){
+                if(newIndex>oldIndex)newIndex--;
+                final item=_salesFieldOrder.removeAt(oldIndex);
+                _salesFieldOrder.insert(newIndex,item);
+              }),
+              children:[
+                for(var index=0;index<_salesFieldOrder.length;index++)
+                  ListTile(
+                    key:ValueKey('sales-field-${_salesFieldOrder[index]}'),
+                    dense:true,
+                    visualDensity:VisualDensity.compact,
+                    leading:const Icon(Icons.drag_indicator,color:_purple),
+                    title:Text(_salesFieldOrder[index],style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700)),
                     trailing:ReorderableDragStartListener(index:index,child:const Icon(Icons.drag_handle)),
                   ),
               ],
