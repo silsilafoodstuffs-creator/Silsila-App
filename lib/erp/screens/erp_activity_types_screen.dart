@@ -858,6 +858,29 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     ErpKeyboardNavigation.registerActions(add: _new, save: _save);
     return Directionality(textDirection: TextDirection.rtl, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       if (!widget.hideHeader) Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), decoration: const BoxDecoration(color: Color(0xFF3E007D), borderRadius: BorderRadius.vertical(top: Radius.circular(10))), child: const Row(children: [Icon(Icons.category_outlined, color: Colors.white), SizedBox(width: 8), Text('بيانات الأنشطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)), Spacer(), Text('إدارة البرنامج • بيانات أساسية', style: TextStyle(color: Colors.white70, fontSize: 11))])),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(8, 6, 8, 2),
+        child: InputDecorator(
+          decoration: const InputDecoration(labelText: 'الشركة', isDense: true,
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 4)),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: (_companyId ?? '').isEmpty ? null : _companyId,
+              isExpanded: true, isDense: true,
+              icon: const Icon(Icons.lock_outline, size: 16, color: Color(0xFF6F42C1)),
+              hint: Text(_loading ? 'جارٍ تحميل الشركة...' : 'لا توجد شركة مرتبطة'),
+              items: (_companyId ?? '').isEmpty ? const [] : [
+                DropdownMenuItem<String>(value: _companyId,
+                  child: Text(_companyName.isEmpty ? 'الشركة الحالية' : _companyName,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w700))),
+              ],
+              onChanged: null,
+            ),
+          ),
+        ),
+      ),
       Container(color: Colors.white, padding: const EdgeInsets.all(8), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
         _task('تحديث', Icons.refresh_rounded, const Color(0xFF2475B8), _loading || _saving ? null : _load),
         _task('إضافة', Icons.add_circle_outline_rounded, const Color(0xFF18865A), _saving ? null : _new),
@@ -875,11 +898,34 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       if (_loading) const LinearProgressIndicator(minHeight: 2),
       Expanded(
         child: SingleChildScrollView(
-          child: Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: ErpStandardDataTable(headingColor: const Color(0xFFF1EAF9), columns: const [DataColumn(label: Text('م')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط عربي')), DataColumn(label: Text('نشط')), DataColumn(label: Text('يظهر في التطبيق')), DataColumn(label: Text('إجراءات'))], rows: [
+          child: Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: ErpStandardDataTable(headingColor: const Color(0xFFF1EAF9), rowHeight: 36, columns: const [DataColumn(label: Text('م')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('نوع النشاط')), DataColumn(label: Text('بيانات الشركة')), DataColumn(label: Text('نشط')), DataColumn(label: Text('يظهر في التطبيق')), DataColumn(label: Text('إجراءات'))], rows: [
         for (var i = 0; i < _rows.length; i++) DataRow(cells: [
           DataCell(SizedBox(width: 38, child: Text('${i + 1}', textAlign: TextAlign.center))),
           DataCell(SizedBox(width: 82, child: Align(alignment: AlignmentDirectional.centerStart, child: Text(_rows[i]['كود النشاط'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6F42C1)))))),
-          DataCell(SizedBox(width: 220, child: TextFormField(initialValue: _rows[i]['اسم النشاط عربي'] ?? '', key: ValueKey('activity-ar-$i-${_rows[i]['كود النشاط']}'), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4)), onChanged: (v) => _rows[i]['اسم النشاط عربي'] = v))),
+          DataCell(SizedBox(height: 32, width: 220, child: Center(child: TextFormField(initialValue: _rows[i]['اسم النشاط عربي'] ?? '', key: ValueKey('activity-ar-$i-${_rows[i]['كود النشاط']}'), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 2, horizontal: 4)), onChanged: (v) => _rows[i]['اسم النشاط عربي'] = v)))),
+          DataCell(SizedBox(width: 190, height: 32, child: InputDecorator(
+            decoration: const InputDecoration(
+              isDense: true, border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: (_companyId ?? '').isEmpty ? null : _companyId,
+                isExpanded: true, isDense: true,
+                icon: const Icon(Icons.lock_outline, size: 14, color: Color(0xFF6F42C1)),
+                hint: const Text('الشركة غير محددة', style: TextStyle(fontSize: 11)),
+                items: (_companyId ?? '').isEmpty ? const [] : [
+                  DropdownMenuItem<String>(
+                    value: _companyId,
+                    child: Text(_companyName.isEmpty ? 'الشركة الحالية' : _companyName,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                  ),
+                ],
+                onChanged: null,
+              ),
+            ),
+          ))),
           DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: (_rows[i]['نشط'] ?? 'true') == 'true', onChanged: _editing ? (v) => setState(() { final active = v ?? false; _rows[i]['نشط'] = active.toString(); if (!active) _rows[i]['يظهر في التطبيق'] = 'false'; }) : null)),
           DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: (_rows[i]['يظهر في التطبيق'] ?? 'true') == 'true' && (_rows[i]['نشط'] ?? 'true') == 'true', onChanged: _editing && (_rows[i]['نشط'] ?? 'true') == 'true' ? (v) => setState(() => _rows[i]['يظهر في التطبيق'] = (v ?? false).toString()) : null)),
           DataCell(IconButton(tooltip: 'حذف هذا النشاط فقط', onPressed: _saving || !_editing ? null : () => _deleteActivityRow(_rows[i]), icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFB42318)))),
