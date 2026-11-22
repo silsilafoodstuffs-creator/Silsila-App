@@ -1945,10 +1945,11 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   );
 
   Widget _invoiceCard(String title, IconData icon, Widget child, {Key? key}) {
-    final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
-    final accent = theme.colorScheme.secondary;
-    final radius = (ErpScreenLayoutProfiles.forScreen('فاتورة بيع')['cornerRadius'] as num?)?.toDouble() ?? 12;
+    final profile = ErpScreenLayoutProfiles.forScreen('فاتورة بيع');
+    final primary = Color((profile['primary'] as int?) ?? const Color(0xFF3E007D).toARGB32());
+    final accent = Color((profile['accent'] as int?) ?? const Color(0xFFFF27C3).toARGB32());
+    final radius = (profile['cornerRadius'] as num?)?.toDouble() ?? 12;
+    final luxury = (profile['themePreset'] as String? ?? 'glossy_neon_luxury') != 'classic';
     final sectionKey = key ?? switch (title) {
       'بيانات المستند والعميل' => _invoiceSectionKeys[0],
       'تفاصيل الأصناف' => _invoiceSectionKeys[1],
@@ -1959,8 +1960,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     };
     return Card(
       key: sectionKey,
-      elevation: theme.cardTheme.elevation ?? 1,
-      color: theme.cardTheme.color ?? Colors.white,
+      elevation: luxury ? 4 : 1,
+      color: profile['themePreset'] == 'platinum' ? const Color(0xFFF8F9FC) : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius), side: BorderSide(color: accent.withValues(alpha: .28))),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
