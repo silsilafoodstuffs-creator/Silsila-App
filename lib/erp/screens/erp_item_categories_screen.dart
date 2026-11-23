@@ -53,6 +53,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   int _level = 0;
   int _catalogTab = 0;
   String? _parentFilter;
+  String? _mainCategoryFilter;
+  String? _subCategoryFilter;
   List<Map<String,dynamic>> _all = [];
   List<Map<String,dynamic>> _companyCategories = [];
   List<Map<String,dynamic>> get _codingCategories => <Map<String,dynamic>>[
@@ -376,6 +378,18 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     }
   }
 
+  bool _isDescendantOf(Map<String,dynamic> row, String ancestorId) {
+    var parentId = _s(row['parent_id']);
+    final visited = <String>{};
+    while (parentId.isNotEmpty && visited.add(parentId)) {
+      if (parentId == ancestorId) return true;
+      Map<String,dynamic>? parent;
+      for (final candidate in _all) { if (_s(candidate['id']) == parentId) { parent = candidate; break; } }
+      parentId = parent == null ? '' : _s(parent['parent_id']);
+    }
+    return false;
+  }
+
   int _rowLevel(Map<String,dynamic> row) {
     if (row['parent_id'] == null) return 0;
     final p = _parentOf(row);
@@ -547,7 +561,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         }
         final selectedBytes = _imageBytes[id];
         final payload = <String,dynamic>{
-          'company_id':_company, 'activity_code':_selectedActivityCode, 'category_code':row['_draft'] == true ? '' : _s(row['category_code']), 'category_name':ar,
+          'company_id':_company, 'activity_code':_s(row['activity_code']).isEmpty ? _selectedActivityCode : _s(row['activity_code']), 'category_code':row['_draft'] == true ? '' : _s(row['category_code']), 'category_name':ar,
           'category_name_en':en, 'parent_id':row['parent_id'], 'is_active':row['is_active'] == true,
           'show_in_app':row['show_in_app'] == true,
           'image_url':(selectedBytes != null || row['_remove_image'] == true) ? null : row['image_url'],
@@ -857,9 +871,21 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     ErpKeyboardNavigation.registerActions(add: _add, save: _save);
     final activityFieldWidth = (MediaQuery.sizeOf(context).width * 0.25)
         .clamp(180.0, 320.0).toDouble();
-    final visibleRows = _all.where((row) =>
-      _rowLevel(row) == _catalogTab && _matchesSearch(row)).toList()
+    final visibleRows = _all.where((row) {
+      if (_rowLevel(row) != _catalogTab || !_matchesSearch(row)) return false;
+      if (_catalogTab >= 1 && _mainCategoryFilter != null) {
+        final mainId = _catalogTab == 1 ? _s(row['parent_id']) : _s(_parentOf(row)?['parent_id']);
+        if (mainId != _mainCategoryFilter) return false;
+      }
+      if (_catalogTab == 2 && _subCategoryFilter != null && _s(row['parent_id']) != _subCategoryFilter) return false;
+      return true;
+    }).toList()
       ..sort((a, b) => _s(a['category_code']).compareTo(_s(b['category_code'])));
+    final mainFilterOptions = _all.where((row) => _rowLevel(row) == 0).toList()
+      ..sort((a,b) => _s(a['category_code']).compareTo(_s(b['category_code'])));
+    final subFilterOptions = _all.where((row) => _rowLevel(row) == 1 &&
+      (_mainCategoryFilter == null || _s(row['parent_id']) == _mainCategoryFilter)).toList()
+      ..sort((a,b) => _s(a['category_code']).compareTo(_s(b['category_code'])));
     final levelName = _catalogTab == 1 ? 'فرعية' : _catalogTab == 2 ? 'ثانوية' : 'رئيسية';
     Map<String, dynamic>? selectedRow;
     for (final row in visibleRows) {
@@ -948,6 +974,26 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                             },
                           ),
                         ),
+                        if (_catalogTab >= 1) ...[
+                          const SizedBox(width: 8),
+                          const Text('فئة رئيسية', style: TextStyle(fontWeight: FontWeight.w800, color: _catPurple)),
+                          SizedBox(width: 180, child: DropdownButtonFormField<String?>(
+                            value: _mainCategoryFilter, itemHeight: 40, isExpanded: true,
+                            decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 4)),
+                            items: [const DropdownMenuItem<String?>(value: null, child: Text('الكل')), ...mainFilterOptions.map((p) => DropdownMenuItem<String?>(value: _s(p['id']), child: Text(_s(p['category_name']), overflow: TextOverflow.ellipsis)))],
+                            onChanged: _loading || _saving ? null : (value) => setState(() { _mainCategoryFilter = value; _subCategoryFilter = null; }),
+                          )),
+                        ],
+                        if (_catalogTab == 2) ...[
+                          const SizedBox(width: 8),
+                          const Text('فئة فرعية', style: TextStyle(fontWeight: FontWeight.w800, color: _catPurple)),
+                          SizedBox(width: 180, child: DropdownButtonFormField<String?>(
+                            value: _subCategoryFilter, itemHeight: 40, isExpanded: true,
+                            decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 4)),
+                            items: [const DropdownMenuItem<String?>(value: null, child: Text('الكل')), ...subFilterOptions.map((p) => DropdownMenuItem<String?>(value: _s(p['id']), child: Text(_s(p['category_name']), overflow: TextOverflow.ellipsis)))],
+                            onChanged: _loading || _saving ? null : (value) => setState(() => _subCategoryFilter = value),
+                          )),
+                        ],
                         const SizedBox(width: 10),
                         Text('الفئات ${levelName == 'رئيسية' ? 'الرئيسية' : levelName == 'فرعية' ? 'الفرعية' : 'الثانوية'}',
                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: _catPurple)),
@@ -978,10 +1024,14 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                               child: ErpStandardDataTable(
                                 headingColor: const Color(0xFFF1EAF9),
                                 rowHeight: 40,
+                                showCheckboxColumn: false,
                                 columns: [
                                   const DataColumn(label: Text('م')),
                                   DataColumn(label: Text('كود فئة $levelName')),
                                   const DataColumn(label: Text('اسم الفئة')),
+                                  if (_catalogTab == 0) const DataColumn(label: Text('نوع النشاط')),
+                                  if (_catalogTab == 1) const DataColumn(label: Text('فئة رئيسية')),
+                                  if (_catalogTab == 2) const DataColumn(label: Text('فئة فرعية')),
                                   const DataColumn(label: Text('معاينة')),
                                   const DataColumn(label: Text('صورة الفئة')),
                                   const DataColumn(label: Text('نشط')),
@@ -1017,6 +1067,27 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                           ),
                                         )),
                                       )),
+                                      if (_catalogTab == 0) DataCell(SizedBox(width: 190, child: DropdownButtonFormField<String>(
+                                        value: _activities.any((a) => a['code'] == _s(row['activity_code'])) ? _s(row['activity_code']) : _selectedActivityCode,
+                                        itemHeight: 40, isExpanded: true,
+                                        decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 3)),
+                                        items: _activities.map((a) => DropdownMenuItem<String>(value: a['code'], child: Text('${a['code']} - ${a['name']}', overflow: TextOverflow.ellipsis))).toList(),
+                                        onChanged: _editing ? (value) { if (value == null) return; setState(() { row['activity_code'] = value; for (final child in _all.where((r) => _isDescendantOf(r, id))) { child['activity_code'] = value; } }); } : null,
+                                      ))),
+                                      if (_catalogTab == 1) DataCell(SizedBox(width: 190, child: DropdownButtonFormField<String>(
+                                        value: _parents.any((p) => _s(p['id']) == _s(row['parent_id'])) ? _s(row['parent_id']) : null,
+                                        itemHeight: 40, isExpanded: true,
+                                        decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 3)),
+                                        items: _parents.map((p) => DropdownMenuItem<String>(value: _s(p['id']), child: Text(_s(p['category_name']), overflow: TextOverflow.ellipsis))).toList(),
+                                        onChanged: _editing ? (value) { if (value == null) return; setState(() { row['parent_id'] = value; row['activity_code'] = _s(_all.firstWhere((p) => _s(p['id']) == value)['activity_code']); }); } : null,
+                                      ))),
+                                      if (_catalogTab == 2) DataCell(SizedBox(width: 190, child: DropdownButtonFormField<String>(
+                                        value: _secondaryParents.any((p) => _s(p['id']) == _s(row['parent_id'])) ? _s(row['parent_id']) : null,
+                                        itemHeight: 40, isExpanded: true,
+                                        decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 3)),
+                                        items: _secondaryParents.where((p) => _mainCategoryFilter == null || _s(_parentOf(p)?['id']) == _mainCategoryFilter).map((p) => DropdownMenuItem<String>(value: _s(p['id']), child: Text(_s(p['category_name']), overflow: TextOverflow.ellipsis))).toList(),
+                                        onChanged: _editing ? (value) { if (value == null) return; setState(() { row['parent_id'] = value; row['activity_code'] = _s(_parentOf(_all.firstWhere((p) => _s(p['id']) == value))?['activity_code']); }); } : null,
+                                      ))),
                                       DataCell(SizedBox(width: 72, child: IconButton(
                                         tooltip: 'معاينة بيانات الفئة',
                                         visualDensity: VisualDensity.compact,
