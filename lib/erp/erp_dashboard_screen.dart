@@ -3247,6 +3247,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       final wide = width >= 1120;
       final tablet = width >= 720;
       final columns = wide ? 3 : tablet ? 2 : 1;
+      // Department cards contain different numbers of metrics. Give them a
+      // responsive width but let each card size itself to its content height.
+      final sectionCardWidth = columns == 1 ? width : (width - (columns - 1) * 10) / columns;
       final canSales = !_executivePartialConfigured || _executiveAllowedSections.contains('مبيعات');
       final canFinance = !_executivePartialConfigured || _executiveAllowedSections.contains('المالية والسيولة');
       final canInventory = !_executivePartialConfigured || _executiveAllowedSections.contains('المخزون والمشتريات');
@@ -3538,18 +3541,17 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         ],
         const SizedBox(height: 20),
         sectionHeading('مؤشرات الإدارات والرقابة', 'نظرة موحدة على المبيعات والمالية والمخزون والتوزيع والموارد البشرية', Icons.hub_rounded, _orange),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: columns,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: wide ? 1.18 : tablet ? 1.12 : 1.08,
-          children: visibleSections.map((section) => _executiveSectionCompact(
-            title: section['title'] as String,
-            icon: section['icon'] as IconData,
-            color: section['color'] as Color,
-            items: section['items'] as List<Map<String, Object>>,
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: visibleSections.map((section) => SizedBox(
+            width: sectionCardWidth,
+            child: _executiveSectionCompact(
+              title: section['title'] as String,
+              icon: section['icon'] as IconData,
+              color: section['color'] as Color,
+              items: section['items'] as List<Map<String, Object>>,
+            ),
           )).toList(),
         ),
         const SizedBox(height: 12),

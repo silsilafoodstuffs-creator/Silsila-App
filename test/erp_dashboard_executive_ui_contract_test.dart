@@ -62,6 +62,19 @@ void main() {
     expect(dashboard, contains('Wrap(\n                spacing: 8,\n                runSpacing: 4,'));
   });
 
+  test('department cards use intrinsic-height wrapping instead of fixed-height grid tiles', () {
+    final sectionStart = dashboard.indexOf("sectionHeading('مؤشرات الإدارات والرقابة'");
+    final sectionEnd = dashboard.indexOf("const SizedBox(height: 12)", sectionStart);
+    expect(sectionStart, greaterThanOrEqualTo(0));
+    expect(sectionEnd, greaterThan(sectionStart));
+    final sectionLayout = dashboard.substring(sectionStart, sectionEnd);
+
+    expect(dashboard, contains('final sectionCardWidth = columns == 1 ? width : (width - (columns - 1) * 10) / columns;'));
+    expect(sectionLayout, contains('Wrap(\n          spacing: 10,\n          runSpacing: 10,'));
+    expect(sectionLayout, contains('width: sectionCardWidth,'));
+    expect(sectionLayout, isNot(contains('GridView.count(')));
+  });
+
   test('RTL chart series and labels use the same visual order', () {
     expect(dashboard, contains('textDirection == TextDirection.rtl ? source.length - 1 - i : i'));
     expect(dashboard, contains('textDirection == TextDirection.rtl ? denominator - i : i'));
