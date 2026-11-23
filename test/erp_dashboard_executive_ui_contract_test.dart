@@ -65,6 +65,18 @@ void main() {
     expect(loader, isNot(contains('final currentData = await fetchMetrics(bounds.start, bounds.end);')));
   });
 
+  test('executive staff rankings and expiry alerts load concurrently', () {
+    final start = dashboard.indexOf('Future<void> _loadExecutiveMetrics');
+    final end = dashboard.indexOf('Future<void> _loadExecutiveStaffPerformance', start);
+    expect(start, greaterThanOrEqualTo(0));
+    expect(end, greaterThan(start));
+    final loader = dashboard.substring(start, end);
+
+    expect(loader, contains('await Future.wait<void>(['));
+    expect(loader, contains('_loadExecutiveStaffPerformance('));
+    expect(loader, contains('_loadExecutiveExpiryMetrics(companyId)'));
+  });
+
   test('executive staff queries select only fields consumed by the dashboard', () {
     final start = dashboard.indexOf('Future<void> _loadExecutiveStaffPerformance');
     final end = dashboard.indexOf('String _staffName', start);
