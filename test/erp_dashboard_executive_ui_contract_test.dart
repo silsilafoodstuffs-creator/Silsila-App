@@ -40,8 +40,8 @@ void main() {
 
   test('executive charts and analysis cards retain readable light-surface contrast', () {
     expect(dashboard, contains('colors: [Colors.white, Color(0xFFFCFAFF), Color(0xFFF5EFFB)]'));
-    expect(dashboard, contains('color: const Color(0xFF241735)'));
-    expect(dashboard, contains('color: const Color(0xFF766B80)'));
+    expect(dashboard, contains('color: Color(0xFF241735)'));
+    expect(dashboard, contains('color: Color(0xFF766B80)'));
     expect(dashboard, contains('RepaintBoundary(child: CustomPaint(painter: chart'));
     expect(dashboard, contains('const Color(0xFF3E007D)'));
     expect(dashboard, contains('const Color(0xFFFFA015)'));
