@@ -50,6 +50,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   String _selectedActivityCode = '01';
   String? _company, _error, _message, _selectedId;
   bool _loading = false, _saving = false, _editing = false;
+  bool _hierarchyChanged = false;
   int _level = 0;
   int _catalogTab = 0;
   String? _parentFilter;
@@ -582,8 +583,13 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           await _db!.from('erp_item_categories').update(payload).eq('id',id).eq('company_id',_company!);
         }
       }
+      final shouldRecode = _hierarchyChanged;
       await _load();
-      if (mounted) setState(() { _editing = false; _message = 'تم حفظ فئات الأصناف في قاعدة البيانات.'; });
+      if (mounted) setState(() { _editing = false; _hierarchyChanged = false; _message = 'تم حفظ فئات الأصناف في قاعدة البيانات.'; });
+      if (shouldRecode) {
+        if (mounted) setState(() => _saving = false);
+        await _recodeCategories();
+      }
     } catch (e) { if (mounted) setState(() => _error = 'تعذر حفظ الفئات: $e'); }
     finally { if (mounted) setState(() => _saving = false); }
   }
@@ -1085,21 +1091,21 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                         itemHeight: 40, isExpanded: true,
                                         decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 3)),
                                         items: _activities.map((a) => DropdownMenuItem<String>(value: a['code'], child: Text('${a['code']} - ${a['name']}', overflow: TextOverflow.ellipsis))).toList(),
-                                        onChanged: _editing ? (value) { if (value == null) return; setState(() { row['activity_code'] = value; for (final child in _all.where((r) => _isDescendantOf(r, id))) { child['activity_code'] = value; } }); } : null,
+                                        onChanged: _editing ? (value) { if (value == null) return; setState(() { _hierarchyChanged = true; row['activity_code'] = value; for (final child in _all.where((r) => _isDescendantOf(r, id))) { child['activity_code'] = value; } }); } : null,
                                       ))),
                                       if (_catalogTab == 1) DataCell(SizedBox(width: 190, child: DropdownButtonFormField<String>(
                                         value: _parents.any((p) => _s(p['id']) == _s(row['parent_id'])) ? _s(row['parent_id']) : null,
                                         itemHeight: 40, isExpanded: true,
                                         decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 3)),
                                         items: _parents.map((p) => DropdownMenuItem<String>(value: _s(p['id']), child: Text(_s(p['category_name']), overflow: TextOverflow.ellipsis))).toList(),
-                                        onChanged: _editing ? (value) { if (value == null) return; setState(() { row['parent_id'] = value; final activity = _s(_all.firstWhere((p) => _s(p['id']) == value)['activity_code']); row['activity_code'] = activity; for (final child in _all.where((r) => _isDescendantOf(r, id))) { child['activity_code'] = activity; } }); } : null,
+                                        onChanged: _editing ? (value) { if (value == null) return; setState(() { _hierarchyChanged = true; row['parent_id'] = value; final activity = _s(_all.firstWhere((p) => _s(p['id']) == value)['activity_code']); row['activity_code'] = activity; for (final child in _all.where((r) => _isDescendantOf(r, id))) { child['activity_code'] = activity; } }); } : null,
                                       ))),
                                       if (_catalogTab == 2) DataCell(SizedBox(width: 190, child: DropdownButtonFormField<String>(
                                         value: _secondaryParents.any((p) => _s(p['id']) == _s(row['parent_id'])) ? _s(row['parent_id']) : null,
                                         itemHeight: 40, isExpanded: true,
                                         decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 3)),
                                         items: _secondaryParents.where((p) => _mainCategoryFilter == null || _s(_parentOf(p)?['id']) == _mainCategoryFilter).map((p) => DropdownMenuItem<String>(value: _s(p['id']), child: Text(_s(p['category_name']), overflow: TextOverflow.ellipsis))).toList(),
-                                        onChanged: _editing ? (value) { if (value == null) return; setState(() { row['parent_id'] = value; row['activity_code'] = _s(_parentOf(_all.firstWhere((p) => _s(p['id']) == value))?['activity_code']); }); } : null,
+                                        onChanged: _editing ? (value) { if (value == null) return; setState(() { _hierarchyChanged = true; row['parent_id'] = value; row['activity_code'] = _s(_parentOf(_all.firstWhere((p) => _s(p['id']) == value))?['activity_code']); }); } : null,
                                       ))),
                                       DataCell(SizedBox(width: 72, child: IconButton(
                                         tooltip: 'معاينة بيانات الفئة',
