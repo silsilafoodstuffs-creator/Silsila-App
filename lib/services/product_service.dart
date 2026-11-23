@@ -203,6 +203,8 @@ class ProductService {
         'package_count': 1,
         'small_unit': null,
         'offer_price': null,
+        'image_data': null,
+        'image_mime_type': null,
         // Binary image data is fetched only for the final, visible result page.
         '_erp_master_item_id': item['id'],
       });
