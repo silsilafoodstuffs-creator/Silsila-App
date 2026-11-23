@@ -1018,6 +1018,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                               setState(() {
                                 _selectedActivityCode = value;
                                 _parentFilter = null;
+                                _mainCategoryFilter = null;
+                                _subCategoryFilter = null;
                                 _selectedId = null;
                               });
                               _load();
