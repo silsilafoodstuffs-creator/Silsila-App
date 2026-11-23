@@ -448,9 +448,10 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     }
     pathSegments.add(next.toString().padLeft(2,'0'));
     final hierarchicalDigits = pathSegments.join();
+    final draftActivityCode = _selectedActivityCode == '*' ? '01' : _selectedActivityCode;
     final draft = <String,dynamic>{
-      'id':'draft-${DateTime.now().microsecondsSinceEpoch}', 'company_id':_company, 'activity_code':_selectedActivityCode,
-      'category_code':'$_selectedActivityCode$hierarchicalDigits', 'category_name':'','category_name_en':'',
+      'id':'draft-${DateTime.now().microsecondsSinceEpoch}', 'company_id':_company, 'activity_code':draftActivityCode,
+      'category_code':'$draftActivityCode$hierarchicalDigits', 'category_name':'','category_name_en':'',
       'parent_id':parentId,'is_active':true,'show_in_app':true,'image_url':null,'image_data':null,'image_mime_type':null,'_draft':true,
     };
     setState(() { _editing = true; _all.add(draft); _selectedId = _s(draft['id']); _expandedIds.add(_s(parentId)); _expandedIds.add(_s(draft['id'])); _syncControllers(); });
