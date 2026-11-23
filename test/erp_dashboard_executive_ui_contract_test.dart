@@ -51,6 +51,34 @@ void main() {
     expect(dashboard, contains('if (loadPurchases) {\n        _executivePurchaseEmployees = purchasingEmployees;'));
   });
 
+  test('executive metrics fetch independent periods and breakdowns concurrently', () {
+    final start = dashboard.indexOf('Future<void> _loadExecutiveMetrics');
+    final end = dashboard.indexOf('Future<void> _loadExecutiveStaffPerformance', start);
+    expect(start, greaterThanOrEqualTo(0));
+    expect(end, greaterThan(start));
+    final loader = dashboard.substring(start, end);
+
+    expect(loader, contains('final currentMetricsFuture = fetchMetrics(bounds.start, bounds.end);'));
+    expect(loader, contains('final previousMetricsFuture ='));
+    expect(loader, contains('final breakdownFuture = Future.wait<dynamic>(['));
+    expect(loader, contains('final parallelResults = await Future.wait<dynamic>(['));
+    expect(loader, isNot(contains('final currentData = await fetchMetrics(bounds.start, bounds.end);')));
+  });
+
+  test('executive staff queries select only fields consumed by the dashboard', () {
+    final start = dashboard.indexOf('Future<void> _loadExecutiveStaffPerformance');
+    final end = dashboard.indexOf('String _staffName', start);
+    expect(start, greaterThanOrEqualTo(0));
+    expect(end, greaterThan(start));
+    final loader = dashboard.substring(start, end);
+
+    expect(loader, contains(".from('erp_sales_representatives').select('id,rep_code,rep_name,monthly_sales_target,is_demo_data,is_active')"));
+    expect(loader, contains(".from('erp_sales_documents').select('sales_rep_id,grand_total,document_type,is_demo_data')"));
+    expect(loader, contains(".from('erp_employee_directory').select('id,company_id,branch_id,employee_code,full_name,job_title,department_name,is_active')"));
+    expect(loader, contains(".from('erp_purchase_documents').select('created_by,grand_total,document_type,is_demo_data')"));
+    expect(loader, isNot(contains(".select('*')")));
+  });
+
   test('executive summary adapts to phone, tablet, and desktop widths', () {
     expect(dashboard, contains('final width = outerConstraints.maxWidth;'));
     expect(dashboard, contains('final wide = width >= 1120;'));
