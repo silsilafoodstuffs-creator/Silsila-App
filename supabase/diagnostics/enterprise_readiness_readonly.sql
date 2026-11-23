@@ -64,13 +64,10 @@ where not exists (
     and ix.indisvalid
     and ix.indisready
     and (
-      select array_agg(k order by k)
-      from unnest(ix.indkey::smallint[]) k
-      where k > 0
-    ) @> (
-      select array_agg(k order by k)
-      from unnest(fk.conkey) k
-    )
+      select array_agg(k.attnum order by k.ordinality)
+      from unnest(ix.indkey::smallint[]) with ordinality as k(attnum, ordinality)
+      where k.ordinality <= cardinality(fk.conkey)
+    ) = fk.conkey
 )
 order by coalesce(estimated_rows, 0) desc,
          pg_total_relation_size(conrelid) desc;
