@@ -47,7 +47,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   final _picker = ImagePicker();
   final _workspaceRecords = ErpWorkspaceRecordsService();
   List<Map<String,String>> _activities = <Map<String,String>>[];
-  String _selectedActivityCode = '01';
+  String _selectedActivityCode = '*';
   String? _company, _error, _message, _selectedId;
   bool _loading = false, _saving = false, _editing = false;
   bool _hierarchyChanged = false;
@@ -60,6 +60,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   List<Map<String,dynamic>> _companyCategories = [];
   List<Map<String,dynamic>> get _codingCategories => <Map<String,dynamic>>[
     ..._companyCategories.where((row) =>
+      _selectedActivityCode == '*' ||
       _normalizeActivityCode(_s(row['activity_code'])) ==
       _normalizeActivityCode(_selectedActivityCode)),
     ..._all.where((row) => row['_draft'] == true),
@@ -190,12 +191,14 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       // request. This prevents server row caps, cached partial catalogs, or
       // mixed-activity pagination from silently omitting one activity.
       final selectedCode = normalizeActivity(_selectedActivityCode);
-      final selectedActivityRows = await _db!.from('erp_item_categories')
-          .select('*')
-          .eq('company_id', company)
-          .eq('activity_code', selectedCode)
-          .order('category_code')
-          .limit(10000);
+      final selectedActivityRows = _selectedActivityCode == '*'
+          ? const <dynamic>[]
+          : await _db!.from('erp_item_categories')
+              .select('*')
+              .eq('company_id', company)
+              .eq('activity_code', selectedCode)
+              .order('category_code')
+              .limit(10000);
       final catalogById = <String, Map<String, dynamic>>{
         for (final row in catalog) _s(row['id']): row,
       };
@@ -238,11 +241,13 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         ..sort((a, b) => a['code']!.compareTo(b['code']!));
 
       final wanted = normalizeActivity(_selectedActivityCode);
-      _selectedActivityCode = displayCodes.contains(wanted)
-          ? wanted
-          : displayCodes.contains(defaultActivity)
-              ? defaultActivity
-              : sortedActualCodes.isNotEmpty ? sortedActualCodes.first : defaultActivity;
+      _selectedActivityCode = _selectedActivityCode == '*'
+          ? '*'
+          : displayCodes.contains(wanted)
+              ? wanted
+              : displayCodes.contains(defaultActivity)
+                  ? defaultActivity
+                  : sortedActualCodes.isNotEmpty ? sortedActualCodes.first : defaultActivity;
 
       // Keep complete source rows (including names, status, and visibility)
       // for code generation and every downstream category workflow.
@@ -251,6 +256,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           .toList(growable: false);
 
       _all = completeCatalog.where((row) {
+        if (_selectedActivityCode == '*') return true;
         final rawCode = normalizeActivity(_s(row['activity_code']));
         if (rawCode.isEmpty) return _selectedActivityCode == defaultActivity;
         return rawCode == _selectedActivityCode;
@@ -920,7 +926,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   Widget build(BuildContext context) {
     ErpKeyboardNavigation.registerActions(add: _add, save: _save);
     final activityFieldWidth = (MediaQuery.sizeOf(context).width * 0.25)
-        .clamp(180.0, 320.0).toDouble();
+        .clamp(180.0, 320.0).toDouble() * (2 / 3);
     final visibleRows = _all.where((row) {
       if (_rowLevel(row) != _catalogTab || !_matchesSearch(row)) return false;
       if (_catalogTab >= 1 && _mainCategoryFilter != null) {
@@ -1008,11 +1014,17 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                               border: OutlineInputBorder(),
                               contentPadding: EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                             ),
-                            items: _activities.map((activity) => DropdownMenuItem<String>(
-                              value: activity['code'],
-                              child: Text('${activity['code']} - ${activity['name']}',
-                                maxLines: 1, overflow: TextOverflow.ellipsis),
-                            )).toList(),
+                            items: [
+                              const DropdownMenuItem<String>(
+                                value: '*',
+                                child: Text('الكل'),
+                              ),
+                              ..._activities.map((activity) => DropdownMenuItem<String>(
+                                value: activity['code'],
+                                child: Text('${activity['code']} - ${activity['name']}',
+                                  maxLines: 1, overflow: TextOverflow.ellipsis),
+                              )),
+                            ],
                             onChanged: _editing || _loading || _saving ? null : (value) {
                               if (value == null) return;
                               setState(() {
