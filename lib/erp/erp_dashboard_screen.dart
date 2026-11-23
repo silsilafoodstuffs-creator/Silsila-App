@@ -3560,7 +3560,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           boxShadow: [BoxShadow(color: color.withValues(alpha: .75), blurRadius: 8)])),
         const SizedBox(width: 10),
         Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: .78), fontWeight: FontWeight.w700))),
+          style: const TextStyle(fontSize: 12, color: Color(0xFF4A4053), fontWeight: FontWeight.w700))),
         const SizedBox(width: 8),
         Flexible(child: Text(value, textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis,
           style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w900))),
@@ -3590,7 +3590,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           child: Icon(icon, size: 19, color: color)),
         const SizedBox(width: 9),
         Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.w900))),
+          style: const TextStyle(fontSize: 13, color: Color(0xFF241735), fontWeight: FontWeight.w900))),
         _summaryAction('عرض الكل', () => _showExecutiveCategoryDetails(title, items)),
       ]),
       Divider(height: 18, thickness: 1, color: const Color(0xFF3E007D).withValues(alpha: .10)),
@@ -3630,7 +3630,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
           style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w900)),
         const SizedBox(width: 4),
-        Icon(Icons.chevron_left_rounded, size: 16, color: Colors.white.withValues(alpha: .38)),
+        Icon(Icons.chevron_left_rounded, size: 16, color: const Color(0xFF3E007D).withValues(alpha: .42)),
       ]),
     ),
   );
@@ -3696,7 +3696,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required Color color,
     required String note,
   }) {
-    final trendColor = change == null ? const Color(0xFFB8A9C8) : change >= 0 ? const Color(0xFF52E2B1) : const Color(0xFFFF7C9B);
+    final trendColor = change == null ? const Color(0xFF766B80) : change >= 0 ? const Color(0xFF168A70) : const Color(0xFFD94B76);
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 15, 16, 14),
       decoration: BoxDecoration(
@@ -3712,7 +3712,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       child: Stack(children: [
         PositionedDirectional(end: -26, top: -34, child: Container(width: 112, height: 112,
           decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: .10),
-            boxShadow: [BoxShadow(color: color.withValues(alpha: .18), blurRadius: 35, spreadRadius: 12)]))),
+            boxShadow: [BoxShadow(color: color.withValues(alpha: .10), blurRadius: 24, spreadRadius: 6)]))),
         PositionedDirectional(start: 0, top: 0, child: Container(width: 48, height: 3,
           decoration: BoxDecoration(gradient: LinearGradient(colors: [color, color.withValues(alpha: 0)]),
             borderRadius: BorderRadius.circular(4)))),
@@ -3725,7 +3725,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               border: Border.all(color: color.withValues(alpha: .55)),
               boxShadow: [BoxShadow(color: color.withValues(alpha: .22), blurRadius: 15)],
             ),
-            child: Icon(icon, color: Colors.white, size: 22)),
+            child: Icon(icon, color: color, size: 22)),
           const SizedBox(width: 12),
           Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -3789,7 +3789,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             child: Icon(icon, size: 17, color: const Color(0xFFD7B9FF))),
           const SizedBox(width: 8),
           Expanded(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, height: 1.15, fontWeight: FontWeight.w900, color: Colors.white))),
+            style: const TextStyle(fontSize: 12, height: 1.15, fontWeight: FontWeight.w900, color: Color(0xFF241735)))),
           if (trend != null) ...[
             Icon(trend >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded, size: 17, color: trendColor),
             const SizedBox(width: 3),
@@ -3826,10 +3826,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           final color = change == null ? const Color(0xFFB8A9C8) : positive ? const Color(0xFF52E2B1) : const Color(0xFFFF7C9B);
           return Row(children: [
             Expanded(flex: 5, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: .78), fontWeight: FontWeight.w800))),
+              style: const TextStyle(fontSize: 11, color: Color(0xFF4A4053), fontWeight: FontWeight.w800))),
             Expanded(flex: 3, child: Text(value == null ? '—' : isPercent ? '${value.toStringAsFixed(1)}%' : _executiveMoney(value).replaceAll(' ج.م', ''),
               textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white))),
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF241735)))),
             SizedBox(width: 55, child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
               Icon(change == null ? Icons.remove_rounded : positive ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded, size: 11, color: color),
               Text(change == null ? '—%' : '${change.abs().toStringAsFixed(1)}%',
