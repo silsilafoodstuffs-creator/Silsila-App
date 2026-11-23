@@ -3061,7 +3061,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'target_amount': amount,
         'updated_at': DateTime.now().toIso8601String(),
       }, onConflict: 'company_id,employee_id,target_type,target_month');
-      await _loadExecutiveStaffPerformance(companyId, month, DateTime(month.year, month.month + 1));
+      await _loadExecutiveStaffPerformance(companyId, month, DateTime(month.year, month.month + 1), loadSales: false, loadPurchases: true);
       if (mounted) ErpCenterToast.show(context, 'تم حفظ هدف المشتريات الشهري.');
     } catch (e) {
       if (mounted) ErpCenterToast.show(context, 'تعذر حفظ الهدف: $e', isError: true, duration: const Duration(seconds: 3));

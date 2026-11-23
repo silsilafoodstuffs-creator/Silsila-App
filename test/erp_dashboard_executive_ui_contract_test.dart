@@ -46,6 +46,7 @@ void main() {
     expect(dashboard, contains("_executivePeriod.contains('الشهر')"));
     expect(dashboard, contains("اختر فترة شهرية لمقارنة الهدف"));
     expect(dashboard, contains("loadPurchases && useMonthlyTargets"));
+    expect(dashboard, contains('loadSales: false, loadPurchases: true'));
   });
 
   test('executive summary adapts to phone, tablet, and desktop widths', () {
