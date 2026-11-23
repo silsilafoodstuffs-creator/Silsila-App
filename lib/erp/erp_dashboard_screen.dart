@@ -3470,13 +3470,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     decoration: BoxDecoration(
       gradient: const LinearGradient(
         begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Color(0xFF241333), Color(0xFF170D23), Color(0xFF32134B)],
+        colors: [Colors.white, Color(0xFFFCFAFF), Color(0xFFF5EFFB)],
       ),
       borderRadius: BorderRadius.circular(21),
-      border: Border.all(color: color.withValues(alpha: .48), width: 1.15),
+      border: Border.all(color: color.withValues(alpha: .18), width: 1),
       boxShadow: [
-        BoxShadow(color: color.withValues(alpha: .17), blurRadius: 22, offset: const Offset(0, 8)),
-        const BoxShadow(color: Color(0x55000000), blurRadius: 16, offset: Offset(0, 7)),
+        BoxShadow(color: const Color(0x103E007D), blurRadius: 16, offset: const Offset(0, 5)),
+        const BoxShadow(color: Color(0x083E007D), blurRadius: 10, offset: Offset(0, 3)),
       ],
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -3484,16 +3484,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle,
           boxShadow: [BoxShadow(color: color.withValues(alpha: .8), blurRadius: 9, spreadRadius: 1)])),
         const SizedBox(width: 9),
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w900))),
+        Expanded(child: Text(title, style: const TextStyle(fontSize: 14, color: Color(0xFF241735), fontWeight: FontWeight.w900))),
         Text(value, style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.w900)),
       ]),
       const SizedBox(height: 4),
-      Text(caption, style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: .58))),
+      Text(caption, style: const TextStyle(fontSize: 10, color: Color(0xFF766B80))),
       const SizedBox(height: 9),
       Expanded(child: CustomPaint(painter: chart, child: const SizedBox.expand())),
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: footerLabels.take(3).map((label) => Expanded(
         child: Text(label, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: .55), fontWeight: FontWeight.w600)),
+          style: const TextStyle(fontSize: 10, color: Color(0xFF766B80), fontWeight: FontWeight.w600)),
       )).toList()),
     ]),
   );
@@ -3770,7 +3770,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }) {
     final chartRows = rows.where((row) => row['isPercent'] != true).toList();
     final donutRows = chartRows.isEmpty ? rows : chartRows;
-    final trendColor = trend == null ? const Color(0xFFB8A9C8) : trend >= 0 ? const Color(0xFF52E2B1) : const Color(0xFFFF7C9B);
+    final trendColor = trend == null ? const Color(0xFF766B80) : trend >= 0 ? const Color(0xFF168A70) : const Color(0xFFD94B76);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       decoration: BoxDecoration(
@@ -3786,7 +3786,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             color: const Color(0xFFB68CFF).withValues(alpha: .14),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: const Color(0xFFB68CFF).withValues(alpha: .28))),
-            child: Icon(icon, size: 17, color: const Color(0xFFD7B9FF))),
+            child: Icon(icon, size: 17, color: const Color(0xFF3E007D))),
           const SizedBox(width: 8),
           Expanded(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 12, height: 1.15, fontWeight: FontWeight.w900, color: Color(0xFF241735)))),
@@ -3823,7 +3823,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           final change = row['change'] as double?;
           final isPercent = row['isPercent'] == true;
           final positive = change != null && change >= 0;
-          final color = change == null ? const Color(0xFFB8A9C8) : positive ? const Color(0xFF52E2B1) : const Color(0xFFFF7C9B);
+          final color = change == null ? const Color(0xFF766B80) : positive ? const Color(0xFF168A70) : const Color(0xFFD94B76);
           return Row(children: [
             Expanded(flex: 5, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 11, color: Color(0xFF4A4053), fontWeight: FontWeight.w800))),
