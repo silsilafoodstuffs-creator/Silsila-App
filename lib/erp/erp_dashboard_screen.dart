@@ -3537,13 +3537,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
     decoration: BoxDecoration(
       gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Color(0xFF251334), Color(0xFF160D20), Color(0xFF321345)]),
+        colors: [Color(0xFFFFFFFF), Color(0xFFFCFAFF), Color(0xFFF5EFFB)]),
       borderRadius: BorderRadius.circular(21),
-      border: Border.all(color: const Color(0xFFFF27C3).withValues(alpha: .34)),
-      boxShadow: const [BoxShadow(color: Color(0x443E007D), blurRadius: 22, offset: Offset(0, 8))],
+      border: Border.all(color: const Color(0xFF3E007D).withValues(alpha: .14)),
+      boxShadow: const [BoxShadow(color: Color(0x103E007D), blurRadius: 18, offset: Offset(0, 5))],
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text(silsilaText('مؤشرات تحتاج متابعة'), style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w900)),
+      Text(silsilaText('مؤشرات تحتاج متابعة'), style: const TextStyle(fontSize: 16, color: Color(0xFF3E007D), fontWeight: FontWeight.w900)),
       const SizedBox(height: 8),
       _executiveHighlightRow('مديونية العملاء', _executiveMoney(_executiveReceivables), _pink),
       _executiveHighlightRow('مبيعات آخر 7 أيام', _executiveMoney(_executiveLast7Sales), const Color(0xFFB68CFF)),
@@ -3577,10 +3577,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     padding: const EdgeInsets.all(13),
     decoration: BoxDecoration(
       gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Color(0xFF281638), Color(0xFF190F25), Color(0xFF321548)]),
+        colors: [Colors.white, Color(0xFFFCFAFF), Color(0xFFF7F2FB)]),
       borderRadius: BorderRadius.circular(19),
-      border: Border.all(color: color.withValues(alpha: .36)),
-      boxShadow: [BoxShadow(color: color.withValues(alpha: .12), blurRadius: 18, offset: const Offset(0, 6))],
+      border: Border.all(color: color.withValues(alpha: .18)),
+      boxShadow: [BoxShadow(color: const Color(0x103E007D), blurRadius: 14, offset: const Offset(0, 4))],
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
@@ -3593,7 +3593,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           style: TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.w900))),
         _summaryAction('عرض الكل', () => _showExecutiveCategoryDetails(title, items)),
       ]),
-      Divider(height: 18, thickness: 1, color: Colors.white.withValues(alpha: .12)),
+      Divider(height: 18, thickness: 1, color: const Color(0xFF3E007D).withValues(alpha: .10)),
       ...items.map((item) => _executiveCompactMetric(
         title: item['title'] as String,
         value: item['value'] as String,
@@ -3622,9 +3622,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         const SizedBox(width: 9),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
           Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w800, height: 1.2)),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF241735), fontWeight: FontWeight.w800, height: 1.2)),
           Text(note, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: .48), height: 1.2)),
+            style: const TextStyle(fontSize: 9, color: Color(0xFF766B80), height: 1.2)),
         ])),
         const SizedBox(width: 5),
         Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -3701,12 +3701,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       padding: const EdgeInsets.fromLTRB(16, 15, 16, 14),
       decoration: BoxDecoration(
         gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Color(0xFF32164D), Color(0xFF1C1029), Color(0xFF140B1D)]),
+          colors: [Colors.white, Color(0xFFFCFAFF), Color(0xFFF4EEF9)]),
         borderRadius: BorderRadius.circular(21),
-        border: Border.all(color: color.withValues(alpha: .56), width: 1.15),
+        border: Border.all(color: color.withValues(alpha: .22), width: 1),
         boxShadow: [
-          BoxShadow(color: color.withValues(alpha: .22), blurRadius: 24, spreadRadius: -2, offset: const Offset(0, 8)),
-          const BoxShadow(color: Color(0x66000000), blurRadius: 15, offset: Offset(0, 7)),
+          BoxShadow(color: const Color(0x123E007D), blurRadius: 18, spreadRadius: -3, offset: const Offset(0, 5)),
+          const BoxShadow(color: Color(0x0A3E007D), blurRadius: 10, offset: Offset(0, 3)),
         ],
       ),
       child: Stack(children: [
@@ -3733,10 +3733,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w900, letterSpacing: .15)),
               const SizedBox(height: 6),
               Text(_executiveMoney(value), maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: -.25)),
+                style: const TextStyle(fontSize: 20, color: Color(0xFF241735), fontWeight: FontWeight.w900, letterSpacing: -.25)),
               const SizedBox(height: 4),
               Text(note, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: .56))),
+                style: const TextStyle(fontSize: 9, color: Color(0xFF766B80))),
             ])),
           const SizedBox(width: 7),
           Column(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -3775,10 +3775,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       decoration: BoxDecoration(
         gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Color(0xFF2A173B), Color(0xFF190F25), Color(0xFF321548)]),
+          colors: [Colors.white, Color(0xFFFCFAFF), Color(0xFFF7F2FB)]),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFB68CFF).withValues(alpha: .28)),
-        boxShadow: const [BoxShadow(color: Color(0x443E007D), blurRadius: 19, offset: Offset(0, 7))],
+        border: Border.all(color: const Color(0xFF3E007D).withValues(alpha: .14)),
+        boxShadow: const [BoxShadow(color: Color(0x103E007D), blurRadius: 15, offset: Offset(0, 4))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
@@ -3796,7 +3796,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             Text('${trend.abs().toStringAsFixed(1)}%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: trendColor)),
           ],
         ]),
-        Divider(height: 15, color: Colors.white.withValues(alpha: .12)),
+        Divider(height: 15, color: const Color(0xFF3E007D).withValues(alpha: .10)),
         SizedBox(height: 82, child: Row(children: [
           SizedBox(width: 82, height: 82, child: CustomPaint(
             painter: _ExecutiveDonutPainter(values: donutRows.map((row) => (row['value'] as num?)?.toDouble() ?? 0).toList()),
@@ -3811,12 +3811,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               return Padding(padding: const EdgeInsets.symmetric(vertical: 1), child: Text(
                 '$label • ${percent.toStringAsFixed(1)}% • ${_executiveMoney((row['value'] as num?)?.toDouble()).replaceAll(' ج.م', '')}',
                 maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white.withValues(alpha: .72)),
+                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF766B80)),
               ));
             }).toList(),
           )),
         ])),
-        Divider(height: 15, color: Colors.white.withValues(alpha: .12)),
+        Divider(height: 15, color: const Color(0xFF3E007D).withValues(alpha: .10)),
         Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.spaceAround, children: rows.map((row) {
           final label = row['label']! as String;
           final value = row['value'] as double?;
