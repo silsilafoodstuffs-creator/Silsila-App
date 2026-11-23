@@ -3303,7 +3303,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                               : 'بيانات فعلية من الحركات المرحلة • $_executivePeriod',
                   style: TextStyle(color: Colors.white.withValues(alpha: .82), fontSize: 10, fontWeight: FontWeight.w600),
                 )),
-                _summaryAction('كل التحليلات', () => _showExecutiveCategoryDetails('جميع التحليلات', allItems)),
+                _summaryAction('كل التحليلات', () => _showExecutiveCategoryDetails('جميع التحليلات', allItems), foreground: Colors.white),
               ]),
             ]),
           ]),
@@ -3446,7 +3446,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     });
   }
 
-  Widget _summaryAction(String label, VoidCallback onPressed) => TextButton(
+  Widget _summaryAction(String label, VoidCallback onPressed, {Color foreground = _purple}) => TextButton(
     onPressed: onPressed,
     style: TextButton.styleFrom(
       minimumSize: const Size(0, 25),
@@ -3454,7 +3454,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       visualDensity: VisualDensity.compact,
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
     ),
-    child: Text(label, style: const TextStyle(color: _purple, fontSize: 12, fontWeight: FontWeight.w800)),
+    child: Text(label, style: TextStyle(color: foreground, fontSize: 12, fontWeight: FontWeight.w800)),
   );
 
   Widget _executiveChartPanel({
@@ -4201,7 +4201,7 @@ class _ExecutiveDonutPainter extends CustomPainter {
     final label = TextPainter(
       text: TextSpan(
         text: '100%',
-        style: TextStyle(color: Colors.white, fontSize: (size.shortestSide * .12).clamp(10.0, 15.0), fontWeight: FontWeight.w900),
+        style: TextStyle(color: const Color(0xFF3E007D), fontSize: (size.shortestSide * .12).clamp(10.0, 15.0), fontWeight: FontWeight.w900),
       ),
       textDirection: TextDirection.rtl,
       textAlign: TextAlign.center,
