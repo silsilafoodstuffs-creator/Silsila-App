@@ -3490,7 +3490,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       const SizedBox(height: 4),
       Text(caption, style: const TextStyle(fontSize: 10, color: Color(0xFF766B80))),
       const SizedBox(height: 9),
-      Expanded(child: CustomPaint(painter: chart, child: const SizedBox.expand())),
+      Expanded(child: RepaintBoundary(child: CustomPaint(painter: chart, child: const SizedBox.expand()))),
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: footerLabels.take(3).map((label) => Expanded(
         child: Text(label, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 10, color: Color(0xFF766B80), fontWeight: FontWeight.w600)),
@@ -3798,9 +3798,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         ]),
         Divider(height: 15, color: const Color(0xFF3E007D).withValues(alpha: .10)),
         SizedBox(height: 82, child: Row(children: [
-          SizedBox(width: 82, height: 82, child: CustomPaint(
+          SizedBox(width: 82, height: 82, child: RepaintBoundary(child: CustomPaint(
             painter: _ExecutiveDonutPainter(values: donutRows.map((row) => (row['value'] as num?)?.toDouble() ?? 0).toList()),
-          )),
+          ))),
           const SizedBox(width: 9),
           Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch, children: donutRows.map((row) {
