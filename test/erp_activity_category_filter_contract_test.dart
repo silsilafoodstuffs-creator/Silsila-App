@@ -27,11 +27,17 @@ void main() {
 
   test('category source rows retain names, status, visibility and hierarchy metadata', () {
     expect(categoryScreen, contains("Map<String, dynamic>.from(row)"));
+    // The wildcard must remain selected for "كل الأنشطة". A specific,
+    // unavailable activity falls back to food, then the first actual code.
     expect(categoryScreen, contains("_selectedActivityCode = _selectedActivityCode == '*'"));
+    expect(categoryScreen, contains("displayCodes.contains(wanted)"));
+    expect(categoryScreen, contains("displayCodes.contains(defaultActivity)"));
+    expect(categoryScreen, contains("sortedActualCodes.isNotEmpty"));
     expect(categoryScreen, contains("if (_selectedActivityCode == '*') return true;"));
     expect(categoryScreen, contains("value: '*',"));
     expect(categoryScreen, contains("final draftActivityCode = _selectedActivityCode == '*' ? '01' : _selectedActivityCode;"));
   });
+
   test('main, sub and secondary category tabs share the compact activity grid contract', () {
     expect(categoryScreen, contains("String _viewMode = 'grid';"));
     expect(categoryScreen, contains("MediaQuery.sizeOf(context).width * 0.25"));
@@ -63,5 +69,4 @@ void main() {
     expect(categoryScreen, contains("final roots = ordered(rows.where((row) => row['parent_id'] == null).toList());"));
     expect(categoryScreen, contains("subsByRoot[rootId] = subs;"));
   });
-
 }
