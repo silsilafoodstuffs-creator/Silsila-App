@@ -2451,6 +2451,59 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     setState(() {
       _executiveMetricsLoading = true;
       _executiveMetricsError = null;
+      _executivePreviousSales = null;
+      _executivePreviousPurchases = null;
+      _executivePreviousGrossProfit = null;
+      _executivePreviousExpenses = null;
+      _executiveSales = null;
+      _executiveGrossSales = null;
+      _executiveSalesReturns = null;
+      _executiveGrossPurchases = null;
+      _executivePurchaseReturns = null;
+      _executiveGrossProfit = null;
+      _executiveCollections = null;
+      _executiveReceivables = null;
+      _executivePurchases = null;
+      _executiveInventoryValue = null;
+      _executiveExpenses = null;
+      _executiveFixedAssetsGross = null;
+      _executiveFixedAssetsDepreciation = null;
+      _executiveFixedAssetsNet = null;
+      _executiveCashInflows = null;
+      _executiveCashOutflows = null;
+      _executiveCashNetFlow = null;
+      _executiveAverageInvoice = null;
+      _executiveSalesReturnRate = null;
+      _executiveAttendanceRate = null;
+      _executivePayrollNetTotal = null;
+      _executiveInvoiceCount = null;
+      _executiveReorderItemCount = null;
+      _executiveExpiryBatchCount = null;
+      _executiveExpiredBatchCount = null;
+      _executiveExpiryNext60BatchCount = null;
+      _executiveSlowMovingItemCount = null;
+      _executiveFulfillmentPendingCount = null;
+      _executivePendingApprovalCount = null;
+      _executiveSupplierOverdueDocuments = null;
+      _executiveCreditLimitExceededCount = null;
+      _executiveFulfillmentCancelledCount = null;
+      _executiveSupplierPayables = null;
+      _executiveInventoryTurnoverRate = null;
+      _executiveDataCompletenessRate = null;
+      _executiveBranchSales = <Map<String, dynamic>>[];
+      _executiveTopProfitableItems = <Map<String, dynamic>>[];
+      _executiveCategorySales = <Map<String, dynamic>>[];
+      _executiveTopCustomers = <String>[];
+      _executiveTopItems = <String>[];
+      _executiveDailySales = <double>[];
+      _executiveDailyCollections = <double>[];
+      _executiveInventoryGroupLabels = <String>[];
+      _executiveInventoryGroupValues = <double>[];
+      _executiveSalesReps = <Map<String, dynamic>>[];
+      _executiveSalesDocuments = <Map<String, dynamic>>[];
+      _executivePurchaseEmployees = <Map<String, dynamic>>[];
+      _executivePurchaseDocuments = <Map<String, dynamic>>[];
+      _executiveEmployeeTargets = <Map<String, dynamic>>[];
     });
     final now = DateTime.now();
     DateTime activityStart = DateTime(2000, 1, 1);
@@ -2473,6 +2526,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     final previousStart = _executivePeriod == 'من بداية النشاط'
         ? bounds.start
         : bounds.start.subtract(duration);
+    final canSales = !_executivePartialConfigured || _executiveAllowedSections.contains('مبيعات');
+    final canInventory = !_executivePartialConfigured || _executiveAllowedSections.contains('المخزون والمشتريات');
     try {
       Future<Map<String, dynamic>> fetchMetrics(DateTime start, DateTime end) async {
         final raw = await Supabase.instance.client.rpc(
@@ -2593,20 +2648,34 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         // Keep the RPC response contract aligned with erp_executive_metrics_rpc.sql.
         _executiveInventoryGroupLabels = stringList(currentData, 'inventory_category_labels');
         _executiveInventoryGroupValues = numberList(currentData, 'inventory_category_values');
-        _executiveMetricsLoading = false;
       });
-      await _loadExecutiveStaffPerformance(companyId, bounds.start, bounds.end);
-      await _loadExecutiveExpiryMetrics(companyId);
+      if (canSales || canInventory) {
+        await _loadExecutiveStaffPerformance(
+          companyId,
+          bounds.start,
+          bounds.end,
+          loadSales: canSales,
+          loadPurchases: canInventory,
+        );
+      }
+      if (canInventory) {
+        await _loadExecutiveExpiryMetrics(companyId);
+      }
     } catch (error) {
       if (!mounted) return;
-      setState(() {
-        _executiveMetricsError = error.toString();
-        _executiveMetricsLoading = false;
-      });
+      setState(() => _executiveMetricsError = error.toString());
+    } finally {
+      if (mounted) setState(() => _executiveMetricsLoading = false);
     }
   }
 
-  Future<void> _loadExecutiveStaffPerformance(String companyId, DateTime start, DateTime end) async {
+  Future<void> _loadExecutiveStaffPerformance(
+    String companyId,
+    DateTime start,
+    DateTime end, {
+    required bool loadSales,
+    required bool loadPurchases,
+  }) async {
     // Load each optional source independently. A missing column/table or an RLS
     // restriction must not hide the names returned successfully by other sources.
     Future<List<dynamic>> safeRows(dynamic Function() request) async {
@@ -2621,28 +2690,44 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     final from = start.toIso8601String().substring(0, 10);
     final to = end.toIso8601String().substring(0, 10);
     final month = DateTime(start.year, start.month).toIso8601String().substring(0, 10);
+    final db = Supabase.instance.client;
+    final useMonthlyTargets = _executivePeriod.contains('الشهر');
     final results = await Future.wait<List<dynamic>>([
-      safeRows(() => Supabase.instance.client
-          .from('erp_sales_representatives').select('*')
-          .eq('company_id', companyId).eq('is_active', true)),
-      safeRows(() => Supabase.instance.client
-          .from('erp_sales_documents').select('*')
-          .eq('company_id', companyId).eq('status', 'posted')
-          .gte('document_date', from).lt('document_date', to)),
-      safeRows(() => Supabase.instance.client
-          .from('erp_employee_directory').select('*')
-          .eq('company_id', companyId).eq('is_active', true)),
-      safeRows(() => Supabase.instance.client
-          .from('erp_purchase_documents').select('*')
-          .eq('company_id', companyId).eq('status', 'posted')
-          .gte('document_date', from).lt('document_date', to)),
-      safeRows(() => Supabase.instance.client
-          .from('erp_employee_monthly_targets')
-          .select('employee_id,target_type,target_month,target_amount')
-          .eq('company_id', companyId).eq('target_month', month)),
-      safeRows(() => Supabase.instance.client
-          .from('erp_users').select('auth_user_id,employee_id')
-          .eq('company_id', companyId).eq('is_active', true)),
+      loadSales
+          ? safeRows(() => db
+              .from('erp_sales_representatives').select('*')
+              .eq('company_id', companyId).eq('is_active', true))
+          : Future.value(<dynamic>[]),
+      loadSales
+          ? safeRows(() => db
+              .from('erp_sales_documents').select('*')
+              .eq('company_id', companyId).eq('status', 'posted')
+              .eq('is_demo_data', false)
+              .gte('document_date', from).lt('document_date', to))
+          : Future.value(<dynamic>[]),
+      loadPurchases
+          ? safeRows(() => db
+              .from('erp_employee_directory').select('*')
+              .eq('company_id', companyId).eq('is_active', true))
+          : Future.value(<dynamic>[]),
+      loadPurchases
+          ? safeRows(() => db
+              .from('erp_purchase_documents').select('*')
+              .eq('company_id', companyId).eq('status', 'posted')
+              .eq('is_demo_data', false)
+              .gte('document_date', from).lt('document_date', to))
+          : Future.value(<dynamic>[]),
+      loadPurchases && useMonthlyTargets
+          ? safeRows(() => db
+              .from('erp_employee_monthly_targets')
+              .select('employee_id,target_type,target_month,target_amount')
+              .eq('company_id', companyId).eq('target_month', month))
+          : Future.value(<dynamic>[]),
+      loadPurchases
+          ? safeRows(() => db
+              .from('erp_users').select('auth_user_id,employee_id')
+              .eq('company_id', companyId).eq('is_active', true))
+          : Future.value(<dynamic>[]),
     ]);
     if (!mounted) return;
 
@@ -2677,6 +2762,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           employee['auth_user_id'] ??= employeeAuthIds[employee['id']?.toString()];
           return employee;
         })
+        .where((employee) => employee['is_demo_data'] != true)
         .toList();
 
     final purchaseDocuments = results[3]
@@ -2737,7 +2823,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () => _changeExecutivePeriod(period),
+          onTap: _executiveMetricsLoading ? null : () => _changeExecutivePeriod(period),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             padding: const EdgeInsetsDirectional.fromSTEB(5, 2, 11, 2),
@@ -2752,7 +2838,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Checkbox(
                 value: selected,
-                onChanged: (value) { if (value == true) _changeExecutivePeriod(period); },
+                onChanged: _executiveMetricsLoading ? null : (value) { if (value == true) _changeExecutivePeriod(period); },
                 activeColor: const Color(0xFFFFA015),
                 checkColor: const Color(0xFF28103E),
                 side: BorderSide(color: Colors.white.withValues(alpha: .65), width: 1.2),
@@ -2773,7 +2859,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }
 
   void _changeExecutivePeriod(String period) {
-    if (_executivePeriod == period) return;
+    if (_executiveMetricsLoading || _executivePeriod == period) return;
     setState(() => _executivePeriod = period);
     final companyId = _appManagementCompanyId;
     if (companyId != null) _loadExecutiveMetrics(companyId);
@@ -2856,11 +2942,11 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     return matching.isEmpty ? 0 : _performanceNumber(matching.first['target_amount']);
   }
 
-  Widget _staffPerformanceCard({required String title, required IconData icon, required Color color, required List<Map<String, dynamic>> people, required double Function(Map<String, dynamic>) actualFor, required double Function(Map<String, dynamic>) targetFor, required String Function(Map<String, dynamic>) nameFor, required String Function(Map<String, dynamic>) classificationFor, required bool showAll, required VoidCallback onToggle, required String emptyText, ValueChanged<Map<String, dynamic>>? onEditTarget}) {
+  Widget _staffPerformanceCard({required String title, required IconData icon, required Color color, required List<Map<String, dynamic>> people, required double Function(Map<String, dynamic>) actualFor, required double Function(Map<String, dynamic>) targetFor, required String Function(Map<String, dynamic>) nameFor, required String Function(Map<String, dynamic>) classificationFor, required bool showAll, required VoidCallback onToggle, required String emptyText, required String noTargetLabel, ValueChanged<Map<String, dynamic>>? onEditTarget}) {
     final sorted = [...people]..sort((a, b) {
       final aTarget = targetFor(a), bTarget = targetFor(b);
-      final aRate = aTarget > 0 ? actualFor(a) / aTarget : -1.0;
-      final bRate = bTarget > 0 ? actualFor(b) / bTarget : -1.0;
+      final aRate = aTarget > 0 ? actualFor(a) / aTarget : actualFor(a);
+      final bRate = bTarget > 0 ? actualFor(b) / bTarget : actualFor(b);
       return bRate.compareTo(aRate);
     });
     final visible = showAll ? sorted : sorted.take(5).toList();
@@ -2898,18 +2984,39 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               Row(children: [
                 Expanded(child: Text(nameFor(person), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Color(0xFF2C2435), fontWeight: FontWeight.w900))),
                 const SizedBox(width: 8),
-                Text(target > 0 ? '${(ratio * 100).toStringAsFixed(0)}%' : 'الهدف غير محدد', style: TextStyle(fontSize: 12, color: rateColor, fontWeight: FontWeight.w900)),
+                Flexible(child: Text(target > 0 ? '${(ratio * 100).toStringAsFixed(0)}%' : noTargetLabel,
+                  maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end,
+                  style: TextStyle(fontSize: 11, color: rateColor, fontWeight: FontWeight.w800))),
               ]),
               const SizedBox(height: 2),
-              Row(children: [
-                Expanded(child: Text(classificationFor(person), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w700))),
-                Text('فعلي: ${_executiveMoney(actual)}', style: const TextStyle(fontSize: 10, color: Colors.black87, fontWeight: FontWeight.w800)),
-                const SizedBox(width: 8),
-                Text('هدف: ${target > 0 ? _executiveMoney(target) : '—'}', style: const TextStyle(fontSize: 10, color: Colors.black54)),
-                if (onEditTarget != null) IconButton(tooltip: 'تحديد الهدف الشهري', visualDensity: VisualDensity.compact, constraints: const BoxConstraints.tightFor(width: 28, height: 28), padding: EdgeInsets.zero, onPressed: () => onEditTarget(person), icon: const Icon(Icons.edit_outlined, size: 15, color: _purple)),
-              ]),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 180),
+                    child: Text(classificationFor(person), maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w700)),
+                  ),
+                  Text('فعلي: ${_executiveMoney(actual)}', maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 10, color: Colors.black87, fontWeight: FontWeight.w800)),
+                  Text('هدف: ${target > 0 ? _executiveMoney(target) : '—'}', maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 10, color: Colors.black54)),
+                  if (onEditTarget != null)
+                    IconButton(
+                      tooltip: 'تحديد الهدف الشهري',
+                      visualDensity: VisualDensity.compact,
+                      constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+                      padding: EdgeInsets.zero,
+                      onPressed: () => onEditTarget(person),
+                      icon: const Icon(Icons.edit_outlined, size: 15, color: _purple),
+                    ),
+                ],
+              ),
               const SizedBox(height: 5),
-              ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(value: target > 0 ? ratio.clamp(0.0, 1.0).toDouble() : 0, minHeight: 7, backgroundColor: const Color(0xFFEFEAF4), color: rateColor)),
+              if (target > 0)
+                ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(value: ratio.clamp(0.0, 1.0).toDouble(), minHeight: 7, backgroundColor: const Color(0xFFEFEAF4), color: rateColor)),
             ]),
           );
         }),
@@ -2961,32 +3068,61 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     }
   }
 
-  Widget _executiveStaffPerformance() => LayoutBuilder(builder: (context, constraints) {
-    final sales = _staffPerformanceCard(
-      title: 'أداء مندوبي المبيعات', icon: Icons.trending_up_rounded, color: _purple,
-      people: _executiveSalesReps,
-      actualFor: _salesRepActual,
-      targetFor: (rep) => _performanceNumber(rep['monthly_sales_target']),
-      nameFor: (rep) => _staffName(rep, const ['rep_name', 'full_name', 'name_ar', 'name']),
-      classificationFor: (rep) => (rep['rep_classification'] ?? rep['channel'] ?? 'مندوب مبيعات').toString(),
-      showAll: _showAllSalesPerformance,
-      onToggle: () => setState(() => _showAllSalesPerformance = !_showAllSalesPerformance),
-      emptyText: 'لا توجد بيانات مندوبي مبيعات نشطة. أضف المندوبين وحدد أهدافهم الشهرية لعرض نسب الإنجاز.',
-    );
-    final purchases = _staffPerformanceCard(
-      title: 'أداء مسؤولي المشتريات', icon: Icons.shopping_cart_checkout_rounded, color: const Color(0xFF2475B8),
-      people: _executivePurchaseEmployees,
-      actualFor: _purchaseEmployeeActual,
-      targetFor: (employee) => _employeeTarget(employee['id'].toString(), 'purchase'),
-      nameFor: (employee) => _staffName(employee, const ['full_name', 'name_ar', 'employee_name', 'name']),
-      classificationFor: (employee) => '${employee['job_title'] ?? 'مسؤول مشتريات'} • ${employee['department_name'] ?? 'المشتريات'}',
-      showAll: _showAllPurchasePerformance,
-      onToggle: () => setState(() => _showAllPurchasePerformance = !_showAllPurchasePerformance),
-      emptyText: 'لا توجد بيانات لموظفي المشتريات النشطين. اربط الموظف بقسم/وظيفة المشتريات وحدد له هدفًا شهريًا.',
-      onEditTarget: _editPurchaseTarget,
-    );
-    if (constraints.maxWidth < 760) return Column(children: [sales, const SizedBox(height: 12), purchases]);
-    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: sales), const SizedBox(width: 12), Expanded(child: purchases)]);
+  Widget _executiveStaffPerformance({
+    required bool showSales,
+    required bool showPurchases,
+  }) => LayoutBuilder(builder: (context, constraints) {
+    final cards = <Widget>[
+      if (showSales)
+        _staffPerformanceCard(
+          title: 'أداء مندوبي المبيعات',
+          icon: Icons.trending_up_rounded,
+          color: _purple,
+          people: _executiveSalesReps,
+          actualFor: _salesRepActual,
+          targetFor: (rep) => _executivePeriod.contains('الشهر')
+              ? _performanceNumber(rep['monthly_sales_target'])
+              : 0,
+          nameFor: (rep) => _staffName(rep, const ['rep_name', 'full_name', 'name_ar', 'name']),
+          classificationFor: (rep) => (rep['rep_classification'] ?? rep['channel'] ?? 'مندوب مبيعات').toString(),
+          showAll: _showAllSalesPerformance,
+          onToggle: () => setState(() => _showAllSalesPerformance = !_showAllSalesPerformance),
+          emptyText: 'لا توجد بيانات مندوبي مبيعات نشطة. أضف المندوبين وحدد أهدافهم الشهرية لعرض نسب الإنجاز.',
+          noTargetLabel: _executivePeriod.contains('الشهر')
+              ? 'الهدف الشهري غير محدد'
+              : 'اختر فترة شهرية لمقارنة الهدف',
+        ),
+      if (showPurchases)
+        _staffPerformanceCard(
+          title: 'أداء مسؤولي المشتريات',
+          icon: Icons.shopping_cart_checkout_rounded,
+          color: const Color(0xFF2475B8),
+          people: _executivePurchaseEmployees,
+          actualFor: _purchaseEmployeeActual,
+          targetFor: (employee) => _executivePeriod.contains('الشهر')
+              ? _employeeTarget(employee['id'].toString(), 'purchase')
+              : 0,
+          nameFor: (employee) => _staffName(employee, const ['full_name', 'name_ar', 'employee_name', 'name']),
+          classificationFor: (employee) => '${employee['job_title'] ?? 'مسؤول مشتريات'} • ${employee['department_name'] ?? 'المشتريات'}',
+          showAll: _showAllPurchasePerformance,
+          onToggle: () => setState(() => _showAllPurchasePerformance = !_showAllPurchasePerformance),
+          emptyText: 'لا توجد بيانات لموظفي المشتريات النشطين. اربط الموظف بقسم/وظيفة المشتريات وحدد له هدفًا شهريًا.',
+          noTargetLabel: _executivePeriod.contains('الشهر')
+              ? 'الهدف الشهري غير محدد'
+              : 'اختر فترة شهرية لمقارنة الهدف',
+          onEditTarget: _executivePeriod.contains('الشهر') && _canPerformActionLabel('تعديل')
+              ? _editPurchaseTarget
+              : null,
+        ),
+    ];
+    if (cards.isEmpty) return const SizedBox.shrink();
+    if (cards.length == 1) return cards.first;
+    if (constraints.maxWidth < 760) return Column(children: [cards[0], const SizedBox(height: 12), cards[1]]);
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Expanded(child: cards[0]),
+      const SizedBox(width: 12),
+      Expanded(child: cards[1]),
+    ]);
   });
 
   Widget _home() {
@@ -3026,7 +3162,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'icon': Icons.account_balance_wallet_outlined,
         'color': _green,
         'items': <Map<String, Object>>[
-          {'title': 'مجمل الربح التقديري', 'value': _executiveMoney(_executiveGrossProfit), 'note': 'على تكلفة الشراء الحالية', 'icon': Icons.account_balance_rounded, 'color': _green, 'details': 'صافي الربح بعد تكلفة المبيعات والمصروفات وفق القيود المحاسبية المرحلة.'},
+          {'title': 'مجمل الربح التقديري', 'value': _executiveMoney(_executiveGrossProfit), 'note': 'على تكلفة الشراء الحالية', 'icon': Icons.account_balance_rounded, 'color': _green, 'details': 'الفرق التقديري بين صافي المبيعات وتكلفة الأصناف على تكلفة الشراء الحالية، قبل المصروفات التشغيلية.'},
           {'title': 'المدفوع على الفواتير', 'value': _executiveMoney(_executiveCollections), 'note': 'المدفوع المسجل على فواتير البيع', 'icon': Icons.payments_outlined, 'color': _green, 'details': 'المبالغ المحصلة والمتبقية ومعدل التحصيل حسب العميل والمندوب والفترة.'},
           {'title': 'ديون العملاء', 'value': _executiveMoney(_executiveReceivables), 'note': 'فواتير مرحلة غير مسددة بالكامل', 'icon': Icons.groups_rounded, 'color': _pink, 'details': 'أرصدة العملاء وأعمار الديون والمتأخرات وحدود الائتمان.'},
           {'title': 'مستحقات الموردين', 'value': _executiveSupplierPayables == null ? '— ج.م' : _executiveMoney(_executiveSupplierPayables), 'note': 'مستندات متأخرة: ${_executiveSupplierOverdueDocuments ?? '—'}', 'icon': Icons.local_shipping_outlined, 'color': _orange, 'details': 'أرصدة الموردين ومواعيد الاستحقاق وأعمار الديون وخطة السداد.'},
@@ -3142,65 +3278,106 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         ]),
       );
 
-      final financialCards = <Widget>[
-        _executiveAnalysisCard(
-          title: 'مجمل الربح التقديري',
-          icon: Icons.account_balance_rounded,
-          trend: _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit),
-          rows: [
-            _analysisRow('مجمل الربح التقديري', _executiveGrossProfit, _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit)),
-            _analysisRow('التغير عن الفترة السابقة', _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit), null, isPercent: true),
-            _analysisRow('هامش الربح التقديري', _executiveGrossProfit != null && _executiveSales != null && _executiveSales! > 0 ? (_executiveGrossProfit! / _executiveSales! * 100) : null, null, isPercent: true),
-          ],
-        ),
-        _executiveAnalysisCard(
-          title: 'تفصيل المبيعات',
-          icon: Icons.point_of_sale_rounded,
-          trend: _executiveChange(_executiveSales, _executivePreviousSales),
-          rows: [
-            _analysisRow('إجمالي المبيعات', _executiveGrossSales, null),
-            _analysisRow('مرتجعات المبيعات', _executiveSalesReturns, null),
-            _analysisRow('صافي المبيعات', _executiveSales, _executiveChange(_executiveSales, _executivePreviousSales)),
-          ],
-        ),
-        _executiveAnalysisCard(
-          title: 'تفصيل المشتريات',
-          icon: Icons.shopping_cart_outlined,
-          trend: _executiveChange(_executivePurchases, _executivePreviousPurchases),
-          rows: [
-            _analysisRow('إجمالي المشتريات', _executiveGrossPurchases, null),
-            _analysisRow('مرتجعات المشتريات', _executivePurchaseReturns, null),
-            _analysisRow('صافي المشتريات', _executivePurchases, _executiveChange(_executivePurchases, _executivePreviousPurchases)),
-          ],
-        ),
-        _executiveAnalysisCard(
-          title: 'المصروفات التشغيلية',
-          icon: Icons.receipt_long_rounded,
-          rows: [
-            _analysisRow('إجمالي المصروفات', _executiveExpenses, _executiveChange(_executiveExpenses, _executivePreviousExpenses)),
-            _analysisRow('التغير عن الفترة السابقة', _executiveChange(_executiveExpenses, _executivePreviousExpenses), null, isPercent: true),
-            _analysisRow('نسبة المصروفات من المبيعات', _executiveSales != null && _executiveSales! > 0 && _executiveExpenses != null ? (_executiveExpenses! / _executiveSales! * 100) : null, null, isPercent: true),
-          ],
-        ),
-        _executiveAnalysisCard(
-          title: 'الأصول والإهلاك',
-          icon: Icons.domain_rounded,
-          rows: [
-            _analysisRow('إجمالي تكلفة الأصول', _executiveFixedAssetsGross, null),
-            _analysisRow('مجمع الإهلاك', _executiveFixedAssetsDepreciation, null),
-            _analysisRow('صافي القيمة الدفترية', _executiveFixedAssetsNet, null),
-          ],
-        ),
-        _executiveAnalysisCard(
-          title: 'التدفقات النقدية',
-          icon: Icons.swap_vert_circle_outlined,
-          rows: [
-            _analysisRow('التدفقات الداخلة', _executiveCashInflows, null),
-            _analysisRow('التدفقات الخارجة', _executiveCashOutflows, null),
-            _analysisRow('صافي التدفق النقدي', _executiveCashNetFlow, null),
-          ],
-        ),
+      final kpiCards = <Widget>[
+        if (canFinance)
+          _executiveKpiCard(
+            title: 'نتيجة النشاط التقديرية',
+            value: netActivityResult,
+            change: netActivityChange,
+            icon: Icons.account_balance_rounded,
+            color: const Color(0xFF168A70),
+            note: 'مجمل الربح التقديري بعد المصروفات المسجلة',
+          ),
+        if (canSales)
+          _executiveKpiCard(
+            title: 'صافي المبيعات',
+            value: _executiveSales,
+            change: _executiveChange(_executiveSales, _executivePreviousSales),
+            icon: Icons.point_of_sale_rounded,
+            color: _purple,
+            note: 'بعد خصم مرتجعات المبيعات',
+          ),
+        if (canInventory)
+          _executiveKpiCard(
+            title: 'صافي المشتريات',
+            value: _executivePurchases,
+            change: _executiveChange(_executivePurchases, _executivePreviousPurchases),
+            icon: Icons.shopping_cart_checkout_rounded,
+            color: const Color(0xFF2475B8),
+            note: 'بعد خصم مرتجعات المشتريات',
+            neutralChange: true,
+          ),
       ];
+
+      final financialCards = <Widget>[
+        if (canFinance)
+          _executiveAnalysisCard(
+            title: 'مجمل الربح التقديري',
+            icon: Icons.account_balance_rounded,
+            trend: _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit),
+            rows: [
+              _analysisRow('مجمل الربح التقديري', _executiveGrossProfit, _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit)),
+              _analysisRow('التغير عن الفترة السابقة', _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit), null, isPercent: true),
+              _analysisRow('هامش الربح التقديري', _executiveGrossProfit != null && _executiveSales != null && _executiveSales! > 0 ? (_executiveGrossProfit! / _executiveSales! * 100) : null, null, isPercent: true),
+            ],
+          ),
+        if (canSales)
+          _executiveAnalysisCard(
+            title: 'تفصيل المبيعات',
+            icon: Icons.point_of_sale_rounded,
+            trend: _executiveChange(_executiveSales, _executivePreviousSales),
+            rows: [
+              _analysisRow('إجمالي المبيعات', _executiveGrossSales, null),
+              _analysisRow('مرتجعات المبيعات', _executiveSalesReturns, null),
+              _analysisRow('صافي المبيعات', _executiveSales, _executiveChange(_executiveSales, _executivePreviousSales)),
+            ],
+          ),
+        if (canInventory)
+          _executiveAnalysisCard(
+            title: 'تفصيل المشتريات',
+            icon: Icons.shopping_cart_outlined,
+            trend: _executiveChange(_executivePurchases, _executivePreviousPurchases),
+            neutralTrend: true,
+            rows: [
+              _analysisRow('إجمالي المشتريات', _executiveGrossPurchases, null),
+              _analysisRow('مرتجعات المشتريات', _executivePurchaseReturns, null),
+              _analysisRow('صافي المشتريات', _executivePurchases, _executiveChange(_executivePurchases, _executivePreviousPurchases)),
+            ],
+          ),
+        if (canFinance)
+          _executiveAnalysisCard(
+            title: 'المصروفات التشغيلية',
+            icon: Icons.receipt_long_rounded,
+            trend: _executiveChange(_executiveExpenses, _executivePreviousExpenses),
+            inverseTrend: true,
+            rows: [
+              _analysisRow('إجمالي المصروفات', _executiveExpenses, _executiveChange(_executiveExpenses, _executivePreviousExpenses)),
+              _analysisRow('التغير عن الفترة السابقة', _executiveChange(_executiveExpenses, _executivePreviousExpenses), null, isPercent: true),
+              _analysisRow('نسبة المصروفات من المبيعات', _executiveSales != null && _executiveSales! > 0 && _executiveExpenses != null ? (_executiveExpenses! / _executiveSales! * 100) : null, null, isPercent: true),
+            ],
+          ),
+        if (canFinance)
+          _executiveAnalysisCard(
+            title: 'الأصول والإهلاك',
+            icon: Icons.domain_rounded,
+            rows: [
+              _analysisRow('إجمالي تكلفة الأصول', _executiveFixedAssetsGross, null),
+              _analysisRow('مجمع الإهلاك', _executiveFixedAssetsDepreciation, null),
+              _analysisRow('صافي القيمة الدفترية', _executiveFixedAssetsNet, null),
+            ],
+          ),
+        if (canFinance)
+          _executiveAnalysisCard(
+            title: 'التدفقات النقدية',
+            icon: Icons.swap_vert_circle_outlined,
+            rows: [
+              _analysisRow('التدفقات الداخلة', _executiveCashInflows, null),
+              _analysisRow('التدفقات الخارجة', _executiveCashOutflows, null),
+              _analysisRow('صافي التدفق النقدي', _executiveCashNetFlow, null),
+            ],
+          ),
+      ];
+
 
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         // Executive command header: clear hierarchy, compact period controls, and live data state.
@@ -3299,99 +3476,60 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           ]),
         ),
         const SizedBox(height: 18),
-        sectionHeading('مؤشرات الأداء الرئيسية', 'الصورة السريعة لنتيجة النشاط وحركة التجارة', Icons.speed_rounded, _orange),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: wide ? 3 : tablet ? 2 : 1,
-          crossAxisSpacing: 11,
-          mainAxisSpacing: 11,
-          childAspectRatio: wide ? 2.35 : tablet ? 2.25 : 2.65,
-          children: [
-            _executiveKpiCard(
-              title: 'صافي نتيجة النشاط',
-              value: netActivityResult,
-              change: netActivityChange,
-              icon: Icons.account_balance_rounded,
-              color: const Color(0xFF168A70),
-              note: 'مجمل الربح التقديري بعد المصروفات',
-            ),
-            _executiveKpiCard(
-              title: 'صافي المبيعات',
-              value: _executiveSales,
-              change: _executiveChange(_executiveSales, _executivePreviousSales),
-              icon: Icons.point_of_sale_rounded,
-              color: _purple,
-              note: 'بعد خصم مرتجعات المبيعات',
-            ),
-            _executiveKpiCard(
-              title: 'صافي المشتريات',
-              value: _executivePurchases,
-              change: _executiveChange(_executivePurchases, _executivePreviousPurchases),
-              icon: Icons.shopping_cart_checkout_rounded,
-              color: const Color(0xFF2475B8),
-              note: 'بعد خصم مرتجعات المشتريات',
-            ),
-          ],
-        ),
-        const SizedBox(height: 19),
-        sectionHeading('التحليل المالي', 'تفاصيل الأداء والمقارنة بالفترة السابقة', Icons.account_balance_wallet_rounded, _green),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: columns,
-          crossAxisSpacing: 11,
-          mainAxisSpacing: 11,
-          childAspectRatio: wide ? 1.12 : tablet ? 1.10 : 1.18,
-          children: financialCards,
-        ),
-        const SizedBox(height: 20),
-        sectionHeading('الأداء التجاري والتشغيلي', 'متابعة فرق البيع والشراء ومؤشرات التنفيذ', Icons.groups_rounded, _pink),
-        _executiveStaffPerformance(),
-        const SizedBox(height: 20),
+        if (kpiCards.isNotEmpty) ...[
+          sectionHeading('مؤشرات الأداء الرئيسية', 'الصورة السريعة للمؤشرات المسموح بعرضها', Icons.speed_rounded, _orange),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: columns,
+            crossAxisSpacing: 11,
+            mainAxisSpacing: 11,
+            childAspectRatio: wide ? 2.35 : tablet ? 2.25 : 2.65,
+            children: kpiCards,
+          ),
+          const SizedBox(height: 19),
+        ],
+        if (financialCards.isNotEmpty) ...[
+          sectionHeading('التحليل المالي', 'تفاصيل الأداء والمقارنة بالفترة السابقة', Icons.account_balance_wallet_rounded, _green),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: columns,
+            crossAxisSpacing: 11,
+            mainAxisSpacing: 11,
+            childAspectRatio: wide ? 1.65 : tablet ? 1.48 : 1.38,
+            children: financialCards,
+          ),
+          const SizedBox(height: 20),
+        ],
+        if (canSales || canInventory) ...[
+          sectionHeading('الأداء التجاري والتشغيلي', 'متابعة فرق البيع والشراء ومؤشرات التنفيذ', Icons.groups_rounded, _pink),
+          _executiveStaffPerformance(showSales: canSales, showPurchases: canInventory),
+          const SizedBox(height: 20),
+        ],
         if (canSales || canFinance || canInventory) ...[
-          sectionHeading('اتجاهات الأداء', 'قراءة مرئية لحركة المبيعات والتحصيل والمخزون', Icons.query_stats_rounded, _purple),
-          if (wide || tablet)
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (canSales) Expanded(child: _executiveChartPanel(
-                title: 'اتجاه المبيعات',
-                caption: 'آخر 7 أيام • فواتير المبيعات المرحلة',
-                color: _purple,
-                value: _executiveMoney(_executiveLast7Sales),
-                chart: _ExecutiveChartPainter(color: _purple, values: _executiveDailySales),
-              )),
-              if (canSales && (canFinance || canInventory)) const SizedBox(width: 11),
-              if (canSales || canFinance) Expanded(child: _executiveChartPanel(
-                title: 'مزيج الأداء',
-                caption: 'مبيعات • مشتريات • المحصّل',
-                color: _orange,
-                value: _executiveMoney(_executivePurchases),
-                chart: _ExecutiveDonutPainter(values: <double>[_executiveSales ?? 0, _executivePurchases ?? 0, _executiveCollections ?? 0]),
-              )),
-            ])
-          else ...[
-            if (canSales) _executiveChartPanel(
+          sectionHeading('اتجاهات الأداء', 'قراءة مرئية للمؤشرات المسموح بعرضها', Icons.query_stats_rounded, _purple),
+          if (canSales)
+            _executiveChartPanel(
               title: 'اتجاه المبيعات',
               caption: 'آخر 7 أيام • فواتير المبيعات المرحلة',
               color: _purple,
               value: _executiveMoney(_executiveLast7Sales),
-              chart: _ExecutiveChartPainter(color: _purple, values: _executiveDailySales),
+              chart: _ExecutiveChartPainter(
+                color: _purple,
+                values: _executiveDailySales,
+                textDirection: Directionality.of(context),
+              ),
             ),
-            const SizedBox(height: 10),
-            if (canSales || canFinance) _executiveChartPanel(
-              title: 'مزيج الأداء',
-              caption: 'مبيعات • مشتريات • المحصّل',
-              color: _orange,
-              value: _executiveMoney(_executivePurchases),
-              chart: _ExecutiveDonutPainter(values: <double>[_executiveSales ?? 0, _executivePurchases ?? 0, _executiveCollections ?? 0]),
+          if (canFinance || canInventory) ...[
+            if (canSales) const SizedBox(height: 11),
+            _executiveAdditionalCharts(
+              sideBySide: wide || tablet,
+              showCollections: canFinance,
+              showInventory: canInventory,
+              textDirection: Directionality.of(context),
             ),
           ],
-          const SizedBox(height: 11),
-          if (canFinance || canInventory) _executiveAdditionalCharts(
-            sideBySide: wide || tablet,
-            showCollections: canFinance,
-            showInventory: canInventory,
-          ),
         ],
         const SizedBox(height: 20),
         sectionHeading('مؤشرات الإدارات والرقابة', 'نظرة موحدة على المبيعات والمالية والمخزون والتوزيع والموارد البشرية', Icons.hub_rounded, _orange),
@@ -3454,33 +3592,39 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required Color color,
     required String value,
     required CustomPainter chart,
+    bool hasData = true,
   }) => Container(
     height: 218,
     padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
     decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Colors.white, Color(0xFFFCFAFF), Color(0xFFF5EFFB)],
-      ),
-      borderRadius: BorderRadius.circular(21),
-      border: Border.all(color: color.withValues(alpha: .18), width: 1),
-      boxShadow: [
-        BoxShadow(color: const Color(0x103E007D), blurRadius: 16, offset: const Offset(0, 5)),
-        const BoxShadow(color: Color(0x083E007D), blurRadius: 10, offset: Offset(0, 3)),
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(19),
+      border: Border.all(color: color.withValues(alpha: .16)),
+      boxShadow: const [
+        BoxShadow(color: Color(0x0A3E007D), blurRadius: 13, offset: Offset(0, 4)),
       ],
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
-        Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: color.withValues(alpha: .8), blurRadius: 9, spreadRadius: 1)])),
+        Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 9),
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 14, color: Color(0xFF241735), fontWeight: FontWeight.w900))),
-        Text(value, style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.w900)),
+        Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 14, color: Color(0xFF241735), fontWeight: FontWeight.w900))),
+        const SizedBox(width: 8),
+        Flexible(child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.end,
+          style: const TextStyle(fontSize: 13, color: Color(0xFF3E007D), fontWeight: FontWeight.w900))),
       ]),
       const SizedBox(height: 4),
-      Text(caption, style: const TextStyle(fontSize: 10, color: Color(0xFF766B80))),
+      Text(caption, maxLines: 1, overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: 10, color: Color(0xFF766B80))),
       const SizedBox(height: 9),
-      Expanded(child: RepaintBoundary(child: CustomPaint(painter: chart, child: const SizedBox.expand()))),
+      Expanded(child: Stack(alignment: Alignment.center, children: [
+        Positioned.fill(child: RepaintBoundary(child: CustomPaint(painter: chart, child: const SizedBox.expand()))),
+        if (!hasData)
+          const Text('لا توجد بيانات متاحة للرسم', textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 10, color: Color(0xFF766B80), fontWeight: FontWeight.w700)),
+      ])),
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: footerLabels.take(3).map((label) => Expanded(
         child: Text(label, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 10, color: Color(0xFF766B80), fontWeight: FontWeight.w600)),
@@ -3488,23 +3632,38 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ]),
   );
 
-  Widget _executiveAdditionalCharts({required bool sideBySide, required bool showCollections, required bool showInventory}) {
+  Widget _executiveAdditionalCharts({
+    required bool sideBySide,
+    required bool showCollections,
+    required bool showInventory,
+    required TextDirection textDirection,
+  }) {
     final charts = <Widget>[
-      if (showCollections) _executiveChartPanel(
-        title: 'المدفوع المسجل على الفواتير',
-        caption: 'آخر 7 أيام • بيانات الفواتير المرحلة',
-        color: const Color(0xFF168A70),
-        value: _executiveMoney(_executiveCollections),
-        chart: _ExecutiveChartPainter(color: const Color(0xFF168A70), values: _executiveDailyCollections),
-      ),
-      if (showInventory) _executiveChartPanel(
-        title: 'قيمة المخزون حسب الفئة',
-        caption: 'تقدير على تكلفة الشراء الحالية',
-        color: _pink,
-        value: _executiveMoney(_executiveInventoryValue),
-        chart: _ExecutiveBarsPainter(values: _executiveInventoryGroupValues),
-        footerLabels: _executiveInventoryGroupLabels.take(3).toList(),
-      ),
+      if (showCollections)
+        _executiveChartPanel(
+          title: 'المدفوع المسجل على الفواتير',
+          caption: 'آخر 7 أيام • بيانات الفواتير المرحلة',
+          color: const Color(0xFF168A70),
+          value: _executiveMoney(_executiveCollections),
+          chart: _ExecutiveChartPainter(
+            color: const Color(0xFF168A70),
+            values: _executiveDailyCollections,
+            textDirection: textDirection,
+          ),
+        ),
+      if (showInventory)
+        _executiveChartPanel(
+          title: 'قيمة المخزون حسب الفئة',
+          caption: 'تقدير على تكلفة الشراء الحالية',
+          color: _pink,
+          value: _executiveMoney(_executiveInventoryValue),
+          chart: _ExecutiveBarsPainter(
+            values: _executiveInventoryGroupValues,
+            textDirection: textDirection,
+          ),
+          footerLabels: _executiveInventoryGroupLabels.take(3).toList(),
+          hasData: _executiveInventoryGroupValues.isNotEmpty,
+        ),
     ];
     if (charts.isEmpty) return const SizedBox.shrink();
     if (charts.length == 1) return charts.first;
@@ -3530,24 +3689,26 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }) => Container(
     padding: const EdgeInsets.all(13),
     decoration: BoxDecoration(
-      gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Colors.white, Color(0xFFFCFAFF), Color(0xFFF7F2FB)]),
-      borderRadius: BorderRadius.circular(19),
-      border: Border.all(color: color.withValues(alpha: .18)),
-      boxShadow: [BoxShadow(color: const Color(0x103E007D), blurRadius: 14, offset: const Offset(0, 4))],
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: color.withValues(alpha: .16)),
+      boxShadow: const [
+        BoxShadow(color: Color(0x0A3E007D), blurRadius: 12, offset: Offset(0, 3)),
+      ],
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
         Container(width: 34, height: 34, decoration: BoxDecoration(
-          gradient: LinearGradient(colors: [color.withValues(alpha: .30), color.withValues(alpha: .08)]),
-          borderRadius: BorderRadius.circular(11), border: Border.all(color: color.withValues(alpha: .35))),
+          color: color.withValues(alpha: .08),
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: color.withValues(alpha: .18))),
           child: Icon(icon, size: 19, color: color)),
         const SizedBox(width: 9),
         Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 13, color: Color(0xFF241735), fontWeight: FontWeight.w900))),
         _summaryAction('عرض الكل', () => _showExecutiveCategoryDetails(title, items)),
       ]),
-      Divider(height: 18, thickness: 1, color: const Color(0xFF3E007D).withValues(alpha: .10)),
+      const Divider(height: 18, thickness: 1, color: Color(0xFFECE7F2)),
       ...items.map((item) => _executiveCompactMetric(
         title: item['title'] as String,
         value: item['value'] as String,
@@ -3581,8 +3742,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             style: const TextStyle(fontSize: 9, color: Color(0xFF766B80), height: 1.2)),
         ])),
         const SizedBox(width: 5),
-        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w900)),
+        Flexible(child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.end,
+          style: const TextStyle(fontSize: 12, color: Color(0xFF3E007D), fontWeight: FontWeight.w900))),
         const SizedBox(width: 4),
         Icon(Icons.chevron_left_rounded, size: 16, color: const Color(0xFF3E007D).withValues(alpha: .42)),
       ]),
@@ -3649,97 +3811,109 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required IconData icon,
     required Color color,
     required String note,
+    bool inverseChange = false,
+    bool neutralChange = false,
   }) {
-    final trendColor = change == null ? const Color(0xFF766B80) : change >= 0 ? const Color(0xFF168A70) : const Color(0xFFD94B76);
+    final favorableChange = change == null ? null : inverseChange ? change < 0 : change >= 0;
+    final trendColor = change == null
+        ? const Color(0xFF766B80)
+        : neutralChange
+            ? const Color(0xFF2475B8)
+            : favorableChange!
+                ? const Color(0xFF168A70)
+                : const Color(0xFFD94B76);
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 15, 16, 14),
+      padding: const EdgeInsets.fromLTRB(15, 14, 15, 13),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Colors.white, Color(0xFFFCFAFF), Color(0xFFF4EEF9)]),
-        borderRadius: BorderRadius.circular(21),
-        border: Border.all(color: color.withValues(alpha: .22), width: 1),
-        boxShadow: [
-          BoxShadow(color: const Color(0x123E007D), blurRadius: 18, spreadRadius: -3, offset: const Offset(0, 5)),
-          const BoxShadow(color: Color(0x0A3E007D), blurRadius: 10, offset: Offset(0, 3)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withValues(alpha: .16)),
+        boxShadow: const [
+          BoxShadow(color: Color(0x0A3E007D), blurRadius: 12, offset: Offset(0, 3)),
         ],
       ),
-      child: Stack(children: [
-        PositionedDirectional(end: -26, top: -34, child: Container(width: 112, height: 112,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: .10),
-            boxShadow: [BoxShadow(color: color.withValues(alpha: .10), blurRadius: 24, spreadRadius: 6)]))),
-        PositionedDirectional(start: 0, top: 0, child: Container(width: 48, height: 3,
-          decoration: BoxDecoration(gradient: LinearGradient(colors: [color, color.withValues(alpha: 0)]),
-            borderRadius: BorderRadius.circular(4)))),
-        Row(children: [
-          Container(width: 45, height: 45,
+      child: Row(children: [
+        Container(
+          width: 43,
+          height: 43,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: .08),
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: color.withValues(alpha: .16)),
+          ),
+          child: Icon(icon, color: color, size: 21),
+        ),
+        const SizedBox(width: 11),
+        Expanded(child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF3E007D), fontWeight: FontWeight.w900)),
+            const SizedBox(height: 6),
+            Text(_executiveMoney(value), maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 20, color: Color(0xFF241735), fontWeight: FontWeight.w900, letterSpacing: -.2)),
+            const SizedBox(height: 4),
+            Text(note, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 9, color: Color(0xFF766B80))),
+          ],
+        )),
+        const SizedBox(width: 7),
+        Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Container(
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
-              gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-                colors: [color.withValues(alpha: .34), color.withValues(alpha: .10)]),
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: color.withValues(alpha: .55)),
-              boxShadow: [BoxShadow(color: color.withValues(alpha: .22), blurRadius: 15)],
+              color: trendColor.withValues(alpha: .09),
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(color: trendColor.withValues(alpha: .16)),
             ),
-            child: Icon(icon, color: color, size: 22)),
-          const SizedBox(width: 12),
-          Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w900, letterSpacing: .15)),
-              const SizedBox(height: 6),
-              Text(_executiveMoney(value), maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 20, color: Color(0xFF241735), fontWeight: FontWeight.w900, letterSpacing: -.25)),
-              const SizedBox(height: 4),
-              Text(note, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 9, color: Color(0xFF766B80))),
-            ])),
-          const SizedBox(width: 7),
-          Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Container(width: 36, height: 36,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: change == null
-                  ? [const Color(0xFF786A88), const Color(0xFF4C405B)]
-                  : change >= 0 ? [const Color(0xFF2CCB98), const Color(0xFF087A60)]
-                  : [const Color(0xFFFF829F), const Color(0xFFB72D58)]),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: trendColor.withValues(alpha: .28), blurRadius: 13, offset: const Offset(0, 4))],
-              ),
-              child: Icon(change == null ? Icons.remove_rounded : change >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-                color: Colors.white, size: 21)),
-            const SizedBox(height: 5),
-            Text(change == null ? '—%' : '${change.abs().toStringAsFixed(1)}%',
-              style: TextStyle(fontSize: 10, color: trendColor, fontWeight: FontWeight.w900)),
-          ]),
+            child: Icon(
+              change == null ? Icons.remove_rounded : change >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+              color: trendColor,
+              size: 19,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(change == null ? '—%' : '${change.abs().toStringAsFixed(1)}%',
+            style: TextStyle(fontSize: 10, color: trendColor, fontWeight: FontWeight.w900)),
         ]),
       ]),
     );
   }
-
-  
 
   Widget _executiveAnalysisCard({
     required String title,
     required IconData icon,
     required List<Map<String, Object?>> rows,
     double? trend,
+    bool inverseTrend = false,
+    bool neutralTrend = false,
   }) {
-    final chartRows = rows.where((row) => row['isPercent'] != true).toList();
-    final donutRows = chartRows.isEmpty ? rows : chartRows;
-    final trendColor = trend == null ? const Color(0xFF766B80) : trend >= 0 ? const Color(0xFF168A70) : const Color(0xFFD94B76);
+    final favorableTrend = trend == null ? null : inverseTrend ? trend < 0 : trend >= 0;
+    final trendColor = trend == null
+        ? const Color(0xFF766B80)
+        : neutralTrend
+            ? const Color(0xFF2475B8)
+            : favorableTrend!
+                ? const Color(0xFF168A70)
+                : const Color(0xFFD94B76);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Colors.white, Color(0xFFFCFAFF), Color(0xFFF7F2FB)]),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF3E007D).withValues(alpha: .14)),
-        boxShadow: const [BoxShadow(color: Color(0x103E007D), blurRadius: 15, offset: Offset(0, 4))],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF3E007D).withValues(alpha: .12)),
+        boxShadow: const [
+          BoxShadow(color: Color(0x0A3E007D), blurRadius: 12, offset: Offset(0, 3)),
+        ],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           Container(width: 31, height: 31, decoration: BoxDecoration(
-            color: const Color(0xFFB68CFF).withValues(alpha: .14),
+            color: const Color(0xFFF1EAF8),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFB68CFF).withValues(alpha: .28))),
+            border: Border.all(color: const Color(0xFF3E007D).withValues(alpha: .12))),
             child: Icon(icon, size: 17, color: const Color(0xFF3E007D))),
           const SizedBox(width: 8),
           Expanded(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
@@ -3750,44 +3924,33 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             Text('${trend.abs().toStringAsFixed(1)}%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: trendColor)),
           ],
         ]),
-        Divider(height: 15, color: const Color(0xFF3E007D).withValues(alpha: .10)),
-        SizedBox(height: 82, child: Row(children: [
-          SizedBox(width: 82, height: 82, child: RepaintBoundary(child: CustomPaint(
-            painter: _ExecutiveDonutPainter(values: donutRows.map((row) => (row['value'] as num?)?.toDouble() ?? 0).toList()),
-          ))),
-          const SizedBox(width: 9),
-          Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch, children: donutRows.map((row) {
-              final value = ((row['value'] as num?)?.toDouble() ?? 0).abs();
-              final total = donutRows.fold<double>(0, (sum, item) => sum + (((item['value'] as num?)?.toDouble() ?? 0).abs()));
-              final percent = total == 0 ? 0.0 : value / total * 100;
-              final label = (row['label'] ?? '').toString();
-              return Padding(padding: const EdgeInsets.symmetric(vertical: 1), child: Text(
-                '$label • ${percent.toStringAsFixed(1)}% • ${_executiveMoney((row['value'] as num?)?.toDouble()).replaceAll(' ج.م', '')}',
-                maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF766B80)),
-              ));
-            }).toList(),
-          )),
-        ])),
-        Divider(height: 15, color: const Color(0xFF3E007D).withValues(alpha: .10)),
+        const Divider(height: 15, color: Color(0xFFECE7F2)),
         Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.spaceAround, children: rows.map((row) {
           final label = row['label']! as String;
           final value = row['value'] as double?;
           final change = row['change'] as double?;
           final isPercent = row['isPercent'] == true;
           final positive = change != null && change >= 0;
-          final color = change == null ? const Color(0xFF766B80) : positive ? const Color(0xFF168A70) : const Color(0xFFD94B76);
+          final rowTrendColor = change == null
+              ? const Color(0xFF766B80)
+              : neutralTrend
+                  ? const Color(0xFF2475B8)
+                  : inverseTrend
+                      ? (positive ? const Color(0xFFD94B76) : const Color(0xFF168A70))
+                      : positive
+                          ? const Color(0xFF168A70)
+                          : const Color(0xFFD94B76);
           return Row(children: [
             Expanded(flex: 5, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 11, color: Color(0xFF4A4053), fontWeight: FontWeight.w800))),
-            Expanded(flex: 3, child: Text(value == null ? '—' : isPercent ? '${value.toStringAsFixed(1)}%' : _executiveMoney(value).replaceAll(' ج.م', ''),
+            Expanded(flex: 3, child: Text(
+              value == null ? '—' : isPercent ? '${value.toStringAsFixed(1)}%' : _executiveMoney(value).replaceAll(' ج.م', ''),
               textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF241735)))),
             SizedBox(width: 55, child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-              Icon(change == null ? Icons.remove_rounded : positive ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded, size: 11, color: color),
+              Icon(change == null ? Icons.remove_rounded : positive ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded, size: 11, color: rowTrendColor),
               Text(change == null ? '—%' : '${change.abs().toStringAsFixed(1)}%',
-                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: color)),
+                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: rowTrendColor)),
             ])),
           ]);
         }).toList())),
@@ -4122,54 +4285,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
 }
 
-class _ExecutiveDonutPainter extends CustomPainter {
-  const _ExecutiveDonutPainter({this.values = const <double>[]});
-  final List<double> values;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const palette = [_purple, _orange, Color(0xFF18865A), _pink, Color(0xFF4C9BE8)];
-    final total = values.fold<double>(0, (sum, value) => sum + (value > 0 ? value : 0));
-    final center = Offset(size.width / 2, size.height / 2);
-    final stroke = (size.shortestSide * .20).clamp(10.0, 22.0);
-    final rect = Rect.fromCircle(center: center, radius: (size.shortestSide - stroke) / 2);
-    final basePaint = Paint()
-      ..color = const Color(0xFFEFEAF4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke;
-    canvas.drawArc(rect, 0, 6.28318530718, false, basePaint);
-    if (total <= 0) return;
-    var start = -1.57079632679;
-    for (var i = 0; i < values.length; i++) {
-      final value = values[i] > 0 ? values[i] : 0;
-      if (value == 0) continue;
-      final sweep = value / total * 6.28318530718;
-      final paint = Paint()
-        ..color = palette[i % palette.length]
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke
-        ..strokeCap = StrokeCap.butt;
-      canvas.drawArc(rect, start, sweep, false, paint);
-      start += sweep;
-    }
-    final label = TextPainter(
-      text: TextSpan(
-        text: '100%',
-        style: TextStyle(color: const Color(0xFF3E007D), fontSize: (size.shortestSide * .12).clamp(10.0, 15.0), fontWeight: FontWeight.w900),
-      ),
-      textDirection: TextDirection.rtl,
-      textAlign: TextAlign.center,
-    )..layout(maxWidth: size.width);
-    label.paint(canvas, Offset(center.dx - label.width / 2, center.dy - label.height / 2));
-  }
-
-  @override
-  bool shouldRepaint(covariant _ExecutiveDonutPainter oldDelegate) => oldDelegate.values != values;
-}
-
 class _ExecutiveBarsPainter extends CustomPainter {
-  const _ExecutiveBarsPainter({this.values = const <double>[]});
+  const _ExecutiveBarsPainter({
+    this.values = const <double>[],
+    this.textDirection = TextDirection.rtl,
+  });
+
   final List<double> values;
+  final TextDirection textDirection;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -4180,29 +4303,54 @@ class _ExecutiveBarsPainter extends CustomPainter {
     }
     final source = values;
     if (source.isEmpty) return;
-    final maxValue = source.fold<double>(0, (max, value) => value > max ? value : max);
-    const colors = [Color(0xFFB68CFF), _orange, _pink, Color(0xFF9C75FF), _orange, _pink, Color(0xFFB68CFF)];
+    final maxAbsValue = source.fold<double>(0, (max, value) => value.abs() > max ? value.abs() : max);
+    final hasNegative = source.any((value) => value < 0);
+    final baseline = hasNegative ? size.height * .68 : size.height;
+    if (hasNegative) {
+      canvas.drawLine(Offset(0, baseline), Offset(size.width, baseline),
+        Paint()..color = const Color(0xFFBDB2C9)..strokeWidth = 1.2);
+    }
+    const colors = [
+      Color(0xFF3E007D),
+      Color(0xFF9A5B00),
+      Color(0xFFB00078),
+      Color(0xFF6A42A6),
+      Color(0xFF875000),
+      Color(0xFF94165F),
+      Color(0xFF5C2D91),
+    ];
     final slot = size.width / source.length;
     for (var i = 0; i < source.length; i++) {
+      final value = source[i];
+      final visualIndex = textDirection == TextDirection.rtl ? source.length - 1 - i : i;
       final barWidth = slot * .48;
-      final normalized = maxValue <= 0 ? .025 : (source[i] / maxValue).clamp(0.0, 1.0);
-      final h = size.height * normalized;
+      final normalized = maxAbsValue <= 0 ? 0.0 : value.abs() / maxAbsValue;
+      final availableHeight = value >= 0 ? baseline - 3 : size.height - baseline - 3;
+      final height = availableHeight * normalized;
+      final top = value >= 0 ? baseline - height : baseline;
       final rect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(slot * i + (slot - barWidth) / 2, size.height - h, barWidth, h),
+        Rect.fromLTWH(slot * visualIndex + (slot - barWidth) / 2, top, barWidth, height),
         const Radius.circular(4),
       );
-      canvas.drawRRect(rect, Paint()..color = colors[i % colors.length].withValues(alpha: .82));
+      canvas.drawRRect(rect, Paint()..color = colors[i % colors.length].withValues(alpha: .90));
     }
   }
 
   @override
-  bool shouldRepaint(covariant _ExecutiveBarsPainter oldDelegate) => oldDelegate.values != values;
+  bool shouldRepaint(covariant _ExecutiveBarsPainter oldDelegate) =>
+      oldDelegate.values != values || oldDelegate.textDirection != textDirection;
 }
 
 class _ExecutiveChartPainter extends CustomPainter {
-  const _ExecutiveChartPainter({required this.color, this.values = const <double>[]});
+  const _ExecutiveChartPainter({
+    required this.color,
+    this.values = const <double>[],
+    this.textDirection = TextDirection.rtl,
+  });
+
   final Color color;
   final List<double> values;
+  final TextDirection textDirection;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -4215,16 +4363,21 @@ class _ExecutiveChartPainter extends CustomPainter {
     }
     final source = values;
     if (source.length < 2) return;
+    final hasNegative = source.any((value) => value < 0);
+    final maxAbsValue = source.fold<double>(0, (max, value) => value.abs() > max ? value.abs() : max);
     final maxValue = source.fold<double>(0, (max, value) => value > max ? value : max);
     final points = List<Offset>.generate(source.length, (i) {
-      final x = source.length == 1 ? 0.0 : size.width * i / (source.length - 1);
+      final denominator = source.length - 1;
+      final xIndex = textDirection == TextDirection.rtl ? denominator - i : i;
+      final x = size.width * xIndex / denominator;
       final normalized = maxValue <= 0 ? .04 : (source[i] / maxValue).clamp(0.0, 1.0);
-      final y = size.height * (.88 - normalized * .70);
+      final y = hasNegative && maxAbsValue > 0
+          ? size.height * (.50 - (source[i] / maxAbsValue) * .38)
+          : size.height * (.88 - normalized * .70);
       return Offset(x, y);
     });
-    final lineColor = color.computeLuminance() < .12 ? const Color(0xFFB68CFF) : color;
     final linePaint = Paint()
-      ..color = lineColor
+      ..color = color
       ..strokeWidth = 3.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
@@ -4234,29 +4387,31 @@ class _ExecutiveChartPainter extends CustomPainter {
       path.lineTo(point.dx, point.dy);
     }
     final fillPath = Path.from(path)
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
+      ..lineTo(size.width, hasNegative ? size.height * .5 : size.height)
+      ..lineTo(0, hasNegative ? size.height * .5 : size.height)
       ..close();
     canvas.drawPath(
       fillPath,
       Paint()
         ..shader = LinearGradient(
-          colors: [lineColor.withValues(alpha: .28), lineColor.withValues(alpha: .015)],
+          colors: [color.withValues(alpha: .20), color.withValues(alpha: .015)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ).createShader(Offset.zero & size),
     );
     canvas.drawPath(path, linePaint);
-    final dotPaint = Paint()..color = lineColor;
+    final dotPaint = Paint()..color = color;
     for (final point in points) {
       canvas.drawCircle(point, 4, dotPaint);
-      canvas.drawCircle(point, 8, Paint()..color = lineColor.withValues(alpha: .18));
+      canvas.drawCircle(point, 8, Paint()..color = color.withValues(alpha: .15));
     }
   }
 
   @override
   bool shouldRepaint(covariant _ExecutiveChartPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.values != values;
+      oldDelegate.color != color ||
+      oldDelegate.values != values ||
+      oldDelegate.textDirection != textDirection;
 }
 
 /// Applies saved Studio visual tokens and density to every ERP page subtree.
