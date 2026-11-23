@@ -18,8 +18,10 @@ Performance counters below are cumulative since `pg_stat_statements_info.stats_r
 - 63 function bodies directly reference `auth.uid()`. Some of the others delegate identity checks to guarded helper functions; absence of a direct reference is not, by itself, proof of an authorization defect.
 - The shared company-role helper checks `auth.uid()`, active company membership, and allowed role. The warehouse/branch scope helpers also verify active ERP user linkage and explicit warehouse/branch assignment for non-owner/admin roles.
 - Six RLS-enabled tables have no policies: four category archive/recovery snapshots and two API credential/usage tables. They remain inaccessible through RLS and should stay private unless a reviewed use case requires access.
-- Supabase Advisor reports leaked-password protection disabled. This setting must be enabled through the project's Auth security configuration; this review did not change Auth settings.
-- Multiple-permissive-policy and per-row auth-initplan warnings remain for targeted review; do not consolidate policies without preserving their OR semantics and tenant/branch scope.
+- The five `anon`-executable functions were inspected: four read the deliberately public Silsila advertisement/brand-asset catalog; `get_targeted_active_offers` returns active, in-date offers and applies profile targeting when a profile exists. They are read-only, but their returned fields and public-data intent should remain covered by regression tests.
+- The 66 authenticated-executable functions include business writes and internal helper RPCs. The sampled sensitive functions enforce identity plus company role, warehouse scope, owner/admin role, platform-user role, or resource ownership. Several functions rely on guarded helper functions rather than repeating a direct `auth.uid()` check; do not classify those as unsafe based on text search alone.
+- Supabase Advisor reports leaked-password protection disabled. This setting must be enabled through the project's Auth security configuration; the connected Supabase actions do not expose an Auth security-settings update operation, so this review did not change it.
+- Multiple-permissive-policy (17) and per-row auth-initplan (10) warnings remain for targeted review; do not consolidate policies without preserving their OR semantics and tenant/branch scope.
 
 ### High-impact RPCs sampled
 
