@@ -828,7 +828,18 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       final rootsByActivity = <String, List<Map<String, dynamic>>>{};
       for (final root in roots) {
         final activityCode = _normalizeActivityCode(_s(root['activity_code']));
-        if (!RegExp(r'^\\d{2}
+        if (activityCode.length != 2 || int.tryParse(activityCode) == null) {
+          throw StateError('كود النشاط غير صالح للفئة الرئيسية «${_s(root['category_name'])}».');
+        }
+        rootsByActivity.putIfAbsent(activityCode, () => <Map<String, dynamic>>[]).add(root);
+      }
+      for (final entry in rootsByActivity.entries) {
+        if (entry.value.length > 99) throw StateError('النشاط ${entry.key} يتجاوز 99 فئة رئيسية.');
+        for (var i = 0; i < entry.value.length; i++) {
+          await saveCode(entry.value[i], entry.key + segment(i + 1));
+        }
+      }
+
       var subCount = 0;
       final subsByRoot = <String, List<Map<String, dynamic>>>{};
       for (final root in roots) {
