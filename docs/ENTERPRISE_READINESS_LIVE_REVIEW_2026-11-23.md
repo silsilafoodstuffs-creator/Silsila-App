@@ -74,3 +74,9 @@ This reduces unnecessary image transfer for rows filtered out by category and pa
 - Do not change production grants, RLS policies, function security modes, or indexes until a reviewed migration and non-production regression suite prove the exact behavior.
 - Keep full Web, Android Release signing, WebView, and Flutter tests required on the exact candidate commit.
 - Do not call the application production-ready or load-certified until the security, restore, monitoring, and workload gates above have evidence.
+
+## High-risk RPC correction queued as a migration
+
+A deeper check found `erp_rebuild_geographic_hierarchical_codes(uuid)` was executable by every authenticated user and gated only by active company membership, while the function can rewrite the entire company's geographic hierarchy and trigger customer-code regeneration. No Flutter/Dart application call site exists.
+
+The branch now includes `20261123020000_restrict_geographic_rebuild_rpc.sql`, which revokes execution from `PUBLIC`, `anon`, and `authenticated`, retaining a trusted `service_role` maintenance path. A contract test asserts the restricted grant and absence of an app call site. This migration is committed to the PR only; it has **not** been applied to production. Do not restore authenticated access without a documented owner/admin-only workflow and negative cross-company authorization tests.
