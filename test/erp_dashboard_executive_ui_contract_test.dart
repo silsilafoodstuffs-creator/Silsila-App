@@ -47,6 +47,8 @@ void main() {
     expect(dashboard, contains("اختر فترة شهرية لمقارنة الهدف"));
     expect(dashboard, contains("loadPurchases && useMonthlyTargets"));
     expect(dashboard, contains('loadSales: false, loadPurchases: true'));
+    expect(dashboard, contains('if (loadSales) {\n        _executiveSalesReps = salesReps;'));
+    expect(dashboard, contains('if (loadPurchases) {\n        _executivePurchaseEmployees = purchasingEmployees;'));
   });
 
   test('executive summary adapts to phone, tablet, and desktop widths', () {

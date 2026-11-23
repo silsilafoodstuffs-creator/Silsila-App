@@ -2794,14 +2794,18 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           .compareTo(_staffName(b, const ['full_name', 'name_ar', 'employee_name', 'name'])));
 
     setState(() {
-      _executiveSalesReps = salesReps;
-      _executiveSalesDocuments = salesDocuments;
-      _executivePurchaseEmployees = purchasingEmployees;
-      _executivePurchaseDocuments = purchaseDocuments;
-      _executiveEmployeeTargets = results[4]
-          .whereType<Map>()
-          .map((row) => Map<String, dynamic>.from(row))
-          .toList();
+      if (loadSales) {
+        _executiveSalesReps = salesReps;
+        _executiveSalesDocuments = salesDocuments;
+      }
+      if (loadPurchases) {
+        _executivePurchaseEmployees = purchasingEmployees;
+        _executivePurchaseDocuments = purchaseDocuments;
+        _executiveEmployeeTargets = results[4]
+            .whereType<Map>()
+            .map((row) => Map<String, dynamic>.from(row))
+            .toList();
+      }
     });
   }
 
