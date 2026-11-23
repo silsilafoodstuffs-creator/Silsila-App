@@ -27,7 +27,9 @@ void main() {
 
   test('category source rows retain names, status, visibility and hierarchy metadata', () {
     expect(categoryScreen, contains("Map<String, dynamic>.from(row)"));
-    expect(categoryScreen, contains("_selectedActivityCode = displayCodes.contains(wanted)"));
+    expect(categoryScreen, contains('final wanted = normalizeActivity(_selectedActivityCode);'));
+    expect(categoryScreen, contains("_selectedActivityCode = _selectedActivityCode == '*'"));
+    expect(categoryScreen, contains('displayCodes.contains(wanted)'));
   });
   test('main, sub and secondary category tabs share the compact activity grid contract', () {
     expect(categoryScreen, contains("String _viewMode = 'grid';"));
