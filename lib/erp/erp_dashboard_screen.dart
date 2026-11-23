@@ -3089,157 +3089,278 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     final canInventory = !_executivePartialConfigured || _executiveAllowedSections.contains('المخزون والمشتريات');
 
 
+    final netActivityResult = _executiveGrossProfit != null && _executiveExpenses != null
+        ? _executiveGrossProfit! - _executiveExpenses!
+        : null;
+    final previousNetActivityResult = _executivePreviousGrossProfit != null && _executivePreviousExpenses != null
+        ? _executivePreviousGrossProfit! - _executivePreviousExpenses!
+        : null;
+    final netActivityChange = _executiveChange(netActivityResult, previousNetActivityResult);
+
     return LayoutBuilder(builder: (context, outerConstraints) {
-      final wide = outerConstraints.maxWidth >= 900;
-      final mid = outerConstraints.maxWidth >= 600;
-      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE9E2F1)),
-            boxShadow: const [BoxShadow(color: Color(0x0D3E007D), blurRadius: 14, offset: Offset(0, 4))],
-          ),
-          child: Row(children: [
-            Container(
-              width: 42, height: 42,
-              decoration: BoxDecoration(color: const Color(0xFFF5EFFB), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE9DDF5))),
-              child: const Icon(Icons.insights_rounded, color: _purple, size: 30),
+      final width = outerConstraints.maxWidth;
+      final wide = width >= 1120;
+      final tablet = width >= 720;
+      final columns = wide ? 3 : tablet ? 2 : 1;
+      final canSales = !_executivePartialConfigured || _executiveAllowedSections.contains('مبيعات');
+      final canFinance = !_executivePartialConfigured || _executiveAllowedSections.contains('المالية والسيولة');
+      final canInventory = !_executivePartialConfigured || _executiveAllowedSections.contains('المخزون والمشتريات');
+      final canOperations = !_executivePartialConfigured ||
+          _executiveAllowedSections.contains('الطلبات والتوزيع') ||
+          _executiveAllowedSections.contains('الموظفون والفروع') ||
+          _executiveAllowedSections.contains('الرقابة والتنبيهات');
+
+      Widget periodPicker() => Wrap(
+        spacing: 6,
+        runSpacing: 5,
+        children: [
+          _executivePeriodCheckbox('السنة الحالية'),
+          _executivePeriodCheckbox('الشهر الحالي'),
+          _executivePeriodCheckbox('السنة السابقة'),
+          _executivePeriodCheckbox('الشهر السابق'),
+        ],
+      );
+
+      Widget sectionHeading(String title, String subtitle, IconData icon, Color color) => Padding(
+        padding: const EdgeInsetsDirectional.only(bottom: 10, top: 4),
+        child: Row(children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .10),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withValues(alpha: .16)),
             ),
-            const SizedBox(width: 16),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Expanded(child: Text(silsilaText('الملخص التنفيذي'), style: const TextStyle(fontSize: 22, height: 1.15, fontWeight: FontWeight.w900, color: _purple, letterSpacing: -.3))),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(silsilaText(title), style: const TextStyle(fontSize: 16, color: _purple, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 2),
+            Text(silsilaText(subtitle), style: const TextStyle(fontSize: 10, color: Color(0xFF766B80))),
+          ])),
+        ]),
+      );
+
+      final financialCards = <Widget>[
+        _executiveAnalysisCard(
+          title: 'مجمل الربح التقديري',
+          icon: Icons.account_balance_rounded,
+          trend: _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit),
+          rows: [
+            _analysisRow('مجمل الربح التقديري', _executiveGrossProfit, _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit)),
+            _analysisRow('التغير عن الفترة السابقة', _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit), null, isPercent: true),
+            _analysisRow('هامش الربح التقديري', _executiveGrossProfit != null && _executiveSales != null && _executiveSales! > 0 ? (_executiveGrossProfit! / _executiveSales! * 100) : null, null, isPercent: true),
+          ],
+        ),
+        _executiveAnalysisCard(
+          title: 'تفصيل المبيعات',
+          icon: Icons.point_of_sale_rounded,
+          trend: _executiveChange(_executiveSales, _executivePreviousSales),
+          rows: [
+            _analysisRow('إجمالي المبيعات', _executiveGrossSales, null),
+            _analysisRow('مرتجعات المبيعات', _executiveSalesReturns, null),
+            _analysisRow('صافي المبيعات', _executiveSales, _executiveChange(_executiveSales, _executivePreviousSales)),
+          ],
+        ),
+        _executiveAnalysisCard(
+          title: 'تفصيل المشتريات',
+          icon: Icons.shopping_cart_outlined,
+          trend: _executiveChange(_executivePurchases, _executivePreviousPurchases),
+          rows: [
+            _analysisRow('إجمالي المشتريات', _executiveGrossPurchases, null),
+            _analysisRow('مرتجعات المشتريات', _executivePurchaseReturns, null),
+            _analysisRow('صافي المشتريات', _executivePurchases, _executiveChange(_executivePurchases, _executivePreviousPurchases)),
+          ],
+        ),
+        _executiveAnalysisCard(
+          title: 'المصروفات التشغيلية',
+          icon: Icons.receipt_long_rounded,
+          rows: [
+            _analysisRow('إجمالي المصروفات', _executiveExpenses, _executiveChange(_executiveExpenses, _executivePreviousExpenses)),
+            _analysisRow('التغير عن الفترة السابقة', _executiveChange(_executiveExpenses, _executivePreviousExpenses), null, isPercent: true),
+            _analysisRow('نسبة المصروفات من المبيعات', _executiveSales != null && _executiveSales! > 0 && _executiveExpenses != null ? (_executiveExpenses! / _executiveSales! * 100) : null, null, isPercent: true),
+          ],
+        ),
+        _executiveAnalysisCard(
+          title: 'الأصول والإهلاك',
+          icon: Icons.domain_rounded,
+          rows: [
+            _analysisRow('إجمالي تكلفة الأصول', _executiveFixedAssetsGross, null),
+            _analysisRow('مجمع الإهلاك', _executiveFixedAssetsDepreciation, null),
+            _analysisRow('صافي القيمة الدفترية', _executiveFixedAssetsNet, null),
+          ],
+        ),
+        _executiveAnalysisCard(
+          title: 'التدفقات النقدية',
+          icon: Icons.swap_vert_circle_outlined,
+          rows: [
+            _analysisRow('التدفقات الداخلة', _executiveCashInflows, null),
+            _analysisRow('التدفقات الخارجة', _executiveCashOutflows, null),
+            _analysisRow('صافي التدفق النقدي', _executiveCashNetFlow, null),
+          ],
+        ),
+      ];
+
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        // Executive command header: clear hierarchy, compact period controls, and live data state.
+        Container(
+          padding: EdgeInsets.all(wide ? 20 : 14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: AlignmentDirectional.topStart,
+              end: AlignmentDirectional.bottomEnd,
+              colors: [Color(0xFF3E007D), Color(0xFF54209A), Color(0xFF28104B)],
+            ),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(color: _purple.withValues(alpha: .22), blurRadius: 24, offset: const Offset(0, 10)),
+              BoxShadow(color: _pink.withValues(alpha: .10), blurRadius: 30, offset: const Offset(-8, -4)),
+            ],
+          ),
+          child: Stack(children: [
+            PositionedDirectional(end: -22, top: -34, child: Icon(Icons.insights_rounded, size: wide ? 150 : 112, color: Colors.white.withValues(alpha: .045))),
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  width: 48, height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .13),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withValues(alpha: .20)),
+                  ),
+                  child: const Icon(Icons.auto_graph_rounded, color: Colors.white, size: 27),
+                ),
                 const SizedBox(width: 12),
-                SizedBox(
-                  width: 250,
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    childAspectRatio: 3.8,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 1,
-                    crossAxisSpacing: 3,
-                    children: [
-                      _executivePeriodCheckbox('السنة السابقة'),
-                      _executivePeriodCheckbox('الشهر السابق'),
-                      _executivePeriodCheckbox('السنة الحالية'),
-                      _executivePeriodCheckbox('الشهر الحالي'),
-                    ],
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(silsilaText('الملخص التنفيذي'), style: const TextStyle(fontSize: 23, height: 1.2, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -.25)),
+                  const SizedBox(height: 4),
+                  Text(silsilaText('مركز قيادة الأداء المالي والتشغيلي'), style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: .82), fontWeight: FontWeight.w600)),
+                ])),
+                const SizedBox(width: 8),
+                Material(
+                  color: Colors.white.withValues(alpha: .13),
+                  borderRadius: BorderRadius.circular(13),
+                  child: IconButton(
+                    tooltip: 'تحديث المؤشرات',
+                    onPressed: _executiveMetricsLoading ? null : () {
+                      final companyId = _appManagementCompanyId;
+                      if (companyId != null) _loadExecutiveMetrics(companyId);
+                    },
+                    icon: _executiveMetricsLoading
+                        ? const SizedBox(width: 19, height: 19, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.refresh_rounded, color: Colors.white),
                   ),
                 ),
               ]),
-              const SizedBox(height: 6),
-              Text(silsilaText('مركز قيادة الأداء المالي والتشغيلي • مؤشرات وتحليلات موحدة للإدارة'), style: const TextStyle(color: Color(0xFF6D6178), fontSize: 12, height: 1.35)),
-              const SizedBox(height: 5),
-              Text(_appManagementCompanyId == null ? 'اختر شركة نشطة لعرض المؤشرات الفعلية' : _executiveMetricsLoading ? 'جارٍ تحميل الحركات المرحلة للفترة المحددة…' : _executiveMetricsError != null ? 'تعذر تحميل بعض المؤشرات؛ راجع إعدادات قاعدة البيانات' : 'الفترة المحددة: $_executivePeriod • المؤشرات من الحركات المرحلة', style: const TextStyle(color: Color(0xFFB36B00), fontSize: 11, fontWeight: FontWeight.w700)),
-            ])),
-            const SizedBox(width: 12),
-            Column(mainAxisSize: MainAxisSize.min, children: [
-              IconButton(
-                tooltip: 'تحديث الملخص',
-                onPressed: () { final companyId = _appManagementCompanyId; if (companyId != null) _loadExecutiveMetrics(companyId); },
-                style: IconButton.styleFrom(backgroundColor: const Color(0xFFF5EFFB), foregroundColor: _purple),
-                icon: const Icon(Icons.refresh_rounded, size: 24),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .09),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: Colors.white.withValues(alpha: .12)),
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Icon(Icons.calendar_month_rounded, size: 16, color: Colors.white.withValues(alpha: .9)),
+                    const SizedBox(width: 7),
+                    Text('الفترة الزمنية', style: TextStyle(color: Colors.white.withValues(alpha: .9), fontSize: 11, fontWeight: FontWeight.w800)),
+                    const Spacer(),
+                    Text(_executivePeriod, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900)),
+                  ]),
+                  const SizedBox(height: 8),
+                  periodPicker(),
+                ]),
               ),
-              _summaryAction('كل التحليلات', () => _showExecutiveCategoryDetails('جميع التحليلات', allItems)),
+              const SizedBox(height: 10),
+              Row(children: [
+                Container(
+                  width: 7, height: 7,
+                  decoration: BoxDecoration(
+                    color: _executiveMetricsError != null ? const Color(0xFFFFB4B4) : _executiveMetricsLoading ? _orange : const Color(0xFF66E3B0),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 7),
+                Expanded(child: Text(
+                  _appManagementCompanyId == null
+                      ? 'اختر شركة نشطة لعرض المؤشرات الفعلية'
+                      : _executiveMetricsLoading
+                          ? 'جارٍ تحديث المؤشرات من الحركات المرحلة…'
+                          : _executiveMetricsError != null
+                              ? 'تعذر تحميل بعض المؤشرات؛ راجع اتصال قاعدة البيانات'
+                              : 'بيانات فعلية من الحركات المرحلة • $_executivePeriod',
+                  style: TextStyle(color: Colors.white.withValues(alpha: .82), fontSize: 10, fontWeight: FontWeight.w600),
+                )),
+                _summaryAction('كل التحليلات', () => _showExecutiveCategoryDetails('جميع التحليلات', allItems)),
+              ]),
             ]),
           ]),
         ),
-        const SizedBox(height: 9),
-        LayoutBuilder(builder: (context, constraints) {
-          final cards = <Widget>[
-            _executiveAnalysisCard(
-              title: 'مجمل الربح التقديري',
-              icon: Icons.assessment_outlined,
-              trend: _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit),
-              rows: [
-                _analysisRow('مجمل الربح التقديري', _executiveGrossProfit, _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit)),
-                _analysisRow('التغير عن الفترة السابقة', _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit), null, isPercent: true),
-                _analysisRow('هامش الربح التقديري', _executiveGrossProfit != null && _executiveSales != null && _executiveSales! > 0 ? (_executiveGrossProfit! / _executiveSales! * 100) : null, null, isPercent: true),
-              ],
+        const SizedBox(height: 18),
+        sectionHeading('مؤشرات الأداء الرئيسية', 'الصورة السريعة لنتيجة النشاط وحركة التجارة', Icons.speed_rounded, _orange),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: wide ? 3 : tablet ? 2 : 1,
+          crossAxisSpacing: 11,
+          mainAxisSpacing: 11,
+          childAspectRatio: wide ? 2.35 : tablet ? 2.25 : 2.65,
+          children: [
+            _executiveKpiCard(
+              title: 'صافي نتيجة النشاط',
+              value: netActivityResult,
+              change: netActivityChange,
+              icon: Icons.account_balance_rounded,
+              color: const Color(0xFF168A70),
+              note: 'مجمل الربح التقديري بعد المصروفات',
             ),
-            _executiveAnalysisCard(
+            _executiveKpiCard(
               title: 'صافي المبيعات',
+              value: _executiveSales,
+              change: _executiveChange(_executiveSales, _executivePreviousSales),
               icon: Icons.point_of_sale_rounded,
-              trend: _executiveChange(_executiveSales, _executivePreviousSales),
-              rows: [
-                _analysisRow('المبيعات', _executiveGrossSales, null),
-                _analysisRow('المرتجعات', _executiveSalesReturns, null),
-                _analysisRow('صافي مبيعات', _executiveSales, _executiveChange(_executiveSales, _executivePreviousSales)),
-              ],
+              color: _purple,
+              note: 'بعد خصم مرتجعات المبيعات',
             ),
-            _executiveAnalysisCard(
+            _executiveKpiCard(
               title: 'صافي المشتريات',
-              icon: Icons.shopping_cart_outlined,
-              trend: _executiveChange(_executivePurchases, _executivePreviousPurchases),
-              rows: [
-                _analysisRow('المشتريات', _executiveGrossPurchases, null),
-                _analysisRow('المرتجعات', _executivePurchaseReturns, null),
-                _analysisRow('صافي مشتريات', _executivePurchases, _executiveChange(_executivePurchases, _executivePreviousPurchases)),
-              ],
+              value: _executivePurchases,
+              change: _executiveChange(_executivePurchases, _executivePreviousPurchases),
+              icon: Icons.shopping_cart_checkout_rounded,
+              color: const Color(0xFF2475B8),
+              note: 'بعد خصم مرتجعات المشتريات',
             ),
-            _executiveAnalysisCard(
-              title: 'المصروفات',
-              icon: Icons.money_off_csred_outlined,
-              rows: [
-                _analysisRow('إجمالي المصروفات', _executiveExpenses, _executiveChange(_executiveExpenses, _executivePreviousExpenses)),
-                _analysisRow('التغير عن الفترة السابقة', _executiveChange(_executiveExpenses, _executivePreviousExpenses), null, isPercent: true),
-                _analysisRow('نسبة المصروفات من المبيعات', _executiveSales != null && _executiveSales! > 0 && _executiveExpenses != null ? (_executiveExpenses! / _executiveSales! * 100) : null, null, isPercent: true),
-              ],
-            ),
-            _executiveAnalysisCard(
-              title: 'الأصول والإهلاك وصافي الأصول',
-              icon: Icons.account_balance_outlined,
-              rows: [
-                _analysisRow('إجمالي تكلفة الأصول', _executiveFixedAssetsGross, null),
-                _analysisRow('مجمع الإهلاك', _executiveFixedAssetsDepreciation, null),
-                _analysisRow('صافي القيمة الدفترية', _executiveFixedAssetsNet, null),
-              ],
-            ),
-            _executiveAnalysisCard(
-              title: 'التدفقات الداخلة والخارجة',
-              icon: Icons.swap_vert_circle_outlined,
-              rows: [
-                _analysisRow('التدفقات الداخلة', _executiveCashInflows, null),
-                _analysisRow('التدفقات الخارجة', _executiveCashOutflows, null),
-                _analysisRow('صافي التدفق النقدي', _executiveCashNetFlow, null),
-              ],
-            ),
-          ];
-
-          // Use a shrink-wrapped grid so all six financial analysis cards remain
-          // visible inside the dashboard's scrollable workspace on desktop/tablet/mobile.
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              GridView.count(
-                crossAxisCount: constraints.maxWidth >= 700 ? 3 : constraints.maxWidth >= 460 ? 2 : 1,
-                childAspectRatio: constraints.maxWidth >= 700 ? .95 : constraints.maxWidth >= 460 ? 1.0 : 1.15,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                children: cards,
-              ),
-              const SizedBox(height: 12),
-              _executiveStaffPerformance(),
-            ],
-          );
-        }),
-        const SizedBox(height: 16),
-        if ((wide || mid) && (canSales || canFinance || canInventory))
-          Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          ],
+        ),
+        const SizedBox(height: 19),
+        sectionHeading('التحليل المالي', 'تفاصيل الأداء والمقارنة بالفترة السابقة', Icons.account_balance_wallet_rounded, _green),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: columns,
+          crossAxisSpacing: 11,
+          mainAxisSpacing: 11,
+          childAspectRatio: wide ? 1.12 : tablet ? 1.10 : 1.18,
+          children: financialCards,
+        ),
+        const SizedBox(height: 20),
+        sectionHeading('الأداء التجاري والتشغيلي', 'متابعة فرق البيع والشراء ومؤشرات التنفيذ', Icons.groups_rounded, _pink),
+        _executiveStaffPerformance(),
+        const SizedBox(height: 20),
+        if (canSales || canFinance || canInventory) ...[
+          sectionHeading('اتجاهات الأداء', 'قراءة مرئية لحركة المبيعات والتحصيل والمخزون', Icons.query_stats_rounded, _purple),
+          if (wide || tablet)
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (canSales) Expanded(child: _executiveChartPanel(
                 title: 'اتجاه المبيعات',
                 caption: 'آخر 7 أيام • فواتير المبيعات المرحلة',
                 color: _purple,
-                value: _executiveMoney(_executiveSales),
+                value: _executiveMoney(_executiveLast7Sales),
                 chart: _ExecutiveChartPainter(color: _purple, values: _executiveDailySales),
               )),
-              const SizedBox(width: 12),
+              if (canSales && (canFinance || canInventory)) const SizedBox(width: 11),
               if (canSales || canFinance) Expanded(child: _executiveChartPanel(
                 title: 'مزيج الأداء',
                 caption: 'مبيعات • مشتريات • المحصّل',
@@ -3247,55 +3368,70 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 value: _executiveMoney(_executivePurchases),
                 chart: _ExecutiveDonutPainter(values: <double>[_executiveSales ?? 0, _executivePurchases ?? 0, _executiveCollections ?? 0]),
               )),
-            ]),
-            const SizedBox(height: 12),
-            if (canSales && canFinance && canInventory) _executiveHighlights(),
-          ])
-        else ...[
-          if (canSales) _executiveChartPanel(
-            title: 'اتجاه المبيعات',
-            caption: 'آخر 7 أيام • فواتير المبيعات المرحلة',
-            color: _purple,
-            value: _executiveMoney(_executiveSales),
-            chart: const _ExecutiveChartPainter(color: _purple),
+            ])
+          else ...[
+            if (canSales) _executiveChartPanel(
+              title: 'اتجاه المبيعات',
+              caption: 'آخر 7 أيام • فواتير المبيعات المرحلة',
+              color: _purple,
+              value: _executiveMoney(_executiveLast7Sales),
+              chart: _ExecutiveChartPainter(color: _purple, values: _executiveDailySales),
+            ),
+            const SizedBox(height: 10),
+            if (canSales || canFinance) _executiveChartPanel(
+              title: 'مزيج الأداء',
+              caption: 'مبيعات • مشتريات • المحصّل',
+              color: _orange,
+              value: _executiveMoney(_executivePurchases),
+              chart: _ExecutiveDonutPainter(values: <double>[_executiveSales ?? 0, _executivePurchases ?? 0, _executiveCollections ?? 0]),
+            ),
+          ],
+          const SizedBox(height: 11),
+          if (canFinance || canInventory) _executiveAdditionalCharts(
+            sideBySide: wide || tablet,
+            showCollections: canFinance,
+            showInventory: canInventory,
           ),
-          const SizedBox(height: 3),
-          if (canSales || canFinance) _executiveChartPanel(
-            title: 'مزيج الأداء',
-            caption: 'مبيعات • مشتريات • المحصّل',
-            color: _orange,
-            value: _executiveMoney(_executivePurchases),
-            chart: _ExecutiveDonutPainter(values: <double>[_executiveSales ?? 0, _executivePurchases ?? 0, _executiveCollections ?? 0]),
-          ),
-          const SizedBox(height: 12),
-          _executiveHighlights(),
         ],
-        const SizedBox(height: 16),
-        if (canFinance || canInventory) _executiveAdditionalCharts(sideBySide: wide || mid, showCollections: canFinance, showInventory: canInventory),
-        const SizedBox(height: 18),
-        LayoutBuilder(builder: (context, constraints) {
-          final columns = constraints.maxWidth >= 1150 ? 3 : constraints.maxWidth >= 680 ? 2 : 1;
-          return GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: columns,
-            crossAxisSpacing: 7,
-            mainAxisSpacing: 7,
-            childAspectRatio: columns == 3 ? 1.0 : columns == 2 ? 1.05 : 1.0,
-            children: visibleSections.map((section) => _executiveSectionCompact(
-              title: section['title'] as String,
-              icon: section['icon'] as IconData,
-              color: section['color'] as Color,
-              items: section['items'] as List<Map<String, Object>>,
-            )).toList(),
-          );
-        }),
-        const SizedBox(height: 4),
-        Row(children: [
-          Icon(Icons.info_outline_rounded, color: _orange, size: 11),
-          SizedBox(width: 4),
-          Expanded(child: Text(silsilaText(_appManagementCompanyId == null ? 'لا توجد شركة نشطة مرتبطة؛ لم تُحمّل بيانات فعلية.' : _executiveMetricsLoading ? 'يتم تحميل البيانات الفعلية للفترة المحددة.' : _executiveMetricsError != null ? 'تعذر تحميل بعض المؤشرات من قاعدة البيانات؛ راجع رسالة الخطأ قبل الاعتماد على النتائج.' : 'المؤشرات المعروضة تعتمد على البيانات التي أمكن تحميلها. تظهر الشرطة (—) عند عدم توفر بيانات المؤشر أو عدم ربطه بعد.'), style: TextStyle(fontSize: 11, color: Colors.black54))),
-        ]),
+        const SizedBox(height: 20),
+        sectionHeading('مؤشرات الإدارات والرقابة', 'نظرة موحدة على المبيعات والمالية والمخزون والتوزيع والموارد البشرية', Icons.hub_rounded, _orange),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: columns,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: wide ? 1.18 : tablet ? 1.12 : 1.08,
+          children: visibleSections.map((section) => _executiveSectionCompact(
+            title: section['title'] as String,
+            icon: section['icon'] as IconData,
+            color: section['color'] as Color,
+            items: section['items'] as List<Map<String, Object>>,
+          )).toList(),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF8EA),
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: const Color(0xFFF4DDAE)),
+          ),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Icon(Icons.info_outline_rounded, color: Color(0xFFB36B00), size: 18),
+            const SizedBox(width: 8),
+            Expanded(child: Text(
+              _appManagementCompanyId == null
+                  ? 'لا توجد شركة نشطة مرتبطة؛ لم تُحمّل بيانات فعلية.'
+                  : _executiveMetricsLoading
+                      ? 'يتم تحميل البيانات الفعلية للفترة المحددة.'
+                      : _executiveMetricsError != null
+                          ? 'تعذر تحميل بعض المؤشرات من قاعدة البيانات؛ راجع رسالة الخطأ قبل الاعتماد على النتائج.'
+                          : 'المؤشرات المعروضة تعتمد على البيانات التي أمكن تحميلها. تظهر الشرطة (—) عند عدم توفر بيانات المؤشر أو عدم ربطه بعد.',
+              style: const TextStyle(fontSize: 10, height: 1.5, color: Color(0xFF76511B)),
+            )),
+          ]),
+        ),
       ]);
     });
   }
