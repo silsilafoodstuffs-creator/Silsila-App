@@ -28,7 +28,7 @@ void main() {
       final baseline = File('docs/ENTERPRISE_READINESS_BASELINE_2026-11-23.md')
           .readAsStringSync();
       expect(baseline, contains('No destructive DDL'));
-      expect(baseline, contains('Do not revoke all access'));
+      expect(baseline, contains('blanket GRANT/REVOKE'));
       expect(baseline, contains('not a capacity certification'));
       expect(baseline, contains('tenant isolation'));
     });
