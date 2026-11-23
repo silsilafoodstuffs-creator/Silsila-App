@@ -3094,11 +3094,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         ? sections.where((section) => _executiveAllowedSections.contains(section['title'])).toList()
         : sections;
     final allItems = visibleSections.expand((section) => section['items'] as List<Map<String, Object>>).toList();
-    final canSales = !_executivePartialConfigured || _executiveAllowedSections.contains('مبيعات');
-    final canFinance = !_executivePartialConfigured || _executiveAllowedSections.contains('المالية والسيولة');
-    final canInventory = !_executivePartialConfigured || _executiveAllowedSections.contains('المخزون والمشتريات');
-
-
     final netActivityResult = _executiveGrossProfit != null && _executiveExpenses != null
         ? _executiveGrossProfit! - _executiveExpenses!
         : null;
@@ -3115,11 +3110,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       final canSales = !_executivePartialConfigured || _executiveAllowedSections.contains('مبيعات');
       final canFinance = !_executivePartialConfigured || _executiveAllowedSections.contains('المالية والسيولة');
       final canInventory = !_executivePartialConfigured || _executiveAllowedSections.contains('المخزون والمشتريات');
-      final canOperations = !_executivePartialConfigured ||
-          _executiveAllowedSections.contains('الطلبات والتوزيع') ||
-          _executiveAllowedSections.contains('الموظفون والفروع') ||
-          _executiveAllowedSections.contains('الرقابة والتنبيهات');
-
       Widget periodPicker() => Wrap(
         spacing: 6,
         runSpacing: 5,
@@ -3531,42 +3521,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       charts[1],
     ]);
   }
-
-  Widget _executiveHighlights() => Container(
-    height: 226,
-    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Color(0xFFFFFFFF), Color(0xFFFCFAFF), Color(0xFFF5EFFB)]),
-      borderRadius: BorderRadius.circular(21),
-      border: Border.all(color: const Color(0xFF3E007D).withValues(alpha: .14)),
-      boxShadow: const [BoxShadow(color: Color(0x103E007D), blurRadius: 18, offset: Offset(0, 5))],
-    ),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text(silsilaText('مؤشرات تحتاج متابعة'), style: const TextStyle(fontSize: 16, color: Color(0xFF3E007D), fontWeight: FontWeight.w900)),
-      const SizedBox(height: 8),
-      _executiveHighlightRow('مديونية العملاء', _executiveMoney(_executiveReceivables), _pink),
-      _executiveHighlightRow('مبيعات آخر 7 أيام', _executiveMoney(_executiveLast7Sales), const Color(0xFFB68CFF)),
-      _executiveHighlightRow('مشتريات الشهر', _executiveMoney(_executivePurchases), _orange),
-      _executiveHighlightRow('قيمة المخزون التقديرية', _executiveMoney(_executiveInventoryValue), const Color(0xFF52C9FF)),
-    ]),
-  );
-
-  Widget _executiveHighlightRow(String label, String value, Color color) => Expanded(
-    child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(children: [
-        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: color.withValues(alpha: .75), blurRadius: 8)])),
-        const SizedBox(width: 10),
-        Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 12, color: Color(0xFF4A4053), fontWeight: FontWeight.w700))),
-        const SizedBox(width: 8),
-        Flexible(child: Text(value, textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w900))),
-      ]),
-    ),
-  );
 
   Widget _executiveSectionCompact({
     required String title,
