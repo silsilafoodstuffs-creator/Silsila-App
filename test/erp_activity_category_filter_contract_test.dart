@@ -40,6 +40,13 @@ void main() {
     expect(categoryScreen, contains("DataColumn(label: Text('يظهر في التطبيق'))"));
     expect(categoryScreen, contains("DataColumn(label: Text('حذف'))"));
     expect(categoryScreen, contains('rowHeight: 40'));
+    expect(categoryScreen, contains('showCheckboxColumn: false'));
+    expect(categoryScreen, contains("DataColumn(label: Text('نوع النشاط'))"));
+    expect(categoryScreen, contains("DataColumn(label: Text('فئة رئيسية'))"));
+    expect(categoryScreen, contains("DataColumn(label: Text('فئة فرعية'))"));
+    expect(categoryScreen, contains('_mainCategoryFilter'));
+    expect(categoryScreen, contains('_subCategoryFilter'));
+    expect(categoryScreen, contains('_isDescendantOf'));
   });
 
   test('category recoding follows policy segments and keeps stable UUID relationships', () {
