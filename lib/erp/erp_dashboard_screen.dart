@@ -2730,33 +2730,43 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   Widget _executivePeriodCheckbox(String period) {
     final selected = _executivePeriod == period;
+    final accent = selected ? const Color(0xFFFFA015) : const Color(0xFFBFAED7);
     return Padding(
       padding: const EdgeInsetsDirectional.only(end: 3),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(9),
-        onTap: () => _changeExecutivePeriod(period),
-        child: Container(
-          padding: const EdgeInsetsDirectional.only(start: 2, end: 7),
-          decoration: BoxDecoration(
-            color: selected ? const Color(0xFFF1E6FF) : Colors.white,
-            borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: selected ? _purple : const Color(0xFFE7E0EF)),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Checkbox(
-              value: selected,
-              onChanged: (value) {
-                if (value == true) _changeExecutivePeriod(period);
-              },
-              visualDensity: VisualDensity.compact,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _changeExecutivePeriod(period),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsetsDirectional.fromSTEB(5, 2, 11, 2),
+            decoration: BoxDecoration(
+              gradient: selected
+                  ? const LinearGradient(colors: [Color(0xFF6A32A2), Color(0xFF3E176B)])
+                  : const LinearGradient(colors: [Color(0x332A173C), Color(0x22150B22)]),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: selected ? accent.withValues(alpha: .85) : Colors.white.withValues(alpha: .16)),
+              boxShadow: selected ? [BoxShadow(color: accent.withValues(alpha: .20), blurRadius: 13, spreadRadius: 1)] : const [],
             ),
-            Text(period, style: TextStyle(
-              color: selected ? _purple : const Color(0xFF51465D),
-              fontSize: 10,
-              fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
-            )),
-          ]),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Checkbox(
+                value: selected,
+                onChanged: (value) { if (value == true) _changeExecutivePeriod(period); },
+                activeColor: const Color(0xFFFFA015),
+                checkColor: const Color(0xFF28103E),
+                side: BorderSide(color: Colors.white.withValues(alpha: .65), width: 1.2),
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              Text(period, style: TextStyle(
+                color: Colors.white.withValues(alpha: selected ? 1 : .78),
+                fontSize: 10,
+                letterSpacing: .1,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
+              )),
+            ]),
+          ),
         ),
       ),
     );
@@ -3455,26 +3465,35 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required String value,
     required CustomPainter chart,
   }) => Container(
-    height: 208,
-    padding: const EdgeInsets.fromLTRB(12, 10, 12, 9),
+    height: 218,
+    padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
     decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: const Color(0xFFE7E0EF)),
-      boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 16, offset: Offset(0, 5))],
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+        colors: [Color(0xFF241333), Color(0xFF170D23), Color(0xFF32134B)],
+      ),
+      borderRadius: BorderRadius.circular(21),
+      border: Border.all(color: color.withValues(alpha: .48), width: 1.15),
+      boxShadow: [
+        BoxShadow(color: color.withValues(alpha: .17), blurRadius: 22, offset: const Offset(0, 8)),
+        const BoxShadow(color: Color(0x55000000), blurRadius: 16, offset: Offset(0, 7)),
+      ],
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 15, color: _purple, fontWeight: FontWeight.w900))),
-        Text(value, style: TextStyle(fontSize: 16, color: color, fontWeight: FontWeight.w900)),
+        Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle,
+          boxShadow: [BoxShadow(color: color.withValues(alpha: .8), blurRadius: 9, spreadRadius: 1)])),
+        const SizedBox(width: 9),
+        Expanded(child: Text(title, style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w900))),
+        Text(value, style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.w900)),
       ]),
       const SizedBox(height: 4),
-      Text(caption, style: const TextStyle(fontSize: 11, color: Colors.black54)),
-      const SizedBox(height: 8),
+      Text(caption, style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: .58))),
+      const SizedBox(height: 9),
       Expanded(child: CustomPaint(painter: chart, child: const SizedBox.expand())),
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: footerLabels.take(3).map((label) => Expanded(
         child: Text(label, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w600)),
+          style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: .55), fontWeight: FontWeight.w600)),
       )).toList()),
     ]),
   );
@@ -3515,20 +3534,21 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   Widget _executiveHighlights() => Container(
     height: 226,
-    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
     decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: const Color(0xFFE7E0EF)),
-      boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 16, offset: Offset(0, 5))],
+      gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+        colors: [Color(0xFF251334), Color(0xFF160D20), Color(0xFF321345)]),
+      borderRadius: BorderRadius.circular(21),
+      border: Border.all(color: const Color(0xFFFF27C3).withValues(alpha: .34)),
+      boxShadow: const [BoxShadow(color: Color(0x443E007D), blurRadius: 22, offset: Offset(0, 8))],
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text(silsilaText('مؤشرات تحتاج متابعة'), style: TextStyle(fontSize: 20, color: _purple, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 7),
+      Text(silsilaText('مؤشرات تحتاج متابعة'), style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 8),
       _executiveHighlightRow('مديونية العملاء', _executiveMoney(_executiveReceivables), _pink),
-      _executiveHighlightRow('مبيعات آخر 7 أيام', _executiveMoney(_executiveLast7Sales), _purple),
+      _executiveHighlightRow('مبيعات آخر 7 أيام', _executiveMoney(_executiveLast7Sales), const Color(0xFFB68CFF)),
       _executiveHighlightRow('مشتريات الشهر', _executiveMoney(_executivePurchases), _orange),
-      _executiveHighlightRow('قيمة المخزون التقديرية', _executiveMoney(_executiveInventoryValue), const Color(0xFF2475B8)),
+      _executiveHighlightRow('قيمة المخزون التقديرية', _executiveMoney(_executiveInventoryValue), const Color(0xFF52C9FF)),
     ]),
   );
 
@@ -3536,11 +3556,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(children: [
-        Container(width: 9, height: 9, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 9),
-        Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, color: Colors.black87, fontWeight: FontWeight.w700))),
+        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle,
+          boxShadow: [BoxShadow(color: color.withValues(alpha: .75), blurRadius: 8)])),
+        const SizedBox(width: 10),
+        Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: .78), fontWeight: FontWeight.w700))),
         const SizedBox(width: 8),
-        Flexible(child: Text(value, textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.w900))),
+        Flexible(child: Text(value, textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w900))),
       ]),
     ),
   );
@@ -3551,16 +3574,26 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required Color color,
     required List<Map<String, Object>> items,
   }) => Container(
-    padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE7E0EF)), boxShadow: const [BoxShadow(color: Color(0x07000000), blurRadius: 14, offset: Offset(0, 4))]),
+    padding: const EdgeInsets.all(13),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+        colors: [Color(0xFF281638), Color(0xFF190F25), Color(0xFF321548)]),
+      borderRadius: BorderRadius.circular(19),
+      border: Border.all(color: color.withValues(alpha: .36)),
+      boxShadow: [BoxShadow(color: color.withValues(alpha: .12), blurRadius: 18, offset: const Offset(0, 6))],
+    ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
-        Icon(icon, size: 22, color: color),
-        const SizedBox(width: 8),
-        Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.w900))),
+        Container(width: 34, height: 34, decoration: BoxDecoration(
+          gradient: LinearGradient(colors: [color.withValues(alpha: .30), color.withValues(alpha: .08)]),
+          borderRadius: BorderRadius.circular(11), border: Border.all(color: color.withValues(alpha: .35))),
+          child: Icon(icon, size: 19, color: color)),
+        const SizedBox(width: 9),
+        Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.w900))),
         _summaryAction('عرض الكل', () => _showExecutiveCategoryDetails(title, items)),
       ]),
-      const Divider(height: 14, thickness: 1, color: Color(0xFFEFEAF4)),
+      Divider(height: 18, thickness: 1, color: Colors.white.withValues(alpha: .12)),
       ...items.map((item) => _executiveCompactMetric(
         title: item['title'] as String,
         value: item['value'] as String,
@@ -3580,20 +3613,24 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required Color color,
     required String details,
   }) => InkWell(
+    borderRadius: BorderRadius.circular(10),
     onTap: () => _showExecutiveAnalysisDetails(title, value, note, details, color),
     child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
       child: Row(children: [
-        Icon(icon, size: 18, color: color),
-        const SizedBox(width: 8),
+        Icon(icon, size: 17, color: color),
+        const SizedBox(width: 9),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Color(0xFF342B3C), fontWeight: FontWeight.w800, height: 1.2)),
-          Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Colors.black45, height: 1.2)),
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w800, height: 1.2)),
+          Text(note, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: .48), height: 1.2)),
         ])),
-        const SizedBox(width: 3),
-        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w900)),
+        const SizedBox(width: 5),
+        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w900)),
         const SizedBox(width: 4),
-        const Icon(Icons.chevron_left_rounded, size: 16, color: Colors.black38),
+        Icon(Icons.chevron_left_rounded, size: 16, color: Colors.white.withValues(alpha: .38)),
       ]),
     ),
   );
@@ -3659,72 +3696,71 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required Color color,
     required String note,
   }) {
-    final trendColor = change == null ? Colors.black45 : change >= 0 ? _green : Colors.red.shade700;
+    final trendColor = change == null ? const Color(0xFFB8A9C8) : change >= 0 ? const Color(0xFF52E2B1) : const Color(0xFFFF7C9B);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      padding: const EdgeInsets.fromLTRB(16, 15, 16, 14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.white, color.withValues(alpha: .055)],
-        ),
-        border: Border.all(color: color.withValues(alpha: .42), width: 1.3),
+        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFF32164D), Color(0xFF1C1029), Color(0xFF140B1D)]),
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(color: color.withValues(alpha: .56), width: 1.15),
         boxShadow: [
-          BoxShadow(color: color.withValues(alpha: .13), blurRadius: 16, offset: const Offset(0, 5)),
-          const BoxShadow(color: Color(0x08FFFFFF), blurRadius: 3, offset: Offset(-1, -1)),
+          BoxShadow(color: color.withValues(alpha: .22), blurRadius: 24, spreadRadius: -2, offset: const Offset(0, 8)),
+          const BoxShadow(color: Color(0x66000000), blurRadius: 15, offset: Offset(0, 7)),
         ],
       ),
-      child: Row(children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(12)),
-          child: Icon(icon, color: color, size: 21),
-        ),
-        const SizedBox(width: 10),
-        Expanded(child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 4),
-            Text(_executiveMoney(value), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, color: Color(0xFF241735), fontWeight: FontWeight.w900)),
-            const SizedBox(height: 2),
-            Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 9, color: Colors.black54)),
-          ],
-        )),
-        const SizedBox(width: 6),
-        Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Container(
-            width: 34,
-            height: 34,
+      child: Stack(children: [
+        PositionedDirectional(end: -26, top: -34, child: Container(width: 112, height: 112,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: .10),
+            boxShadow: [BoxShadow(color: color.withValues(alpha: .18), blurRadius: 35, spreadRadius: 12)]))),
+        PositionedDirectional(start: 0, top: 0, child: Container(width: 48, height: 3,
+          decoration: BoxDecoration(gradient: LinearGradient(colors: [color, color.withValues(alpha: 0)]),
+            borderRadius: BorderRadius.circular(4)))),
+        Row(children: [
+          Container(width: 45, height: 45,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: change == null
-                    ? [const Color(0xFFB9B0C4), const Color(0xFF766A86)]
-                    : change >= 0
-                        ? [const Color(0xFF32C58A), const Color(0xFF087A54)]
-                        : [const Color(0xFFFF8794), const Color(0xFFCB2944)],
+              gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+                colors: [color.withValues(alpha: .34), color.withValues(alpha: .10)]),
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: color.withValues(alpha: .55)),
+              boxShadow: [BoxShadow(color: color.withValues(alpha: .22), blurRadius: 15)],
+            ),
+            child: Icon(icon, color: Colors.white, size: 22)),
+          const SizedBox(width: 12),
+          Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w900, letterSpacing: .15)),
+              const SizedBox(height: 6),
+              Text(_executiveMoney(value), maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: -.25)),
+              const SizedBox(height: 4),
+              Text(note, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: .56))),
+            ])),
+          const SizedBox(width: 7),
+          Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Container(width: 36, height: 36,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: change == null
+                  ? [const Color(0xFF786A88), const Color(0xFF4C405B)]
+                  : change >= 0 ? [const Color(0xFF2CCB98), const Color(0xFF087A60)]
+                  : [const Color(0xFFFF829F), const Color(0xFFB72D58)]),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: trendColor.withValues(alpha: .28), blurRadius: 13, offset: const Offset(0, 4))],
               ),
-              borderRadius: BorderRadius.circular(11),
-              boxShadow: [BoxShadow(color: trendColor.withValues(alpha: .22), blurRadius: 9, offset: const Offset(0, 3))],
-            ),
-            child: Icon(
-              change == null ? Icons.remove_rounded : change >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-              color: Colors.white,
-              size: 21,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(change == null ? '—%' : '${change.abs().toStringAsFixed(1)}%', style: TextStyle(fontSize: 10, color: trendColor, fontWeight: FontWeight.w900)),
+              child: Icon(change == null ? Icons.remove_rounded : change >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                color: Colors.white, size: 21)),
+            const SizedBox(height: 5),
+            Text(change == null ? '—%' : '${change.abs().toStringAsFixed(1)}%',
+              style: TextStyle(fontSize: 10, color: trendColor, fontWeight: FontWeight.w900)),
+          ]),
         ]),
       ]),
     );
   }
+
+  
 
   Widget _executiveAnalysisCard({
     required String title,
@@ -3734,89 +3770,73 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }) {
     final chartRows = rows.where((row) => row['isPercent'] != true).toList();
     final donutRows = chartRows.isEmpty ? rows : chartRows;
+    final trendColor = trend == null ? const Color(0xFFB8A9C8) : trend >= 0 ? const Color(0xFF52E2B1) : const Color(0xFFFF7C9B);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFF3E007D), width: 1.5),
-        boxShadow: const [BoxShadow(color: Color(0x183E007D), blurRadius: 12, spreadRadius: 0, offset: Offset(0, 3))],
+        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFF2A173B), Color(0xFF190F25), Color(0xFF321548)]),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFB68CFF).withValues(alpha: .28)),
+        boxShadow: const [BoxShadow(color: Color(0x443E007D), blurRadius: 19, offset: Offset(0, 7))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
-          Icon(icon, size: 18, color: _purple),
-          const SizedBox(width: 6),
-          Expanded(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, height: 1.15, fontWeight: FontWeight.w900, color: _purple))),
+          Container(width: 31, height: 31, decoration: BoxDecoration(
+            color: const Color(0xFFB68CFF).withValues(alpha: .14),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFB68CFF).withValues(alpha: .28))),
+            child: Icon(icon, size: 17, color: const Color(0xFFD7B9FF))),
+          const SizedBox(width: 8),
+          Expanded(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, height: 1.15, fontWeight: FontWeight.w900, color: Colors.white))),
           if (trend != null) ...[
-            const SizedBox(width: 4),
-            Icon(
-              trend >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-              size: 19,
-              color: trend >= 0 ? _green : Colors.red.shade700,
-            ),
-            const SizedBox(width: 2),
-            Text(
-              '${trend.abs().toStringAsFixed(1)}%',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-                color: trend >= 0 ? _green : Colors.red.shade700,
-              ),
-            ),
+            Icon(trend >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded, size: 17, color: trendColor),
+            const SizedBox(width: 3),
+            Text('${trend.abs().toStringAsFixed(1)}%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: trendColor)),
           ],
         ]),
-        const Divider(height: 8),
-        SizedBox(
-          height: 82,
-          child: Row(children: [
-            SizedBox(width: 82, height: 82, child: CustomPaint(
-              painter: _ExecutiveDonutPainter(values: donutRows.map((row) => (row['value'] as num?)?.toDouble() ?? 0).toList()),
-            )),
-            const SizedBox(width: 8),
-            Expanded(child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: donutRows.map((row) {
-                final value = ((row['value'] as num?)?.toDouble() ?? 0).abs();
-                final total = donutRows.fold<double>(0, (sum, item) => sum + (((item['value'] as num?)?.toDouble() ?? 0).abs()));
-                final percent = total == 0 ? 0.0 : value / total * 100;
-                final label = (row['label'] ?? '').toString();
-                return Padding(padding: const EdgeInsets.symmetric(vertical: 1), child: Text(
-                  '$label  •  ${percent.toStringAsFixed(1)}%  •  ${_executiveMoney((row['value'] as num?)?.toDouble()).replaceAll(' ج.م', '')}',
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF51465D)),
-                ));
-              }).toList(),
-            )),
-          ]),
-        ),
-        const Divider(height: 8),
-        Expanded(child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: rows.map((row) {
-            final label = row['label']! as String;
-            final value = row['value'] as double?;
-            final change = row['change'] as double?;
-            final isPercent = row['isPercent'] == true;
-            final hasData = value != null;
-            final positive = change != null && change >= 0;
-            final color = change == null ? Colors.black45 : positive ? _green : Colors.red.shade700;
-            return Row(children: [
-              Expanded(flex: 5, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.w900))),
-              Expanded(flex: 3, child: Text(
-                !hasData ? '—' : isPercent ? '${value.toStringAsFixed(1)}%' : _executiveMoney(value).replaceAll(' ج.م', ''),
-                textAlign: TextAlign.end,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.black87),
-              )),
-              SizedBox(width: 58, child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                Icon(change == null ? Icons.remove_rounded : positive ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded, size: 12, color: color),
-                Text(change == null ? '—%' : '${change.abs().toStringAsFixed(1)}%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: color)),
-              ])),
-            ]);
-          }).toList(),
-        )),
+        Divider(height: 15, color: Colors.white.withValues(alpha: .12)),
+        SizedBox(height: 82, child: Row(children: [
+          SizedBox(width: 82, height: 82, child: CustomPaint(
+            painter: _ExecutiveDonutPainter(values: donutRows.map((row) => (row['value'] as num?)?.toDouble() ?? 0).toList()),
+          )),
+          const SizedBox(width: 9),
+          Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch, children: donutRows.map((row) {
+              final value = ((row['value'] as num?)?.toDouble() ?? 0).abs();
+              final total = donutRows.fold<double>(0, (sum, item) => sum + (((item['value'] as num?)?.toDouble() ?? 0).abs()));
+              final percent = total == 0 ? 0.0 : value / total * 100;
+              final label = (row['label'] ?? '').toString();
+              return Padding(padding: const EdgeInsets.symmetric(vertical: 1), child: Text(
+                '$label • ${percent.toStringAsFixed(1)}% • ${_executiveMoney((row['value'] as num?)?.toDouble()).replaceAll(' ج.م', '')}',
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white.withValues(alpha: .72)),
+              ));
+            }).toList(),
+          )),
+        ])),
+        Divider(height: 15, color: Colors.white.withValues(alpha: .12)),
+        Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.spaceAround, children: rows.map((row) {
+          final label = row['label']! as String;
+          final value = row['value'] as double?;
+          final change = row['change'] as double?;
+          final isPercent = row['isPercent'] == true;
+          final positive = change != null && change >= 0;
+          final color = change == null ? const Color(0xFFB8A9C8) : positive ? const Color(0xFF52E2B1) : const Color(0xFFFF7C9B);
+          return Row(children: [
+            Expanded(flex: 5, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: .78), fontWeight: FontWeight.w800))),
+            Expanded(flex: 3, child: Text(value == null ? '—' : isPercent ? '${value.toStringAsFixed(1)}%' : _executiveMoney(value).replaceAll(' ج.م', ''),
+              textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white))),
+            SizedBox(width: 55, child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+              Icon(change == null ? Icons.remove_rounded : positive ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded, size: 11, color: color),
+              Text(change == null ? '—%' : '${change.abs().toStringAsFixed(1)}%',
+                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: color)),
+            ])),
+          ]);
+        }).toList())),
       ]),
     );
   }
@@ -4181,7 +4201,7 @@ class _ExecutiveDonutPainter extends CustomPainter {
     final label = TextPainter(
       text: TextSpan(
         text: '100%',
-        style: TextStyle(color: _purple, fontSize: (size.shortestSide * .12).clamp(10.0, 15.0), fontWeight: FontWeight.w900),
+        style: TextStyle(color: Colors.white, fontSize: (size.shortestSide * .12).clamp(10.0, 15.0), fontWeight: FontWeight.w900),
       ),
       textDirection: TextDirection.rtl,
       textAlign: TextAlign.center,
@@ -4207,7 +4227,7 @@ class _ExecutiveBarsPainter extends CustomPainter {
     final source = values;
     if (source.isEmpty) return;
     final maxValue = source.fold<double>(0, (max, value) => value > max ? value : max);
-    const colors = [_purple, _orange, _pink, _purple, _orange, _pink, _purple];
+    const colors = [Color(0xFFB68CFF), _orange, _pink, Color(0xFF9C75FF), _orange, _pink, Color(0xFFB68CFF)];
     final slot = size.width / source.length;
     for (var i = 0; i < source.length; i++) {
       final barWidth = slot * .48;
@@ -4248,8 +4268,9 @@ class _ExecutiveChartPainter extends CustomPainter {
       final y = size.height * (.88 - normalized * .70);
       return Offset(x, y);
     });
+    final lineColor = color.computeLuminance() < .12 ? const Color(0xFFB68CFF) : color;
     final linePaint = Paint()
-      ..color = color
+      ..color = lineColor
       ..strokeWidth = 3.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
@@ -4266,16 +4287,16 @@ class _ExecutiveChartPainter extends CustomPainter {
       fillPath,
       Paint()
         ..shader = LinearGradient(
-          colors: [color.withValues(alpha: .18), color.withValues(alpha: .01)],
+          colors: [lineColor.withValues(alpha: .28), lineColor.withValues(alpha: .015)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ).createShader(Offset.zero & size),
     );
     canvas.drawPath(path, linePaint);
-    final dotPaint = Paint()..color = color;
+    final dotPaint = Paint()..color = lineColor;
     for (final point in points) {
       canvas.drawCircle(point, 4, dotPaint);
-      canvas.drawCircle(point, 8, Paint()..color = color.withValues(alpha: .13));
+      canvas.drawCircle(point, 8, Paint()..color = lineColor.withValues(alpha: .18));
     }
   }
 
