@@ -830,6 +830,37 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       }
       String segment(int index) => index.toString().padLeft(2, '0');
 
+      // Move existing codes to collision-free temporary numeric codes before
+      // assigning their new hierarchy paths. IDs and parent_id values never move.
+      final usedCodes = rows.map((row) => _s(row['category_code'])).toSet();
+      for (final row in rows) {
+        final oldCode = _s(row['category_code']);
+        final length = oldCode.length;
+        if (length != 4 && length != 6 && length != 8) {
+          throw StateError('طول كود الفئة غير متوافق مع سياسة 2+2+2: $oldCode');
+        }
+        String? temporaryCode;
+        for (var prefix = 90; prefix <= 99 && temporaryCode == null; prefix++) {
+          for (var sequence = 1; sequence <= 9999; sequence++) {
+            final candidate = prefix.toString() + sequence.toString().padLeft(length - 2, '0');
+            if (candidate.length == length && !usedCodes.contains(candidate)) {
+              temporaryCode = candidate;
+              break;
+            }
+          }
+        }
+        if (temporaryCode == null) {
+          throw StateError('تعذر حجز كود مؤقت آمن للفئة $oldCode دون تعارض.');
+        }
+        await _db!.from('erp_item_categories')
+            .update({'category_code': temporaryCode})
+            .eq('id', _s(row['id']))
+            .eq('company_id', _company!);
+        usedCodes.remove(oldCode);
+        usedCodes.add(temporaryCode);
+        row['category_code'] = temporaryCode;
+      }
+
       final roots = ordered(rows.where((row) => row['parent_id'] == null).toList());
       final rootsByActivity = <String, List<Map<String, dynamic>>>{};
       for (final root in roots) {
