@@ -24,6 +24,21 @@ void main() {
       expect(script, isNot(contains('http.del(')));
     });
 
+    test('Gitleaks ignores only the seven audited public configuration fingerprints', () {
+      final entries = File('.gitleaksignore').readAsLinesSync()
+        ..removeWhere((line) => line.trim().isEmpty || line.trim().startsWith('#'));
+      expect(entries, hasLength(7));
+      expect(entries, containsAll([
+        '4ea085988b95074cdc86c86f36bb4978fdb0c971:lib/erp/screens/erp_program_policies_screen.dart:generic-api-key:105',
+        '4ea085988b95074cdc86c86f36bb4978fdb0c971:lib/erp/screens/erp_program_policies_screen.dart:generic-api-key:106',
+        '4ea085988b95074cdc86c86f36bb4978fdb0c971:lib/erp/screens/erp_program_policies_screen.dart:generic-api-key:107',
+        'd6c9c993c1df86ba10ac01d9062f3f950d791ddc:lib/erp/screens/erp_program_policies_screen.dart:generic-api-key:59',
+        'd6c9c993c1df86ba10ac01d9062f3f950d791ddc:lib/erp/screens/erp_program_policies_screen.dart:generic-api-key:60',
+        'd6c9c993c1df86ba10ac01d9062f3f950d791ddc:lib/erp/screens/erp_program_policies_screen.dart:generic-api-key:61',
+        '2be7996d66ae9530ef25b4065dfe9a87f7372fce:lib/main.dart:generic-api-key:13',
+      ]));
+    });
+
     test('enterprise baseline forbids blanket production privilege changes', () {
       final baseline = File('docs/ENTERPRISE_READINESS_BASELINE_2026-11-23.md')
           .readAsStringSync();
