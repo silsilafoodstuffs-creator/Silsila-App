@@ -2540,12 +2540,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         );
         return Map<String, dynamic>.from(raw as Map);
       }
-      final currentData = await fetchMetrics(bounds.start, bounds.end);
-      // Fetch document-level totals for the visible gross/returns breakdown.
-      // Keep these separate from the server-calculated net KPI values.
+      // Independent dashboard requests run concurrently to avoid serial network waits.
+      final currentMetricsFuture = fetchMetrics(bounds.start, bounds.end);
+      final previousMetricsFuture =
+          _executivePeriod != 'من بداية النشاط' && previousEnd.isAfter(previousStart)
+              ? fetchMetrics(previousStart, previousEnd)
+              : Future.value(<String, dynamic>{});
+      // Fetch only the two fields needed for the gross/returns breakdown.
       final fromDate = bounds.start.toIso8601String().substring(0, 10);
       final toDate = bounds.end.toIso8601String().substring(0, 10);
-      final breakdownResults = await Future.wait<dynamic>([
+      final breakdownFuture = Future.wait<dynamic>([
         Supabase.instance.client
             .from('erp_sales_documents')
             .select('document_type,grand_total')
@@ -2563,6 +2567,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             .gte('document_date', fromDate)
             .lt('document_date', toDate),
       ]);
+      final parallelResults = await Future.wait<dynamic>([
+        currentMetricsFuture,
+        breakdownFuture,
+        previousMetricsFuture,
+      ]);
+      final currentData = parallelResults[0] as Map<String, dynamic>;
+      final breakdownResults = parallelResults[1] as List<dynamic>;
+      final previousData = parallelResults[2] as Map<String, dynamic>;
       double sumDocumentType(dynamic rows, String type) {
         if (rows is! List) return 0;
         return rows.whereType<Map>().where((row) => row['document_type']?.toString() == type)
@@ -2574,10 +2586,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       final salesReturns = sumDocumentType(salesRows, 'return');
       final grossPurchases = sumDocumentType(purchaseRows, 'invoice');
       final purchaseReturns = sumDocumentType(purchaseRows, 'return');
-      Map<String, dynamic> previousData = <String, dynamic>{};
-      if (_executivePeriod != 'من بداية النشاط' && previousEnd.isAfter(previousStart)) {
-        previousData = await fetchMetrics(previousStart, previousEnd);
-      }
       double? numberValue(Map<String, dynamic> data, String key) {
         final value = data[key];
         return value == null ? null : double.tryParse(value.toString());
@@ -2695,24 +2703,24 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     final results = await Future.wait<List<dynamic>>([
       loadSales
           ? safeRows(() => db
-              .from('erp_sales_representatives').select('*')
+              .from('erp_sales_representatives').select('id,rep_code,rep_name,monthly_sales_target,is_demo_data,is_active')
               .eq('company_id', companyId).eq('is_active', true))
           : Future.value(<dynamic>[]),
       loadSales
           ? safeRows(() => db
-              .from('erp_sales_documents').select('*')
+              .from('erp_sales_documents').select('sales_rep_id,grand_total,document_type,is_demo_data')
               .eq('company_id', companyId).eq('status', 'posted')
               .eq('is_demo_data', false)
               .gte('document_date', from).lt('document_date', to))
           : Future.value(<dynamic>[]),
       loadPurchases
           ? safeRows(() => db
-              .from('erp_employee_directory').select('*')
+              .from('erp_employee_directory').select('id,company_id,branch_id,employee_code,full_name,job_title,department_name,is_active')
               .eq('company_id', companyId).eq('is_active', true))
           : Future.value(<dynamic>[]),
       loadPurchases
           ? safeRows(() => db
-              .from('erp_purchase_documents').select('*')
+              .from('erp_purchase_documents').select('created_by,grand_total,document_type,is_demo_data')
               .eq('company_id', companyId).eq('status', 'posted')
               .eq('is_demo_data', false)
               .gte('document_date', from).lt('document_date', to))
