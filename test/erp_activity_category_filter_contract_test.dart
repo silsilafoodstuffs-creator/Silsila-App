@@ -27,13 +27,15 @@ void main() {
 
   test('category source rows retain names, status, visibility and hierarchy metadata', () {
     expect(categoryScreen, contains("Map<String, dynamic>.from(row)"));
-    expect(categoryScreen, contains('final wanted = normalizeActivity(_selectedActivityCode);'));
     expect(categoryScreen, contains("_selectedActivityCode = _selectedActivityCode == '*'"));
-    expect(categoryScreen, contains('displayCodes.contains(wanted)'));
+    expect(categoryScreen, contains("if (_selectedActivityCode == '*') return true;"));
+    expect(categoryScreen, contains("value: '*',"));
+    expect(categoryScreen, contains("final draftActivityCode = _selectedActivityCode == '*' ? '01' : _selectedActivityCode;"));
   });
   test('main, sub and secondary category tabs share the compact activity grid contract', () {
     expect(categoryScreen, contains("String _viewMode = 'grid';"));
     expect(categoryScreen, contains("MediaQuery.sizeOf(context).width * 0.25"));
+    expect(categoryScreen, contains(".toDouble() * (2 / 3);"));
     expect(categoryScreen, contains(r"DataColumn(label: Text('كود فئة $levelName'))"));
     expect(categoryScreen, contains("DataColumn(label: Text('اسم الفئة'))"));
     expect(categoryScreen, contains("DataColumn(label: Text('معاينة'))"));
