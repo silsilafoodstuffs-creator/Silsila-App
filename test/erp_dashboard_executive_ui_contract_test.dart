@@ -66,6 +66,10 @@ void main() {
     expect(dashboard, contains('textDirection == TextDirection.rtl ? source.length - 1 - i : i'));
     expect(dashboard, contains('textDirection == TextDirection.rtl ? denominator - i : i'));
     expect(dashboard, contains('oldDelegate.textDirection != textDirection'));
+    expect(dashboard, contains('footerLabels.take(7)'));
+    expect(dashboard, contains('last7Collections'));
+    expect(dashboard, contains('hasData: _executiveDailySales.isNotEmpty'));
+    expect(dashboard, contains('hasData: _executiveDailyCollections.isNotEmpty'));
     expect(dashboard, isNot(contains('_ExecutiveDonutPainter')));
   });
 

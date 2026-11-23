@@ -3524,6 +3524,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 values: _executiveDailySales,
                 textDirection: Directionality.of(context),
               ),
+              hasData: _executiveDailySales.isNotEmpty,
             ),
           if (canFinance || canInventory) ...[
             if (canSales) const SizedBox(height: 11),
@@ -3629,9 +3630,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           const Text('لا توجد بيانات متاحة للرسم', textAlign: TextAlign.center,
             style: TextStyle(fontSize: 10, color: Color(0xFF766B80), fontWeight: FontWeight.w700)),
       ])),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: footerLabels.take(3).map((label) => Expanded(
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: footerLabels.take(7).map((label) => Expanded(
         child: Text(label, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 10, color: Color(0xFF766B80), fontWeight: FontWeight.w600)),
+          style: TextStyle(fontSize: footerLabels.length > 3 ? 8 : 10, color: const Color(0xFF766B80), fontWeight: FontWeight.w600)),
       )).toList()),
     ]),
   );
@@ -3642,18 +3643,20 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required bool showInventory,
     required TextDirection textDirection,
   }) {
+    final last7Collections = _executiveDailyCollections.fold<double>(0, (sum, amount) => sum + amount);
     final charts = <Widget>[
       if (showCollections)
         _executiveChartPanel(
-          title: 'المدفوع المسجل على الفواتير',
+          title: 'التحصيل خلال آخر 7 أيام',
           caption: 'آخر 7 أيام • بيانات الفواتير المرحلة',
           color: const Color(0xFF168A70),
-          value: _executiveMoney(_executiveCollections),
+          value: _executiveMoney(last7Collections),
           chart: _ExecutiveChartPainter(
             color: const Color(0xFF168A70),
             values: _executiveDailyCollections,
             textDirection: textDirection,
           ),
+          hasData: _executiveDailyCollections.isNotEmpty,
         ),
       if (showInventory)
         _executiveChartPanel(
@@ -3665,7 +3668,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             values: _executiveInventoryGroupValues,
             textDirection: textDirection,
           ),
-          footerLabels: _executiveInventoryGroupLabels.take(3).toList(),
+          footerLabels: _executiveInventoryGroupLabels.take(7).toList(),
           hasData: _executiveInventoryGroupValues.isNotEmpty,
         ),
     ];
