@@ -2657,18 +2657,19 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _executiveInventoryGroupLabels = stringList(currentData, 'inventory_category_labels');
         _executiveInventoryGroupValues = numberList(currentData, 'inventory_category_values');
       });
-      if (canSales || canInventory) {
-        await _loadExecutiveStaffPerformance(
-          companyId,
-          bounds.start,
-          bounds.end,
-          loadSales: canSales,
-          loadPurchases: canInventory,
-        );
-      }
-      if (canInventory) {
-        await _loadExecutiveExpiryMetrics(companyId);
-      }
+      // Staff rankings and expiry alerts are independent supplementary panels.
+      // Load them together so one slow query does not delay the other panel.
+      await Future.wait<void>([
+        if (canSales || canInventory)
+          _loadExecutiveStaffPerformance(
+            companyId,
+            bounds.start,
+            bounds.end,
+            loadSales: canSales,
+            loadPurchases: canInventory,
+          ),
+        if (canInventory) _loadExecutiveExpiryMetrics(companyId),
+      ]);
     } catch (error) {
       if (!mounted) return;
       setState(() => _executiveMetricsError = error.toString());
