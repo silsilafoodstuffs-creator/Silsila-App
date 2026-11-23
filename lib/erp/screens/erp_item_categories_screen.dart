@@ -90,8 +90,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   }
 
   String _s(dynamic v) => (v ?? '').toString();
-  List<Map<String,dynamic>> get _parents => _all.where((r) => r['parent_id'] == null && r['is_active'] == true).toList();
-  List<Map<String,dynamic>> get _secondaryParents => _all.where((r) => r['parent_id'] != null && _parentOf(r) != null && _parentOf(r)!['parent_id'] == null && r['is_active'] == true).toList();
+  List<Map<String,dynamic>> get _parents => _all.where((r) => r['parent_id'] == null).toList();
+  List<Map<String,dynamic>> get _secondaryParents => _all.where((r) => r['parent_id'] != null && _parentOf(r) != null && _parentOf(r)!['parent_id'] == null).toList();
   Map<String,dynamic>? _parentOf(Map<String,dynamic> row) {
     for (final r in _all) { if (_s(r['id']) == _s(row['parent_id'])) return r; }
     return null;
@@ -1079,7 +1079,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                         itemHeight: 40, isExpanded: true,
                                         decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 3)),
                                         items: _parents.map((p) => DropdownMenuItem<String>(value: _s(p['id']), child: Text(_s(p['category_name']), overflow: TextOverflow.ellipsis))).toList(),
-                                        onChanged: _editing ? (value) { if (value == null) return; setState(() { row['parent_id'] = value; row['activity_code'] = _s(_all.firstWhere((p) => _s(p['id']) == value)['activity_code']); }); } : null,
+                                        onChanged: _editing ? (value) { if (value == null) return; setState(() { row['parent_id'] = value; final activity = _s(_all.firstWhere((p) => _s(p['id']) == value)['activity_code']); row['activity_code'] = activity; for (final child in _all.where((r) => _isDescendantOf(r, id))) { child['activity_code'] = activity; } }); } : null,
                                       ))),
                                       if (_catalogTab == 2) DataCell(SizedBox(width: 190, child: DropdownButtonFormField<String>(
                                         value: _secondaryParents.any((p) => _s(p['id']) == _s(row['parent_id'])) ? _s(row['parent_id']) : null,
