@@ -97,7 +97,9 @@ class ProductService {
         search: cleanSearch,
         enabled: supplierId == null && categoryId == null,
       );
-      return _mergeMasterCatalog(marketplaceRows, masterRows, limit);
+      final merged = _mergeMasterCatalog(marketplaceRows, masterRows, limit);
+      await _attachErpMasterImages(merged);
+      return merged;
     } catch (_) {
       // Existing supplier listings remain available if ERP catalog access is
       // temporarily unavailable or the shared-catalog migration is pending.
@@ -126,7 +128,7 @@ class ProductService {
     }
 
     var categoryQuery = db.from('erp_item_categories')
-        .select('id,parent_id,category_name:category_name,category_name_en:category_name_en,activity_code,image_data,image_mime_type')
+        .select('id,parent_id,category_name:category_name,category_name_en:category_name_en,activity_code')
         .eq('is_active', true)
         .eq('show_in_app', true);
     if (activityCode != null && activityCode.isNotEmpty) {
@@ -161,7 +163,7 @@ class ProductService {
     // IN filter based on the category query: category visibility and pagination can
     // differ, and that filter silently drops otherwise valid item rows.
     var itemQuery = db.from('erp_items')
-        .select('id,category_id:category_id,item_code,item_name,base_unit,sale_price,is_active,show_in_app,image_data,image_mime_type,brand_name,package_description')
+        .select('id,category_id:category_id,item_code,item_name,base_unit,sale_price,is_active,show_in_app,brand_name,package_description')
         .eq('is_active', true)
         .eq('show_in_app', true);
     if (search != null) itemQuery = itemQuery.ilike('item_name', '%${_escapeLike(search)}%');
@@ -201,9 +203,8 @@ class ProductService {
         'package_count': 1,
         'small_unit': null,
         'offer_price': null,
-        'image_data': item['image_data'],
-        'image_mime_type': item['image_mime_type'],
-        '_erp_master_item': true,
+        // Binary image data is fetched only for the final, visible result page.
+        '_erp_master_item_id': item['id'],
       });
     }
     return results;
@@ -229,11 +230,7 @@ class ProductService {
       final existingIndex = marketplaceByName[key];
       if (existingIndex != null) {
         final existing = merged[existingIndex];
-        if ((master['image_data'] ?? '').toString().isNotEmpty) {
-          existing['image_data'] = master['image_data'];
-          existing['image_mime_type'] = master['image_mime_type'];
-          existing['image_url'] = null;
-        }
+        existing['_erp_master_item_id'] = master['_erp_master_item_id'];
         if ((master['category'] ?? '').toString().isNotEmpty) existing['category'] = master['category'];
         if ((master['brand'] ?? '').toString().isNotEmpty) existing['brand'] = master['brand'];
         if ((master['subcategory'] ?? '').toString().isNotEmpty) existing['subcategory'] = master['subcategory'];
@@ -243,7 +240,47 @@ class ProductService {
       merged.add(Map<String, dynamic>.from(master));
     }
     merged.sort((a, b) => (a['name'] ?? '').toString().compareTo((b['name'] ?? '').toString()));
-    return merged.take(limit).toList(growable: false);
+    return merged.take(limit).toList(growable: true);
+  }
+
+  /// Fetch ERP image bytes only for products that survive catalog filtering,
+  /// sorting, and page limiting. This avoids transferring every image in the
+  /// 500-row metadata window on each catalog request.
+  Future<void> _attachErpMasterImages(
+    List<Map<String, dynamic>> rows,
+  ) async {
+    final ids = rows
+        .map((row) => row['_erp_master_item_id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+
+    for (final row in rows) {
+      row.remove('_erp_master_item_id');
+    }
+    if (ids.isEmpty) return;
+
+    try {
+      final imageRows = await _requireClient
+          .from('erp_items')
+          .select('id,image_data,image_mime_type')
+          .inFilter('id', ids);
+      final imagesById = <String, Map<String, dynamic>>{
+        for (final raw in imageRows.whereType<Map>())
+          raw['id'].toString(): Map<String, dynamic>.from(raw),
+      };
+      for (final row in rows) {
+        final image = imagesById[row['id']?.toString()];
+        final imageData = image?['image_data'];
+        if (imageData != null && imageData.toString().isNotEmpty) {
+          row['image_data'] = imageData;
+          row['image_mime_type'] = image?['image_mime_type'];
+          row['image_url'] = null;
+        }
+      }
+    } catch (_) {
+      // Catalog metadata remains usable if optional image retrieval fails.
+    }
   }
 
   /// جلب تفاصيل منتج نشط باستخدام رقمه.
