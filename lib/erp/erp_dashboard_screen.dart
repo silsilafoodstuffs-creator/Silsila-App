@@ -4201,7 +4201,7 @@ class _ExecutiveDonutPainter extends CustomPainter {
     final label = TextPainter(
       text: TextSpan(
         text: '100%',
-        style: TextStyle(color: _purple, fontSize: (size.shortestSide * .12).clamp(10.0, 15.0), fontWeight: FontWeight.w900),
+        style: TextStyle(color: Colors.white, fontSize: (size.shortestSide * .12).clamp(10.0, 15.0), fontWeight: FontWeight.w900),
       ),
       textDirection: TextDirection.rtl,
       textAlign: TextAlign.center,
@@ -4227,7 +4227,7 @@ class _ExecutiveBarsPainter extends CustomPainter {
     final source = values;
     if (source.isEmpty) return;
     final maxValue = source.fold<double>(0, (max, value) => value > max ? value : max);
-    const colors = [_purple, _orange, _pink, _purple, _orange, _pink, _purple];
+    const colors = [Color(0xFFB68CFF), _orange, _pink, Color(0xFF9C75FF), _orange, _pink, Color(0xFFB68CFF)];
     final slot = size.width / source.length;
     for (var i = 0; i < source.length; i++) {
       final barWidth = slot * .48;
@@ -4268,8 +4268,9 @@ class _ExecutiveChartPainter extends CustomPainter {
       final y = size.height * (.88 - normalized * .70);
       return Offset(x, y);
     });
+    final lineColor = color.computeLuminance() < .12 ? const Color(0xFFB68CFF) : color;
     final linePaint = Paint()
-      ..color = color
+      ..color = lineColor
       ..strokeWidth = 3.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
@@ -4286,16 +4287,16 @@ class _ExecutiveChartPainter extends CustomPainter {
       fillPath,
       Paint()
         ..shader = LinearGradient(
-          colors: [color.withValues(alpha: .18), color.withValues(alpha: .01)],
+          colors: [lineColor.withValues(alpha: .28), lineColor.withValues(alpha: .015)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ).createShader(Offset.zero & size),
     );
     canvas.drawPath(path, linePaint);
-    final dotPaint = Paint()..color = color;
+    final dotPaint = Paint()..color = lineColor;
     for (final point in points) {
       canvas.drawCircle(point, 4, dotPaint);
-      canvas.drawCircle(point, 8, Paint()..color = color.withValues(alpha: .13));
+      canvas.drawCircle(point, 8, Paint()..color = lineColor.withValues(alpha: .18));
     }
   }
 
