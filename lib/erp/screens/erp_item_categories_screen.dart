@@ -1125,7 +1125,10 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                   Expanded(
                     child: _loading
                         ? const Center(child: CircularProgressIndicator())
-                        : Container(
+                        : Column(
+                            children: [
+                              Expanded(
+                                child: Container(
                             decoration: BoxDecoration(
                               color: Colors.white,
                               border: Border.all(color: const Color(0xFFE4DDED)),
@@ -1261,8 +1264,9 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
 
                               ),
                             ),
-                          ),
-                          Padding(
+                                ),
+                              ),
+                              Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1284,6 +1288,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                 ]),
                               ],
                             ),
+                          ),
+                            ],
                           ),
                   ),
                 ],
