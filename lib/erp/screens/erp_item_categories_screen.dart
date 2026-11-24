@@ -61,6 +61,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   List<Map<String,dynamic>> _all = [];
   List<Map<String,dynamic>> _companyCategories = [];
   final Map<String, Map<String, dynamic>> _categoriesById = <String, Map<String, dynamic>>{};
+  final Map<String, List<Map<String, dynamic>>> _childrenByParent = <String, List<Map<String, dynamic>>>{};
   final Set<String> _categoryImageLoads = <String>{};
   List<Map<String,dynamic>> get _codingCategories => <Map<String,dynamic>>[
     ..._companyCategories.where((row) =>
@@ -106,6 +107,15 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       ..clear()
       ..addEntries(_all.where((row) => _s(row['id']).isNotEmpty)
           .map((row) => MapEntry(_s(row['id']), row)));
+    _childrenByParent.clear();
+    for (final row in _all) {
+      final parentId = _s(row['parent_id']);
+      if (parentId.isEmpty) continue;
+      _childrenByParent.putIfAbsent(parentId, () => <Map<String, dynamic>>[]).add(row);
+    }
+    for (final children in _childrenByParent.values) {
+      children.sort((a, b) => _s(a['category_code']).compareTo(_s(b['category_code'])));
+    }
   }
   Future<void> _load() async {
     if (_db == null) {
@@ -159,15 +169,21 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       // company context yields no rows. Never read another company's catalog.
       if (rawRows.isEmpty && activeCompanies.isNotEmpty) {
         for (final candidate in activeCompanies.where((id) => id != company)) {
-          final candidateRows = await _db!.from('erp_item_categories')
-              .select(categoryColumns)
-              .eq('company_id', candidate)
-              .order('category_code')
-              .range(0, catalogPageSize - 1);
-          if ((candidateRows as List).isNotEmpty) {
+          final candidateRows = <dynamic>[];
+          for (var offset = 0; ; offset += catalogPageSize) {
+            final page = await _db!.from('erp_item_categories')
+                .select(categoryColumns)
+                .eq('company_id', candidate)
+                .order('category_code')
+                .order('id')
+                .range(offset, offset + catalogPageSize - 1);
+            candidateRows.addAll(page as List);
+            if (page.length < catalogPageSize) break;
+          }
+          if (candidateRows.isNotEmpty) {
             company = candidate;
             _company = candidate;
-            rawRows.addAll(candidateRows as List);
+            rawRows.addAll(candidateRows);
             break;
           }
         }
@@ -661,8 +677,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     SizedBox(width:112, child: ErpQuickTaskButton(label:label,icon:icon,onPressed:action,compact:true));
 
   List<Map<String,dynamic>> _childrenOf(Map<String,dynamic> parent) =>
-      _all.where((r) => _s(r['parent_id']) == _s(parent['id'])).toList()
-        ..sort((a,b) => _s(a['category_code']).compareTo(_s(b['category_code'])));
+      _childrenByParent[_s(parent['id'])] ?? const <Map<String, dynamic>>[];
 
   bool _matchesSearch(Map<String,dynamic> row) {
     if (_searchQuery.isEmpty) return true;
