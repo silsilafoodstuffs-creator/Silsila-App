@@ -252,6 +252,49 @@ class ProductService {
     return merged.take(limit).toList(growable: true);
   }
 
+  /// جلب صور المنتجات المطلوبة فقط، على دفعات صغيرة لتقليل نقل البيانات.
+  /// تُقرأ صور كتالوج الموردين أولاً، ثم صور أصناف ERP للمعرّفات غير الموجودة.
+  Future<Map<String, dynamic>> getProductImageRowsByIds(
+    List<String> productIds,
+  ) async {
+    final ids = productIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    if (ids.isEmpty) return <String, dynamic>{};
+
+    final result = <String, dynamic>{};
+
+    Future<void> readImages(String table, List<String> requestedIds) async {
+      for (var offset = 0; offset < requestedIds.length; offset += 100) {
+        final batch = requestedIds.skip(offset).take(100).toList(growable: false);
+        try {
+          final rows = await _requireClient
+              .from(table)
+              .select('id,image_data')
+              .inFilter('id', batch);
+          for (final raw in (rows as List)) {
+            if (raw is! Map) continue;
+            final row = Map<String, dynamic>.from(raw);
+            final id = row['id']?.toString();
+            final image = row['image_data'];
+            if (id != null && image != null) result[id] = image;
+          }
+        } catch (_) {
+          // A missing/denied source must not prevent loading the other source.
+        }
+      }
+    }
+
+    await readImages('products', ids);
+    final missing = ids.where((id) => !result.containsKey(id)).toList(growable: false);
+    if (missing.isNotEmpty) {
+      await readImages('erp_items', missing);
+    }
+    return result;
+  }
+
   /// جلب تفاصيل منتج نشط باستخدام رقمه.
   Future<Map<String, dynamic>?> getProductById(
     String productId,
