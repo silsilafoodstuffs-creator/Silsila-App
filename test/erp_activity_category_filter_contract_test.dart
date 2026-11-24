@@ -17,12 +17,14 @@ void main() {
     expect(categoryScreen, contains("'01': 'مواد غذائية'"));
   });
 
-  test('selected activity is fetched independently and merged by stable category id', () {
-    expect(categoryScreen, contains("final selectedCode = normalizeActivity(_selectedActivityCode);"));
+  test('company category catalog is fetched once in bounded pages without duplicate activity requests', () {
+    expect(categoryScreen, contains("const categoryColumns = 'id,company_id,activity_code,category_code,category_name,category_name_en,parent_id,is_active,show_in_app,image_url,image_mime_type,image_source_url,image_attribution,created_at';"));
     expect(categoryScreen, contains(".eq('company_id', company)"));
-    expect(categoryScreen, contains(".eq('activity_code', selectedCode)"));
-    expect(categoryScreen, contains("final completeCatalog = catalogById.values.toList(growable: false);"));
+    expect(categoryScreen, contains(".range(offset, offset + catalogPageSize - 1)"));
+    expect(categoryScreen, contains("final completeCatalog = catalog;"));
     expect(categoryScreen, contains("_all = completeCatalog.where((row)"));
+    expect(categoryScreen, isNot(contains("final selectedCode = normalizeActivity(_selectedActivityCode);")));
+    expect(categoryScreen, isNot(contains(".eq('activity_code', selectedCode)")));
   });
 
   test('category source rows retain names, status, visibility and hierarchy metadata', () {
