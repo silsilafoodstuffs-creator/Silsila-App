@@ -53,6 +53,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   bool _hierarchyChanged = false;
   int _level = 0;
   int _catalogTab = 0;
+  int _categoryPageIndex = 0;
+  static const int _categoryPageSize = 100;
   String? _parentFilter;
   String? _mainCategoryFilter;
   String? _subCategoryFilter;
@@ -201,10 +203,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         return code;
       }
 
-      // Always fetch the selected activity independently of the broad catalog
-      // request. This prevents server row caps, cached partial catalogs, or
-      // mixed-activity pagination from silently omitting one activity.
-      final selectedCode = normalizeActivity(_selectedActivityCode);
+      // The company catalog has already been fetched in bounded pages.
+      // Do not issue a second full-table request for the selected activity.
       final completeCatalog = catalog;
 
       final actualCodes = <String>{};
@@ -965,6 +965,12 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     final subFilterOptions = _all.where((row) => _rowLevel(row) == 1 &&
       (_mainCategoryFilter == null || _s(row['parent_id']) == _mainCategoryFilter)).toList()
       ..sort((a,b) => _s(a['category_code']).compareTo(_s(b['category_code'])));
+    final pageCount = (visibleRows.length / _categoryPageSize).ceil().clamp(1, 999999);
+    final currentPage = _categoryPageIndex.clamp(0, pageCount - 1);
+    final pageRows = visibleRows
+        .skip(currentPage * _categoryPageSize)
+        .take(_categoryPageSize)
+        .toList(growable: false);
     final levelName = _catalogTab == 1 ? 'فرعية' : _catalogTab == 2 ? 'ثانوية' : 'رئيسية';
     Map<String, dynamic>? selectedRow;
     for (final row in visibleRows) {
@@ -1001,6 +1007,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           if (_saving) return;
           setState(() {
             _catalogTab = tab;
+            _categoryPageIndex = 0;
             if (tab < 3) {
               _level = tab;
               _parentFilter = null;
@@ -1125,7 +1132,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                   const DataColumn(label: Text('يظهر في التطبيق')),
                                   const DataColumn(label: Text('حذف')),
                                 ],
-                                rows: visibleRows.asMap().entries.map((entry) {
+                                rows: pageRows.asMap().entries.map((entry) {
                                   final i = entry.key;
                                   final row = entry.value;
                                   final id = _s(row['id']);
@@ -1136,7 +1143,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                       _loadCategoryImage(row);
                                     },
                                     cells: [
-                                      DataCell(SizedBox(width: 38, child: Text('${i + 1}',
+                                      DataCell(SizedBox(width: 38, child: Text('${currentPage * _categoryPageSize + i + 1}',
                                         textAlign: TextAlign.center))),
                                       DataCell(SizedBox(width: 112, child: Align(
                                         alignment: AlignmentDirectional.centerStart,
@@ -1235,6 +1242,29 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                 }).toList(),
 
                               ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('عرض ${visibleRows.isEmpty ? 0 : currentPage * _categoryPageSize + 1}-${(currentPage * _categoryPageSize + pageRows.length)} من ${visibleRows.length} فئة',
+                                  style: const TextStyle(fontSize: 12, color: _catPurple)),
+                                Row(mainAxisSize: MainAxisSize.min, children: [
+                                  IconButton(
+                                    tooltip: 'الصفحة السابقة',
+                                    onPressed: currentPage > 0 ? () => setState(() => _categoryPageIndex = currentPage - 1) : null,
+                                    icon: const Icon(Icons.chevron_right),
+                                  ),
+                                  Text('${currentPage + 1} / ${pageCount}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  IconButton(
+                                    tooltip: 'الصفحة التالية',
+                                    onPressed: currentPage + 1 < pageCount ? () => setState(() => _categoryPageIndex = currentPage + 1) : null,
+                                    icon: const Icon(Icons.chevron_left),
+                                  ),
+                                ]),
+                              ],
                             ),
                           ),
                   ),
