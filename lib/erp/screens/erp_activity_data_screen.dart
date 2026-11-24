@@ -26,16 +26,18 @@ class _ErpActivityDataScreenState extends State<ErpActivityDataScreen> {
   @override
   Widget build(BuildContext context) {
     ErpKeyboardNavigation.registerActions();
-    final children = <Widget>[
-      ErpActivityTypesScreen(key: ValueKey('activity-types-${widget.companyId}'), companyId: widget.companyId, hideHeader: true),
-      for (var tab = 0; tab < 4; tab++)
-        ErpItemCategoriesScreen(
-          key: ValueKey('activity-category-$tab-${widget.companyId}'),
-          companyId: widget.companyId,
-          initialCatalogTab: tab,
-          hideHeaderAndTabs: true,
-        ),
-    ];
+    final Widget selectedContent = _selectedTab == 0
+        ? ErpActivityTypesScreen(
+            key: ValueKey('activity-types-${widget.companyId}'),
+            companyId: widget.companyId,
+            hideHeader: true,
+          )
+        : ErpItemCategoriesScreen(
+            key: ValueKey('activity-category-${_selectedTab - 1}-${widget.companyId}'),
+            companyId: widget.companyId,
+            initialCatalogTab: _selectedTab - 1,
+            hideHeaderAndTabs: true,
+          );
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Column(
@@ -83,7 +85,10 @@ class _ErpActivityDataScreenState extends State<ErpActivityDataScreen> {
               ]),
             ),
           ),
-          Expanded(child: IndexedStack(index: _selectedTab, children: children)),
+          Expanded(child: KeyedSubtree(
+            key: ValueKey('activity-data-tab-${_selectedTab}-${widget.companyId}'),
+            child: selectedContent,
+          )),
         ],
       ),
     );
