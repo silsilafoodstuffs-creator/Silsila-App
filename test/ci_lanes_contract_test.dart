@@ -123,7 +123,7 @@ void main() {
     // Preview smoke tests remain tied to the exact completed Web artifact,
     // while superseded previews for the same branch are cancelled.
     expect(preview, contains('cancel-in-progress: true'));
-    expect(preview, contains('github.event.workflow_run.run_id'));
+    expect(preview, contains('github.event.workflow_run.id'));
     expect(preview, contains('github.event.workflow_run.head_sha'));
     expect(mobile, contains('workflow_dispatch:'));
     expect(web, contains('workflow_dispatch:'));
@@ -165,7 +165,9 @@ void main() {
     final categories = File('lib/erp/screens/erp_item_categories_screen.dart').readAsStringSync();
     expect(categories, contains("const defaultActivity = '01';"));
     expect(categories, contains('if (company.isEmpty && activeCompanies.isNotEmpty)'));
-    expect(categories, contains('if ((rawRows as List).isEmpty && activeCompanies.isNotEmpty)'));
+    expect(categories, contains('if (rawRows.isEmpty && activeCompanies.isNotEmpty)'));
+    expect(categories, contains('const catalogPageSize = 500;'));
+    expect(categories, contains(".select(categoryColumns)"));
     expect(categories, contains("final rawCode = normalizeActivity(_s(row['activity_code']));"));
     expect(categories, contains("return rawCode == _selectedActivityCode;"));
     expect(categories, contains("Map<String,dynamic>? _parentOf"));
