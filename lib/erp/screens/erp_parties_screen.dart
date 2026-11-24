@@ -1,3 +1,4 @@
+import '../services/erp_geographic_data_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as excel;
@@ -240,7 +241,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     try {
       final result=await Future.wait<dynamic>([
         client.from('erp_parties').select('id,party_code,party_name,party_name_en,party_kind,country,address,governorate,district,center,area,geo_area_id,geographic_area_id,customer_type,transaction_type,sales_rep_employee_id,is_active').eq('company_id',cid).eq('party_kind',kind).order('party_code').limit(2000),
-        _fetchAllGeo(client,cid),
+        ErpGeographicDataRepository.fetchActive(client, cid),
         client.from('erp_party_classifications').select('id,name_ar,name_en').eq('company_id',cid).eq('party_kind',kind).eq('is_active',true).order('name_ar'),
         client.from('erp_employees').select('id,employee_code,full_name,job_title').eq('company_id',cid).eq('is_active',true).order('full_name'),
       ]);
