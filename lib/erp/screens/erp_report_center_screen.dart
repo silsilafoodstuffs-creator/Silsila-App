@@ -27,7 +27,7 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
   bool _loading = false;
   bool _loadingMore = false;
   bool _hasMore = false;
-  static const int _pageSize = 500;
+  static const int _pageSize = 100;
   String? _error;
   String? _warning;
   String? _sourceTable;
@@ -401,7 +401,7 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
                   child: OutlinedButton.icon(
                     onPressed: _loadingMore ? null : _loadMore,
                     icon: _loadingMore ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.expand_more),
-                    label: Text(_loadingMore ? 'جارٍ تحميل المزيد...' : 'تحميل 500 سجل إضافي'),
+                    label: Text(_loadingMore ? 'جارٍ تحميل المزيد...' : 'تحميل 100 سجل إضافي'),
                   ),
                 ),
               ]),
