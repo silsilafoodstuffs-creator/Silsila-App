@@ -58,6 +58,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   String? _subCategoryFilter;
   List<Map<String,dynamic>> _all = [];
   List<Map<String,dynamic>> _companyCategories = [];
+  final Map<String, Map<String, dynamic>> _categoriesById = <String, Map<String, dynamic>>{};
+  final Set<String> _categoryImageLoads = <String>{};
   List<Map<String,dynamic>> get _codingCategories => <Map<String,dynamic>>[
     ..._companyCategories.where((row) =>
       _selectedActivityCode == '*' ||
@@ -94,9 +96,14 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   String _s(dynamic v) => (v ?? '').toString();
   List<Map<String,dynamic>> get _parents => _all.where((r) => r['parent_id'] == null).toList();
   List<Map<String,dynamic>> get _secondaryParents => _all.where((r) => r['parent_id'] != null && _parentOf(r) != null && _parentOf(r)!['parent_id'] == null).toList();
-  Map<String,dynamic>? _parentOf(Map<String,dynamic> row) {
-    for (final r in _all) { if (_s(r['id']) == _s(row['parent_id'])) return r; }
-    return null;
+  Map<String,dynamic>? _parentOf(Map<String,dynamic> row) =>
+      _categoriesById[_s(row['parent_id'])];
+
+  void _rebuildCategoryIndexes() {
+    _categoriesById
+      ..clear()
+      ..addEntries(_all.where((row) => _s(row['id']).isNotEmpty)
+          .map((row) => MapEntry(_s(row['id']), row)));
   }
   Future<void> _load() async {
     if (_db == null) {
@@ -133,29 +140,36 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
 
       // Read the canonical catalog once. Activity metadata is optional and
       // must never prevent the actual categories from loading.
-      var rawRows = await _db!.from('erp_item_categories')
-          .select('*')
-          .eq('company_id', company)
-          .order('category_code')
-          .limit(10000);
+      const categoryColumns = 'id,company_id,activity_code,category_code,category_name,category_name_en,parent_id,is_active,show_in_app,image_url,image_mime_type,image_source_url,image_attribution,created_at';
+      final rawRows = <dynamic>[];
+      const catalogPageSize = 500;
+      for (var offset = 0; ; offset += catalogPageSize) {
+        final page = await _db!.from('erp_item_categories')
+            .select(categoryColumns)
+            .eq('company_id', company)
+            .order('category_code')
+            .range(offset, offset + catalogPageSize - 1);
+        rawRows.addAll(page as List);
+        if (page.length < catalogPageSize) break;
+      }
       // Retry only against the user's other verified memberships when a stale
       // company context yields no rows. Never read another company's catalog.
-      if ((rawRows as List).isEmpty && activeCompanies.isNotEmpty) {
+      if (rawRows.isEmpty && activeCompanies.isNotEmpty) {
         for (final candidate in activeCompanies.where((id) => id != company)) {
           final candidateRows = await _db!.from('erp_item_categories')
-              .select('*')
+              .select(categoryColumns)
               .eq('company_id', candidate)
               .order('category_code')
-              .limit(10000);
+              .range(0, catalogPageSize - 1);
           if ((candidateRows as List).isNotEmpty) {
             company = candidate;
             _company = candidate;
-            rawRows = candidateRows;
+            rawRows.addAll(candidateRows as List);
             break;
           }
         }
       }
-      final catalog = (rawRows as List)
+      final catalog = rawRows
           .whereType<Map>()
           .map((row) => Map<String, dynamic>.from(row))
           .toList(growable: false);
@@ -191,25 +205,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       // request. This prevents server row caps, cached partial catalogs, or
       // mixed-activity pagination from silently omitting one activity.
       final selectedCode = normalizeActivity(_selectedActivityCode);
-      final selectedActivityRows = _selectedActivityCode == '*'
-          ? const <dynamic>[]
-          : await _db!.from('erp_item_categories')
-              .select('*')
-              .eq('company_id', company)
-              .eq('activity_code', selectedCode)
-              .order('category_code')
-              .limit(10000);
-      final catalogById = <String, Map<String, dynamic>>{
-        for (final row in catalog) _s(row['id']): row,
-      };
-      for (final raw in (selectedActivityRows as List)) {
-        if (raw is Map) {
-          final row = Map<String, dynamic>.from(raw);
-          final id = _s(row['id']);
-          if (id.isNotEmpty) catalogById[id] = row;
-        }
-      }
-      final completeCatalog = catalogById.values.toList(growable: false);
+      final completeCatalog = catalog;
 
       final actualCodes = <String>{};
       for (final row in completeCatalog) {
@@ -261,7 +257,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         if (rawCode.isEmpty) return _selectedActivityCode == defaultActivity;
         return rawCode == _selectedActivityCode;
       }).toList();
-      _expandedIds.addAll(_all.map((row) => _s(row['id'])));
+      _rebuildCategoryIndexes();
+      _expandedIds.clear();
       _syncControllers();
       if (_parentFilter != null &&
           !_all.any((row) => _s(row['id']) == _parentFilter)) {
@@ -371,17 +368,19 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   }
 
   void _syncControllers() {
-    final keep = <String>{};
-    for (final row in _all) {
-      final id = _s(row['id']); keep.add(id);
-      _ar.putIfAbsent(id, () => TextEditingController());
-      _en.putIfAbsent(id, () => TextEditingController());
-      _ar[id]!.text = _s(row['category_name']);
-      _en[id]!.text = _s(row['category_name_en']);
-    }
-    for (final id in _ar.keys.where((id) => !keep.contains(id)).toList()) {
-      _ar.remove(id)?.dispose(); _en.remove(id)?.dispose();
-      _imageBytes.remove(id); _imageNames.remove(id);
+    final keep = _categoriesById.keys.toSet();
+    for (final id in _ar.keys.toList()) {
+      if (!keep.contains(id)) {
+        _ar.remove(id)?.dispose();
+        _en.remove(id)?.dispose();
+        _imageBytes.remove(id);
+        _imageNames.remove(id);
+        _categoryImageLoads.remove(id);
+        continue;
+      }
+      final row = _categoriesById[id]!;
+      _ar[id]?.text = _s(row['category_name']);
+      _en[id]?.text = _s(row['category_name_en']);
     }
   }
 
@@ -390,8 +389,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     final visited = <String>{};
     while (parentId.isNotEmpty && visited.add(parentId)) {
       if (parentId == ancestorId) return true;
-      Map<String,dynamic>? parent;
-      for (final candidate in _all) { if (_s(candidate['id']) == parentId) { parent = candidate; break; } }
+      final parent = _categoriesById[parentId];
       parentId = parent == null ? '' : _s(parent['parent_id']);
     }
     return false;
@@ -399,8 +397,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
 
   int _rowLevel(Map<String,dynamic> row) {
     if (row['parent_id'] == null) return 0;
-    final p = _parentOf(row);
-    if (p == null || p['parent_id'] == null) return 1;
+    final parent = _parentOf(row);
+    if (parent == null || parent['parent_id'] == null) return 1;
     return 2;
   }
 
@@ -492,6 +490,30 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
 
   Uint8List? _categoryImageBytes(Map<String,dynamic> row) =>
       _imageBytes[_s(row['id'])] ?? _decodeBytea(row['image_data']);
+
+  Future<void> _loadCategoryImage(Map<String, dynamic> row) async {
+    final id = _s(row['id']);
+    if (id.isEmpty || row['image_data'] != null ||
+        _imageBytes[id] != null || !_categoryImageLoads.add(id)) return;
+    try {
+      final image = await _db!.from('erp_item_categories')
+          .select('image_data,image_mime_type,image_attribution,image_source_url')
+          .eq('company_id', _company!)
+          .eq('id', id)
+          .maybeSingle();
+      if (!mounted || image == null) return;
+      setState(() {
+        row['image_data'] = image['image_data'];
+        row['image_mime_type'] = image['image_mime_type'];
+        row['image_attribution'] = image['image_attribution'];
+        row['image_source_url'] = image['image_source_url'];
+      });
+    } catch (_) {
+      // Category text and editing remain available if the optional image fails.
+    } finally {
+      _categoryImageLoads.remove(id);
+    }
+  }
 
   Widget _imagePreview(Map<String,dynamic> row, {double size = 54}) {
     final bytes = _categoryImageBytes(row);
@@ -1109,7 +1131,10 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                   final id = _s(row['id']);
                                   return DataRow(
                                     selected: _selectedId == id,
-                                    onSelectChanged: (_) => setState(() => _selectedId = id),
+                                    onSelectChanged: (_) {
+                                      setState(() => _selectedId = id);
+                                      _loadCategoryImage(row);
+                                    },
                                     cells: [
                                       DataCell(SizedBox(width: 38, child: Text('${i + 1}',
                                         textAlign: TextAlign.center))),
@@ -1156,7 +1181,10 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                       DataCell(SizedBox(width: 72, child: IconButton(
                                         tooltip: 'معاينة بيانات الفئة',
                                         visualDensity: VisualDensity.compact,
-                                        onPressed: () => _showCategoryPreview(row),
+                                        onPressed: () {
+                                          _loadCategoryImage(row);
+                                          _showCategoryPreview(row);
+                                        },
                                         icon: const Icon(Icons.visibility_outlined, size: 19, color: _catPurple),
                                       ))),
                                       DataCell(SizedBox(width: 142, child: Row(
