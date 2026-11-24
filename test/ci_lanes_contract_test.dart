@@ -113,9 +113,11 @@ void main() {
     expect(release, contains('workflow_dispatch:'));
     expect(release, isNot(contains('workflow_run:')));
 
-    // Validate each commit independently so later pushes cannot cancel active checks.
+    // Keep only the newest validation per branch to prevent obsolete runs
+    // from consuming runners while preserving exact-SHA checkout for each run.
     for (final workflow in [mobile, web]) {
-      expect(workflow, contains('cancel-in-progress: false'));
+      expect(workflow, contains('cancel-in-progress: true'));
+      expect(workflow, contains('github.ref'));
       expect(workflow, contains('github.sha'));
     }
     // Preview smoke tests remain tied to the exact completed Web artifact.
