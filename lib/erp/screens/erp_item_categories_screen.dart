@@ -150,6 +150,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
             .select(categoryColumns)
             .eq('company_id', company)
             .order('category_code')
+            .order('id')
             .range(offset, offset + catalogPageSize - 1);
         rawRows.addAll(page as List);
         if (page.length < catalogPageSize) break;
@@ -258,6 +259,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         return rawCode == _selectedActivityCode;
       }).toList();
       _rebuildCategoryIndexes();
+      _categoryPageIndex = 0;
       _expandedIds.clear();
       _syncControllers();
       if (_parentFilter != null &&
@@ -492,6 +494,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       _imageBytes[_s(row['id'])] ?? _decodeBytea(row['image_data']);
 
   Future<void> _loadCategoryImage(Map<String, dynamic> row) async {
+    if (_db == null || _company == null) return;
     final id = _s(row['id']);
     if (id.isEmpty || row['image_data'] != null ||
         _imageBytes[id] != null || !_categoryImageLoads.add(id)) return;
