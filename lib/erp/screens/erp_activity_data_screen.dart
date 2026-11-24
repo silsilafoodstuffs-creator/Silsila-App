@@ -15,6 +15,7 @@ class ErpActivityDataScreen extends StatefulWidget {
 
 class _ErpActivityDataScreenState extends State<ErpActivityDataScreen> {
   int _selectedTab = 0;
+  final Map<int, Widget> _tabWidgets = <int, Widget>{};
   static const _tabs = <String>[
     'أنواع الأنشطة',
     'الفئة الرئيسية',
@@ -24,20 +25,38 @@ class _ErpActivityDataScreenState extends State<ErpActivityDataScreen> {
   ];
 
   @override
+  void didUpdateWidget(covariant ErpActivityDataScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.companyId != widget.companyId) {
+      _tabWidgets.clear();
+    }
+  }
+
+  Widget _buildTab(int tab) {
+    if (tab == 0) {
+      return ErpActivityTypesScreen(
+        key: ValueKey('activity-types-${widget.companyId}'),
+        companyId: widget.companyId,
+        hideHeader: true,
+      );
+    }
+    return ErpItemCategoriesScreen(
+      key: ValueKey('activity-category-${tab - 1}-${widget.companyId}'),
+      companyId: widget.companyId,
+      initialCatalogTab: tab - 1,
+      hideHeaderAndTabs: true,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     ErpKeyboardNavigation.registerActions();
-    final Widget selectedContent = _selectedTab == 0
-        ? ErpActivityTypesScreen(
-            key: ValueKey('activity-types-${widget.companyId}'),
-            companyId: widget.companyId,
-            hideHeader: true,
-          )
-        : ErpItemCategoriesScreen(
-            key: ValueKey('activity-category-${_selectedTab - 1}-${widget.companyId}'),
-            companyId: widget.companyId,
-            initialCatalogTab: _selectedTab - 1,
-            hideHeaderAndTabs: true,
-          );
+    final children = List<Widget>.generate(
+      _tabs.length,
+      (tab) => _tabWidgets[tab] ?? const SizedBox.shrink(),
+    );
+    children[_selectedTab] =
+        _tabWidgets.putIfAbsent(_selectedTab, () => _buildTab(_selectedTab));
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Column(
@@ -85,10 +104,7 @@ class _ErpActivityDataScreenState extends State<ErpActivityDataScreen> {
               ]),
             ),
           ),
-          Expanded(child: KeyedSubtree(
-            key: ValueKey('activity-data-tab-${_selectedTab}-${widget.companyId}'),
-            child: selectedContent,
-          )),
+          Expanded(child: IndexedStack(index: _selectedTab, children: children)),
         ],
       ),
     );
