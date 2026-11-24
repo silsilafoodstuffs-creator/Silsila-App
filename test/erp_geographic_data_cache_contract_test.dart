@@ -12,6 +12,8 @@ void main() {
     expect(repository, contains('static const int _parallelPages = 4'));
     expect(repository, contains('Future.wait<List<dynamic>>'));
     expect(repository, contains("from('erp_geographic_data')"));
+    expect(repository, contains("const fields = 'id,parent_id,geo_code,name_ar,name_en,level,is_active'"));
+    expect(repository, isNot(contains('latitude,longitude')));
     expect(repository, contains("eq('is_active', true)"));
     expect(repository, contains('static void invalidate(String companyId)'));
   });
