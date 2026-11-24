@@ -34,14 +34,19 @@
           await Promise.all(registrations.map((registration) => registration.unregister()));
         }
       } catch (_) {}
-      try {
-        if ('caches' in window) {
-          const keys = await caches.keys();
-          await Promise.all(keys
-            .filter((key) => /flutter|silsila/i.test(key))
-            .map((key) => caches.delete(key)));
-        }
-      } catch (_) {}
+      // Only clear obsolete Flutter caches when a legacy worker was
+      // actually registered. Clearing Cache Storage on every launch defeats
+      // browser caching and needlessly delays the first Flutter frame.
+      if (removedLegacyWorker) {
+        try {
+          if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys
+              .filter((key) => /flutter|silsila/i.test(key))
+              .map((key) => caches.delete(key)));
+          }
+        } catch (_) {}
+      }
       // Unregistering a worker does not detach it from the current document.
       // Reload once so the next navigation is guaranteed to come from the network.
       try {
