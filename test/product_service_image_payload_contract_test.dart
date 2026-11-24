@@ -3,8 +3,14 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('ERP catalog metadata does not transfer category or item image bytes', () {
+  test('catalog metadata does not transfer product image bytes', () {
     final source = File('lib/services/product_service.dart').readAsStringSync();
+
+    final catalogColumnsStart = source.indexOf('_productCatalogColumns');
+    final catalogColumnsEnd = source.indexOf('static const String _productColumns', catalogColumnsStart);
+    expect(catalogColumnsStart, greaterThanOrEqualTo(0));
+    expect(catalogColumnsEnd, greaterThan(catalogColumnsStart));
+    expect(source.substring(catalogColumnsStart, catalogColumnsEnd), isNot(contains('image_data')));
 
     final categoryStart = source.indexOf('var categoryQuery');
     final categoryEnd = source.indexOf('final categoryRows', categoryStart);
@@ -19,17 +25,21 @@ void main() {
     expect(source.substring(itemStart, itemEnd), isNot(contains('image_data')));
   });
 
-  test('ERP images are fetched only for visible rows and retain master IDs after merge', () {
-    final source = File('lib/services/product_service.dart').readAsStringSync();
+  test('product images are fetched in small batches on demand, not during catalog load', () {
+    final service = File('lib/services/product_service.dart').readAsStringSync();
+    final main = File('lib/main.dart').readAsStringSync();
 
-    expect(source, contains('await _attachErpMasterImages(merged)'));
-    expect(source, contains("existing['_erp_master_item_id'] = master['_erp_master_item_id'];"));
-    expect(source, contains('final masterIdsByRow = <Map<String, dynamic>, String>{};'));
-    expect(source, contains("row.remove('_erp_master_item_id')"));
-    expect(source, contains(".select('id,image_data,image_mime_type')"));
-    expect(source, contains(".inFilter('id', ids)"));
-    expect(source, contains('final masterId = masterIdsByRow[row];'));
-    expect(source, contains('final image = imagesById[masterId];'));
-    expect(source, isNot(contains("imagesById[row['id']?.toString()]")));
+    expect(service, contains('getProductImageRowsByIds'));
+    expect(service, contains("select('id,image_data')"));
+    expect(service, contains('offset += 100'));
+    expect(service, contains("readImages('products', ids)"));
+    expect(service, contains("readImages('erp_items', missing)"));
+    expect(service, isNot(contains('_attachErpMasterImages')));
+    expect(service, isNot(contains('await _attachErpMasterImages(merged)')));
+
+    expect(main, contains('_loadProductImagesForProducts'));
+    expect(main, contains('productService.getProductImageRowsByIds(ids)'));
+    expect(main, contains('if (!brandExpanded)'));
+    expect(main, contains('imageBytes: null'));
   });
 }
