@@ -120,9 +120,11 @@ void main() {
       expect(workflow, contains('github.ref'));
       expect(workflow, contains('github.sha'));
     }
-    // Preview smoke tests remain tied to the exact completed Web artifact.
-    expect(preview, contains('cancel-in-progress: false'));
-    expect(preview, contains('github.run_id'));
+    // Preview smoke tests remain tied to the exact completed Web artifact,
+    // while superseded previews for the same branch are cancelled.
+    expect(preview, contains('cancel-in-progress: true'));
+    expect(preview, contains('github.event.workflow_run.run_id'));
+    expect(preview, contains('github.event.workflow_run.head_sha'));
     expect(mobile, contains('workflow_dispatch:'));
     expect(web, contains('workflow_dispatch:'));
   });
