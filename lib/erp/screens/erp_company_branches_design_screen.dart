@@ -1,3 +1,4 @@
+import '../services/erp_geographic_data_repository.dart';
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../services/erp_excel_export_service.dart';
@@ -80,10 +81,7 @@ class _ErpCompanyBranchesDesignScreenState extends State<ErpCompanyBranchesDesig
           .order('branch_code');
       List<Map<String, dynamic>> geoRows = [];
       try {
-        final geoResult = await _db!.from('erp_geographic_data')
-            .select('id,parent_id,geo_code,name_ar,name_en,level,is_active')
-            .eq('company_id', companyId).eq('is_active', true).order('geo_code');
-        geoRows = (geoResult as List).map((e) => Map<String, dynamic>.from(e)).toList();
+        geoRows = await ErpGeographicDataRepository.fetchActive(_db!, companyId);
       } catch (error) { relatedDataWarning = 'تعذر تحميل البيانات الجغرافية: $error'; }
       List<Map<String, dynamic>> warehouseRows = [];
       try {
