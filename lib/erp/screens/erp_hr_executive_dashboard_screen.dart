@@ -117,7 +117,9 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
       final monthEnd = DateTime(now.year, now.month + 1, 0);
       final dateStart = '${monthStart.year.toString().padLeft(4, '0')}-${monthStart.month.toString().padLeft(2, '0')}-01';
       final dateEnd = '${monthEnd.year.toString().padLeft(4, '0')}-${monthEnd.month.toString().padLeft(2, '0')}-${monthEnd.day.toString().padLeft(2, '0')}';
-      final results = await Future.wait([
+      // Bound per-screen request fan-out. A dashboard opening must not issue
+      // sixteen simultaneous database requests for every signed-in user.
+      final requests = <Future<dynamic>>[
         _db.from('erp_employees').select('id,employee_code,full_name,department_name,job_title,is_active,employment_status,work_unit,job_id,work_location_id,hire_date,contract_type,contract_start_date,contract_end_date,notes').eq('company_id', companyId).limit(3000),
         _db.from('erp_hr_departments').select('id,department_code,name_ar,department_level,parent_id,is_active').eq('company_id', companyId).limit(1000),
         _db.from('erp_hr_jobs').select('id,job_code,name_ar,department_id,is_active,requires_photo,requires_birth_certificate,requires_qualification_certificate,requires_work_card,requires_insurance_printout,requires_military_service,requires_criminal_record,requires_trust_receipt,requires_health_certificate,requires_driving_license,requires_id_copy,requires_bank_account').eq('company_id', companyId).limit(1000),
@@ -131,10 +133,27 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
         _db.from('erp_leave_requests').select('id,employee_id,status,starts_on,ends_on,requested_days').eq('company_id', companyId).gte('starts_on', dateStart).lte('starts_on', dateEnd).limit(5000),
         _db.from('erp_hr_employee_contracts').select('id,employee_id,contract_number,contract_type,start_date,end_date,status').eq('company_id', companyId).order('start_date', ascending: false).limit(5000),
         _db.from('erp_hr_performance_reviews').select('id,employee_id,period_start,period_end,score,rating,status').eq('company_id', companyId).order('period_end', ascending: false).limit(5000),
-        _db.from('erp_payroll_lines').select('id,payroll_run_id,employee_id,basic_amount,allowances,commissions,overtime_amount,deductions,gross_amount,net_amount').eq('company_id', companyId).limit(20000),
         _db.from('erp_hr_work_locations').select('id,location_code,name_ar,is_active').eq('company_id', companyId).eq('is_active', true).order('name_ar').limit(500),
         _db.from('erp_hr_staffing_plans').select('id,job_id,work_location_id,authorized_headcount,effective_from,effective_to,status,notes').eq('company_id', companyId).order('effective_from', ascending: false).limit(2000),
-      ]);
+      ];
+      final results = <dynamic>[];
+      for (var offset = 0; offset < requests.length; offset += 4) {
+        results.addAll(await Future.wait(requests.skip(offset).take(4)));
+      }
+
+      // Only the latest payroll run is displayed here. Do not download up to
+      // 20,000 lines from every historical run to filter them on the device.
+      final payrollRuns = results[5] as List;
+      final latestPayrollRunId = payrollRuns.isEmpty
+          ? null
+          : (payrollRuns.first as Map)['id']?.toString();
+      final latestPayrollLines = latestPayrollRunId == null
+          ? <dynamic>[]
+          : await _db.from('erp_payroll_lines')
+              .select('id,payroll_run_id,employee_id,basic_amount,allowances,commissions,overtime_amount,deductions,gross_amount,net_amount')
+              .eq('company_id', companyId)
+              .eq('payroll_run_id', latestPayrollRunId)
+              .limit(5000);
       if (!mounted) return;
       setState(() {
         _employees = List<Map<String, dynamic>>.from(results[0]);
@@ -150,9 +169,9 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
         _leaves = List<Map<String, dynamic>>.from(results[10]);
         _contracts = List<Map<String, dynamic>>.from(results[11]);
         _performanceReviews = List<Map<String, dynamic>>.from(results[12]);
-        _payrollLines = List<Map<String, dynamic>>.from(results[13]);
-        _workLocations = List<Map<String, dynamic>>.from(results[14]);
-        _staffingPlans = List<Map<String, dynamic>>.from(results[15]);
+        _payrollLines = List<Map<String, dynamic>>.from(latestPayrollLines);
+        _workLocations = List<Map<String, dynamic>>.from(results[13]);
+        _staffingPlans = List<Map<String, dynamic>>.from(results[14]);
         _loading = false;
       });
     } catch (e) {
