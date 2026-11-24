@@ -1,3 +1,4 @@
+import '../services/erp_geographic_data_repository.dart';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' hide Border;
@@ -105,10 +106,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       ]);
       List<Map<String, dynamic>> geoRows = [];
       try {
-        final geo = await _db!.from('erp_geographic_data')
-            .select('id,parent_id,name_ar,level,is_active')
-            .eq('company_id', _cid).eq('is_active', true).order('geo_code');
-        geoRows = List<Map<String, dynamic>>.from(geo);
+        geoRows = await ErpGeographicDataRepository.fetchActive(_db!, _cid);
       } catch (_) {
         // Keep the built-in governorate list as a fallback if geography data has not been loaded.
       }
