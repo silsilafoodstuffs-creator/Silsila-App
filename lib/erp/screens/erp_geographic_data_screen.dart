@@ -1,4 +1,5 @@
 
+import '../services/erp_geographic_data_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -384,6 +385,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
             .eq('company_id', writeCompanyId);
       }
 
+      ErpGeographicDataRepository.invalidate(writeCompanyId);
       if (mounted) {
         setState(() => message = 'تم حفظ البيانات.');
       }
@@ -407,6 +409,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
           .update({'is_active': nextActive})
           .eq('id', id)
           .eq('company_id', companyId);
+      ErpGeographicDataRepository.invalidate(companyId);
       if (!mounted) return;
       // Update the visible row locally instead of reloading all 6k+ geographic
       // records after every checkbox click.
@@ -450,11 +453,13 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
     if (ok != true) return;
 
     try {
+      final companyId = s(row['company_id']);
       await db!
           .from('erp_geographic_data')
           .delete()
           .eq('id', id)
-          .eq('company_id', s(row['company_id']));
+          .eq('company_id', companyId);
+      ErpGeographicDataRepository.invalidate(companyId);
       await load();
     } catch (e) {
       if (mounted) setState(() => error = 'تعذر الحذف: $e');
