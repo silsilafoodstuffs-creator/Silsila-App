@@ -69,3 +69,15 @@ The current tool connection can inspect project metadata, migrations, table meta
 - **Gate D — Production:** staged release, monitored cutover, rollback route, and verified recovery point.
 
 Until Gate A is satisfied, only isolated repository documentation and non-production UI prototyping are permitted.
+
+## 7. Isolated React category proof-of-concept — 2026-11-25
+
+An initial non-production React + TypeScript + Vite screen now exists under `web-react/` on the Hybrid work branch only.
+
+- Uses 10,000 generated mock category rows; it does not read or write production data.
+- Implements activity filtering, deferred text search, and fixed-row-height windowing so only a small visible slice is mounted.
+- Reuses the repository Tajawal font and Silsila purple/orange brand direction with Arabic RTL layout.
+- Includes a smoke test and a dedicated GitHub Actions workflow.
+- GitHub Actions run `45514407763` completed successfully for commit `033d2b9045adf8a184a4854fe82a4e7fb0ef8207`: 1 test passed and Vite production build passed.
+
+This is only a technical UI/performance prototype. It is not connected to Supabase, does not implement real CRUD, RLS, permissions, image storage, full category hierarchy behavior, or measured comparison with Flutter Web. No production route was changed and no deployment or cutover occurred. The backup/restore gate remains open.
