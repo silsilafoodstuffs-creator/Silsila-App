@@ -1,3 +1,4 @@
+import '../services/erp_geographic_data_repository.dart';
 import 'package:excel/excel.dart' hide Border;
 import '../services/erp_print_support.dart';
 import 'package:file_saver/file_saver.dart';
@@ -179,10 +180,10 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       ]);
       List<Map<String, dynamic>> geoRows = [];
       try {
-        final geoResult = await Supabase.instance.client.from('erp_geographic_data')
-            .select('id,parent_id,name_ar,level,is_active')
-            .eq('company_id', companyId).eq('is_active', true).order('name_ar');
-        geoRows = (geoResult as List).map((e) => Map<String, dynamic>.from(e)).toList();
+        geoRows = await ErpGeographicDataRepository.fetchActive(
+          Supabase.instance.client,
+          companyId,
+        );
       } catch (_) {
         // Geography is optional; it must not hide successfully loaded warehouse data.
       }
