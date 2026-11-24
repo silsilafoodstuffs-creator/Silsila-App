@@ -1425,10 +1425,15 @@ class _MainShellState extends State<MainShell> {
   List<Product> liveProducts = [];
   List<Map<String, dynamic>> liveSuppliers = [];
   bool loadingLiveSuppliers = false;
+  bool _suppliersLoaded = false;
   List<Map<String, dynamic>> liveCustomers = [];
   bool loadingLiveCustomers = false;
+  bool _customersLoaded = false;
   List<Map<String, dynamic>> liveShippingCompanies = [];
   bool loadingLiveShippingCompanies = false;
+  bool _shippingCompaniesLoaded = false;
+  bool _categoriesLoaded = false;
+  bool _productsLoaded = false;
   bool isAdmin = false;
   bool isApprovedSupplier = false;
   int unreadNotifications = 0;
@@ -1459,11 +1464,9 @@ class _MainShellState extends State<MainShell> {
       activity = widget.initialActivity!;
     }
     _loadActivityCodeAndIntroAd();
-    loadLiveProducts();
-    loadLiveSuppliers();
-    loadLiveCustomers();
-    loadLiveShippingCompanies();
-    loadLiveCategories();
+    // The home view opens on categories. Load only the catalog needed for
+    // that view; supplier/customer/shipping directories are fetched on demand.
+    _ensureBrowseEntityLoaded(selectedEntity);
     loadCurrentRole();
     loadFavoriteKeys();
     loadUnreadNotifications();
@@ -1712,6 +1715,27 @@ class _MainShellState extends State<MainShell> {
     }
   }
 
+  void _ensureBrowseEntityLoaded(String entity) {
+    if (database == null) return;
+    switch (entity) {
+      case 'فئات':
+        if (!_categoriesLoaded) loadLiveCategories();
+        if (!_productsLoaded && !loadingLiveProducts) loadLiveProducts();
+        break;
+      case 'موردين':
+        if (!_suppliersLoaded && !loadingLiveSuppliers) loadLiveSuppliers();
+        break;
+      case 'عملاء':
+        if (!_customersLoaded && !loadingLiveCustomers) loadLiveCustomers();
+        break;
+      case 'شركات شحن':
+        if (!_shippingCompaniesLoaded && !loadingLiveShippingCompanies) {
+          loadLiveShippingCompanies();
+        }
+        break;
+    }
+  }
+
   Future<void> _changeActivity(String nextActivity) async {
     if (nextActivity == activity) return;
     setState(() {
@@ -1720,14 +1744,17 @@ class _MainShellState extends State<MainShell> {
       browseSubcategory = 'الكل';
       liveProducts = [];
       liveSuppliers = [];
+      liveCustomers = [];
+      liveShippingCompanies = [];
+      _productsLoaded = false;
+      _categoriesLoaded = false;
+      _suppliersLoaded = false;
+      _customersLoaded = false;
+      _shippingCompaniesLoaded = false;
       adSupplierTargetId = null;
       currentActivityCode = null;
     });
-    loadLiveProducts();
-    loadLiveSuppliers();
-    loadLiveCustomers();
-    loadLiveShippingCompanies();
-    loadLiveCategories();
+    _ensureBrowseEntityLoaded(selectedEntity);
     final selected = await ActivityService().findActivity(nextActivity);
     if (!mounted) return;
     setState(() => currentActivityCode = selected?['code']?.toString());
@@ -1864,6 +1891,7 @@ class _MainShellState extends State<MainShell> {
       );
       if (!mounted) return;
       setState(() {
+        _categoriesLoaded = true;
         final rootRows = rows.where((row) => row['parent_id'] == null).toList();
         liveCategoryNames = rootRows
             .map((row) => (row['name'] ?? '').toString())
@@ -1916,7 +1944,10 @@ class _MainShellState extends State<MainShell> {
     try {
       final rows = await supplierService.getSuppliers(activityType: activity, limit: 100);
       if (!mounted) return;
-      setState(() => liveSuppliers = rows);
+      setState(() {
+        _suppliersLoaded = true;
+        liveSuppliers = rows;
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() => liveSuppliers = []);
@@ -1936,7 +1967,10 @@ class _MainShellState extends State<MainShell> {
           .order('full_name', ascending: true)
           .limit(100);
       if (!mounted) return;
-      setState(() => liveCustomers = List<Map<String, dynamic>>.from(rows));
+      setState(() {
+        _customersLoaded = true;
+        liveCustomers = List<Map<String, dynamic>>.from(rows);
+      });
     } catch (_) {
       if (mounted) setState(() => liveCustomers = []);
     } finally {
@@ -1950,7 +1984,10 @@ class _MainShellState extends State<MainShell> {
     try {
       final rows = await DeliveryService().getShippingCompanies(limit: 100);
       if (!mounted) return;
-      setState(() => liveShippingCompanies = rows);
+      setState(() {
+        _shippingCompaniesLoaded = true;
+        liveShippingCompanies = rows;
+      });
     } catch (_) {
       if (mounted) setState(() => liveShippingCompanies = []);
     } finally {
@@ -2012,6 +2049,7 @@ class _MainShellState extends State<MainShell> {
       }).where((p) => p.id != null && p.name.trim().isNotEmpty).toList();
       if (!mounted) return;
       setState(() {
+        _productsLoaded = true;
         liveProducts = mapped;
         loadingLiveProducts = false;
         productLoadMessage = mapped.isEmpty
@@ -2486,11 +2524,14 @@ class _MainShellState extends State<MainShell> {
                     selectedColor: purple,
                     side: BorderSide(color: purple.withValues(alpha: .15)),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-                    onSelected: (_) => setState(() {
-                      selectedEntity = entity;
-                      selectedCategory = 'الكل';
-                      browseSubcategory = 'الكل';
-                    }),
+                    onSelected: (_) {
+                      setState(() {
+                        selectedEntity = entity;
+                        selectedCategory = 'الكل';
+                        browseSubcategory = 'الكل';
+                      });
+                      _ensureBrowseEntityLoaded(entity);
+                    },
                   ),
                 ),
               );
