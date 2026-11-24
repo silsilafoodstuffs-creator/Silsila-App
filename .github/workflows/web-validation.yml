@@ -31,10 +31,10 @@ on:
 permissions:
   contents: read
 
-# Isolate each commit's validation so later pushes cannot cancel an active test.
+# Keep one current Web validation per branch.
 concurrency:
-  group: silsila-web-validation-${{ github.sha }}
-  cancel-in-progress: false
+  group: silsila-web-validation-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   web:

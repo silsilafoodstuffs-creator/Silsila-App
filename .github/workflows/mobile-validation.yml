@@ -33,10 +33,10 @@ on:
 permissions:
   contents: read
 
-# Isolate each commit's validation so later pushes cannot cancel an active test.
+# Keep one current mobile validation per branch.
 concurrency:
-  group: silsila-mobile-validation-${{ github.sha }}
-  cancel-in-progress: false
+  group: silsila-mobile-validation-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   mobile:

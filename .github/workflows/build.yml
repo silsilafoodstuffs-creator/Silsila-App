@@ -1,9 +1,9 @@
 name: Build Silsila Android App
 
-# Isolate each commit's APK build so later pushes cannot cancel an active build.
+# Keep only the newest release build for a branch; older commits are superseded.
 concurrency:
-  group: silsila-android-release-${{ github.sha }}
-  cancel-in-progress: false
+  group: silsila-android-release-${{ github.ref }}
+  cancel-in-progress: true
 
 'on':
   # Build a signed production APK whenever shipped app code, assets, dependencies,

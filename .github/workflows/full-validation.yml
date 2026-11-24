@@ -38,9 +38,9 @@ permissions:
   contents: read
 
 concurrency:
-  # Isolate each branch so an unrelated feature-branch run cannot cancel main validation.
-  group: silsila-full-validation-manual-${{ github.run_id }}
-  cancel-in-progress: false
+  # A newer commit supersedes the older full validation on the same branch.
+  group: silsila-full-validation-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate-all:

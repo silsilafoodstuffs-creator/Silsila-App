@@ -12,10 +12,10 @@ permissions:
   contents: read
   actions: read
 
-# Each validated build gets its own preview smoke run; pushes never cancel it.
+# Only the newest preview smoke run for the source branch remains active.
 concurrency:
-  group: silsila-web-preview-validation-${{ github.run_id }}
-  cancel-in-progress: false
+  group: silsila-web-preview-validation-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
 
 jobs:
   preview:
