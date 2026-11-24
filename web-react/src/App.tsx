@@ -1,0 +1,17 @@
+import { useDeferredValue, useMemo, useState } from "react";
+type Category = { id:number; code:string; name:string; activity:string; parent:string };
+const activities = ["الكل","مواد غذائية","ملابس","أجهزة وإلكترونيات","لوازم بناء"];
+const categories:Category[] = Array.from({length:10000},(_,i)=>({id:i+1,code:`CAT-${String(i+1).padStart(5,"0")}`,name:["حبوب وبقوليات","زيوت وسمن","معلبات","منظفات","مشروبات","ملابس رجالي","أجهزة منزلية"][i%7]+` — ${i+1}`,activity:activities[1+(i%4)],parent:["الأغذية الأساسية","المنتجات الاستهلاكية","الأصناف العامة"][i%3]}));
+const ROW_HEIGHT=48, VIEWPORT_HEIGHT=480, OVERSCAN=6;
+export default function App(){
+ const [query,setQuery]=useState(""),[activity,setActivity]=useState("الكل"),[scrollTop,setScrollTop]=useState(0);
+ const deferredQuery=useDeferredValue(query);
+ const filtered=useMemo(()=>{const q=deferredQuery.trim().toLocaleLowerCase("ar");return categories.filter(x=>(activity==="الكل"||x.activity===activity)&&(!q||x.name.toLocaleLowerCase("ar").includes(q)||x.code.toLowerCase().includes(q)));},[activity,deferredQuery]);
+ const start=Math.max(0,Math.floor(scrollTop/ROW_HEIGHT)-OVERSCAN), visibleCount=Math.ceil(VIEWPORT_HEIGHT/ROW_HEIGHT)+OVERSCAN*2, rows=filtered.slice(start,start+visibleCount);
+ return <main className="shell"><header className="topbar"><div className="brand-mark">س</div><div><strong>سلسلة</strong><small>بنربط السوق ببعضه</small></div><span className="env">نموذج تجريبي معزول · بيانات وهمية</span></header>
+ <section className="intro"><div><span className="eyebrow">HYBRID WEB PROOF OF CONCEPT</span><h1>إدارة فئات الأصناف</h1><p>اختبار واجهة ويب خفيفة مع عرض افتراضي للقوائم الكبيرة.</p></div><div className="metric"><b>{filtered.length.toLocaleString("en-US")}</b><span>فئة مطابقة</span></div></section>
+ <section className="panel"><div className="toolbar"><label className="search">⌕ <input aria-label="بحث" value={query} onChange={e=>{setQuery(e.target.value);setScrollTop(0);}} placeholder="ابحث بالاسم أو الكود..."/></label><select aria-label="نوع النشاط" value={activity} onChange={e=>{setActivity(e.target.value);setScrollTop(0);}}>{activities.map(a=><option key={a}>{a}</option>)}</select><button type="button" onClick={()=>{setQuery("");setActivity("الكل");setScrollTop(0);}}>إعادة ضبط</button></div>
+ <div className="table-head"><span>الكود</span><span>اسم الفئة</span><span>الفئة الرئيسية</span><span>نوع النشاط</span></div>
+ <div className="virtual-list" role="list" aria-label="قائمة الفئات" onScroll={e=>setScrollTop(e.currentTarget.scrollTop)}><div style={{height:filtered.length*ROW_HEIGHT,position:"relative"}}>{rows.map((item,index)=><div className="table-row" role="listitem" key={item.id} style={{position:"absolute",top:(start+index)*ROW_HEIGHT,height:ROW_HEIGHT}}><code>{item.code}</code><strong>{item.name}</strong><span>{item.parent}</span><span className="activity">{item.activity}</span></div>)}</div>{filtered.length===0&&<p className="empty">لا توجد نتائج مطابقة.</p>}</div>
+ <footer className="table-foot"><span>يتم إنشاء 10,000 سجل وهمي داخل المتصفح فقط.</span><span>المعروض حاليًا: {rows.length} صفوف</span></footer></section><p className="notice">هذه تجربة واجهة وأداء فقط. لا يوجد اتصال بـ Supabase أو بيانات حقيقية أو عمليات حفظ/حذف.</p></main>;
+}
