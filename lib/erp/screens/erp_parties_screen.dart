@@ -253,20 +253,6 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
       if (mounted) setState(() { loading = false; error = null; });
     } catch(e) { if (mounted) setState(() { loading = false; error = 'تعذر تحميل البيانات. تأكد من تطبيق ترحيل بيانات العملاء والموردين: $e'; }); }
   }
-  Future<List<Map<String,dynamic>>> _fetchAllGeo(SupabaseClient client, String cid) async {
-    final all = <Map<String,dynamic>>[];
-    var offset = 0;
-    while (true) {
-      final batch = await client.from('erp_geographic_data')
-          .select('id,parent_id,level,name_ar,name_en')
-          .eq('company_id', cid).eq('is_active', true)
-          .order('name_ar').range(offset, offset + 999);
-      all.addAll((batch as List).map((e) => Map<String,dynamic>.from(e)));
-      if (batch.length < 1000) break;
-      offset += 1000;
-    }
-    return all;
-  }
   List<Map<String,dynamic>> _geoLevel(String level, [String? parent]) => geos.where((g)=>s(g['level'])==level && (parent==null ? g['parent_id']==null : s(g['parent_id'])==parent)).toList();
   Future<void> _new() async {
     setState(() { editing = true; error = null; message = null; selectedPartyId = null; selectedClassification = null; selectedGovernorate = null; selectedDistrict = null; selectedArea = null; selectedRep = null; });
