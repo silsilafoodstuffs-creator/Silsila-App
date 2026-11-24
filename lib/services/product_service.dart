@@ -21,6 +21,12 @@ class ProductService {
     }
   }
 
+  static const String _productCatalogColumns =
+      'id, supplier_id, name, category, category_id, '
+      'description, price, unit, min_quantity, minimum_quantity, '
+      'activity_type, is_active, image_url, subcategory, brand, '
+      'package_count, small_unit, offer_price, created_at';
+
   static const String _productColumns =
       'id, supplier_id, name, category, category_id, '
       'description, price, unit, min_quantity, minimum_quantity, '
@@ -65,7 +71,7 @@ class ProductService {
 
     var query = _requireClient
         .from('products')
-        .select(_productColumns)
+        .select(_productCatalogColumns)
         .eq('is_active', true);
 
     // Apply filters before ordering and limiting so matching products are not
@@ -97,9 +103,10 @@ class ProductService {
         search: cleanSearch,
         enabled: supplierId == null && categoryId == null,
       );
-      final merged = _mergeMasterCatalog(marketplaceRows, masterRows, limit);
-      await _attachErpMasterImages(merged);
-      return merged;
+      // Product image bytes are fetched only after a user expands a visible
+      // brand group. Avoid transferring hundreds of full-size bytea images
+      // during the initial catalog load.
+      return _mergeMasterCatalog(marketplaceRows, masterRows, limit);
     } catch (_) {
       // Existing supplier listings remain available if ERP catalog access is
       // temporarily unavailable or the shared-catalog migration is pending.
@@ -243,45 +250,6 @@ class ProductService {
     }
     merged.sort((a, b) => (a['name'] ?? '').toString().compareTo((b['name'] ?? '').toString()));
     return merged.take(limit).toList(growable: true);
-  }
-
-  /// Fetch ERP image bytes only for products that survive catalog filtering,
-  /// sorting, and page limiting. The mapping retains the ERP item ID even when
-  /// the visible row is merged into a supplier marketplace product.
-  Future<void> _attachErpMasterImages(
-    List<Map<String, dynamic>> rows,
-  ) async {
-    final masterIdsByRow = <Map<String, dynamic>, String>{};
-    for (final row in rows) {
-      final masterId = row.remove('_erp_master_item_id')?.toString().trim() ?? '';
-      if (masterId.isNotEmpty) masterIdsByRow[row] = masterId;
-    }
-    final ids = masterIdsByRow.values.toSet().toList(growable: false);
-    if (ids.isEmpty) return;
-
-    try {
-      final imageRows = await _requireClient
-          .from('erp_items')
-          .select('id,image_data,image_mime_type')
-          .inFilter('id', ids);
-      final imagesById = <String, Map<String, dynamic>>{
-        for (final raw in imageRows.whereType<Map>())
-          raw['id'].toString(): Map<String, dynamic>.from(raw),
-      };
-      for (final row in rows) {
-        final masterId = masterIdsByRow[row];
-        if (masterId == null) continue;
-        final image = imagesById[masterId];
-        final imageData = image?['image_data'];
-        if (imageData != null && imageData.toString().isNotEmpty) {
-          row['image_data'] = imageData;
-          row['image_mime_type'] = image?['image_mime_type'];
-          row['image_url'] = null;
-        }
-      }
-    } catch (_) {
-      // Catalog metadata remains usable if optional image retrieval fails.
-    }
   }
 
   /// جلب تفاصيل منتج نشط باستخدام رقمه.
