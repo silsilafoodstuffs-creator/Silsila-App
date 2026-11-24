@@ -656,7 +656,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     if (yes != true) return;
     try {
       if (selectedRow['_draft'] != true) await _db!.from('erp_item_categories').delete().eq('id',id).eq('company_id',_company!);
-      setState(() { _all.removeWhere((r)=>_s(r['id'])==id); _selectedId=null; _syncControllers(); _message='تم حذف الفئة.'; });
+      setState(() { _all.removeWhere((r)=>_s(r['id'])==id); _rebuildCategoryIndexes(); _selectedId=null; _syncControllers(); _message='تم حذف الفئة.'; });
     } catch(e) { setState(()=>_error='تعذر حذف الفئة: $e'); }
   }
 
@@ -1194,14 +1194,14 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                         itemHeight: 40, isExpanded: true,
                                         decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 3)),
                                         items: _parents.map((p) => DropdownMenuItem<String>(value: _s(p['id']), child: Text(_s(p['category_name']), overflow: TextOverflow.ellipsis))).toList(),
-                                        onChanged: _editing ? (value) { if (value == null) return; setState(() { _hierarchyChanged = true; row['parent_id'] = value; final activity = _s(_all.firstWhere((p) => _s(p['id']) == value)['activity_code']); row['activity_code'] = activity; for (final child in _all.where((r) => _isDescendantOf(r, id))) { child['activity_code'] = activity; } }); } : null,
+                                        onChanged: _editing ? (value) { if (value == null) return; setState(() { _hierarchyChanged = true; row['parent_id'] = value; _rebuildCategoryIndexes(); final activity = _s(_all.firstWhere((p) => _s(p['id']) == value)['activity_code']); row['activity_code'] = activity; for (final child in _all.where((r) => _isDescendantOf(r, id))) { child['activity_code'] = activity; } }); } : null,
                                       ))),
                                       if (_catalogTab == 2) DataCell(SizedBox(width: 190, child: DropdownButtonFormField<String>(
                                         value: _secondaryParents.any((p) => _s(p['id']) == _s(row['parent_id'])) ? _s(row['parent_id']) : null,
                                         itemHeight: 40, isExpanded: true,
                                         decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 3)),
                                         items: _secondaryParents.where((p) => _mainCategoryFilter == null || _s(_parentOf(p)?['id']) == _mainCategoryFilter).map((p) => DropdownMenuItem<String>(value: _s(p['id']), child: Text(_s(p['category_name']), overflow: TextOverflow.ellipsis))).toList(),
-                                        onChanged: _editing ? (value) { if (value == null) return; setState(() { _hierarchyChanged = true; row['parent_id'] = value; row['activity_code'] = _s(_parentOf(_all.firstWhere((p) => _s(p['id']) == value))?['activity_code']); }); } : null,
+                                        onChanged: _editing ? (value) { if (value == null) return; setState(() { _hierarchyChanged = true; row['parent_id'] = value; _rebuildCategoryIndexes(); row['activity_code'] = _s(_parentOf(_all.firstWhere((p) => _s(p['id']) == value))?['activity_code']); }); } : null,
                                       ))),
                                       DataCell(SizedBox(width: 72, child: IconButton(
                                         tooltip: 'معاينة بيانات الفئة',
