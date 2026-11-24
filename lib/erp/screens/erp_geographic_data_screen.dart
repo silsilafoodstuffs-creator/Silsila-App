@@ -1,11 +1,9 @@
-
-import '../services/erp_geographic_data_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/erp_geographic_data_repository.dart';
 import '../widgets/erp_quick_task_button.dart';
-
 class ErpGeographicDataScreen extends StatefulWidget {
   const ErpGeographicDataScreen({
     super.key,
