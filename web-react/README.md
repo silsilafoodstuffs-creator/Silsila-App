@@ -19,3 +19,5 @@ npm test
 
 ## Explicit exclusions
 No production credentials, Supabase client, real customer data, writes, authentication, or migration. No route replacement or production deployment. Functional parity, authorization parity, database pagination, and performance comparison against Flutter Web remain acceptance gates.
+
+CI validation is executed by `.github/workflows/react-web-poc.yml` on changes to this isolated directory.
