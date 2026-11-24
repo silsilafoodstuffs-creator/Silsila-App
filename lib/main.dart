@@ -242,6 +242,24 @@ class Product {
   final double? offerPrice;
 
   String get cartKey => id == null ? 'demo:$name' : 'product:$id';
+
+  Product copyWith({Uint8List? imageBytes}) => Product(
+    name,
+    category,
+    price,
+    unit,
+    icon,
+    id: id,
+    supplierId: supplierId,
+    minQuantity: minQuantity,
+    imageUrl: imageUrl,
+    imageBytes: imageBytes ?? this.imageBytes,
+    subcategory: subcategory,
+    brand: brand,
+    packageCount: packageCount,
+    smallUnit: smallUnit,
+    offerPrice: offerPrice,
+  );
 }
 
 const products = [
@@ -2036,7 +2054,8 @@ class _MainShellState extends State<MainShell> {
           supplierId: row['supplier_id']?.toString(),
           minQuantity: minQuantity < 1 ? 1 : minQuantity,
           imageUrl: null,
-          imageBytes: _decodeDatabaseBytea(row['image_data']),
+          // Full-size image bytes are fetched lazily when the product group is opened.
+          imageBytes: null,
           subcategory: (row['subcategory'] ?? '').toString().trim().isEmpty ? null : row['subcategory'].toString(),
           brand: (row['brand'] ?? '').toString().trim().isEmpty ? null : row['brand'].toString(),
           packageCount: (row['package_count'] is num ? (row['package_count'] as num).toInt() : int.tryParse((row['package_count'] ?? '1').toString()) ?? 1).clamp(1, 100000).toInt(),
@@ -2878,6 +2897,37 @@ class _MainShellState extends State<MainShell> {
         ],
       );
 
+  final Set<String> _productImageRequests = <String>{};
+
+  Future<void> _loadProductImagesForProducts(List<Product> productsToShow) async {
+    final pending = productsToShow.where((product) {
+      final id = product.id?.trim() ?? '';
+      return id.isNotEmpty &&
+          product.imageBytes == null &&
+          !_productImageRequests.contains(id);
+    }).toList(growable: false);
+    if (pending.isEmpty) return;
+
+    final ids = pending.map((product) => product.id!).toList(growable: false);
+    _productImageRequests.addAll(ids);
+    try {
+      final imageRows = await productService.getProductImageRowsByIds(ids);
+      if (!mounted || imageRows.isEmpty) return;
+      setState(() {
+        liveProducts = liveProducts.map((product) {
+          final raw = imageRows[product.id];
+          if (raw == null || product.imageBytes != null) return product;
+          final bytes = _decodeDatabaseBytea(raw);
+          return bytes == null ? product : product.copyWith(imageBytes: bytes);
+        }).toList(growable: false);
+      });
+    } catch (_) {
+      // Product text, pricing, and ordering remain usable without images.
+    } finally {
+      _productImageRequests.removeAll(ids);
+    }
+  }
+
   Widget _catalogSubcategoryTree(String category, List<Product> items) {
     final subcategories = <String, List<Product>>{};
     for (final product in items) {
@@ -2939,13 +2989,18 @@ class _MainShellState extends State<MainShell> {
                             title: Text(brandEntry.key, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                             subtitle: Text('${brandEntry.value.length} صنف'),
                             trailing: Icon(brandExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: orange, size: 19),
-                            onTap: () => setState(() {
-                              if (brandExpanded) {
-                                expandedCatalogBrands.remove(brandKey);
-                              } else {
-                                expandedCatalogBrands.add(brandKey);
+                            onTap: () {
+                              setState(() {
+                                if (brandExpanded) {
+                                  expandedCatalogBrands.remove(brandKey);
+                                } else {
+                                  expandedCatalogBrands.add(brandKey);
+                                }
+                              });
+                              if (!brandExpanded) {
+                                _loadProductImagesForProducts(brandEntry.value);
                               }
-                            }),
+                            },
                           ),
                           if (brandExpanded)
                             ...brandEntry.value.map(_catalogListProduct),
