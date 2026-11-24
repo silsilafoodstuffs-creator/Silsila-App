@@ -452,7 +452,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       'category_code':'$draftActivityCode$hierarchicalDigits', 'category_name':'','category_name_en':'',
       'parent_id':parentId,'is_active':true,'show_in_app':true,'image_url':null,'image_data':null,'image_mime_type':null,'_draft':true,
     };
-    setState(() { _editing = true; _all.add(draft); _selectedId = _s(draft['id']); _expandedIds.add(_s(parentId)); _expandedIds.add(_s(draft['id'])); _syncControllers(); });
+    setState(() { _editing = true; _all.add(draft); _rebuildCategoryIndexes(); _selectedId = _s(draft['id']); _expandedIds.add(_s(parentId)); _expandedIds.add(_s(draft['id'])); _syncControllers(); });
   }
 
   Future<void> _pickImage(Map<String,dynamic> row, {ImageSource? source}) async {
@@ -965,8 +965,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     final subFilterOptions = _all.where((row) => _rowLevel(row) == 1 &&
       (_mainCategoryFilter == null || _s(row['parent_id']) == _mainCategoryFilter)).toList()
       ..sort((a,b) => _s(a['category_code']).compareTo(_s(b['category_code'])));
-    final pageCount = (visibleRows.length / _categoryPageSize).ceil().clamp(1, 999999);
-    final currentPage = _categoryPageIndex.clamp(0, pageCount - 1);
+    final pageCount = (visibleRows.length / _categoryPageSize).ceil().clamp(1, 999999).toInt();
+    final currentPage = _categoryPageIndex.clamp(0, pageCount - 1).toInt();
     final pageRows = visibleRows
         .skip(currentPage * _categoryPageSize)
         .take(_categoryPageSize)
