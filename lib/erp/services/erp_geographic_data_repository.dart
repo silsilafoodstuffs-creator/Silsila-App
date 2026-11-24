@@ -54,9 +54,10 @@ class ErpGeographicDataRepository {
     SupabaseClient client,
     String companyId,
   ) async {
-    const fields =
-        'id,company_id,parent_id,geo_code,name_ar,name_en,level,is_active,'
-        'latitude,longitude,admin_type,hierarchical_code';
+    // These are the only fields required by party, employee, inventory,
+    // and branch selectors. Keep binary/map and administrative metadata out
+    // of this shared lookup payload.
+    const fields = 'id,parent_id,geo_code,name_ar,name_en,level,is_active';
     final all = <Map<String, dynamic>>[];
     var offset = 0;
 
