@@ -19,5 +19,9 @@
   "devDependencies": {
     "@types/react": "latest",
     "@types/react-dom": "latest"
+  },
+  "stackblitz": {
+    "installDependencies": true,
+    "startCommand": "npm run dev"
   }
 }
