@@ -5,6 +5,10 @@ import { isSupabaseConfigured, supabase } from "./supabase";
 import SILSILA_LOGO from "./brand";
 
 type Company = { id: string; name: string; role: string };
+type ActivityOption = { code: string; name: string };
+const userTypeIcons: Record<string, string> = {
+  "مورد": "▣", "عميل": "▤", "مندوب": "♙", "شركة شحن": "⇢", "ادمن": "✦", "أدمن": "✦",
+};
 
 export default function AuthGate({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -17,6 +21,11 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
+  const [activities, setActivities] = useState<ActivityOption[]>([]);
+  const [activity, setActivity] = useState("");
+  const [userTypes, setUserTypes] = useState<string[]>([]);
+  const [accountType, setAccountType] = useState("");
+  const [activityUserType, setActivityUserType] = useState("مستخدم رئيسي للنشاط");
 
   const loadCompanies = async (current: Session) => {
     const client = supabase;
@@ -162,9 +171,15 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   if (preview) return <>{children}<div style={{position:"fixed",left:16,bottom:14,zIndex:1000,display:"flex",alignItems:"center",gap:10,padding:"9px 13px",borderRadius:14,background:"#4b2a6b",color:"#fff",fontSize:12}}><Eye size={15}/> معاينة محلية فقط <button onClick={()=>{sessionStorage.removeItem("silsila-preview-mode");setPreview(false);}} style={{color:"#fff",background:"transparent",border:0,cursor:"pointer"}}>إنهاء المعاينة</button></div></>;
 
   return <div className="login-screen" dir="rtl">
-    <div className="login-layout">
+    <div className="login-frame">
+      <header className="login-frame-header">
+        <img src={SILSILA_LOGO} alt="شعار سلسلة" />
+        <div className="login-frame-brand"><b>سلسلة</b><span>منظومة إدارة الأعمال المتكاملة</span></div>
+        <strong className="login-frame-slogan">سلسلة .. بنربط السوق ببعضه</strong>
+      </header>
+      <div className="login-layout">
       <section className="login-brand-panel">
-        <div className="login-brand"><div className="login-brand-mark"><img src={SILSILA_LOGO} alt="شعار سلسلة"/></div><div><b>سلسلة</b><span>ERP · BUSINESS OS</span></div></div>
+        <div className="login-brand-art"><img src={SILSILA_LOGO} alt="شعار سلسلة" /></div>
         <div className="login-brand-copy"><span className="login-eyebrow"><ShieldCheck size={14}/> اتصال آمن بقاعدة بيانات المنشأة</span><h1>تجارتك اليومية<br/><em>تبدأ من هنا</em></h1><p>سجّل الدخول للوصول إلى بيانات منشأتك المشتركة، وفق عضويتك وصلاحياتك.</p></div>
         <div className="login-brand-footer">سلسلة .. بنربط السوق ببعضه</div>
       </section>
@@ -172,6 +187,18 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         <div className="login-mobile-brand"><div className="login-brand-mark"><img src={SILSILA_LOGO} alt="شعار سلسلة"/></div><b>سلسلة</b></div>
         <div className="login-form-heading"><span>مرحبًا بعودتك</span><h2>تسجيل الدخول</h2><p>استخدم حسابك المسجل في سلسلة.</p></div>
         <form className="login-form" onSubmit={signIn}>
+          <label className="login-select-label"><span>نوع النشاط</span><select aria-label="نوع النشاط" value={activity} onChange={(e)=>setActivity(e.target.value)} disabled={!activities.length}><option value="">{activities.length ? "اختر النشاط" : "لا توجد أنشطة متاحة"}</option>{activities.map((item)=><option key={item.code} value={item.code}>{item.name}</option>)}</select></label>
+          <div className="login-choice-block">
+            <span className="login-choice-title">اختار طريقة دخولك</span>
+            {userTypes.length ? <div className="login-user-type-options">{userTypes.map((type)=><button type="button" key={type} className={accountType===type?"selected":""} aria-pressed={accountType===type} onClick={()=>setAccountType(type)}><span>{userTypeIcons[type] || "♙"}</span>{type}</button>)}</div> : <p className="login-catalog-empty">لا توجد أنواع مستخدمين نشطة ومسموح بظهورها في التطبيق.</p>}
+          </div>
+          <div className="login-activity-user">
+            <span className="login-choice-title">تسجيل دخول النشاط</span>
+            <div className="login-segmented" role="group" aria-label="نوع مستخدم النشاط">
+              <button type="button" className={activityUserType==="مستخدم رئيسي للنشاط"?"selected":""} aria-pressed={activityUserType==="مستخدم رئيسي للنشاط"} onClick={()=>setActivityUserType("مستخدم رئيسي للنشاط")}>مستخدم رئيسي</button>
+              <button type="button" className={activityUserType==="مستخدم فرعي للنشاط"?"selected":""} aria-pressed={activityUserType==="مستخدم فرعي للنشاط"} onClick={()=>setActivityUserType("مستخدم فرعي للنشاط")}>مستخدم فرعي</button>
+            </div>
+          </div>
           <label><span>البريد الإلكتروني</span><div className="login-input-wrap"><Mail size={17}/><input type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@company.com" required/></div></label>
           <label><span>كلمة المرور</span><div className="login-input-wrap"><LockKeyhole size={17}/><input type={showPassword?"text":"password"} autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="أدخل كلمة المرور" required/><button type="button" onClick={()=>setShowPassword(!showPassword)} aria-label="إظهار أو إخفاء كلمة المرور">{showPassword?<EyeOff size={17}/>:<Eye size={17}/>}</button></div></label>
           <div className="login-form-meta"><span></span><button type="button" onClick={resetPassword}>نسيت كلمة المرور؟</button></div>
@@ -182,6 +209,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         <div className="login-security-note"><Building2 size={15}/> صلاحيات المنشأة تُطبّق من قاعدة البيانات</div>
         <footer>© 2026 سلسلة · جميع الحقوق محفوظة</footer>
       </section>
+      </div>
+      <footer className="login-frame-footer"><span>© 2026 سلسلة · جميع الحقوق محفوظة</span><strong>سلسلة .. بنربط السوق ببعضه</strong></footer>
     </div>
   </div>;
 }
