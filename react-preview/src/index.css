@@ -473,3 +473,69 @@ html,body,#root{min-height:100%;width:100%;max-width:100%;overflow-x:hidden}
 .sidebar.collapsed .brand{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;padding:0 0 12px;overflow:visible}
 .sidebar.collapsed .brand-mark{width:38px;height:38px;flex:none}
 .sidebar.collapsed .collapse{display:grid!important;visibility:visible;opacity:1;width:34px;height:30px;min-width:34px;flex:0 0 30px;position:relative}
+
+
+/* Login experience refresh: complete outer brand frame and application-matched controls */
+.login-screen{min-height:100svh;padding:clamp(14px,3vw,38px);background:radial-gradient(ellipse at 10% 10%,#eadcf8 0,transparent 35%),radial-gradient(ellipse at 92% 88%,#ffe8d0 0,transparent 32%),#f5effb}
+.login-frame{position:relative;z-index:1;width:min(1180px,100%);padding:clamp(12px,2vw,22px);border:1px solid #e6d2f2;border-radius:30px;background:linear-gradient(135deg,#fff 0%,#fffaff 52%,#fbf4ff 100%);box-shadow:0 28px 100px #32104a20,0 0 0 7px #ffffff88;overflow:hidden}
+.login-frame-header{display:flex;align-items:center;gap:15px;padding:5px 12px 17px;border-bottom:1px solid #eee4f5}
+.login-frame-header>img{width:68px;height:68px;object-fit:contain;mix-blend-mode:multiply;filter:drop-shadow(0 6px 12px #3e007d20)}
+.login-frame-brand{display:grid;gap:4px}.login-frame-brand b{font-size:25px;line-height:1;color:#3e007d;font-weight:950}.login-frame-brand span{font-size:10px;color:#877392}
+.login-frame-slogan{margin-inline-start:auto;color:#ff27c3;font-size:clamp(13px,1.5vw,18px);font-weight:900;letter-spacing:.1px}
+.login-layout{width:100%;min-height:640px;margin:16px 0 12px;grid-template-columns:minmax(0,1fr) minmax(390px,.94fr);border-radius:22px;border:1px solid #eee5f4;box-shadow:0 18px 55px #32104a10}
+.login-brand-panel{padding:30px 38px;background:radial-gradient(circle at 50% 14%,#8e4ec1 0,transparent 43%),radial-gradient(circle at 10% 90%,#ff9e2528 0,transparent 27%),linear-gradient(145deg,#210039,#3e007d 57%,#5b2392)}
+.login-brand-art{position:relative;z-index:1;display:grid;place-items:center;min-height:260px;margin:-5px auto 0;width:min(100%,360px)}
+.login-brand-art img{display:block;width:min(100%,330px);height:260px;object-fit:contain;mix-blend-mode:screen;filter:drop-shadow(0 12px 28px #0d001e70)}
+.login-brand-copy{margin:12px 0 22px}.login-brand-copy h1{font-size:clamp(32px,3.5vw,46px);line-height:1.4}.login-brand-copy h1 em{color:#ff27c3}
+.login-brand-footer{color:#ffb8ed;font-weight:800}
+.login-form-panel{padding:clamp(22px,3vw,40px);justify-content:flex-start}
+.login-form-heading{margin-bottom:18px}.login-form-heading>span{color:#a13b9b}.login-form-heading h2{margin:6px 0;font-size:28px}
+.login-form{gap:12px}
+.login-form>label>span,.login-choice-title{font-size:11px;font-weight:900;color:#59476a}
+.login-select-label select{width:100%;height:45px;padding:0 12px;border:1px solid #e8dff0;border-radius:10px;background:#fff;color:#3d2850;font:inherit;font-size:12px;outline-color:#9c62c0}
+.login-choice-block,.login-activity-user{display:grid;gap:9px}
+.login-user-type-options{display:flex;flex-wrap:wrap;gap:7px}
+.login-user-type-options button{min-height:39px;padding:7px 11px;border:1px solid #e7dced;border-radius:10px;background:#fff;color:#6d587d;font:inherit;font-size:11px;font-weight:800;display:flex;align-items:center;gap:7px;cursor:pointer;transition:.18s}
+.login-user-type-options button>span{font-size:16px;color:#8b5bb0}
+.login-user-type-options button.selected{border-color:#3e007d;background:linear-gradient(120deg,#f4eafd,#fff4fc);color:#3e007d;box-shadow:0 0 0 2px #3e007d10}
+.login-catalog-empty{margin:0;padding:9px 11px;border-radius:9px;background:#fff7f0;color:#9a642e;font-size:10px;line-height:1.7}
+.login-activity-user{padding:11px;border:1px solid #efdff0;border-radius:13px;background:linear-gradient(120deg,#f7f1fc,#fff5fc)}
+.login-segmented{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.login-segmented button{min-height:38px;border:1px solid #e8dced;border-radius:9px;background:#fff;color:#735d82;font:inherit;font-size:11px;font-weight:800;cursor:pointer}
+.login-segmented button.selected{border-color:#3e007d;background:#3e007d;color:#fff;box-shadow:0 5px 14px #3e007d22}
+.login-form .login-input-wrap{height:44px}
+.login-form-meta{margin:1px 0 0}
+.login-remember{display:flex;align-items:center;gap:7px;color:#76677f;font-size:10px;font-weight:700;cursor:pointer}
+.login-remember input{width:15px;height:15px;margin:0;accent-color:#3e007d}
+.login-form-meta>button{color:#ff27c3;font-size:10px}
+.login-submit{height:46px}
+.login-preview-access{margin-top:14px}
+.login-frame-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 3px;border-top:1px solid #eee4f5;color:#9a8aa4;font-size:10px}
+.login-frame-footer strong{color:#ff27c3;font-size:12px;font-weight:900}
+.login-security-note{margin-top:12px}
+@media(max-width:850px){
+ .login-screen{padding:10px}.login-frame{padding:10px;border-radius:22px}
+ .login-frame-header{gap:9px;padding:2px 5px 12px}.login-frame-header>img{width:48px;height:48px}
+ .login-frame-brand b{font-size:21px}.login-frame-brand span{font-size:8px}
+ .login-frame-slogan{font-size:11px}
+ .login-layout{grid-template-columns:1fr;min-height:0;margin:10px 0}
+ .login-brand-panel{display:flex;padding:18px 20px;gap:8px;align-items:center;flex-direction:row;min-height:155px}
+ .login-brand-art{width:34%;min-height:110px;margin:0;flex:none}
+ .login-brand-art img{height:110px;width:100%}
+ .login-brand-copy{margin:0;min-width:0}.login-brand-copy h1{font-size:25px;margin:9px 0 5px}.login-brand-copy p{font-size:10px;line-height:1.7;margin:0}
+ .login-brand-footer{display:none}
+ .login-form-panel{padding:20px 18px}
+ .login-form-heading{margin-bottom:13px}.login-form-heading h2{font-size:24px}
+ .login-frame-footer{padding:9px 5px;font-size:9px}
+}
+@media(max-width:480px){
+ .login-frame-header>img{width:42px;height:42px}.login-frame-brand b{font-size:19px}
+ .login-frame-brand span{max-width:115px;line-height:1.4}
+ .login-frame-slogan{max-width:135px;text-align:left;line-height:1.5;font-size:10px}
+ .login-brand-panel{min-height:125px;padding:12px}
+ .login-brand-art{width:30%;min-height:90px}.login-brand-art img{height:90px}
+ .login-brand-copy h1{font-size:20px;line-height:1.35}.login-brand-copy p{font-size:9px}
+ .login-form-panel{padding:17px 13px}
+ .login-user-type-options button{flex:1;justify-content:center}
+ .login-frame-footer{flex-direction:column;align-items:center;gap:4px}
+}
