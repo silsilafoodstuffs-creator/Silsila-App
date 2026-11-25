@@ -1,1 +1,37 @@
-# Silsila React Preview\n\nAn isolated visual prototype for the Silsila ERP React migration. It does not connect to Supabase and uses illustrative dashboard values only. The existing Flutter application and production backend are untouched.\n\n## Run locally\n\n```bash\ncd react-preview\nnpm install\nnpm run dev\n```\n\n## Validate production build\n\n```bash\nnpm run build\n```\n\nThis preview is intentionally isolated from production data and workflows.\n
+# سلسلة — React ERP Preview
+
+نسخة React مستقلة لتطوير واختبار واجهات سلسلة ووظائفها تدريجيًا، بالتوازي مع تطبيق Flutter الحالي. لا يتم حذف تطبيق Flutter أو استبداله قبل اكتمال التحقق والاعتماد.
+
+## ما هو متصل حاليًا
+
+- المصادقة عبر Supabase Auth بالبريد الإلكتروني وكلمة المرور.
+- تحميل عضويات المنشآت النشطة من `erp_company_members` وبيانات المنشآت من `erp_companies`.
+- نطاق المنشأة المختارة محفوظ في جلسة المتصفح، وتُقرأ البيانات التشغيلية من Supabase وفق سياسات RLS.
+- لوحة تنفيذية وواجهات مستندات وخزينة وقيود مرتبطة بقاعدة البيانات في الشاشات التي تحمل توضيح الاتصال.
+- وضع المعاينة لا ينشئ مستندات ولا يكتب بيانات في قاعدة الإنتاج.
+
+> تنبيه: بعض الشاشات ما زالت عرضًا أو CRUD محليًا، وبعض دورات العمل تحتاج استكمالًا. نجاح البناء لا يعني أن كل إجراء تشغيلي تم اختباره على قاعدة فعلية.
+
+## التشغيل المحلي
+
+```bash
+cd react-preview
+npm install
+npm run dev
+```
+
+## الاختبارات
+
+```bash
+npm run build
+npx playwright install chromium
+npm run test:e2e
+```
+
+اختبارات المتصفح تتحقق من شاشة الدخول، الدخول إلى المعاينة، ظهور التنقل الأساسي، وأساسيات العرض على الهاتف. لا تستخدم بيانات اعتماد حقيقية ولا تنشئ معاملات في قاعدة الإنتاج.
+
+## بيئات التشغيل
+
+- المعاينة المنشورة: https://silsila-react-preview.vercel.app/
+- قاعدة Supabase المتصلة محددة عبر متغيرات بيئة Vercel الخاصة ببيئة Preview.
+- لا تُنفّذ تغييرات على مخطط قاعدة الإنتاج أو بياناتها دون خطة وموافقة صريحة.
