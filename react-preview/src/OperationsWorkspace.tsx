@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { postDocumentJournal } from "./accounting";
 import { Plus, Trash2, Save, RotateCcw, Package, ShoppingCart, ShoppingBag, CheckCircle2, FileText, Clock3 } from "lucide-react";
 
 type Line = { id:number; name:string; unit:string; qty:number; price:number };
@@ -63,8 +64,9 @@ export default function OperationsWorkspace({kind}:{kind:"sale"|"purchase"|"inve
   if(!window.confirm("اعتماد المستند "+doc.id+"؟ ستنشأ حركة مخزنية محلية لكل بند. هذا لا يرحّل محاسبيًا ولا يغيّر مخزون الإنتاج."))return;
   const movements:StockMovement[]=doc.lineItems.map((line,index)=>({id:doc.id+"-"+index,documentId:doc.id,documentKind:doc.kind,date:doc.date,party:doc.party,item:line.name,unit:line.unit,qty:line.qty,direction:doc.kind==="purchase"?"in":"out",createdAt:new Date().toISOString()}));
   setStockMovements(old=>[...movements,...old.filter(m=>m.documentId!==doc.id)]);
+  try{postDocumentJournal({sourceId:doc.id,sourceType:doc.kind as "sale"|"purchase",date:doc.date,party:doc.party,total:doc.total,subtotal:doc.lineItems.reduce((s,l)=>s+l.qty*l.price,0)-(doc.discount||0),tax:Math.max(0,doc.total-(doc.lineItems.reduce((s,l)=>s+l.qty*l.price,0)-(doc.discount||0))),payment:doc.payment});}catch(error){setMessage(error instanceof Error?error.message:"تعذر إنشاء القيد المحاسبي.");return;}
   setDocuments(old=>old.map(d=>d.id===doc.id?{...d,status:"posted",postedAt:new Date().toISOString()}:d));
-  setMessage("تم اعتماد المستند وإنشاء حركات مخزنية محلية مرتبطة به. لم يتم تحديث أرصدة فعلية أو قاعدة الإنتاج.");
+  setMessage("تم اعتماد المستند وإنشاء حركات مخزنية وقيد محاسبي مزدوج محلي مرتبط به. لم يتم تحديث أرصدة الإنتاج.");
  };
  const removeDoc=(id:string)=>setDocuments(old=>old.filter(d=>d.id!==id));
  return <section className="operation-workspace" dir="rtl">
