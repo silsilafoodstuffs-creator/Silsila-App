@@ -10,12 +10,10 @@ type Account = { id:string; account_code:string; account_name:string; account_ty
 type Party = { id:string; party_name:string; party_kind:string };
 const money=(n:number)=>new Intl.NumberFormat("ar-EG",{maximumFractionDigits:2}).format(n);
 const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");};
-const COMPANY=sessionStorage.getItem("silsila-company-id")||"";
-const USER=sessionStorage.getItem("silsila-user-id")||"";
-const ROLE=sessionStorage.getItem("silsila-member-role")||"viewer";
-
 export default function TreasuryWorkspace(){
- const companyId=COMPANY,userId=USER,role=ROLE;
+ const companyId=sessionStorage.getItem("silsila-company-id")||"";
+ const userId=sessionStorage.getItem("silsila-user-id")||"";
+ const role=sessionStorage.getItem("silsila-member-role")||"viewer";
  const live=Boolean(supabase&&companyId&&userId);
  const canCreate=["owner","admin","manager","operator","accountant"].includes(role);
  const [vouchers,setVouchers]=useState<Voucher[]>([]);
