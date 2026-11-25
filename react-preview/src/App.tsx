@@ -45,7 +45,7 @@ const nav = [
  {title:"علاقات العملاء",sections:[{title:"إدارة العلاقات",items:[{name:"علاقات العملاء",icon:Users},{name:"الحملات التسويقية",icon:Sparkles},{name:"الزيارات والمتابعات",icon:CalendarDays},{name:"شكاوى وملاحظات العملاء",icon:ClipboardList},{name:"ولاء العملاء",icon:Award}]}]},
  {title:"الموارد البشرية",sections:[
   {title:"ملفات وتنظيم",items:[{name:"الموارد البشرية",icon:BriefcaseBusiness},{name:"ملفات الموظفين",icon:Users},{name:"الهيكل التنظيمي",icon:GitBranch},{name:"الوظائف والتعيينات",icon:BriefcaseBusiness}]},
-  {title:"شؤون العاملين",items:[{name:"الحضور والانصراف",icon:CalendarDays},{name:"الإجازات",icon:CalendarDays},{name:"العقود والتراخيص",icon:FileBarChart},{name:"التدريب",icon:Award},{name:"التأمينات",icon:ShieldCheck},{name:"الرواتب",icon:Wallet}]},
+  {title:"شؤون العاملين",items:[{name:"الحضور والانصراف",icon:CalendarDays},{name:"الورديات",icon:CalendarDays},{name:"العمل الإضافي",icon:Activity},{name:"الإجازات",icon:CalendarDays},{name:"العقود والتراخيص",icon:FileBarChart},{name:"التدريب",icon:Award},{name:"التأمينات",icon:ShieldCheck},{name:"العهد",icon:BriefcaseBusiness},{name:"الرواتب",icon:Wallet}]},
   {title:"الأداء",items:[{name:"التقييم الوظيفي",icon:Award},{name:"مؤشرات KPI للموارد البشرية",icon:FileBarChart},{name:"الاستقطاب والمرشحون",icon:Users}]}
  ]},
  {title:"الفاتورة الإلكترونية",sections:[{title:"منظومة الضرائب المصرية",items:[{name:"الفاتورة الإلكترونية",icon:ReceiptText},{name:"الإيصال الإلكتروني",icon:ReceiptText},{name:"إعدادات مصلحة الضرائب",icon:Settings2},{name:"حالة الربط والتكامل",icon:GitBranch}]}]},
