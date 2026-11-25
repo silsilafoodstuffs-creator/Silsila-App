@@ -27,7 +27,8 @@ export default function OperationsWorkspace({kind}:{kind:"sale"|"purchase"|"inve
  const [notes,setNotes]=useState(""); const [saved,setSaved]=useState(false);
  const [message,setMessage]=useState(""); const [nextId,setNextId]=useState(3);
  const [documents,setDocuments]=useState<SavedDocument[]>(()=>read(docsKey,[]));
- const [stockMovements,setStockMovements]=useState<StockMovement[]>(()=>read(STOCK_MOVEMENTS_KEY,[]));\n const [lineFilters,setLineFilters]=useState<string[]>(Array(5).fill("")); const [movementFilters,setMovementFilters]=useState<string[]>(Array(7).fill("")); const [documentFilters,setDocumentFilters]=useState<string[]>(Array(6).fill(""));
+ const [stockMovements,setStockMovements]=useState<StockMovement[]>(()=>read(STOCK_MOVEMENTS_KEY,[]));
+ const [lineFilters,setLineFilters]=useState<string[]>(Array(5).fill("")); const [movementFilters,setMovementFilters]=useState<string[]>(Array(7).fill("")); const [documentFilters,setDocumentFilters]=useState<string[]>(Array(6).fill(""));
  const subtotal=useMemo(()=>lines.reduce((s,l)=>s+l.qty*l.price,0),[lines]);
  const discountValue=Math.min(subtotal,Math.max(0,discount));
  const taxValue=(subtotal-discountValue)*Math.max(0,tax)/100;
@@ -51,7 +52,10 @@ export default function OperationsWorkspace({kind}:{kind:"sale"|"purchase"|"inve
   const doc:SavedDocument={id:prefix+"-"+Date.now().toString().slice(-8),party:party.trim(),date,payment,total,lines:lines.length,kind,status:"draft",savedAt:new Date().toISOString(),lineItems:lines.map(line=>({...line})),discount:discountValue,tax,notes};
   setDocuments(old=>[doc,...old].slice(0,100));setSaved(true);setMessage("تم حفظ المسودة محليًا. لم يتم ترحيلها أو إرسالها إلى قاعدة بيانات.");
  };
- const recent=documents.filter(d=>d.kind===kind).slice(0,5);\n const filteredLines=lines.filter(l=>[l.name,l.unit,String(l.qty),String(l.price),fmt(l.qty*l.price)].every((v,i)=>v.toLowerCase().includes((lineFilters[i]||"").toLowerCase())));\n const filteredMovements=stockMovements.slice(0,30).filter(m=>[m.documentId,m.documentKind==="purchase"?"شراء":"بيع",m.item,m.party,m.date,fmt(m.qty)+" "+m.unit,m.direction==="in"?"وارد":"صادر"].every((v,i)=>v.toLowerCase().includes((movementFilters[i]||"").toLowerCase())));\n const filteredRecent=recent.filter(d=>[d.id,d.party,d.date,String(d.lines),fmt(d.total),d.status==="posted"?"معتمد محليًا":"مسودة"].every((v,i)=>v.toLowerCase().includes((documentFilters[i]||"").toLowerCase())));
+ const recent=documents.filter(d=>d.kind===kind).slice(0,5);
+ const filteredLines=lines.filter(l=>[l.name,l.unit,String(l.qty),String(l.price),fmt(l.qty*l.price)].every((v,i)=>v.toLowerCase().includes((lineFilters[i]||"").toLowerCase())));
+ const filteredMovements=stockMovements.slice(0,30).filter(m=>[m.documentId,m.documentKind==="purchase"?"شراء":"بيع",m.item,m.party,m.date,fmt(m.qty)+" "+m.unit,m.direction==="in"?"وارد":"صادر"].every((v,i)=>v.toLowerCase().includes((movementFilters[i]||"").toLowerCase())));
+ const filteredRecent=recent.filter(d=>[d.id,d.party,d.date,String(d.lines),fmt(d.total),d.status==="posted"?"معتمد محليًا":"مسودة"].every((v,i)=>v.toLowerCase().includes((documentFilters[i]||"").toLowerCase())));
  const reopenDoc=(doc:SavedDocument)=>{if(!doc.lineItems?.length){setMessage("هذه مسودة قديمة لا تحتوي تفاصيل الأصناف؛ لا يمكن استعادتها بالكامل.");return;}setParty(doc.party);setDate(doc.date);setPayment(doc.payment);setLines(doc.lineItems.map(line=>({...line})));setNextId(Math.max(0,...doc.lineItems.map(line=>line.id))+1);setDiscount(doc.discount??0);setTax(doc.tax??14);setNotes(doc.notes??"");setSaved(false);setMessage("تم تحميل المسودة إلى شاشة التحرير. التعديلات لن تغيّر النسخة المحفوظة إلا عند حفظ مسودة جديدة.");window.scrollTo({top:0,behavior:"smooth"});};
  const postDoc=(doc:SavedDocument)=>{
   if(doc.status==="posted"){setMessage("هذا المستند سبق اعتماده محليًا.");return;}
