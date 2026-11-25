@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { postVoucherJournal } from "./accounting";
 import { ArrowDownToLine, ArrowUpFromLine, CheckCircle2, FileText, Plus, ReceiptText, Trash2, Wallet } from "lucide-react";
 
 type VoucherKind = "receipt" | "payment";
@@ -38,8 +39,9 @@ export default function TreasuryWorkspace(){
   if(v.status!=="draft")return;
   const action=v.kind==="receipt"?"إثبات القبض":"إثبات الصرف";
   if(!window.confirm(action+" بمبلغ "+money(v.amount)+" ج.م؟ سيُسجل كتأثير محلي تجريبي فقط، دون ترحيل محاسبي أو اتصال بالإنتاج."))return;
+  try{postVoucherJournal({sourceId:v.id,sourceType:v.kind,date:v.date,party:v.party,amount:v.amount,method:v.method,reference:v.reference});}catch(error){setMessage(error instanceof Error?error.message:"تعذر إنشاء القيد المحاسبي.");return;}
   setVouchers(old=>old.map(x=>x.id===v.id&&x.status==="draft"?{...x,status:"posted",postedAt:new Date().toISOString()}:x));
-  setMessage("تم اعتماد السند داخل سجل المعاينة المحلي فقط. لم يُنشأ قيد محاسبي ولم يتغير أي رصيد إنتاجي.");
+  setMessage("تم اعتماد السند وإنشاء قيد محاسبي مزدوج داخل دفتر القيود المحلي. لم يتغير أي رصيد إنتاجي.");
  };
  const remove=(id:string)=>{const v=vouchers.find(x=>x.id===id);if(v?.status==="draft"&&window.confirm("حذف المسودة المحلية؟"))setVouchers(old=>old.filter(x=>x.id!==id));};
  return <section className="treasury-workspace" dir="rtl">
