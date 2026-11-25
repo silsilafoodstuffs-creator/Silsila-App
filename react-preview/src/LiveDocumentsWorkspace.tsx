@@ -49,6 +49,7 @@ export default function LiveDocumentsWorkspace({kind}:{kind:Kind}){
  const selectedItems=lines.map(l=>items.find(i=>i.id===l.itemId));
  const lineTotals=lines.map((l,index)=>{
   const item=selectedItems[index];
+  const unit=units.find(u=>u.id===l.unitId);
   const qty=Math.max(0,Number(l.qty)||0),price=Math.max(0,Number(l.price)||0),discount=Math.max(0,Number(l.discount)||0);
   const base=round2(qty*price),disc=Math.min(base,discount),tax=round2((base-disc)*Math.max(0,Number(item?.tax_rate)||0)/100);
   return {base,discount:disc,tax,total:round2(base-disc+tax),baseQty:qty*(Number(unit?.conversion_factor)||1),unitName:unit?.unit_name||unit?.unit_code||item?.base_unit||"وحدة"};
