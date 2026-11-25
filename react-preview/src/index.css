@@ -15,3 +15,14 @@
 .module-editor-actions{display:flex;gap:8px;margin-top:13px}.module-validation{display:block;color:#c15a52;margin-top:9px;font-size:10px}
 .row-actions button:last-child{color:#bd6565;background:#fff2f1}
 @media(max-width:800px){.module-editor-fields{grid-template-columns:1fr 1fr}}
+
+.operation-feedback{margin-top:12px;padding:11px 13px;border-radius:9px;background:#eaf8f1;color:#22845f;font-size:11px;font-weight:700}
+.operation-feedback.warning{background:#fff5e8;color:#b97927}
+.operation-history{margin-top:18px;background:#fff;border:1px solid #eeeaf3;border-radius:13px;padding:15px;box-shadow:0 4px 15px #31114a05}
+.operation-history .operation-table-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.operation-history .operation-table-head>div{display:flex;flex-direction:column;gap:4px}
+.operation-history .operation-table-head b{display:flex;align-items:center;gap:7px;font-size:12px}
+.operation-history .operation-table-head small{font-size:10px;color:#9c91a6}
+.operation-history .operation-table-head>span{display:flex;align-items:center;gap:5px;color:#8e7e9d;font-size:10px}
+.operation-disclaimer{margin-top:12px;padding:10px 12px;border:1px dashed #dfd2eb;border-radius:9px;color:#8d7e98;background:#fbf9fd;font-size:10px;line-height:1.7}
+@media(max-width:700px){.operation-history{padding:10px}.operation-history .table-wrap{overflow-x:auto}.operation-disclaimer{font-size:9px}}
