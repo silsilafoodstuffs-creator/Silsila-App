@@ -23,7 +23,7 @@ export default function ModuleWorkspace({name,onAction}:{name:string;onAction:(m
  const data=config[name]||config["مركز النشاط"]; const Icon=data.icon;
  const [records,setRecords]=useState<Row[]>(data.rows);
  const [query,setQuery]=useState(""); const [filter,setFilter]=useState("الكل");
- const [editing,setEditing]=useState<Row|null>(null); const [form,setForm]=useState({code:"",name:"",detail:"",amount:""});
+ const [editing,setEditing]=useState<Row|null>(null); const [editorOpen,setEditorOpen]=useState(false); const [form,setForm]=useState({code:"",name:"",detail:"",amount:""});
  const [message,setMessage]=useState("");
  const rows=useMemo(()=>records.filter(r=>(filter==="الكل"||r.status===filter)&&Object.values(r).join(" ").toLowerCase().includes(query.toLowerCase())),[records,query,filter]);
  const startNew=()=>{setEditing(null);setEditorOpen(true);setForm({code:"",name:"",detail:"",amount:""});setMessage("");};
