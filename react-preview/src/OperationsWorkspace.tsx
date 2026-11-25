@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Save, RotateCcw, Package, ShoppingCart, ShoppingBag, CheckCircle2, FileText, Clock3 } from "lucide-react";
 
 type Line = { id:number; name:string; unit:string; qty:number; price:number };
-type SavedDocument = { id:string; party:string; date:string; payment:string; total:number; lines:number; kind:string; savedAt:string };
+type SavedDocument = { id:string; party:string; date:string; payment:string; total:number; lines:number; kind:string; savedAt:string; lineItems?:Line[]; discount?:number; tax?:number; notes?:string };
 const seed:Line[] = [
  {id:1,name:"أرز مصري فاخر 1 كجم",unit:"كرتونة",qty:2,price:720},
  {id:2,name:"سكر أبيض 1 كجم",unit:"كرتونة",qty:1,price:650},
@@ -39,10 +39,11 @@ export default function OperationsWorkspace({kind}:{kind:"sale"|"purchase"|"inve
   if(!party.trim()){setMessage("أدخل اسم العميل أو المورد.");return;}
   if(!lines.length||lines.some(l=>!l.name.trim()||l.qty<=0)){setMessage("أضف صنفًا صحيحًا، وتأكد من الاسم والكمية.");return;}
   const prefix=kind==="sale"?"SAL":"PUR";
-  const doc:SavedDocument={id:prefix+"-"+Date.now().toString().slice(-8),party:party.trim(),date,payment,total,lines:lines.length,kind,savedAt:new Date().toISOString()};
+  const doc:SavedDocument={id:prefix+"-"+Date.now().toString().slice(-8),party:party.trim(),date,payment,total,lines:lines.length,kind,savedAt:new Date().toISOString(),lineItems:lines.map(line=>({...line})),discount:discountValue,tax,notes};
   setDocuments(old=>[doc,...old].slice(0,100));setSaved(true);setMessage("تم حفظ المسودة محليًا. لم يتم ترحيلها أو إرسالها إلى قاعدة بيانات.");
  };
  const recent=documents.filter(d=>d.kind===kind).slice(0,5);
+ const reopenDoc=(doc:SavedDocument)=>{if(!doc.lineItems?.length){setMessage("هذه مسودة قديمة لا تحتوي تفاصيل الأصناف؛ لا يمكن استعادتها بالكامل.");return;}setParty(doc.party);setDate(doc.date);setPayment(doc.payment);setLines(doc.lineItems.map(line=>({...line})));setDiscount(doc.discount??0);setTax(doc.tax??14);setNotes(doc.notes??"");setSaved(false);setMessage("تم تحميل المسودة إلى شاشة التحرير. التعديلات لن تغيّر النسخة المحفوظة إلا عند حفظ مسودة جديدة.");window.scrollTo({top:0,behavior:"smooth"});};
  const removeDoc=(id:string)=>setDocuments(old=>old.filter(d=>d.id!==id));
  return <section className="operation-workspace" dir="rtl">
   <div className="operation-heading"><div className="operation-title"><span className="operation-icon"><Icon size={22}/></span><div><small>مساحة تشغيل تفاعلية · بيانات محلية</small><h2>{title}</h2><p>{kind==="sale"?"أنشئ مسودة بيع واحسب الخصم والضريبة والإجمالي، ثم راجع سجل المسودات.":kind==="purchase"?"سجّل مسودة توريد واحسب قيمتها واحتفظ بسجل محلي للمستندات.":"أدر قائمة الأصناف التجريبية مع حفظ الأسماء والوحدات والأرصدة محليًا."}</p></div></div><span className="demo-pill">معاينة فقط — لا يؤثر على الإنتاج</span></div>
@@ -52,7 +53,7 @@ export default function OperationsWorkspace({kind}:{kind:"sale"|"purchase"|"inve
   {kind==="inventory"&&<div className="inventory-summary"><div><span>عدد الأصناف المعروضة</span><b>{lines.length}</b></div><div><span>إجمالي قيمة الرصيد التجريبي</span><b>{fmt(subtotal)} ج.م</b></div><div><span>تنبيه</span><b>الأرصدة غير مرتبطة بالمخازن الفعلية</b></div></div>}
   <div className="operation-actions"><button className="operation-save" onClick={save}><Save size={16}/> {kind==="inventory"?"حفظ قائمة الأصناف":"حفظ مسودة"}</button><button className="operation-reset" onClick={reset}><RotateCcw size={15}/> إعادة ضبط</button>{saved&&<span className="saved-feedback"><CheckCircle2 size={16}/> تم الحفظ محليًا</span>}</div>
   {message&&<div className={saved?"operation-feedback":"operation-feedback warning"}>{message}</div>}
-  {kind!=="inventory"&&<div className="operation-history"><div className="operation-table-head"><div><b><FileText size={15}/> سجل المسودات المحفوظة</b><small>آخر خمس مسودات محفوظة على هذا المتصفح</small></div><span><Clock3 size={14}/> {recent.length} مستندات</span></div>{recent.length?<div className="table-wrap"><table><thead><tr><th>رقم المسودة</th><th>{kind==="sale"?"العميل":"المورد"}</th><th>التاريخ</th><th>البنود</th><th>الصافي</th><th>إجراء</th></tr></thead><tbody>{recent.map(d=><tr key={d.id}><td><b>{d.id}</b></td><td>{d.party}</td><td>{d.date}</td><td>{d.lines}</td><td className="operation-amount">{fmt(d.total)} ج.م</td><td><button className="remove-line" onClick={()=>removeDoc(d.id)} title="حذف المسودة المحلية"><Trash2 size={14}/></button></td></tr>)}</tbody></table></div>:<div className="operation-empty">لا توجد مسودات محفوظة حتى الآن.</div>}</div>}
+  {kind!=="inventory"&&<div className="operation-history"><div className="operation-table-head"><div><b><FileText size={15}/> سجل المسودات المحفوظة</b><small>آخر خمس مسودات محفوظة على هذا المتصفح</small></div><span><Clock3 size={14}/> {recent.length} مستندات</span></div>{recent.length?<div className="table-wrap"><table><thead><tr><th>رقم المسودة</th><th>{kind==="sale"?"العميل":"المورد"}</th><th>التاريخ</th><th>البنود</th><th>الصافي</th><th>استعادة</th><th>حذف</th></tr></thead><tbody>{recent.map(d=><tr key={d.id}><td><b>{d.id}</b></td><td>{d.party}</td><td>{d.date}</td><td>{d.lines}</td><td className="operation-amount">{fmt(d.total)} ج.م</td><td><button className="operation-add" onClick={()=>reopenDoc(d)} title="استعادة المسودة للتحرير">تحميل</button></td><td><button className="remove-line" onClick={()=>removeDoc(d.id)} title="حذف المسودة المحلية"><Trash2 size={14}/></button></td></tr>)}</tbody></table></div>:<div className="operation-empty">لا توجد مسودات محفوظة حتى الآن.</div>}</div>}
   <div className="operation-disclaimer">البيانات محفوظة محليًا في المتصفح فقط. لا يوجد اتصال بقاعدة بيانات الإنتاج، ولا يتم ترحيل المستندات إلى حسابات أو أرصدة فعلية.</div>
  </section>;
 }
