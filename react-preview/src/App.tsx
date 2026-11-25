@@ -14,23 +14,18 @@ const nav = [
     { title: "حركات", items: [] },
     { title: "تقارير", items: [{name:"الملخص التنفيذي",icon:LayoutDashboard}] }
   ]},
-  { title: "إدارة الأعمال", sections: [
-    { title: "بيانات أساسية", items: [{name:"العملاء",icon:Users},{name:"الموردون",icon:Building2},{name:"الشحن والنقل",icon:Truck},{name:"جامع صور الأصناف",icon:Package}] },
-    { title: "حركات", items: [] },
-    { title: "تقارير", items: [] }
-  ]},
   { title: "المبيعات", sections: [
-    { title: "بيانات أساسية", items: [] },
-    { title: "حركات", items: [{name:"عروض الأسعار",icon:FileBarChart},{name:"أوامر البيع",icon:ClipboardList},{name:"فواتير البيع",icon:ShoppingCart},{name:"مرتجعات البيع",icon:ReceiptText}] },
+    { title: "بيانات أساسية", items: [{name:"العملاء",icon:Users}] },
+    { title: "حركات", items: [{name:"عروض الأسعار",icon:FileBarChart},{name:"أوامر البيع",icon:ClipboardList},{name:"فواتير البيع",icon:ShoppingCart},{name:"مرتجعات البيع",icon:ReceiptText},{name:"الشحن والنقل",icon:Truck}] },
     { title: "تقارير", items: [] }
   ]},
   { title: "المشتريات", sections: [
-    { title: "بيانات أساسية", items: [] },
+    { title: "بيانات أساسية", items: [{name:"الموردون",icon:Building2}] },
     { title: "حركات", items: [{name:"أوامر التوريد",icon:Truck},{name:"أوامر الشراء",icon:ClipboardList},{name:"فواتير الشراء",icon:ShoppingBag},{name:"مرتجعات الشراء",icon:ReceiptText}] },
     { title: "تقارير", items: [] }
   ]},
   { title: "المخازن", sections: [
-    { title: "بيانات أساسية", items: [{name:"المخازن والأصناف",icon:Boxes},{name:"إدارة المخازن",icon:Building2},{name:"فئات الأصناف",icon:Tags}] },
+    { title: "بيانات أساسية", items: [{name:"المخازن والأصناف",icon:Boxes},{name:"إدارة المخازن",icon:Building2},{name:"فئات الأصناف",icon:Tags},{name:"جامع صور الأصناف",icon:Package}] },
     { title: "حركات", items: [{name:"التحويلات المخزنية",icon:GitBranch},{name:"الجرد المخزني",icon:ClipboardList}] },
     { title: "تقارير", items: [] }
   ]},
