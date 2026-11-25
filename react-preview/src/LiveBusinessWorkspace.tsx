@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useState} from "react";
 import {supabase} from "./supabase";
-import {Search,RefreshCw,Database,Users,BriefcaseBusiness,Activity,CalendarDays,Wallet,Star,Factory,Building2,ReceiptText,ShieldCheck,Sparkles,ClipboardList} from "lucide-react";
+import {Search,RefreshCw,Database,Users,BriefcaseBusiness,Activity,CalendarDays,Wallet,Star,Package,Factory,Building2,ReceiptText,ShieldCheck,Sparkles,ClipboardList} from "lucide-react";
 type Col={key:string;label:string;kind?:"money"|"date"|"status"|"percent"};
 type Def={title:string;table:string;cols:Col[];order:string;icon:any;note:string};
 const defs:Record<string,Def>={
