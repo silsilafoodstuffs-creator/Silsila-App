@@ -94,10 +94,10 @@ export default function FoundationWorkspace({kind}:{kind:Kind}){
   finally{setSaving(false);}
  };
  const remove=async(r:Row)=>{
-  if(!supabase||!cfg.companyScoped||kind==="policies"||kind==="company")return;
+  if(!supabase||kind==="policies"||kind==="company")return;
   if(!window.confirm("تأكيد تعطيل السجل؟ سيتم تغيير حالته دون حذف البيانات المرتبطة."))return;
   const statusField=kind==="activities"?"is_active":"is_active";
-  const {error}=await supabase.from(cfg.table).update({[statusField]:false}).eq("id",r.id).eq("company_id",companyId);
+  let update=supabase.from(cfg.table).update({[statusField]:false}).eq("id",r.id);if(cfg.companyScoped)update=update.eq("company_id",companyId);const {error}=await update;
   if(error)setError("تعذر تعطيل السجل: "+error.message);else{setNotice("تم تعطيل السجل دون حذفه.");await load();}
  };
  const policyCategories=["الكل",...Array.from(new Set(rows.map(r=>r.category).filter(Boolean)))];
