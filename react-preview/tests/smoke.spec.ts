@@ -25,8 +25,8 @@ test("main menus are grouped into basic data, movements and reports", async ({ p
   await expect(page.getByRole("button", { name: "حركات" })).toBeVisible();
   await expect(page.getByRole("button", { name: "تقارير" })).toBeVisible();
 
-  await page.getByRole("button", { name: "عن البرنامج" }).first().click();
-  await page.getByRole("button", { name: "عن البرنامج" }).last().click();
+  await page.locator(".nav-main-toggle").filter({ hasText: "عن البرنامج" }).click();
+  await page.locator(".nav-item").filter({ hasText: "عن البرنامج" }).click();
   await expect(page.getByRole("heading", { name: "منظومة إدارة الأعمال المتكاملة" })).toBeVisible();
 
   await page.getByRole("button", { name: "الملخص التنفيذي" }).click();
@@ -37,10 +37,13 @@ test("sidebar collapse toggle stays available and exit dialog supports all choic
   await page.goto("/");
   await page.getByRole("button", { name: /دخول المعاينة/ }).click();
 
-  await page.getByRole("button", { name: "إخفاء القوائم" }).click();
-  await expect(page.getByRole("button", { name: "إظهار القوائم" })).toBeVisible();
-  await page.getByRole("button", { name: "إظهار القوائم" }).click();
-  await expect(page.getByRole("button", { name: "إخفاء القوائم" })).toBeVisible();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.locator(".collapse").click();
+  await expect(page.locator(".sidebar")).toHaveClass(/collapsed/);
+  await expect(page.locator(".collapse")).toHaveAttribute("aria-label", "إظهار القوائم");
+  await page.locator(".collapse").click();
+  await expect(page.locator(".sidebar")).not.toHaveClass(/collapsed/);
+  await expect(page.locator(".collapse")).toHaveAttribute("aria-label", "إخفاء القوائم");
 
   await page.getByRole("button", { name: "خروج من البرنامج" }).click();
   await expect(page.getByRole("dialog", { name: "تأكيد الخروج من البرنامج" })).toBeVisible();
@@ -60,7 +63,11 @@ test("mobile preview does not create page-level horizontal overflow", async ({ p
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await page.getByRole("button", { name: /دخول المعاينة/ }).click();
+  await page.getByRole("button", { name: "فتح القوائم" }).click();
+  await expect(page.locator(".sidebar")).toHaveClass(/mobile-open/);
+  await expect(page.locator(".nav-main-toggle").first()).toBeVisible();
   await expect(page.getByText("وضع المعاينة")).toBeVisible();
+  await page.getByRole("button", { name: "إغلاق القوائم" }).click();
 
   const dimensions = await page.evaluate(() => ({
     viewport: document.documentElement.clientWidth,
