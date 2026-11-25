@@ -12,7 +12,7 @@ on:
       - '.github/workflows/react-preview-validation.yml'
   workflow_dispatch:
 jobs:
-  build:
+  build-and-browser-test:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -22,9 +22,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: react-preview/package-lock.json
       - run: npm install
       - run: npm run build
+      - name: Install Chromium for browser smoke tests
+        run: npx playwright install --with-deps chromium
+      - name: Run React browser smoke tests
+        run: npm run test:e2e
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: silsila-react-preview-dist
-          path: react-preview/dist
+          name: silsila-react-preview-validation
+          path: |
+            react-preview/playwright-report
+            react-preview/test-results
+            react-preview/dist
+          if-no-files-found: ignore
