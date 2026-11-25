@@ -15,16 +15,17 @@ export default function JournalWorkspace(){
  const load=async()=>{
   if(!live||!supabase){const local=readJournal();setEntries(local.map(e=>({id:e.id,number:e.id,date:e.date,description:e.description,source:e.sourceType,lines:e.lines.map((l,i)=>({account:l.account,debit:l.debit,credit:l.credit,party:e.party,description:e.description,entry:e.id,date:e.date,source:e.sourceType,id:e.id+"-"+i}))})));setLoading(false);return;}
   setLoading(true);setMessage("");
-  const [je,jl,ac,pa]=await Promise.all([
+  const [je,ac,pa]=await Promise.all([
    supabase.from("erp_journal_entries").select("id,entry_number,entry_number_display,entry_date,description,source_type,status").eq("company_id",companyId).eq("status","posted").order("entry_date",{ascending:false}).limit(500),
-   supabase.from("erp_journal_lines").select("id,entry_id,account_id,description,debit,credit,party_id").limit(5000),
    supabase.from("erp_accounts").select("id,account_code,account_name").eq("company_id",companyId),
    supabase.from("erp_parties").select("id,party_name").eq("company_id",companyId)
   ]);
+  const entryIds=(je.data||[]).map((e:any)=>e.id);
+  const jl=entryIds.length?await supabase.from("erp_journal_lines").select("id,entry_id,account_id,description,debit,credit,party_id").in("entry_id",entryIds):{data:[],error:null};
   const err=je.error||jl.error||ac.error||pa.error;
   if(err){setMessage("تعذر تحميل دفتر الأستاذ من قاعدة سلسلة: "+err.message);setEntries([]);setLoading(false);return;}
-  const accountMap=new Map((ac.data||[]).map((a:any)=>[a.id,a.account_code+" — "+a.account_name]));
-  const partyMap=new Map((pa.data||[]).map((p:any)=>[p.id,p.party_name]));
+  const accountMap=new Map<string,string>((ac.data||[]).map((a:any)=>[a.id,a.account_code+" — "+a.account_name]));
+  const partyMap=new Map<string,string>((pa.data||[]).map((p:any)=>[p.id,p.party_name]));
   const linesByEntry=new Map<string,Line[]>();
   for(const l of jl.data||[]){const entry=(je.data||[]).find((e:any)=>e.id===l.entry_id);if(!entry)continue;const line:Line={id:l.id,entry:entry.entry_number_display||String(entry.entry_number),date:entry.entry_date,source:entry.source_type,description:l.description||entry.description,party:l.party_id?partyMap.get(l.party_id)||"": "",account:accountMap.get(l.account_id)||"حساب غير معروف",debit:Number(l.debit),credit:Number(l.credit)};const arr=linesByEntry.get(l.entry_id)||[];arr.push(line);linesByEntry.set(l.entry_id,arr);}
   setEntries((je.data||[]).map((e:any)=>({id:e.id,number:e.entry_number_display||String(e.entry_number),date:e.entry_date,description:e.description,source:e.source_type,lines:(linesByEntry.get(e.id)||[]).map(l=>({...l,entry:e.entry_number_display||String(e.entry_number)}))})));
