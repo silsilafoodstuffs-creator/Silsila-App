@@ -21,7 +21,9 @@ const activeStatuses=["مكتملة","نشط","متاح","مرحّل","جاهز"
 const today=new Intl.DateTimeFormat("ar-EG",{day:"numeric",month:"long",year:"numeric"}).format(new Date());
 export default function ModuleWorkspace({name,onAction}:{name:string;onAction:(message:string)=>void}){
  const data=config[name]||config["مركز النشاط"]; const Icon=data.icon;
- const storageKey="silsila-react-preview:"+name;\n const [records,setRecords]=useState<Row[]>(()=>{try{const stored=window.localStorage.getItem(storageKey);return stored?JSON.parse(stored) as Row[]:data.rows;}catch{return data.rows;}});\n useEffect(()=>{try{window.localStorage.setItem(storageKey,JSON.stringify(records));}catch{}},[records,storageKey]);
+ const storageKey="silsila-react-preview:"+name;
+ const [records,setRecords]=useState<Row[]>(()=>{try{const stored=window.localStorage.getItem(storageKey);return stored?JSON.parse(stored) as Row[]:data.rows;}catch{return data.rows;}});
+ useEffect(()=>{try{window.localStorage.setItem(storageKey,JSON.stringify(records));}catch{}},[records,storageKey]);
  const [query,setQuery]=useState(""); const [filter,setFilter]=useState("الكل");
  const [editing,setEditing]=useState<Row|null>(null); const [editorOpen,setEditorOpen]=useState(false); const [form,setForm]=useState({code:"",name:"",detail:"",amount:""});
  const [message,setMessage]=useState("");
