@@ -20,7 +20,7 @@ const config:Record<string,ModuleConfig> = {
 };
 const activeStatuses=["مكتملة","نشط","متاح","مرحّل","جاهز","مفعّل"];
 const today=new Intl.DateTimeFormat("ar-EG",{day:"numeric",month:"long",year:"numeric"}).format(new Date());
-export default function ModuleWorkspace({name,onAction,companyId=null,userId=null,memberRole="viewer"}:{name:string;onAction:(message:string)=>void;companyId?:string|null;userId?:string|null;memberRole?:string}){
+export default function ModuleWorkspace({name,onAction,companyId=sessionStorage.getItem("silsila-company-id"),userId=sessionStorage.getItem("silsila-user-id"),memberRole=sessionStorage.getItem("silsila-member-role")||"viewer"}:{name:string;onAction:(message:string)=>void;companyId?:string|null;userId?:string|null;memberRole?:string}){
  const data=config[name]||config["مركز النشاط"]; const Icon=data.icon;
  const storageKey="silsila-react-preview:"+name;
  const pageKey="react-preview:"+name;
