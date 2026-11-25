@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Save, RotateCcw, Package, ShoppingCart, ShoppingBag, CheckCircle2, FileText, Clock3 } from "lucide-react";
 
 type Line = { id:number; name:string; unit:string; qty:number; price:number };
-type SavedDocument = { id:string; party:string; date:string; payment:string; total:number; lines:number; kind:string; savedAt:string; lineItems?:Line[]; discount?:number; tax?:number; notes?:string };
+type SavedDocument = { id:string; party:string; date:string; payment:string; total:number; lines:number; kind:string; savedAt:string; lineItems?:Line[]; discount?:number; tax?:number; notes?:string; status?:"draft"|"posted"; postedAt?:string };
+type StockMovement = { id:string; documentId:string; documentKind:string; date:string; party:string; item:string; unit:string; qty:number; direction:"in"|"out"; createdAt:string };
+const STOCK_MOVEMENTS_KEY="silsila-react-preview:stock-movements";
 const seed:Line[] = [
  {id:1,name:"أرز مصري فاخر 1 كجم",unit:"كرتونة",qty:2,price:720},
  {id:2,name:"سكر أبيض 1 كجم",unit:"كرتونة",qty:1,price:650},
@@ -25,6 +27,7 @@ export default function OperationsWorkspace({kind}:{kind:"sale"|"purchase"|"inve
  const [notes,setNotes]=useState(""); const [saved,setSaved]=useState(false);
  const [message,setMessage]=useState(""); const [nextId,setNextId]=useState(3);
  const [documents,setDocuments]=useState<SavedDocument[]>(()=>read(docsKey,[]));
+ const [stockMovements,setStockMovements]=useState<StockMovement[]>(()=>read(STOCK_MOVEMENTS_KEY,[]));
  const subtotal=useMemo(()=>lines.reduce((s,l)=>s+l.qty*l.price,0),[lines]);
  const discountValue=Math.min(subtotal,Math.max(0,discount));
  const taxValue=(subtotal-discountValue)*Math.max(0,tax)/100;
@@ -33,6 +36,7 @@ export default function OperationsWorkspace({kind}:{kind:"sale"|"purchase"|"inve
  const Icon=kind==="sale"?ShoppingCart:kind==="purchase"?ShoppingBag:Package;
  useEffect(()=>{try{localStorage.setItem(key,JSON.stringify(lines));}catch{}},[key,lines]);
  useEffect(()=>{try{localStorage.setItem(docsKey,JSON.stringify(documents));}catch{}},[docsKey,documents]);
+ useEffect(()=>{try{localStorage.setItem(STOCK_MOVEMENTS_KEY,JSON.stringify(stockMovements));}catch{}},[stockMovements]);
  const update=(id:number,k:"name"|"unit"|"qty"|"price",v:string)=>{setLines(old=>old.map(l=>l.id===id?{...l,[k]:k==="qty"||k==="price"?Math.max(0,Number(v)||0):v}:l));setSaved(false);};
  const add=()=>{setLines(old=>[...old,{id:nextId,name:"",unit:"كرتونة",qty:1,price:0}]);setNextId(n=>n+1);setSaved(false);};
  const reset=()=>{setLines(kind==="inventory"?[]:seed);setDiscount(0);setTax(14);setNotes("");setSaved(false);setMessage("");};
@@ -44,12 +48,21 @@ export default function OperationsWorkspace({kind}:{kind:"sale"|"purchase"|"inve
   if(!party.trim()){setMessage("أدخل اسم العميل أو المورد.");return;}
   if(!lines.length||lines.some(l=>!l.name.trim()||l.qty<=0)){setMessage("أضف صنفًا صحيحًا، وتأكد من الاسم والكمية.");return;}
   const prefix=kind==="sale"?"SAL":"PUR";
-  const doc:SavedDocument={id:prefix+"-"+Date.now().toString().slice(-8),party:party.trim(),date,payment,total,lines:lines.length,kind,savedAt:new Date().toISOString(),lineItems:lines.map(line=>({...line})),discount:discountValue,tax,notes};
+  const doc:SavedDocument={id:prefix+"-"+Date.now().toString().slice(-8),party:party.trim(),date,payment,total,lines:lines.length,kind,status:"draft",savedAt:new Date().toISOString(),lineItems:lines.map(line=>({...line})),discount:discountValue,tax,notes};
   setDocuments(old=>[doc,...old].slice(0,100));setSaved(true);setMessage("تم حفظ المسودة محليًا. لم يتم ترحيلها أو إرسالها إلى قاعدة بيانات.");
  };
  const recent=documents.filter(d=>d.kind===kind).slice(0,5);
  const reopenDoc=(doc:SavedDocument)=>{if(!doc.lineItems?.length){setMessage("هذه مسودة قديمة لا تحتوي تفاصيل الأصناف؛ لا يمكن استعادتها بالكامل.");return;}setParty(doc.party);setDate(doc.date);setPayment(doc.payment);setLines(doc.lineItems.map(line=>({...line})));setNextId(Math.max(0,...doc.lineItems.map(line=>line.id))+1);setDiscount(doc.discount??0);setTax(doc.tax??14);setNotes(doc.notes??"");setSaved(false);setMessage("تم تحميل المسودة إلى شاشة التحرير. التعديلات لن تغيّر النسخة المحفوظة إلا عند حفظ مسودة جديدة.");window.scrollTo({top:0,behavior:"smooth"});};
- const removeDoc=(id:string)=>setDocuments(old=>old.filter(d=>d.id!==id));
+ const postDoc=(doc:SavedDocument)=>{
+  if(doc.status==="posted"){setMessage("هذا المستند سبق اعتماده محليًا.");return;}
+  if(!doc.lineItems?.length){setMessage("لا يمكن اعتماد مستند لا يحتوي تفاصيل أصناف.");return;}
+  if(!window.confirm("اعتماد المستند "+doc.id+"؟ ستنشأ حركة مخزنية محلية لكل بند. هذا لا يرحّل محاسبيًا ولا يغيّر مخزون الإنتاج."))return;
+  const movements:StockMovement[]=doc.lineItems.map((line,index)=>({id:doc.id+"-"+index,documentId:doc.id,documentKind:doc.kind,date:doc.date,party:doc.party,item:line.name,unit:line.unit,qty:line.qty,direction:doc.kind==="purchase"?"in":"out",createdAt:new Date().toISOString()}));
+  setStockMovements(old=>[...movements,...old.filter(m=>m.documentId!==doc.id)]);
+  setDocuments(old=>old.map(d=>d.id===doc.id?{...d,status:"posted",postedAt:new Date().toISOString()}:d));
+  setMessage("تم اعتماد المستند وإنشاء حركات مخزنية محلية مرتبطة به. لم يتم تحديث أرصدة فعلية أو قاعدة الإنتاج.");
+ };
+ const removeDoc=(id:string)=>setDocuments(old=>old.filter(d=>d.id!==id&&d.status!=="posted"));
  return <section className="operation-workspace" dir="rtl">
   <div className="operation-heading"><div className="operation-title"><span className="operation-icon"><Icon size={22}/></span><div><small>مساحة تشغيل تفاعلية · بيانات محلية</small><h2>{title}</h2><p>{kind==="sale"?"أنشئ مسودة بيع واحسب الخصم والضريبة والإجمالي، ثم راجع سجل المسودات.":kind==="purchase"?"سجّل مسودة توريد واحسب قيمتها واحتفظ بسجل محلي للمستندات.":"أدر قائمة الأصناف التجريبية مع حفظ الأسماء والوحدات والأرصدة محليًا."}</p></div></div><span className="demo-pill">معاينة فقط — لا يؤثر على الإنتاج</span></div>
   {kind!=="inventory"&&<div className="operation-form-grid"><label><span>{kind==="sale"?"العميل":"المورد"}</span><input list={partyListId} value={party} onChange={e=>setParty(e.target.value)} placeholder="اكتب الاسم أو اختر من السجلات المحفوظة"/><datalist id={partyListId}>{partyOptions.map((p,i)=>p.name?<option key={i} value={p.name}/>:null)}</datalist></label><label><span>رقم المستند</span><input value={kind==="sale"?"مسودة بيع تلقائية":"مسودة شراء تلقائية"} readOnly/></label><label><span>تاريخ المستند</span><input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><label><span>طريقة السداد</span><select value={payment} onChange={e=>setPayment(e.target.value)}><option>نقدي</option><option>آجل</option><option>تحويل بنكي</option><option>بطاقة</option></select></label></div>}
@@ -58,7 +71,8 @@ export default function OperationsWorkspace({kind}:{kind:"sale"|"purchase"|"inve
   {kind==="inventory"&&<div className="inventory-summary"><div><span>عدد الأصناف المعروضة</span><b>{lines.length}</b></div><div><span>إجمالي قيمة الرصيد التجريبي</span><b>{fmt(subtotal)} ج.م</b></div><div><span>تنبيه</span><b>الأرصدة غير مرتبطة بالمخازن الفعلية</b></div></div>}
   <div className="operation-actions"><button className="operation-save" onClick={save}><Save size={16}/> {kind==="inventory"?"حفظ قائمة الأصناف":"حفظ مسودة"}</button><button className="operation-reset" onClick={reset}><RotateCcw size={15}/> إعادة ضبط</button>{saved&&<span className="saved-feedback"><CheckCircle2 size={16}/> تم الحفظ محليًا</span>}</div>
   {message&&<div className={saved?"operation-feedback":"operation-feedback warning"}>{message}</div>}
-  {kind!=="inventory"&&<div className="operation-history"><div className="operation-table-head"><div><b><FileText size={15}/> سجل المسودات المحفوظة</b><small>آخر خمس مسودات محفوظة على هذا المتصفح</small></div><span><Clock3 size={14}/> {recent.length} مستندات</span></div>{recent.length?<div className="table-wrap"><table><thead><tr><th>رقم المسودة</th><th>{kind==="sale"?"العميل":"المورد"}</th><th>التاريخ</th><th>البنود</th><th>الصافي</th><th>استعادة</th><th>حذف</th></tr></thead><tbody>{recent.map(d=><tr key={d.id}><td><b>{d.id}</b></td><td>{d.party}</td><td>{d.date}</td><td>{d.lines}</td><td className="operation-amount">{fmt(d.total)} ج.م</td><td><button className="operation-add" onClick={()=>reopenDoc(d)} title="استعادة المسودة للتحرير">تحميل</button></td><td><button className="remove-line" onClick={()=>removeDoc(d.id)} title="حذف المسودة المحلية"><Trash2 size={14}/></button></td></tr>)}</tbody></table></div>:<div className="operation-empty">لا توجد مسودات محفوظة حتى الآن.</div>}</div>}
-  <div className="operation-disclaimer">البيانات محفوظة محليًا في المتصفح فقط. لا يوجد اتصال بقاعدة بيانات الإنتاج، ولا يتم ترحيل المستندات إلى حسابات أو أرصدة فعلية.</div>
+  {kind==="inventory"&&<div className="operation-history"><div className="operation-table-head"><div><b><Package size={15}/> سجل الحركات المخزنية المرتبطة بالمستندات</b><small>تظهر هنا البنود الناتجة عن اعتماد مسودات البيع والشراء محليًا</small></div><span>{stockMovements.length} حركة</span></div>{stockMovements.length?<div className="table-wrap"><table><thead><tr><th>المستند</th><th>النوع</th><th>الصنف</th><th>الطرف</th><th>التاريخ</th><th>الكمية</th><th>الاتجاه</th></tr></thead><tbody>{stockMovements.slice(0,30).map(m=><tr key={m.id}><td><b>{m.documentId}</b></td><td>{m.documentKind==="purchase"?"شراء":"بيع"}</td><td>{m.item}</td><td>{m.party}</td><td>{m.date}</td><td>{fmt(m.qty)} {m.unit}</td><td><span className={m.direction==="in"?"treasury-status posted":"treasury-status draft"}>{m.direction==="in"?"وارد":"صادر"}</span></td></tr>)}</tbody></table></div>:<div className="operation-empty">لا توجد حركات مخزنية معتمدة محليًا بعد. احفظ مسودة بيع أو شراء ثم اعتمدها لتظهر حركاتها هنا.</div>}</div>}
+  {kind!=="inventory"&&<div className="operation-history"><div className="operation-table-head"><div><b><FileText size={15}/> سجل المسودات المحفوظة</b><small>آخر خمس مسودات محفوظة على هذا المتصفح</small></div><span><Clock3 size={14}/> {recent.length} مستندات</span></div>{recent.length?<div className="table-wrap"><table><thead><tr><th>رقم المسودة</th><th>{kind==="sale"?"العميل":"المورد"}</th><th>التاريخ</th><th>البنود</th><th>الصافي</th><th>الحالة</th><th>اعتماد</th><th>استعادة</th><th>حذف</th></tr></thead><tbody>{recent.map(d=><tr key={d.id}><td><b>{d.id}</b></td><td>{d.party}</td><td>{d.date}</td><td>{d.lines}</td><td className="operation-amount">{fmt(d.total)} ج.م</td><td><span className={d.status==="posted"?"treasury-status posted":"treasury-status draft"}>{d.status==="posted"?"معتمد محليًا":"مسودة"}</span></td><td>{d.status==="posted"?<span className="treasury-lock">تم إنشاء الحركة</span>:<button className="operation-add" onClick={()=>postDoc(d)}>اعتماد وحركة مخزون</button>}</td><td><button className="operation-add" onClick={()=>reopenDoc(d)} title="استعادة المسودة للتحرير">تحميل</button></td><td>{d.status==="posted"?<span className="treasury-lock">—</span>:<button className="remove-line" onClick={()=>removeDoc(d.id)} title="حذف المسودة المحلية"><Trash2 size={14}/></button>}</td></tr>)}</tbody></table></div>:<div className="operation-empty">لا توجد مسودات محفوظة حتى الآن.</div>}</div>}
+  <div className="operation-disclaimer">البيانات محفوظة محليًا في المتصفح فقط. اعتماد البيع والشراء ينشئ سجل حركات مخزنية محليًا فقط؛ لا يتم تحديث رصيد فعلي أو ترحيل محاسبي، ولا يوجد اتصال بقاعدة بيانات الإنتاج.</div>
  </section>;
 }
