@@ -136,6 +136,10 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     }
     setBusy(true);
     setMessage("");
+    try {
+      if (rememberMe) { localStorage.setItem("silsila-login-email", email.trim()); localStorage.setItem("silsila-remember-login", "true"); }
+      else { localStorage.removeItem("silsila-login-email"); localStorage.removeItem("silsila-remember-login"); }
+    } catch { /* Storage may be disabled; sign-in should still work. */ }
     const { data, error } = await client.auth.signInWithPassword({ email: email.trim(), password });
     if (error || !data.session) {
       setMessage("تعذر تسجيل الدخول: " + (error?.message || "لم يتم إنشاء جلسة."));
