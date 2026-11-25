@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode, type FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, LogOut, Building2 } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "./supabase";
@@ -92,7 +92,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     return () => { alive = false; };
   }, []);
 
-  const signIn = async (event: React.FormEvent) => {
+  const signIn = async (event: FormEvent) => {
     event.preventDefault();
     const client = supabase;
     if (!client || !isSupabaseConfigured) {
