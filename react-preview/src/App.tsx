@@ -2,7 +2,7 @@ import { useState } from "react";
 import ModuleWorkspace from "./ModuleWorkspace";
 import OperationsWorkspace from "./OperationsWorkspace";
 import TreasuryWorkspace from "./TreasuryWorkspace";
-import { Activity, ArrowDownLeft, ArrowUpLeft, Bell, Boxes, BriefcaseBusiness, Building2, CalendarDays, ChevronDown, ChevronLeft, CircleHelp, ClipboardList, Command, CreditCard, Download, FileBarChart, Home, LayoutDashboard, LifeBuoy, Menu, MoreHorizontal, Package, Plus, ReceiptText, Search, Settings2, ShoppingBag, ShoppingCart, Sparkles, Truck, Users, Wallet, X } from "lucide-react";
+import { Activity, ArrowDownLeft, ArrowUpLeft, Bell, Boxes, BriefcaseBusiness, Building2, CalendarDays, ChevronDown, ChevronLeft, CircleHelp, ClipboardList, Command, CreditCard, Download, FileBarChart, Home, LayoutDashboard, LifeBuoy, Menu, MoreHorizontal, Package, Plus, ReceiptText, Search, Settings2, ShoppingBag, ShoppingCart, Sparkles, Truck, Users, Wallet, X, LockKeyhole, Eye, EyeOff, Mail, ShieldCheck } from "lucide-react";
 
 const nav = [
   { title: "الرئيسية", items: [{name:"الملخص التنفيذي",icon:LayoutDashboard},{name:"مركز النشاط",icon:Activity}] },
