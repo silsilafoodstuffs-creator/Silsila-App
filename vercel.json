@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "installCommand": "cd react-preview && npm install",
+  "buildCommand": "cd react-preview && npm run build",
+  "outputDirectory": "react-preview/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
