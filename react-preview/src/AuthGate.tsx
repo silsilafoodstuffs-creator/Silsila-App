@@ -17,7 +17,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const [preview, setPreview] = useState(false);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => { try { return localStorage.getItem("silsila-login-email") || ""; } catch { return ""; } });
+  const [rememberMe, setRememberMe] = useState(() => { try { return localStorage.getItem("silsila-remember-login") === "true"; } catch { return false; } });
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
@@ -26,6 +27,31 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const [userTypes, setUserTypes] = useState<string[]>([]);
   const [accountType, setAccountType] = useState("");
   const [activityUserType, setActivityUserType] = useState("مستخدم رئيسي للنشاط");
+
+  useEffect(() => {
+    const client = supabase;
+    if (!client) return;
+    let alive = true;
+    const loadLoginCatalogs = async () => {
+      const [activityResult, userTypeResult] = await Promise.all([
+        client.from("activity_types").select("code,name,sort_order").eq("is_active", true).eq("show_in_app", true).order("sort_order", { ascending: true }),
+        client.from("erp_user_types").select("name_ar,name_en,type_code").eq("is_active", true).eq("show_at_login", true).order("type_code", { ascending: true }),
+      ]);
+      if (!alive) return;
+      if (!activityResult.error) {
+        const rows = (activityResult.data || []).map((row: any) => ({ code: String(row.code || "").trim(), name: String(row.name || "").trim() })).filter((row: ActivityOption) => row.code && row.name);
+        setActivities(rows);
+        if (rows.length && !rows.some((row: ActivityOption) => row.code === activity)) setActivity(rows[0].code);
+      }
+      if (!userTypeResult.error) {
+        const names = [...new Set((userTypeResult.data || []).map((row: any) => String(row.name_ar || "").trim()).filter(Boolean))] as string[];
+        setUserTypes(names);
+        if (names.length && !names.includes(accountType)) setAccountType(names[0]);
+      }
+    };
+    void loadLoginCatalogs();
+    return () => { alive = false; };
+  }, []);
 
   const loadCompanies = async (current: Session) => {
     const client = supabase;
@@ -201,7 +227,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
           </div>
           <label><span>البريد الإلكتروني</span><div className="login-input-wrap"><Mail size={17}/><input type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@company.com" required/></div></label>
           <label><span>كلمة المرور</span><div className="login-input-wrap"><LockKeyhole size={17}/><input type={showPassword?"text":"password"} autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="أدخل كلمة المرور" required/><button type="button" onClick={()=>setShowPassword(!showPassword)} aria-label="إظهار أو إخفاء كلمة المرور">{showPassword?<EyeOff size={17}/>:<Eye size={17}/>}</button></div></label>
-          <div className="login-form-meta"><span></span><button type="button" onClick={resetPassword}>نسيت كلمة المرور؟</button></div>
+          <div className="login-form-meta"><label className="login-remember"><input type="checkbox" checked={rememberMe} onChange={(e)=>setRememberMe(e.target.checked)}/> تذكرني</label><button type="button" onClick={resetPassword}>نسيت كلمة المرور؟</button></div>
           <button className="login-submit" type="submit" disabled={busy}>{busy?"جارٍ التحقق...":"تسجيل الدخول"} <ArrowLeft size={17}/></button>
           {message&&<div className="login-message" role="status">{message}</div>}
         </form>
