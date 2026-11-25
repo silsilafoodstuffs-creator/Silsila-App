@@ -324,3 +324,6 @@ table thead tr.column-filter-row input:focus{border-color:#7c3db0;box-shadow:0 0
   .shell{display:block;width:100%;min-width:0;overflow-x:clip}
   .main{width:calc(100% - 78px);margin-right:78px;margin-left:0;min-width:0}
 }
+
+
+.workspace-loading{min-height:180px;display:grid;place-items:center;border:1px solid #eee7f3;border-radius:14px;background:#fff;color:#76518e;font-size:12px;font-weight:700}
