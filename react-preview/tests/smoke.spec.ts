@@ -48,7 +48,7 @@ test("sidebar collapse toggle stays available and exit dialog supports all choic
 
   await page.getByRole("button", { name: "خروج من البرنامج" }).click();
   await expect(page.getByRole("dialog", { name: "تأكيد الخروج من البرنامج" })).toBeVisible();
-  await page.getByRole("button", { name: "لا" }).click();
+  await page.getByRole("button", { name: "لا", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
   await page.getByRole("button", { name: "خروج من البرنامج" }).click();
@@ -69,7 +69,8 @@ test("mobile preview does not create page-level horizontal overflow", async ({ p
   await expect(page.locator(".nav-main-toggle").first()).toBeVisible();
   await expect(page.locator(".nav-main-toggle").first()).toBeVisible();
   await expect(page.locator(".nav-item").first()).toBeVisible();
-  await page.getByRole("button", { name: "إغلاق القوائم" }).click();
+  await page.locator(".collapse").click();
+  await expect(page.locator(".sidebar")).not.toHaveClass(/mobile-open/);
 
   const dimensions = await page.evaluate(() => ({
     viewport: document.documentElement.clientWidth,
