@@ -162,3 +162,6 @@ table thead tr.column-filter-row input:focus{border-color:#7c3db0;box-shadow:0 0
 .business-image-picker .business-item-thumb{width:58px;height:58px;flex:0 0 58px}
 .quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:700px){.business-image-picker{flex-wrap:wrap}.business-image-picker input[type=file]{width:100%}.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Main navigation hierarchy: master data, transactions, reports and per-screen favorites */
+.nav-subgroup{margin:5px 0 10px;padding:0 0 2px}.nav-subgroup-title{padding:5px 13px 4px 8px;color:#b7a3c8;font-size:9px;font-weight:900;letter-spacing:.2px}.nav-entry{display:flex;align-items:center;gap:3px;min-width:0;margin:1px 5px}.nav-entry .nav-item{flex:1;min-width:0}.nav-favorite{width:29px;height:30px;flex:0 0 29px;display:grid;place-items:center;border-radius:8px;background:transparent;color:#8f7a9f;opacity:.5;transition:.16s}.nav-entry:hover .nav-favorite,.nav-favorite.active{opacity:1;color:#ff6a9c}.nav-favorite:hover{background:#ffffff12;color:#ff4f91}.nav-group>small{display:flex;align-items:center;gap:6px}.favorites-group{padding:8px 0 10px;margin-bottom:9px;border-bottom:1px solid #ffffff16}.favorites-group>small{color:#ff9abd!important}.favorites-group .nav-item{color:#f5eafb}.favorites-group .nav-item.active{color:#fff}
