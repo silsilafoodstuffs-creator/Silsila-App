@@ -1,5 +1,5 @@
 import { useEffect,useMemo,useState } from "react";
-import { CheckCircle2,FileText,Package,Plus,RefreshCw,RotateCcw,Save,ShoppingCart,ShoppingBag,Trash2,Warehouse } from "lucide-react";
+import { CheckCircle2,FileText,Package,Plus,RefreshCw,RotateCcw,Save,ShoppingCart,ShoppingBag,Trash2 } from "lucide-react";
 import { supabase } from "./supabase";
 
 type Kind="sale"|"purchase";
@@ -48,7 +48,7 @@ export default function LiveDocumentsWorkspace({kind}:{kind:Kind}){
  const selectedParty=partyOptions.find(p=>p.id===partyId);
  const selectedItems=lines.map(l=>items.find(i=>i.id===l.itemId));
  const lineTotals=lines.map((l,index)=>{
-  const item=selectedItems[index],unit=units.find(u=>u.id===l.unitId);
+  const item=selectedItems[index];
   const qty=Math.max(0,Number(l.qty)||0),price=Math.max(0,Number(l.price)||0),discount=Math.max(0,Number(l.discount)||0);
   const base=round2(qty*price),disc=Math.min(base,discount),tax=round2((base-disc)*Math.max(0,Number(item?.tax_rate)||0)/100);
   return {base,discount:disc,tax,total:round2(base-disc+tax),baseQty:qty*(Number(unit?.conversion_factor)||1),unitName:unit?.unit_name||unit?.unit_code||item?.base_unit||"وحدة"};
@@ -111,7 +111,7 @@ export default function LiveDocumentsWorkspace({kind}:{kind:Kind}){
   if(!selectedParty){setMessage("أضف واختر "+(kind==="sale"?"عميلًا":"موردًا")+" فعليًا من شاشة "+(kind==="sale"?"العملاء":"الموردين")+" أولًا.");return;}
   if(!selectedWarehouse){setMessage("لا يوجد مخزن نشط متاح في نطاق صلاحيتك.");return;}
   if(!date||date>today()){setMessage("تاريخ المستند مطلوب ولا يجوز أن يكون مستقبليًا.");return;}
-  if(!lines.length||lines.some(l=>!l.itemId||Number(l.qty)<=0||Number(l.price)<0)){setMessage("أكمل الصنف والكمية والسعر في كل البنود.");return;}
+  if(!lines.length||lines.some(l=>!l.itemId||Number(l.qty)<=0||Number(l.price)<=0)){setMessage("أكمل الصنف والكمية والسعر في كل البنود.");return;}
   for(let i=0;i<lines.length;i++){const l=lines[i],it=items.find(x=>x.id===l.itemId);if(!it){setMessage("أحد الأصناف لم يعد متاحًا.");return;}if(kind==="sale"&&available(l.itemId)<lineTotals[i].baseQty){setMessage("الرصيد المتاح غير كافٍ للصنف "+it.item_name+"؛ المتاح "+money(available(l.itemId))+" "+it.base_unit+".");return;}}
   setSaving(true);setMessage("");
   const now=Date.now();
@@ -168,7 +168,7 @@ export default function LiveDocumentsWorkspace({kind}:{kind:Kind}){
   {partyOptions.length===0&&<div className="operation-feedback warning">لا يوجد {kind==="sale"?"عملاء":"موردون"} مسجلون في قاعدة المنشأة حاليًا. أضف الطرف أولًا من شاشة {kind==="sale"?"العملاء":"الموردين"}.</div>}
   {warehouses.length===0&&<div className="operation-feedback warning">لا توجد مخازن نشطة ضمن نطاق صلاحيتك.</div>}
   <div className="operation-table-card"><div className="operation-table-head"><div><b><Package size={16}/> بنود المستند</b><small>{lines.length} بند · الوحدات والأسعار تُقرأ من بيانات الصنف</small></div><button className="operation-add" onClick={()=>setLines(old=>[...old,blankLine()])}><Plus size={16}/> إضافة صنف</button></div>
-   <div className="operation-table-scroll"><table><thead><tr><th>الصنف</th><th>الوحدة</th><th>الكمية</th><th>سعر الوحدة</th><th>الخصم</th><th>الضريبة</th><th>الإجمالي</th><th>المتاح</th><th></th></tr></thead><tbody>{lines.map((l,i)=>{const item=items.find(x=>x.id===l.itemId),unitList=units.filter(u=>u.item_id===l.itemId),factor=Number(unitList.find(u=>u.id===l.unitId)?.conversion_factor)||1;return <tr key={l.id}>
+   <div className="operation-table-scroll"><table><thead><tr><th>الصنف</th><th>الوحدة</th><th>الكمية</th><th>سعر الوحدة</th><th>الخصم</th><th>الضريبة</th><th>الإجمالي</th><th>المتاح</th><th></th></tr></thead><tbody>{lines.map((l,i)=>{const item=items.find(x=>x.id===l.itemId),unitList=units.filter(u=>u.item_id===l.itemId);return <tr key={l.id}>
     <td><select className="cell-input item-name" value={l.itemId} onChange={e=>chooseItem(l,e.target.value)}><option value="">اختر الصنف</option>{items.map(it=><option key={it.id} value={it.id}>{it.item_code} — {it.item_name}</option>)}</select></td>
     <td><select className="cell-input" value={l.unitId} onChange={e=>chooseUnit(l,e.target.value)} disabled={!item}><option value="">الوحدة الأساسية</option>{unitList.map(u=><option key={u.id} value={u.id}>{u.unit_name||u.unit_code} × {u.conversion_factor}</option>)}</select></td>
     <td><input className="cell-input number-input" type="number" min="0.001" step="0.001" value={l.qty} onChange={e=>updateLine(l.id,{qty:e.target.value})}/></td>
