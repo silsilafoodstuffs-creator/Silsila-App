@@ -327,3 +327,36 @@ table thead tr.column-filter-row input:focus{border-color:#7c3db0;box-shadow:0 0
 
 
 .workspace-loading{min-height:180px;display:grid;place-items:center;border:1px solid #eee7f3;border-radius:14px;background:#fff;color:#76518e;font-size:12px;font-weight:700}
+
+
+/* Main navigation footer, confirmation dialog and About page */
+.sidebar-exit{width:100%;min-height:42px;display:flex;align-items:center;justify-content:flex-start;gap:10px;padding:0 12px;margin:0 0 10px;border:1px solid #ff9b8c55;border-radius:10px;background:linear-gradient(105deg,#6d2149,#4c183b);color:#ffe5e2;font:inherit;font-size:12px;font-weight:800;transition:.2s}
+.sidebar-exit:hover{background:linear-gradient(105deg,#8a2853,#612047);border-color:#ffb2a6}
+.sidebar.collapsed .sidebar-exit{justify-content:center;padding:0;font-size:0}
+.sidebar.collapsed .sidebar-exit span{display:none}
+.executive-shortcut{color:#6f36a1;border-color:#e5d8ef;background:#f8f2fc}
+.executive-shortcut:hover{background:#efe3fa;border-color:#cbb1df}
+.dialog-backdrop{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:18px;background:#180b25a8;backdrop-filter:blur(5px)}
+.exit-dialog{width:min(100%,430px);padding:25px;border:1px solid #eadff2;border-radius:20px;background:#fff;box-shadow:0 24px 80px #17092355;text-align:center}
+.exit-dialog-icon{width:54px;height:54px;margin:0 auto 12px;display:grid;place-items:center;border-radius:16px;background:#fff0ed;color:#c34d55}
+.exit-dialog h2{margin:0 0 9px;color:#2d1740;font-size:19px}
+.exit-dialog p{margin:0;color:#82748d;font-size:12px;line-height:1.9}
+.exit-dialog-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+.exit-dialog-actions button{min-height:39px;padding:0 17px;border-radius:9px;font:inherit;font-size:11px;font-weight:800}
+.exit-confirm{background:#b53f4c;color:#fff}
+.exit-no{background:#3e007d;color:#fff}
+.exit-cancel{background:#f3eff6;color:#6f5b7d}
+.about-program{max-width:850px;margin:18px auto;padding:26px;border:1px solid #ece3f4;border-radius:18px;background:linear-gradient(135deg,#fff 55%,#f8f1ff);box-shadow:0 12px 36px #3213480a}
+.about-program-brand{display:flex;align-items:center;gap:13px;padding-bottom:18px;border-bottom:1px solid #eee7f3}
+.about-program-brand img{width:64px;height:64px;object-fit:contain}
+.about-program-brand h2{margin:0;color:#3e007d;font-size:29px}
+.about-program-brand p{margin:3px 0 0;color:#9a6bc0;font-size:12px}
+.about-program h3{margin:22px 0 8px;color:#2d1740;font-size:20px}
+.about-program>p{color:#786a83;font-size:12px;line-height:2}
+.about-program-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:18px 0}
+.about-program-grid article{display:grid;gap:7px;padding:14px;border:1px solid #eee7f3;border-radius:12px;background:#fff}
+.about-program-grid small{color:#9b8ba5;font-size:10px}
+.about-program-grid b{color:#4b2866;font-size:13px}
+.about-program .about-program-note{padding:12px 14px;border-radius:10px;background:#f6f1fa;color:#82718e;font-size:10px}
+@media(max-width:800px){.sidebar .collapse{display:grid!important}.sidebar .brand{flex-direction:column;gap:8px;padding:8px 3px 11px}.sidebar .brand-mark{width:43px;height:43px}.sidebar .brand-copy{display:none}.sidebar .collapse{width:34px;height:30px;flex-basis:30px}.sidebar .sidebar-exit{justify-content:center;padding:0;font-size:0}.sidebar .sidebar-exit span{display:none}}
+@media(max-width:520px){.about-program{padding:17px}.about-program-grid{grid-template-columns:1fr}.exit-dialog{padding:20px}.exit-dialog-actions{display:grid;grid-template-columns:1fr 1fr}.exit-cancel{grid-column:1/-1}}
