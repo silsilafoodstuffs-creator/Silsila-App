@@ -25,11 +25,12 @@ test("main menus are grouped into basic data, movements and reports", async ({ p
   await expect(page.getByRole("button", { name: "حركات" })).toBeVisible();
   await expect(page.getByRole("button", { name: "تقارير" })).toBeVisible();
 
-  await page.getByRole("button", { name: "عن البرنامج" }).click();
+  await page.getByRole("button", { name: "عن البرنامج" }).first().click();
+  await page.getByRole("button", { name: "عن البرنامج" }).last().click();
   await expect(page.getByRole("heading", { name: "منظومة إدارة الأعمال المتكاملة" })).toBeVisible();
 
   await page.getByRole("button", { name: "الملخص التنفيذي" }).click();
-  await expect(page.getByText("صافي المبيعات")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "مؤشرات الأداء الرئيسية" })).toBeVisible();
 });
 
 test("sidebar collapse toggle stays available and exit dialog supports all choices", async ({ page }) => {
