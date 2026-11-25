@@ -165,3 +165,18 @@ table thead tr.column-filter-row input:focus{border-color:#7c3db0;box-shadow:0 0
 
 /* Main navigation hierarchy: master data, transactions, reports and per-screen favorites */
 .nav-subgroup{margin:5px 0 10px;padding:0 0 2px}.nav-subgroup-title{padding:5px 13px 4px 8px;color:#b7a3c8;font-size:9px;font-weight:900;letter-spacing:.2px}.nav-entry{display:flex;align-items:center;gap:3px;min-width:0;margin:1px 5px}.nav-entry .nav-item{flex:1;min-width:0}.nav-favorite{width:29px;height:30px;flex:0 0 29px;display:grid;place-items:center;border-radius:8px;background:transparent;color:#8f7a9f;opacity:.5;transition:.16s}.nav-entry:hover .nav-favorite,.nav-favorite.active{opacity:1;color:#ff6a9c}.nav-favorite:hover{background:#ffffff12;color:#ff4f91}.nav-group>small{display:flex;align-items:center;gap:6px}.favorites-group{padding:8px 0 10px;margin-bottom:9px;border-bottom:1px solid #ffffff16}.favorites-group>small{color:#ff9abd!important}.favorites-group .nav-item{color:#f5eafb}.favorites-group .nav-item.active{color:#fff}
+
+
+/* Two-level expandable navigation accordions */
+.nav-main-toggle,.nav-subgroup-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:right;font:inherit;cursor:pointer;transition:background .18s,color .18s}
+.nav-main-toggle{min-height:42px;padding:0 13px;border-radius:10px;background:transparent;color:#f4eafa;font-size:12px;font-weight:900}
+.nav-main-toggle:hover,.nav-main-toggle.expanded{background:#ffffff12;color:#fff}
+.nav-main-toggle svg,.nav-subgroup-toggle svg{flex:0 0 auto;transition:transform .2s ease}
+.nav-main-toggle.expanded svg,.nav-subgroup-toggle.expanded svg{transform:rotate(180deg)}
+.nav-main-content{padding:3px 0 8px}
+.nav-subgroup{margin:4px 0 7px;padding:0 0 2px}
+.nav-subgroup-toggle{min-height:34px;padding:0 20px 0 12px;border-radius:8px;background:#ffffff08;color:#d7c5e4;font-size:10px;font-weight:800}
+.nav-subgroup-toggle:hover,.nav-subgroup-toggle.expanded{background:#ffffff12;color:#fff}
+.nav-subgroup-items{padding-top:3px}
+.nav-empty{padding:9px 34px 10px;color:#9c89aa;font-size:9px}
+.nav-main-toggle:focus-visible,.nav-subgroup-toggle:focus-visible{outline:2px solid #ffa015;outline-offset:2px}
