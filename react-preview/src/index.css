@@ -26,3 +26,19 @@
 .operation-history .operation-table-head>span{display:flex;align-items:center;gap:5px;color:#8e7e9d;font-size:10px}
 .operation-disclaimer{margin-top:12px;padding:10px 12px;border:1px dashed #dfd2eb;border-radius:9px;color:#8d7e98;background:#fbf9fd;font-size:10px;line-height:1.7}
 @media(max-width:700px){.operation-history{padding:10px}.operation-history .table-wrap{overflow-x:auto}.operation-disclaimer{font-size:9px}}
+
+
+.treasury-workspace{display:flex;flex-direction:column;gap:15px}
+.treasury-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.treasury-kpis>div{background:#fff;border:1px solid #eeeaf3;border-radius:12px;padding:15px;display:flex;flex-direction:column;gap:7px;min-width:0}
+.treasury-kpis span{font-size:10px;color:#95899f}.treasury-kpis b{font-size:20px;color:#442d55}.treasury-kpis small{font-size:9px;color:#b17b39}
+.treasury-editor{background:#fff;border:1px solid #eeeaf3;border-radius:13px;overflow:hidden}
+.treasury-editor-head{padding:15px 17px;border-bottom:1px solid #f0ecf4;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.treasury-editor-head>div:first-child{display:flex;flex-direction:column;gap:4px}.treasury-editor-head b{font-size:13px;display:flex;align-items:center;gap:7px}.treasury-editor-head small{font-size:10px;color:#a195ab}
+.treasury-switch{display:flex;gap:6px}.treasury-switch button{height:35px;padding:0 12px;border-radius:8px;background:#f8f6fa;color:#7d7089;display:flex;align-items:center;gap:6px;font-size:10px;font-weight:800}.treasury-switch button.selected.receipt{background:#eaf8f1;color:#23865f}.treasury-switch button.selected.payment{background:#fff0ef;color:#c35e58}
+.treasury-fields{padding:16px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.treasury-fields label{display:flex;flex-direction:column;gap:6px;min-width:0}.treasury-fields label span{font-size:10px;color:#766783;font-weight:700}.treasury-fields input,.treasury-fields select{height:38px;width:100%;border:1px solid #eae4ef;border-radius:8px;padding:0 10px;background:#fdfcfe;color:#3e2c4e;font:inherit;font-size:11px;outline:none;min-width:0}.treasury-fields input:focus,.treasury-fields select:focus{border-color:#a77acb;box-shadow:0 0 0 3px #7d37bb12}.treasury-form-actions{display:flex;align-items:center;gap:12px;padding:0 16px 16px}.treasury-form-actions>span{font-size:10px;color:#998da3}
+.treasury-history .operation-table-head select{height:34px;border:1px solid #ece6f1;border-radius:8px;background:white;padding:0 9px;color:#756581;font:inherit;font-size:10px}
+.treasury-ref{display:block;color:#a69aaf;font-size:9px;margin-top:3px}.treasury-status{display:inline-flex;padding:5px 8px;border-radius:20px;font-size:9px;font-weight:800}.treasury-status.draft{background:#fff5e8;color:#bd812e}.treasury-status.posted{background:#eaf8f1;color:#25875f}.treasury-row-actions{display:flex;align-items:center;gap:6px}.treasury-row-actions .operation-add{height:29px;padding:0 8px}.treasury-lock{font-size:10px;color:#26956c}
+@media(max-width:800px){.treasury-fields{grid-template-columns:1fr 1fr}.treasury-kpis{gap:8px}.treasury-kpis>div{padding:11px}.treasury-kpis b{font-size:16px}.treasury-editor-head{align-items:flex-start;flex-direction:column}}
+@media(max-width:430px){.treasury-kpis{grid-template-columns:1fr}.treasury-fields{grid-template-columns:1fr 1fr;padding:11px}.treasury-switch{width:100%}.treasury-switch button{flex:1;justify-content:center}.treasury-form-actions{align-items:flex-start;flex-direction:column}.treasury-form-actions .operation-save{width:100%;justify-content:center}}
