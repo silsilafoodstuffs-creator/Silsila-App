@@ -9,12 +9,14 @@ import { Heart, Activity, ArrowDownLeft, ArrowUpLeft, Bell, Boxes, BriefcaseBusi
 
 const nav = [
   { title: "الرئيسية", sections: [
-    { title: "تقارير", items: [{name:"الملخص التنفيذي",icon:LayoutDashboard},{name:"مركز النشاط",icon:Activity}] }
+    { title: "بيانات أساسية", items: [{name:"مركز النشاط",icon:Activity}] },
+    { title: "حركات", items: [] },
+    { title: "تقارير", items: [{name:"الملخص التنفيذي",icon:LayoutDashboard}] }
   ]},
   { title: "إدارة الأعمال", sections: [
     { title: "بيانات أساسية", items: [{name:"العملاء",icon:Users},{name:"الموردون",icon:Building2},{name:"المخازن والأصناف",icon:Boxes},{name:"إدارة المخازن",icon:Building2},{name:"فئات الأصناف",icon:Tags},{name:"جامع صور الأصناف",icon:Package},{name:"الشحن والنقل",icon:Truck}] },
     { title: "حركات", items: [{name:"المبيعات",icon:ShoppingCart},{name:"عروض الأسعار",icon:FileBarChart},{name:"أوامر البيع",icon:ClipboardList},{name:"مرتجعات المبيعات",icon:ReceiptText},{name:"المشتريات",icon:ShoppingBag},{name:"أوامر الشراء",icon:ClipboardList},{name:"مرتجعات المشتريات",icon:ReceiptText},{name:"التحويلات المخزنية",icon:GitBranch},{name:"الجرد المخزني",icon:ClipboardList}] },
-    { title: "تقارير", items: [{name:"تقارير المخزون",icon:FileBarChart}] }
+    { title: "تقارير", items: [] }
   ]},
   { title: "الإدارة المالية", sections: [
     { title: "بيانات أساسية", items: [{name:"الحسابات المالية",icon:Wallet},{name:"مراكز التكلفة",icon:Building2},{name:"الخزينة والبنوك",icon:CreditCard}] },
@@ -23,23 +25,23 @@ const nav = [
   ]},
   { title: "إدارة العملاء", sections: [
     { title: "بيانات أساسية", items: [{name:"علاقات العملاء",icon:Users}] },
-    { title: "حركات", items: [{name:"متابعة العملاء",icon:Activity}] },
-    { title: "تقارير", items: [{name:"تقارير العملاء",icon:FileBarChart}] }
+    { title: "حركات", items: [] },
+    { title: "تقارير", items: [] }
   ]},
   { title: "الفوترة الرقمية", sections: [
-    { title: "بيانات أساسية", items: [{name:"إعدادات الفاتورة الإلكترونية",icon:Settings2}] },
+    { title: "بيانات أساسية", items: [] },
     { title: "حركات", items: [{name:"الفاتورة الإلكترونية",icon:ReceiptText}] },
-    { title: "تقارير", items: [{name:"تقارير الفوترة الإلكترونية",icon:FileBarChart}] }
+    { title: "تقارير", items: [] }
   ]},
   { title: "إدارة النظام", sections: [
     { title: "بيانات أساسية", items: [{name:"الموارد البشرية",icon:BriefcaseBusiness},{name:"إدارة التطبيقات",icon:Layers3}] },
-    { title: "حركات", items: [{name:"حركات الموارد البشرية",icon:Activity}] },
-    { title: "تقارير", items: [{name:"تقارير الموارد البشرية",icon:FileBarChart}] }
+    { title: "حركات", items: [] },
+    { title: "تقارير", items: [] }
   ]},
   { title: "إعدادات عامة", sections: [
     { title: "بيانات أساسية", items: [{name:"إعدادات عامة",icon:Settings2},{name:"بيانات الشركة",icon:Building2},{name:"فروع الشركة",icon:GitBranch},{name:"انواع الأنشطة",icon:Layers3},{name:"فئات الأنشطة",icon:Tags},{name:"مجموعات براندات الانشطة",icon:Layers3},{name:"براندات الانشطة",icon:Award},{name:"انواع المستخدمين",icon:UserRoundCog},{name:"تصنيفات المستخدمين",icon:Users},{name:"قوالب صلاحيات المستخدمين",icon:ShieldCheck},{name:"صلاحيات المستخدمين",icon:KeyRound},{name:"سياسات البرنامج",icon:SlidersHorizontal}] },
-    { title: "حركات", items: [{name:"سجل تغييرات النظام",icon:Activity}] },
-    { title: "تقارير", items: [{name:"تقارير النظام",icon:FileBarChart}] }
+    { title: "حركات", items: [] },
+    { title: "تقارير", items: [] }
   ]}
 ];
 const money = (n:number) => new Intl.NumberFormat("ar-EG").format(n);
