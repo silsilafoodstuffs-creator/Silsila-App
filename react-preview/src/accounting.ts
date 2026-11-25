@@ -13,7 +13,7 @@ export function postDocumentJournal(input:{sourceId:string;sourceType:"sale"|"pu
  return addJournalEntry({id:id(),sourceId:input.sourceId,sourceType:input.sourceType,date:input.date,party:input.party,description:input.sourceType==="sale"?"ترحيل فاتورة بيع":"ترحيل فاتورة شراء",lines,postedAt:new Date().toISOString()});
 }
 export function postVoucherJournal(input:{sourceId:string;sourceType:"receipt"|"payment";date:string;party:string;amount:number;method:string;reference:string}){
- const cash=input.method==="نقدي"?"الخزينة الرئيسية":input.method==="تحويل بنكي"?"البنك الرئيسي":input.method==="شيك"?"شيكات تحت التحصيل":"حسابات التحصيل الإلكتروني";
+ const cash=input.method==="نقدي"?"الخزينة الرئيسية":input.method==="تحويل بنكي"?"البنك الرئيسي":input.method==="شيك"?"شيكات تحت التحصيل":input.sourceType==="receipt"?"حسابات التحصيل الإلكتروني":"حسابات الدفع الإلكتروني";
  const lines:JournalLine[]=input.sourceType==="receipt"?[line(cash,input.amount),line("العملاء",0,input.amount)]:[line("الموردون",input.amount),line(cash,0,input.amount)];
  return addJournalEntry({id:id(),sourceId:input.sourceId,sourceType:input.sourceType,date:input.date,party:input.party,description:input.sourceType==="receipt"?"ترحيل سند قبض":"ترحيل سند صرف",lines,postedAt:new Date().toISOString()});
 }
