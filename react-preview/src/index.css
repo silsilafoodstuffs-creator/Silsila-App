@@ -118,7 +118,7 @@
 
 /* Permanent table header identity + per-column search strip across all data grids */
 table thead th{background:#3E007D!important;color:#fff!important;font-weight:800!important;border-color:#5a2490!important}
-table thead tr:first-child th{padding-top:12px;padding-bottom:12px;letter-spacing:.1px}
+table thead tr:not(.column-filter-row) th{padding-top:12px;padding-bottom:12px;letter-spacing:.1px}
 table thead tr.column-filter-row th{background:#f3eafa!important;color:#5b3476!important;padding:7px 8px;border-bottom:1px solid #e1d1ed!important}
 table thead tr.column-filter-row input{width:100%;min-width:68px;height:31px;padding:0 8px;border:1px solid #ddcde9;border-radius:7px;background:#fff;color:#392449;font:inherit;font-size:10px;outline:0;box-shadow:inset 0 1px 2px #3e007d08}
 table thead tr.column-filter-row input::placeholder{color:#a18eaf}
@@ -154,3 +154,11 @@ table thead tr.column-filter-row input:focus{border-color:#7c3db0;box-shadow:0 0
 .topbar-brand-logo{display:block;width:27px;height:27px;object-fit:contain;flex:0 0 27px;border-radius:7px;margin-inline-end:2px}
 .crumb{display:flex;align-items:center;gap:8px}
 @media(max-width:700px){.topbar-brand-logo{width:23px;height:23px;flex-basis:23px}.brand-mark{width:38px;height:38px}.login-brand-mark{width:44px;height:44px}}
+
+/* Item image collector previews */
+.business-item-thumb{display:block;width:48px;height:48px;object-fit:contain;border:1px solid #eee4f4;border-radius:8px;background:#fff;padding:2px}
+.business-image-picker{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.business-image-picker input[type=file]{font-size:10px;max-width:100%;color:#776982}
+.business-image-picker .business-item-thumb{width:58px;height:58px;flex:0 0 58px}
+.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:700px){.business-image-picker{flex-wrap:wrap}.business-image-picker input[type=file]{width:100%}.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
