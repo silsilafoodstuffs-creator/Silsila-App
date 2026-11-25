@@ -39,7 +39,7 @@ export default function TreasuryWorkspace(){
   if(v.status!=="draft")return;
   const action=v.kind==="receipt"?"إثبات القبض":"إثبات الصرف";
   if(!window.confirm(action+" بمبلغ "+money(v.amount)+" ج.م؟ سيُسجل كتأثير محلي تجريبي فقط، دون ترحيل محاسبي أو اتصال بالإنتاج."))return;
-  try{postVoucherJournal({sourceId:v.id,sourceType:v.kind,date:v.date,party:v.party,amount:v.amount,method:v.method,reference:v.reference});}catch(error){setMessage(error instanceof Error?error.message:"تعذر إنشاء القيد المحاسبي.");return;}
+  try{const journaled=postVoucherJournal({sourceId:v.id,sourceType:v.kind,date:v.date,party:v.party,amount:v.amount,method:v.method,reference:v.reference});if(!journaled)throw new Error("يوجد قيد سابق لهذا السند؛ لم يتم تكرار الاعتماد.");}catch(error){setMessage(error instanceof Error?error.message:"تعذر إنشاء القيد المحاسبي.");return;}
   setVouchers(old=>old.map(x=>x.id===v.id&&x.status==="draft"?{...x,status:"posted",postedAt:new Date().toISOString()}:x));
   setMessage("تم اعتماد السند وإنشاء قيد محاسبي مزدوج داخل دفتر القيود المحلي. لم يتغير أي رصيد إنتاجي.");
  };
