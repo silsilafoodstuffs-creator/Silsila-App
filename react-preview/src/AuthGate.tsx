@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode, type FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, LogOut, Building2 } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, Building2 } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "./supabase";
 import SILSILA_LOGO from "./brand";
 
@@ -155,7 +155,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     return <><div key={selected.id}>{children}</div><div style={{position:"fixed",left:16,bottom:14,zIndex:1000,display:"flex",alignItems:"center",gap:10,padding:"9px 13px",borderRadius:14,background:"#241735",color:"#fff",boxShadow:"0 8px 28px #160b2b55",fontSize:12}}>
       <ShieldCheck size={16}/><span>{selected.name} · {selected.role}</span>
       {companies.length > 1 && <select aria-label="اختيار المنشأة" value={companyId} onChange={(e)=>{const c=companies.find(x=>x.id===e.target.value);if(c){setCompanyId(c.id);sessionStorage.setItem("silsila-company-id",c.id);sessionStorage.setItem("silsila-member-role",c.role);}}} style={{maxWidth:150}}>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>}
-      <button onClick={signOut} style={{display:"flex",alignItems:"center",gap:5,color:"#fff",background:"transparent",border:0,cursor:"pointer"}}><LogOut size={14}/> خروج</button>
+
     </div></>;
   }
 
