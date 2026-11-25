@@ -25,7 +25,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const [activities, setActivities] = useState<ActivityOption[]>([]);
   const [activity, setActivity] = useState("");
   const [userTypes, setUserTypes] = useState<string[]>([]);
-  const [accountType, setAccountType] = useState("");
+  const [accountType, setAccountType] = useState("إدارة نشاط");
   const [activityUserType, setActivityUserType] = useState("مستخدم رئيسي للنشاط");
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     let alive = true;
     const loadLoginCatalogs = async () => {
       const [activityResult, userTypeResult] = await Promise.all([
-        client.from("activity_types").select("code,name,sort_order").eq("is_active", true).eq("show_in_app", true).order("sort_order", { ascending: true }),
+        client.from("activity_types").select("id,code,name,name_en,sort_order,is_active,show_in_app").eq("is_active", true).eq("show_in_app", true).order("sort_order", { ascending: true }),
         client.from("erp_user_types").select("name_ar,name_en,type_code").eq("is_active", true).eq("show_at_login", true).order("type_code", { ascending: true }),
       ]);
       if (!alive) return;
