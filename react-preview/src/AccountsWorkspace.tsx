@@ -29,6 +29,7 @@ export default function AccountsWorkspace(){
  const [parent,setParent]=useState("");
  const [normal,setNormal]=useState<"debit"|"credit">("debit");
  const [postable,setPostable]=useState(true);
+ const [formOriginal,setFormOriginal]=useState({name:"",type:"asset" as Account["account_type"],parent:"",normal:"debit" as "debit"|"credit",postable:true});
  const [loading,setLoading]=useState(live);
  const [saving,setSaving]=useState(false);
  const [seeding,setSeeding]=useState(false);
@@ -58,20 +59,20 @@ export default function AccountsWorkspace(){
  const totalCredit=accounts.reduce((s,a)=>s+a.own_credit_total,0);
  const parentOptions=active.filter(a=>a.account_type===type&&!a.is_postable);
  const resetForm=()=>{setName("");setType("asset");setParent("");setNormal("debit");setPostable(true);setShowForm(false);};
- const save=async()=>{
-  if(!live||!supabase)return;
-  if(!canEdit){setMessage("صلاحيات حسابك لا تسمح بإضافة حساب.");return;}
-  if(!name.trim()){setMessage("اسم الحساب مطلوب.");return;}
+ const save=async():Promise<boolean>=>{
+  if(!live||!supabase)return false;
+  if(!canEdit){setMessage("صلاحيات حسابك لا تسمح بإضافة حساب.");return false;}
+  if(!name.trim()){setMessage("اسم الحساب مطلوب.");return false;}
   const parentAccount=parent?accounts.find(a=>a.id===parent):null;
-  if(parent&&!parentAccount){setMessage("الحساب الأب المحدد غير صالح.");return;}
-  if(parentAccount&&parentAccount.account_type!==type){setMessage("يجب أن تكون طبيعة الحساب الفرعي متوافقة مع الحساب الأب.");return;}
+  if(parent&&!parentAccount){setMessage("الحساب الأب المحدد غير صالح.");return false;}
+  if(parentAccount&&parentAccount.account_type!==type){setMessage("يجب أن تكون طبيعة الحساب الفرعي متوافقة مع الحساب الأب.");return false;}
   setSaving(true);setMessage("");
   const {data,error}=await supabase.from("erp_accounts").insert({
    company_id:companyId,parent_id:parent||null,account_name:name.trim(),account_type:type,
    normal_balance:normal,is_postable:postable,is_active:true
   }).select("id,account_code,account_name").single();
   setSaving(false);
-  if(error){setMessage("لم يتم حفظ الحساب: "+error.message);return;}
+  if(error){setMessage("لم يتم حفظ الحساب: "+error.message);return false;}
   setMessage("تم إنشاء الحساب بكود مركزي "+data.account_code+" وفق سياسة التكويد الحالية.");
   resetForm();await load();
  };
@@ -106,17 +107,17 @@ export default function AccountsWorkspace(){
   </div>
   <div className="accounts-panel">
    <div className="accounts-panel-head"><div><b>شجرة الحسابات الفعلية</b><small>المصدر: erp_accounts وerp_account_tree_metrics — الأرصدة من القيود المرحلة فقط.</small></div>
-    <div className="accounts-head-actions">{accounts.length===0&&live&&canEdit&&<button className="accounts-add secondary" disabled={seeding} onClick={()=>void seed()}><Database size={14}/>{seeding?"جارٍ التهيئة":"تهيئة الشجرة القياسية"}</button>}<button className="accounts-add" disabled={!canEdit||!live} onClick={()=>setShowForm(v=>!v)}><Plus size={15}/> إضافة حساب</button></div>
+    <div className="accounts-head-actions">{accounts.length===0&&live&&canEdit&&<button className="accounts-add secondary" disabled={seeding} onClick={()=>void seed()}><Database size={14}/>{seeding?"جارٍ التهيئة":"تهيئة الشجرة القياسية"}</button>}<button className="accounts-add" disabled={!canEdit||!live} onClick={()=>{if(showForm){window.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}));return;}setFormOriginal({name:"",type:"asset",parent:"",normal:"debit",postable:true});setName("");setType("asset");setParent("");setNormal("debit");setPostable(true);setMessage("");setShowForm(true);}}><Plus size={15}/> إضافة حساب</button></div>
    </div>
-   {showForm&&<div className="accounts-form live-form">
+   {showForm&&<EditDrawer title="إضافة حساب جديد" dirty={JSON.stringify({name,type,parent,normal,postable})!==JSON.stringify(formOriginal)} saving={saving} error={message} onSave={save} onDiscard={()=>{setName(formOriginal.name);setType(formOriginal.type);setParent(formOriginal.parent);setNormal(formOriginal.normal);setPostable(formOriginal.postable);setMessage("");}} onClose={resetForm}><div className="accounts-form live-form">
     <label><span>اسم الحساب *</span><input value={name} onChange={e=>setName(e.target.value)} placeholder="اسم الحساب"/></label>
     <label><span>طبيعة الحساب</span><select value={type} onChange={e=>{const t=e.target.value as Account["account_type"];setType(t);setNormal(normalFor(t));setParent("");}}>{types.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}</select></label>
     <label><span>الحساب الأب</span><select value={parent} onChange={e=>setParent(e.target.value)}><option value="">حساب رئيسي</option>{parentOptions.map(a=><option key={a.id} value={a.id}>{a.account_code} · {a.account_name}</option>)}</select></label>
     <label><span>الرصيد الطبيعي</span><select value={normal} onChange={e=>setNormal(e.target.value as "debit"|"credit")}><option value="debit">مدين</option><option value="credit">دائن</option></select></label>
     <label><span>قابل للترحيل</span><select value={postable?"yes":"no"} onChange={e=>setPostable(e.target.value==="yes")}><option value="yes">نعم — حساب حركة</option><option value="no">لا — حساب تجميعي</option></select></label>
-    <div className="accounts-form-actions"><button disabled={saving} onClick={()=>void save()}>{saving?"جارٍ الحفظ":"حفظ الحساب وتوليد الكود"}</button><button className="cancel" onClick={resetForm}><X size={13}/> إلغاء</button></div>
+    <div className="accounts-form-actions"><button disabled={saving} onClick={()=>void save()}>{saving?"جارٍ الحفظ":"حفظ الحساب وتوليد الكود"}</button><button className="cancel" onClick={()=>window.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))}><X size={13}/> إلغاء</button></div>
     <small className="accounts-code-note">كود الحساب لا يُكتب يدويًا؛ يتم توليده تلقائيًا من سياسة التكويد المركزية في قاعدة البيانات.</small>
-   </div>}
+   </div></EditDrawer>}
    <div className="accounts-filters"><div><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="بحث بالكود أو اسم الحساب"/></div>
     <select value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="all">كل أنواع الحسابات</option>{types.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}</select>
     <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="active">النشطة</option><option value="inactive">الموقوفة</option><option value="all">الكل</option></select>
