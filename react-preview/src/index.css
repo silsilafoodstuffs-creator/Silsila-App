@@ -1710,3 +1710,12 @@ main .content table tbody tr{height:40px}
 .executive-rank-row>strong small{font-size:10px;color:#766B80;font-weight:500}
 .executive-rank-grid{margin-top:14px}
 @media(max-width:760px){.executive-live-panel>header{align-items:flex-start;flex-direction:column;gap:5px}.executive-rank-row>strong{font-size:11px}.executive-live-panel{padding:12px}}
+
+
+/* Company profile grid and logo upload inside the shared edit drawer */
+.company-logo-field{grid-column:1/-1;display:grid;grid-template-columns:1fr auto;align-items:center;gap:9px;padding:12px;border:1px dashed #d8c8e5;border-radius:10px;background:#faf8fc;color:#51445c;font-size:12px}
+.company-logo-field>span{font-weight:800;color:#3e007d}
+.company-logo-field img{grid-column:1/-1;width:112px;height:88px;object-fit:contain;border:1px solid #eee5f2;border-radius:8px;background:#fff;padding:6px}
+.company-logo-field input[type=file]{grid-column:1/-1;height:auto;min-height:40px;padding:7px;background:#fff}
+.company-logo-field small{font-size:11px;color:#81718e}
+.foundation-clickable-row:focus-visible{outline:2px solid #ffa015;outline-offset:-2px}
