@@ -1289,3 +1289,10 @@ main .content > section > header h2{
 .live-hr-structure-form input,.live-hr-structure-form select{width:100%;height:40px;padding:0 9px;border:1px solid #e4d9ed;border-radius:7px;background:#fff;color:#241735;font:inherit;font-size:11px;min-width:0}
 .live-hr-structure-code-note{padding:9px 10px;border-radius:8px;background:#f5effb;color:#3e007d;font-size:10px}
 @media(max-width:750px){.live-hr-structure-toolbar{align-items:flex-start;flex-direction:column}.live-hr-structure-toolbar>div:last-child{width:100%;flex-wrap:wrap}.live-hr-structure-toolbar label{flex:1;width:auto}.live-hr-structure-head{align-items:flex-start;flex-wrap:wrap}.live-hr-structure-head>span{margin-right:0}}
+
+
+/* Shared circular checkbox indicator for boolean active columns */
+.silsila-bool-check{appearance:none;-webkit-appearance:none;width:16px;height:16px;min-width:16px;margin:0;border:1.5px solid #a99ab5;border-radius:50%;background:#fff;display:inline-grid;place-content:center;vertical-align:middle;opacity:1;cursor:default;pointer-events:none}
+.silsila-bool-check:checked{border-color:#3E007D;background:#3E007D}
+.silsila-bool-check:checked::after{content:"";width:7px;height:4px;border-left:1.5px solid #fff;border-bottom:1.5px solid #fff;transform:rotate(-45deg) translate(0,-1px)}
+.silsila-bool-check:disabled{opacity:1;filter:none}
