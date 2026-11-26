@@ -595,3 +595,43 @@ html,body,#root{min-height:100%;width:100%;max-width:100%;overflow-x:hidden}
   .foundation-table-wrap th{padding:10px}
   .foundation-table-wrap td{padding:8px 10px}
 }
+
+
+/* Silsila visual identity policy tokens — React workspace runtime */
+:root{
+ --silsila-screen-title-color:#3E007D;
+ --silsila-table-header-bg:#FFA015;
+ --silsila-table-header-color:#241735;
+ --silsila-table-row-alt:#FAF8FC;
+ --silsila-table-row-hover:#F5EFFB;
+}
+.foundation-head h2,
+.settings-hero h2,
+.welcome-row h1,
+main .content > section > header h1,
+main .content > section > header h2{
+ color:var(--silsila-screen-title-color)!important;
+}
+.main .content table thead th,
+.foundation-table-wrap th,
+.settings-table thead th,
+.table-wrap thead th{
+ background:var(--silsila-table-header-bg)!important;
+ color:var(--silsila-table-header-color)!important;
+ font-weight:800;
+ border-bottom:1px solid #e9a02b;
+}
+.main .content table tbody tr:nth-child(even),
+.foundation-table-wrap tbody tr:nth-child(even),
+.settings-table tbody tr:nth-child(even),
+.table-wrap tbody tr:nth-child(even){
+ background:var(--silsila-table-row-alt);
+}
+.main .content table tbody tr:hover,
+.foundation-table-wrap tbody tr:hover,
+.settings-table tbody tr:hover,
+.table-wrap tbody tr:hover{
+ background:var(--silsila-table-row-hover);
+}
+.foundation-head h2{color:var(--silsila-screen-title-color)!important}
+.foundation-table-wrap th{padding:10px 11px!important}
