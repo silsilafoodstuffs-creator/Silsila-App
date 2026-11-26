@@ -6,6 +6,7 @@ import EditDrawer from "./EditDrawer";
 type Line={account:string;debit:number;credit:number;party:string;description:string;entry:string;date:string;source:string;id:string};
 type Entry={id:string;number:string;date:string;description:string;source:string;status:"draft"|"posted"|"reversed";lines:Line[]};
 type Account={id:string;account_code:string;account_name:string};
+type LedgerBalance={account_id:string;account_code:string;account_name:string;account_type:string;is_postable:boolean;own_debit_total:number;own_credit_total:number;own_net_balance:number};
 type Party={id:string;party_name:string};
 type DraftLine={accountId:string;debit:string;credit:string;partyId:string;description:string};
 const money=(n:number)=>new Intl.NumberFormat("ar-EG",{maximumFractionDigits:2}).format(n);
@@ -19,6 +20,7 @@ export default function JournalWorkspace(){
  const canManage=roles.includes(role);
  const [entries,setEntries]=useState<Entry[]>([]);
  const [accounts,setAccounts]=useState<Account[]>([]);
+ const [ledgerBalances,setLedgerBalances]=useState<LedgerBalance[]>([]);
  const [parties,setParties]=useState<Party[]>([]);
  const [query,setQuery]=useState(""); const [columnFilters,setColumnFilters]=useState<Record<string,string>>({});
  const [statusFilter,setStatusFilter]=useState<"all"|"posted"|"draft">("all");
@@ -35,16 +37,17 @@ export default function JournalWorkspace(){
  const [editorOriginal,setEditorOriginal]=useState({description:"",date:today(),lines:[emptyLine(),emptyLine()]});
 
  const load=async()=>{
-  if(!live||!supabase){setEntries([]);setAccounts([]);setParties([]);setLoading(false);setError("سجّل الدخول إلى المنشأة لعرض دفتر القيود الفعلي.");return;}
+  if(!live||!supabase){setEntries([]);setAccounts([]);setLedgerBalances([]);setParties([]);setLoading(false);setError("سجّل الدخول إلى المنشأة لعرض دفتر القيود الفعلي.");return;}
   setLoading(true);setError("");
-  const [je,ac,pa]=await Promise.all([
+  const [je,ac,pa,lb]=await Promise.all([
    supabase.from("erp_journal_entries").select("id,entry_number,entry_number_display,entry_date,description,source_type,status").eq("company_id",companyId).in("status",["draft","posted"]).order("entry_date",{ascending:false}).limit(500),
    supabase.from("erp_accounts").select("id,account_code,account_name").eq("company_id",companyId).eq("is_active",true).eq("is_postable",true).order("account_code"),
-   supabase.from("erp_parties").select("id,party_name").eq("company_id",companyId).eq("is_active",true).order("party_name").limit(1000)
+   supabase.from("erp_parties").select("id,party_name").eq("company_id",companyId).eq("is_active",true).order("party_name").limit(1000),
+   supabase.from("erp_account_tree_metrics").select("account_id,account_code,account_name,account_type,is_postable,own_debit_total,own_credit_total,own_net_balance").eq("company_id",companyId).eq("is_postable",true).order("account_code")
   ]);
   const entryIds=(je.data||[]).map((e:any)=>e.id);
   const jl=entryIds.length?await supabase.from("erp_journal_lines").select("id,entry_id,account_id,description,debit,credit,party_id").in("entry_id",entryIds):{data:[],error:null};
-  const err=je.error||jl.error||ac.error||pa.error;
+  const err=je.error||jl.error||ac.error||pa.error||lb.error;
   if(err){setMessage("");setError("تعذر تحميل دفتر القيود: "+err.message);setEntries([]);setLoading(false);return;}
   const accountMap=new Map<string,string>((ac.data||[]).map((a:any)=>[a.id,a.account_code+" — "+a.account_name]));
   const partyMap=new Map<string,string>((pa.data||[]).map((p:any)=>[p.id,p.party_name]));
@@ -55,16 +58,15 @@ export default function JournalWorkspace(){
    const line:Line={id:l.id,entry:number,date:entry.entry_date,source:entry.source_type,description:l.description||entry.description,party:l.party_id?partyMap.get(l.party_id)||"": "",account:accountMap.get(l.account_id)||"حساب غير معروف",debit:Number(l.debit),credit:Number(l.credit)};
    const arr=linesByEntry.get(l.entry_id)||[];arr.push(line);linesByEntry.set(l.entry_id,arr);
   }
-  setAccounts((ac.data||[]) as Account[]);setParties((pa.data||[]) as Party[]);
+  setAccounts((ac.data||[]) as Account[]);setLedgerBalances((lb.data||[]) as LedgerBalance[]);setParties((pa.data||[]) as Party[]);
   setEntries((je.data||[]).map((e:any)=>({id:e.id,number:e.entry_number_display||String(e.entry_number),date:e.entry_date,description:e.description,source:e.source_type,status:e.status,lines:(linesByEntry.get(e.id)||[]).map(l=>({...l,entry:e.entry_number_display||String(e.entry_number)}))})));
   setLoading(false);
  };
  useEffect(()=>{void load();},[companyId,live]);
 
  const rows=useMemo(()=>entries.filter(e=>statusFilter==="all"||e.status===statusFilter).flatMap(e=>e.lines).filter(r=>[r.entry,r.date,r.party,r.account,r.description,r.source].join(" ").toLowerCase().includes(query.toLowerCase())),[entries,query,statusFilter]);
- const postedRows=useMemo(()=>entries.filter(e=>e.status==="posted").flatMap(e=>e.lines),[entries]);
- const debit=postedRows.reduce((s,r)=>s+r.debit,0),credit=postedRows.reduce((s,r)=>s+r.credit,0);
- const trial=useMemo(()=>{const m=new Map<string,{debit:number;credit:number}>();postedRows.forEach(l=>{const v=m.get(l.account)||{debit:0,credit:0};v.debit+=l.debit;v.credit+=l.credit;m.set(l.account,v)});return [...m.entries()].sort((a,b)=>a[0].localeCompare(b[0],"ar"))},[postedRows]);
+ const debit=ledgerBalances.reduce((s,a)=>s+Number(a.own_debit_total||0),0),credit=ledgerBalances.reduce((s,a)=>s+Number(a.own_credit_total||0),0);
+ const trial=useMemo(()=>ledgerBalances.map(a=>[a.account_code+" — "+a.account_name,{debit:Number(a.own_debit_total)||0,credit:Number(a.own_credit_total)||0}] as [string,{debit:number;credit:number}]),[ledgerBalances]);
  const draftDebit=draftLines.reduce((s,l)=>s+(Number(l.debit)||0),0);
  const draftCredit=draftLines.reduce((s,l)=>s+(Number(l.credit)||0),0);
  const draftBalanced=draftDebit>0&&Math.abs(draftDebit-draftCredit)<0.005;
