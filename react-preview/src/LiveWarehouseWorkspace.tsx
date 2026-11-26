@@ -28,7 +28,7 @@ export default function LiveWarehouseWorkspace(){
  const filtered=useMemo(()=>rows.filter(r=>[r.warehouse_code,r.warehouse_name,branches.find(b=>b.id===r.branch_id)?.branch_name||"",r.address||"",r.location||""].join(" ").toLowerCase().includes(query.toLowerCase())&&[r.warehouse_code,r.warehouse_name,branches.find(b=>b.id===r.branch_id)?.branch_name||"",r.address||r.location||"",r.phone||"",String(balances.filter(b=>b.warehouse_id===r.id).length),r.is_active?"نشط":"موقوف"].every((v,n)=>String(v).toLowerCase().includes((columnFilters[String(n)]||"").toLowerCase()))),[rows,branches,query,columnFilters,balances]);
  const stats=useMemo(()=>({active:rows.filter(r=>r.is_active).length,balanceRows:balances.length,value:balances.reduce((n,r)=>n+Number(r.inventory_value||0),0)}),[rows,balances]);
  const startNew=()=>{const next={...empty(),branch_id:branches[0]?.id||""};setForm(next);setFormOriginal({...next});setEditing(false);setShowForm(true);setMessage("");};
- const startEdit=(r:Warehouse)=>{const next={id:r.id,branch_id:r.branch_id||"",warehouse_code:r.warehouse_code,warehouse_name:r.warehouse_name,warehouse_name_en:address:r.address||"",location:r.location||"",phone:r.phone||""};setForm(next);setFormOriginal({...next});setEditing(true);setShowForm(true);setMessage("");};
+ const startEdit=(r:Warehouse)=>{const next={id:r.id,branch_id:r.branch_id||"",warehouse_code:r.warehouse_code,warehouse_name:r.warehouse_name,address:r.address||"",location:r.location||"",phone:r.phone||""};setForm(next);setFormOriginal({...next});setEditing(true);setShowForm(true);setMessage("");};
  const save=async():Promise<boolean>=>{
   if(!supabase||!live)return false;
   if(!canEdit){setError("لا تملك صلاحية تعديل بيانات المخازن.");return false;}
