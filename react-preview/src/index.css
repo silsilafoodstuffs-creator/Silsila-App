@@ -1058,3 +1058,15 @@ main .content > section > header h2{
 .live-warehouse-actions{display:flex;gap:5px}
 .live-warehouse-actions button{width:29px;height:29px;display:grid;place-items:center;border:1px solid #e8deef;border-radius:7px;background:#fff;color:#5a367b;cursor:pointer}
 @media(max-width:720px){.live-warehouse-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.live-warehouse-kpis{grid-template-columns:1fr}.live-warehouse-kpis article{padding:9px 11px}.live-warehouse-kpis b{font-size:15px}}
+
+/* Live chart of accounts — compact Silsila standards */
+.accounts-head-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.accounts-add.secondary{background:#fff;color:#3e007d;border:1px solid #d8c7e8}
+.accounts-form.live-form{grid-template-columns:repeat(3,minmax(0,1fr));align-items:end}
+.accounts-form.live-form label{display:flex;align-items:center;gap:7px}
+.accounts-form.live-form label span{min-width:94px}
+.accounts-form.live-form input,.accounts-form.live-form select{height:40px}
+.accounts-code-note{grid-column:1/-1;color:#8a7897;font-size:10px}
+.accounts-table-scroll th,.accounts-table-scroll td{height:40px;padding-top:0;padding-bottom:0;vertical-align:middle}
+@media(max-width:900px){.accounts-form.live-form{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.accounts-head-actions{width:100%}.accounts-head-actions button{flex:1;justify-content:center}.accounts-form.live-form{grid-template-columns:1fr}.accounts-form.live-form label span{min-width:94px}}
