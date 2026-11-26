@@ -365,6 +365,7 @@ test("cash order collection and payment workflow opens without seeded data", asy
   await expect(page.getByRole("heading", { name: "أوامر الصرف والتوريد", exact: true })).toBeVisible();
   await expect(page.getByText(/سجّل الدخول بحساب منشأة لعرض أوامر الخزينة الفعلية/)).toBeVisible();
   await expect(page.getByRole("button", { name: "حفظ الأمر", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "ترحيل السند والقيد", exact: true })).toHaveCount(0);
   await expect(page.getByText("نوع الطرف", { exact: true })).toBeVisible();
   await expect(page.getByText("ربط بأمر بيع (اختياري)", { exact: true })).toBeVisible();
   await expect(page.getByText("مؤسسة النور التجارية", { exact: true })).toHaveCount(0);
