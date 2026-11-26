@@ -1669,3 +1669,14 @@ main .content table tbody td{
  font-size:var(--silsila-table-body-size,14px)!important;color:var(--silsila-body-color,#241735)!important;
 }
 main .content table tbody tr{height:40px}
+
+/* Column filters: compact, clear, and visually separated from purple labels. */
+.column-filter-row th{background:#f4eef9!important;color:#51445C!important;border-bottom:1px solid #e6d8ef!important}
+.column-filter-row th input{
+ width:100%;min-width:74px;height:30px!important;min-height:30px!important;
+ border:1px solid #dfd1eb!important;border-radius:6px!important;
+ background:#fff!important;color:#241735!important;padding:3px 7px!important;
+ font-size:12px!important;font-weight:500!important;box-shadow:none!important;
+}
+.column-filter-row th input::placeholder{color:#9584a1!important;opacity:1}
+.column-filter-row th input:focus{border-color:#8d55b7!important;box-shadow:0 0 0 2px #3e007d12!important}
