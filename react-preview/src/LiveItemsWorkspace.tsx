@@ -3,7 +3,7 @@ import { supabase } from "./supabase";
 import EditDrawer from "./EditDrawer";
 import { Search, RefreshCw, Package, Pencil, Save, X, Boxes, Tags, Award, AlertCircle } from "lucide-react";
 
-type Item = { id:string; company_id:string; item_code:string; item_name:string; item_name_en:string; barcode:string|null; base_unit:string; purchase_price:number; sale_price:number; reorder_level:number; tax_rate:number; discount_limit:number; category_id:string|null; brand_id:string|null; brand_name:string|null; is_active:boolean; expiry_tracking:boolean; show_in_app:boolean };
+type Item = { id:string; company_id:string; item_code:string; item_name:string; barcode:string|null; base_unit:string; purchase_price:number; sale_price:number; reorder_level:number; tax_rate:number; discount_limit:number; category_id:string|null; brand_id:string|null; brand_name:string|null; is_active:boolean; expiry_tracking:boolean; show_in_app:boolean };
 type Unit = { id:string; item_id:string; unit_code:string; unit_name:string; conversion_factor:number; is_base_unit:boolean; unit_level:number|null; inner_quantity:number|null; is_active:boolean; is_implicit:boolean; is_selectable:boolean };
 type Ref = { id:string; name:string; code:string };
 const money=(v:number)=>new Intl.NumberFormat("ar-EG",{maximumFractionDigits:2}).format(Number(v)||0);
@@ -13,12 +13,12 @@ export default function LiveItemsWorkspace(){
  const [search,setSearch]=useState(""),[active,setActive]=useState("all"),[columnFilters,setColumnFilters]=useState<Record<string,string>>({}),[loading,setLoading]=useState(true),[error,setError]=useState(""),[notice,setNotice]=useState("");
  const [editing,setEditing]=useState<Item|null>(null),[editingOriginal,setEditingOriginal]=useState<Item|null>(null),[saving,setSaving]=useState(false);
  const [showCreate,setShowCreate]=useState(false),[creating,setCreating]=useState(false);
- const [draft,setDraft]=useState({item_name:"",item_name_en:"",barcode:"",category_id:"",brand_id:"",base_unit:"وحدة",purchase_price:"0",sale_price:"0",tax_rate:"0",reorder_level:"0"});
+ const [draft,setDraft]=useState({item_name:"",barcode:"",category_id:"",brand_id:"",base_unit:"وحدة",purchase_price:"0",sale_price:"0",tax_rate:"0",reorder_level:"0"});
  const load=useCallback(async()=>{
   if(!supabase||!companyId){setLoading(false);setError("سجّل الدخول إلى المنشأة لعرض سجل الأصناف الفعلي. وضع المعاينة لا يعرض بيانات منشأة.");return;}
   setLoading(true);setError("");
   const [ir,ur,cr,br]=await Promise.all([
-   supabase.from("erp_items").select("id,company_id,item_code,item_name,item_name_en,barcode,base_unit,purchase_price,sale_price,reorder_level,tax_rate,discount_limit,category_id,brand_id,brand_name,is_active,expiry_tracking,show_in_app").eq("company_id",companyId).order("item_name").limit(500),
+   supabase.from("erp_items").select("id,company_id,item_code,item_name ,barcode,base_unit,purchase_price,sale_price,reorder_level,tax_rate,discount_limit,category_id,brand_id,brand_name,is_active,expiry_tracking,show_in_app").eq("company_id",companyId).order("item_name").limit(500),
    supabase.from("erp_item_units").select("id,item_id,unit_code,unit_name,conversion_factor,is_base_unit,unit_level,inner_quantity,is_active,is_implicit,is_selectable").eq("company_id",companyId).order("conversion_factor",{ascending:false}).limit(3000),
    supabase.from("erp_item_categories").select("id,category_name,category_code").eq("company_id",companyId).eq("is_active",true).order("category_name").limit(1000),
    supabase.from("erp_brands").select("id,brand_name,brand_code").eq("company_id",companyId).eq("is_active",true).order("brand_name").limit(1000)
@@ -29,11 +29,11 @@ export default function LiveItemsWorkspace(){
   setLoading(false);
  },[companyId]);
  useEffect(()=>{void load();},[load]);
- const filtered=useMemo(()=>items.filter(i=>(active==="all"||(active==="active"?i.is_active:!i.is_active))&&[i.item_code,i.item_name,i.item_name_en,i.barcode||"",i.brand_name||""].join(" ").toLowerCase().includes(search.trim().toLowerCase())&&[i.item_code,i.item_name,categories.find(x=>x.id===i.category_id)?.name||"",brands.find(x=>x.id===i.brand_id)?.name||i.brand_name||"",i.base_unit,money(i.purchase_price),money(i.sale_price),String(units.filter(u=>u.item_id===i.id&&!u.is_implicit).length),i.is_active?"نشط":"موقوف"].every((v,n)=>String(v).toLowerCase().includes((columnFilters[String(n)]||"").toLowerCase()))),[items,active,search,columnFilters,categories,brands,units]);
+ const filtered=useMemo(()=>items.filter(i=>(active==="all"||(active==="active"?i.is_active:!i.is_active))&&[i.item_code,i.item_name,i.barcode||"",i.brand_name||""].join(" ").toLowerCase().includes(search.trim().toLowerCase())&&[i.item_code,i.item_name,categories.find(x=>x.id===i.category_id)?.name||"",brands.find(x=>x.id===i.brand_id)?.name||i.brand_name||"",i.base_unit,money(i.purchase_price),money(i.sale_price),String(units.filter(u=>u.item_id===i.id&&!u.is_implicit).length),i.is_active?"نشط":"موقوف"].every((v,n)=>String(v).toLowerCase().includes((columnFilters[String(n)]||"").toLowerCase()))),[items,active,search,columnFilters,categories,brands,units]);
  const unitRows=useMemo(()=>units.filter(u=>editing?.id===u.item_id),[units,editing]);
  const begin=(item:Item)=>{setNotice("");setEditingOriginal({...item});setEditing({...item});};
  const save=async():Promise<boolean>=>{if(!editing||!supabase)return false;if(!editing.item_name.trim()){setNotice("اسم الصنف مطلوب.");return false;}setSaving(true);setNotice("");
-  const payload={item_name:editing.item_name.trim(),item_name_en:editing.item_name_en||"",barcode:editing.barcode||null,base_unit:editing.base_unit,purchase_price:Number(editing.purchase_price)||0,sale_price:Number(editing.sale_price)||0,reorder_level:Number(editing.reorder_level)||0,tax_rate:Number(editing.tax_rate)||0,discount_limit:Number(editing.discount_limit)||0,category_id:editing.category_id,brand_id:editing.brand_id,brand_name:brands.find(b=>b.id===editing.brand_id)?.name||editing.brand_name||null,is_active:editing.is_active,expiry_tracking:editing.expiry_tracking,show_in_app:editing.show_in_app};
+  const payload={item_name:editing.item_name.trim(),barcode:editing.barcode||null,base_unit:editing.base_unit,purchase_price:Number(editing.purchase_price)||0,sale_price:Number(editing.sale_price)||0,reorder_level:Number(editing.reorder_level)||0,tax_rate:Number(editing.tax_rate)||0,discount_limit:Number(editing.discount_limit)||0,category_id:editing.category_id,brand_id:editing.brand_id,brand_name:brands.find(b=>b.id===editing.brand_id)?.name||editing.brand_name||null,is_active:editing.is_active,expiry_tracking:editing.expiry_tracking,show_in_app:editing.show_in_app};
   const {data,error}=await supabase.from("erp_items").update(payload).eq("id",editing.id).eq("company_id",companyId).select("id").maybeSingle();
   setSaving(false);if(error){setNotice("لم يتم الحفظ: "+error.message);return false;}if(!data){setNotice("لم يتم تحديث السجل؛ تحقق من صلاحية التعديل والوصول إلى الشركة.");return false;}
   setNotice("تم حفظ تعديلات الصنف في قاعدة البيانات.");setEditing(null);setEditingOriginal(null);await load();return true;
@@ -48,7 +48,7 @@ export default function LiveItemsWorkspace(){
   setCreating(true);setNotice("");
   const {data,error}=await supabase.rpc("erp_create_item_with_units",{
    p_item:{
-    company_id:companyId,item_name:draft.item_name.trim(),item_name_en:draft.item_name_en.trim(),
+    company_id:companyId,item_name:draft.item_name.trim(),
     category_id:draft.category_id,brand_id:draft.brand_id||null,barcode:draft.barcode.trim()||null,
     base_unit:unitName,purchase_price:Number(draft.purchase_price)||0,sale_price:Number(draft.sale_price)||0,
     tax_rate:Number(draft.tax_rate)||0,reorder_level:Number(draft.reorder_level)||0,expiry_tracking:false
@@ -60,7 +60,7 @@ export default function LiveItemsWorkspace(){
   const created=Array.isArray(data)?data[0]:data;
   setNotice("تم إنشاء الصنف وربط وحدته الأساسية. كود الصنف: "+(created?.item_code||"تم توليده مركزيًا"));
   setShowCreate(false);
-  setDraft({item_name:"",item_name_en:"",barcode:"",category_id:"",brand_id:"",base_unit:"وحدة",purchase_price:"0",sale_price:"0",tax_rate:"0",reorder_level:"0"});
+  setDraft({item_name:"",barcode:"",category_id:"",brand_id:"",base_unit:"وحدة",purchase_price:"0",sale_price:"0",tax_rate:"0",reorder_level:"0"});
   await load();
  };
  const countActive=items.filter(i=>i.is_active).length;
@@ -71,7 +71,6 @@ export default function LiveItemsWorkspace(){
   <div className="li-panel"><div className="li-tools"><label className="li-search"><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="ابحث بالكود أو اسم الصنف أو الباركود أو البراند"/></label><select value={active} onChange={e=>setActive(e.target.value)}><option value="all">كل الحالات</option><option value="active">نشط</option><option value="inactive">موقوف</option></select><button className="li-create" onClick={()=>setShowCreate(v=>!v)}><Package size={15}/> إضافة صنف</button><button onClick={()=>void load()}><RefreshCw size={15}/> تحديث</button></div>
    {showCreate&&<div className="li-create-form"><h3>إضافة صنف جديد</h3><div className="li-create-grid">
     <label>اسم الصنف *<input value={draft.item_name} onChange={e=>setDraft(v=>({...v,item_name:e.target.value}))} placeholder="اسم الصنف"/></label>
-    <label>الاسم بالإنجليزية<input value={draft.item_name_en} onChange={e=>setDraft(v=>({...v,item_name_en:e.target.value}))}/></label>
     <label>الباركود<input value={draft.barcode} onChange={e=>setDraft(v=>({...v,barcode:e.target.value}))}/></label>
     <label>الفئة الثانوية *<select value={draft.category_id} onChange={e=>setDraft(v=>({...v,category_id:e.target.value}))}><option value="">اختر الفئة الثانوية</option>{categories.filter(c=>c.code.length===8).map(c=><option key={c.id} value={c.id}>{c.code} · {c.name}</option>)}</select></label>
     <label>البراند / الماركة<select value={draft.brand_id} onChange={e=>setDraft(v=>({...v,brand_id:e.target.value}))}><option value="">بدون براند</option>{brands.map(b=><option key={b.id} value={b.id}>{b.code} · {b.name}</option>)}</select></label>
@@ -87,7 +86,6 @@ export default function LiveItemsWorkspace(){
   </div>
   {editing&&<EditDrawer initialMode="view" title={"بيانات الصنف · "+editing.item_code} dirty={JSON.stringify(editing)!==JSON.stringify(editingOriginal)} saving={saving} error={notice.startsWith("لم يتم")||notice.startsWith("اسم الصنف")?notice:""} onSaveError={()=>setSaving(false)} onSave={save} onDiscard={()=>{setEditing(editingOriginal);setNotice("");}} onClose={()=>{setEditing(null);setEditingOriginal(null);}}><div className="li-editor"><h3>تعديل بيانات الصنف · {editing.item_code}</h3><div className="li-editor-grid">
    <label>اسم الصنف<input value={editing.item_name} onChange={e=>setEditing(v=>v?{...v,item_name:e.target.value}:v)}/></label>
-   <label>الاسم بالإنجليزية<input value={editing.item_name_en||""} onChange={e=>setEditing(v=>v?{...v,item_name_en:e.target.value}:v)}/></label>
    <label>الباركود<input value={editing.barcode||""} onChange={e=>setEditing(v=>v?{...v,barcode:e.target.value}:v)}/></label>
    <label>الفئة الثانوية<select value={editing.category_id||""} onChange={e=>setEditing(v=>v?{...v,category_id:e.target.value||null}:v)}><option value="">اختر الفئة</option>{categories.map(c=><option key={c.id} value={c.id}>{c.code} · {c.name}</option>)}</select></label>
    <label>البراند / الماركة<select value={editing.brand_id||""} onChange={e=>setEditing(v=>v?{...v,brand_id:e.target.value||null}:v)}><option value="">اختر البراند</option>{brands.map(b=><option key={b.id} value={b.id}>{b.code} · {b.name}</option>)}</select></label>
