@@ -148,3 +148,20 @@ test("item catalog opens the live Supabase workspace", async ({ page }) => {
   await expect(page.getByRole("button", { name: /حفظ الصنف وتوليد الكود/ })).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
+
+
+test("chart of accounts is connected to the live Supabase ledger", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", error => pageErrors.push(error.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: /دخول المعاينة/ }).click();
+  await page.locator(".nav-main-toggle").filter({ hasText: "الإدارة المالية" }).click();
+  await page.locator(".nav-subgroup-toggle").filter({ hasText: "بيانات أساسية" }).click();
+  await page.locator(".nav-item").filter({ hasText: "دليل الحسابات" }).click();
+  await expect(page.getByRole("heading", { name: "دليل الحسابات", exact: true })).toBeVisible();
+  await expect(page.getByText(/erp_accounts وerp_account_tree_metrics/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /تحديث/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /إضافة حساب/ })).toBeDisabled();
+  await expect(page.getByText(/سجّل الدخول إلى المنشأة لعرض دليل الحسابات الحقيقي/)).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
