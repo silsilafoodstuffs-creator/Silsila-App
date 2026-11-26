@@ -18,12 +18,12 @@
 The current item-code format is:
 
 ```text
-[Itm: 3 letters][primary category: 2 digits][secondary category: 2 digits][tertiary category: 2 digits][brand: 4 digits][serial: 3 digits]
+[Itm: 3 letters][activity: 2 digits][main category: 2 digits][subcategory: 2 digits][secondary category: 2 digits][brand: 4 digits][serial: 3 digits]
 ```
 
-The default first-code example is `Itm0101010001001`:
+The default first-code example is `Itm010101010001001`:
 - `Itm`: item prefix.
-- `010101`: the three inherited category levels, each two digits.
+- `01010101`: the inherited activity code (2 digits) followed by the three category levels (2 digits each).
 - `0001`: the four-digit numeric part of the selected brand code; the brand prefix is omitted.
 - `001`: the serial within the company/category/brand combination.
 
@@ -40,7 +40,7 @@ The database resolves the selected secondary category and active company brand, 
 
 - Customer codes use `Cus` by default, followed by eight inherited geographic digits and a four-digit customer serial. The prefix and serial width remain configurable in Program Policies > Coding; the generator and preview use the same four-digit fallback for new companies.
 - Country code is two digits (Egypt is `20`). Governorate, center/district, and area segment widths are independently configured in the geographic policy; child codes inherit their parent's numeric code.
-- Category hierarchy codes use `Cat` plus two digits for each of the three levels: main, subcategory, and secondary category. The category hierarchy remains aligned with the six category digits embedded in item codes.
+- Category hierarchy codes use `Cat` plus two digits for each of the three levels: main, subcategory, and secondary category. The category hierarchy remains six digits; the two-digit activity code precedes it in item identifiers.
 
 ## Warehouse storage locations and HR sections
 
