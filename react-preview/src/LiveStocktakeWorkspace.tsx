@@ -77,6 +77,7 @@ export default function LiveStocktakeWorkspace(){
  };
  const createDoc=async()=>{
   if(!supabase||!warehouseId){setError("اختر المخزن أولًا.");return;}
+  if(!items.length){setError("لا توجد أصناف نشطة في المنشأة لإنشاء محضر جرد.");return;}
   setBusy(true);setError("");setMessage("");
   const {data,error}=await supabase.rpc("erp_create_physical_stocktake",{p_company_id:companyId,p_warehouse_id:warehouseId,p_count_mode:"detailed",p_valuation_basis:null,p_notes:notes.trim()||null});
   setBusy(false);
@@ -90,6 +91,7 @@ export default function LiveStocktakeWorkspace(){
  const saveOrPost=async():Promise<boolean>=>{
   if(!supabase||!selected)return false;
   if(selected.status!=="draft"){setError("هذا المحضر مرحّل ولا يقبل التعديل.");return false;}
+  if(!lines.length){setError("لا توجد بنود في محضر الجرد؛ لا يمكن حفظه أو ترحيله.");return false;}
   const payload=countPayload();
   if(payload.some(x=>!Number.isFinite(x.counted_quantity)||x.counted_quantity<0)){setError("الكميات المعدودة يجب أن تكون أرقامًا صحيحة ولا تقبل السالب.");return false;}
   setBusy(true);setError("");
