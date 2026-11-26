@@ -645,3 +645,43 @@ main .content > section > header h2{
 .foundation-color-editor small{color:#877a90;font-size:11px}
 .foundation-policy-meta{display:flex;flex-wrap:wrap;gap:8px 16px;color:#887a91;font-size:11px}
 .foundation-policy-meta code{direction:ltr;color:#5b3977}
+
+
+/* Apply the same title/header hierarchy to the live React workspaces */
+.foundation-head h2,
+.settings-hero h2,
+.welcome-row h1,
+.accounts-hero h2,
+.inventory-hero h2,
+.live-master-head h2,
+.live-business-head h2,
+.executive-live-head h2,
+.live-parties-head h2{
+ color:var(--silsila-screen-title-color)!important;
+}
+.foundation-table-wrap th,
+.accounts-table-scroll th,
+.inventory-table-scroll th,
+.live-master-table-wrap th,
+.live-business-table th,
+.live-parties-table-wrap th{
+ background:var(--silsila-table-header-bg)!important;
+ color:var(--silsila-table-header-color)!important;
+ font-weight:800;
+}
+.foundation-table-wrap tbody tr:nth-child(even),
+.accounts-table-scroll tbody tr:nth-child(even),
+.inventory-table-scroll tbody tr:nth-child(even),
+.live-master-table-wrap tbody tr:nth-child(even),
+.live-business-table tbody tr:nth-child(even),
+.live-parties-table-wrap tbody tr:nth-child(even){
+ background:var(--silsila-table-row-alt);
+}
+.foundation-table-wrap tbody tr:hover,
+.accounts-table-scroll tbody tr:hover,
+.inventory-table-scroll tbody tr:hover,
+.live-master-table-wrap tbody tr:hover,
+.live-business-table tbody tr:hover,
+.live-parties-table-wrap tbody tr:hover{
+ background:var(--silsila-table-row-hover);
+}
