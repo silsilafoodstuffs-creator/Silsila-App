@@ -85,7 +85,17 @@ export default function ProgramPoliciesWorkspace(){
   root.setProperty("--silsila-tertiary-heading-color",color(sub3.color,"#51445C"));
   root.setProperty("--silsila-header-font","'"+fontName(header.font)+"',sans-serif");
  },[rows]);
- const visible=useMemo(()=>rows.filter(p=>(category==="الكل"||p.category===category)&&(!query.trim()||[p.policy_code,p.policy_key,p.name_ar,p.name_en,p.category,p.policy_value].some(v=>text(v).toLowerCase().includes(query.trim().toLowerCase())))&&[p.policy_code,p.name_ar,p.category,p.policy_value,p.is_enabled?"مفعّلة":"متوقفة",p.apply_to_all?"كل المستخدمين":"مستخدمون محددون",(p.user_ids||[]).length].every((v,n)=>String(v??"").toLowerCase().includes((columnFilters[String(n)]||"").toLowerCase()))),[rows,category,query,columnFilters]);
+ const visible=useMemo(()=>rows.filter((p,index)=>{
+  if(category!=="الكل"&&p.category!==category)return false;
+  if(query.trim()&&![p.policy_code,p.policy_key,p.name_ar,p.name_en,p.category,p.policy_value].some(v=>text(v).toLowerCase().includes(query.trim().toLowerCase())))return false;
+  const cfg=parseObject(p.policy_value)||{},key=text(p.policy_key);
+  const prefix=text(cfg.prefix)||(key==="customer_code"?"Cus":key==="item_code"?"Itm":key.startsWith("geo_code.")?({"geo_code.country":"Con","geo_code.governorate":"Gov","geo_code.district":"Dis","geo_code.area":"Rig"}[key]||""):"");
+  const digits=key==="customer_code"?Number(cfg.geo_digits??8)+Number(cfg.serial_digits??4):key==="item_code"?Number(cfg.category_digits??8)+Number(cfg.brand_digits??4)+Number(cfg.serial_digits??3):Number(cfg.parent_digits??0)+Number(cfg.digits??0);
+  const values=[String(index+1),p.policy_code,p.name_ar||p.policy_key,p.policy_value];
+  if(category==="تكويدية")values.push(prefix,prefix?prefix+"0".repeat(Math.max(0,digits-1))+"1":"");
+  values.push(p.is_enabled?"مفعّلة":"متوقفة",p.apply_to_all?"كل المستخدمين":"مستخدمون محددون",(p.user_ids||[]).length);
+  return values.every((v,n)=>String(v??"").toLowerCase().includes((columnFilters[String(n)]||"").toLowerCase()));
+ }),[rows,category,query,columnFilters]);
  const counts=useMemo(()=>Object.fromEntries(categories.map(c=>[c,c==="الكل"?rows.length:rows.filter(p=>p.category===c).length])),[rows]);
  const isLocked=(p:Policy)=>{if(!codePolicy(p))return false;const key=text(p.policy_key);return !lockCheckReady||lockedCodes.has("__ALL_CODE_POLICIES_LOCKED_UNTIL_CHECK__")||lockedCodes.has(key);}; // Honor the database lock registry: protect issued-code policies, but allow unlocked policies to use the existing central coding rules.
  const openEditor=(p:Policy)=>{setSelected(p);setSelectedOriginal({...p});setDraft({...p});setError("");setNotice("");};
