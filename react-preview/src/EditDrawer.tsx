@@ -18,6 +18,7 @@ type Props={
 
 export default function EditDrawer({title,dirty,saving=false,onSave,onDiscard,onClose,onSaveError,initialMode="edit",canEdit=true,children,error=""}:Props){
  const [confirmOpen,setConfirmOpen]=useState(false);
+ const [confirmMode,setConfirmMode]=useState<"save"|"cancel">("save");
  const [viewMode,setViewMode]=useState(initialMode==="view");
  const [saveError,setSaveError]=useState("");
  const [internalSaving,setInternalSaving]=useState(false);
@@ -48,18 +49,17 @@ export default function EditDrawer({title,dirty,saving=false,onSave,onDiscard,on
  return <div className="silsila-edit-layer" dir="rtl">
   <button className="silsila-edit-scrim" aria-label="إغلاق نافذة التعديل" onClick={requestClose}/>
   <aside className="silsila-edit-drawer" role="dialog" aria-modal="true" aria-label={title}>
-   <header className="silsila-edit-drawer-head"><div><small>سلسلة · {viewMode?"معاينة البيانات":"تعديل البيانات"}</small><h2>{title}</h2></div><div className="silsila-edit-drawer-tools">{viewMode?<button type="button" className="drawer-edit-toggle" onClick={()=>setViewMode(false)} disabled={isSaving||!canEdit}><Pencil size={15}/> تعديل</button>:<><button type="button" className="drawer-edit-toggle" onClick={()=>{onDiscard();setViewMode(true);}} disabled={isSaving}><RotateCcw size={15}/> العدول عن التعديل</button><button type="button" className="drawer-save-toggle" onClick={()=>{if(dirty)setConfirmOpen(true);else setViewMode(true);}} disabled={isSaving||!canEdit}><Save size={15}/> حفظ</button></>}<button type="button" aria-label="إغلاق" onClick={requestClose} disabled={isSaving}><X size={19}/></button></div></header>
+   <header className="silsila-edit-drawer-head"><div><small>سلسلة · {viewMode?"معاينة البيانات":"تعديل البيانات"}</small><h2>{title}</h2></div><div className="silsila-edit-drawer-tools">{viewMode?<button type="button" className="drawer-edit-toggle" onClick={()=>setViewMode(false)} disabled={isSaving||!canEdit}><Pencil size={15}/> تعديل</button>:<><button type="button" className="drawer-edit-toggle" onClick={()=>{setConfirmMode("cancel");setConfirmOpen(true);}} disabled={isSaving}><RotateCcw size={15}/> إلغاء التعديل</button><button type="button" className="drawer-save-toggle" onClick={()=>{setConfirmMode("save");if(dirty)setConfirmOpen(true);else setViewMode(true);}} disabled={isSaving||!canEdit}><Save size={15}/> حفظ</button></>}<button type="button" aria-label="إغلاق" onClick={requestClose} disabled={isSaving}><X size={19}/></button></div></header>
    <div className="silsila-edit-drawer-body">{(error||saveError)&&<div role="alert" className="silsila-edit-inline-error">{error||saveError}</div>}<fieldset disabled={viewMode} className="silsila-edit-drawer-fieldset">{children}</fieldset></div>
   </aside>
   {confirmOpen&&<div className="silsila-edit-confirm-backdrop" role="presentation">
    <section className="silsila-edit-confirm" role="alertdialog" aria-modal="true" aria-labelledby="silsila-edit-confirm-title">
     <div className="silsila-edit-confirm-icon"><AlertTriangle size={22}/></div>
-    <h3 id="silsila-edit-confirm-title">هل ترغب في حفظ التعديلات؟</h3>
-    <p>لديك تغييرات لم يتم حفظها بعد. اختر كيف تريد المتابعة.</p>
+    <h3 id="silsila-edit-confirm-title">{confirmMode==="cancel"?"تأكيد إلغاء التعديل":"هل ترغب في حفظ التعديلات؟"}</h3>
+    <p>{confirmMode==="cancel"?"تنبيه: سيتم فقد جميع التغييرات التي لم يتم حفظها. هل تريد إلغاء التعديل؟":"لديك تغييرات لم يتم حفظها بعد. اختر كيف تريد المتابعة."}</p>
     {(error||saveError)&&<p role="alert" className="silsila-edit-save-error">{error||saveError}</p>}
     <div className="silsila-edit-confirm-actions">
-     <button className="primary" type="button" onClick={()=>void saveAndClose()} disabled={isSaving}><Save size={15}/>{isSaving?"جارٍ الحفظ...":"نعم، حفظ التعديلات"}</button>
-     <button className="danger" type="button" onClick={discardAndClose} disabled={isSaving}>لا، تجاهل التعديلات</button>
+     {confirmMode==="cancel"?<><button className="danger" type="button" onClick={discardAndClose} disabled={isSaving}>نعم، إلغاء التعديل</button><button className="primary" type="button" onClick={()=>setConfirmOpen(false)} disabled={isSaving}>لا، متابعة التعديل</button></>:<><button className="primary" type="button" onClick={()=>void saveAndClose()} disabled={isSaving}><Save size={15}/>{isSaving?"جارٍ الحفظ...":"نعم، حفظ التعديلات"}</button><button className="danger" type="button" onClick={discardAndClose} disabled={isSaving}>لا، تجاهل التعديلات</button></>}
      <button className="quiet" type="button" onClick={()=>{setConfirmOpen(false);window.dispatchEvent(new Event("silsila:edit-navigation-cancel"));}} disabled={isSaving}>إلغاء الأمر</button>
     </div>
    </section>
