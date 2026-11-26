@@ -198,7 +198,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
 
   if (session && companies.length > 0) {
     const selected = companies.find((c) => c.id === companyId) || companies[0];
-    return <AuthContext.Provider value={{signOut,preview:false}}><div key={selected.id}>{children}</div><div style={{position:"fixed",left:16,bottom:14,zIndex:1000,display:"flex",alignItems:"center",gap:10,padding:"9px 13px",borderRadius:14,background:"#241735",color:"#fff",boxShadow:"0 8px 28px #160b2b55",fontSize:12}}>
+    return <AuthContext.Provider value={{signOut,preview:false}}><div key={selected.id}>{children}</div>{message&&<div role="alert" style={{position:"fixed",right:18,top:18,zIndex:1400,maxWidth:420,padding:"11px 14px",borderRadius:10,background:"#fff1ef",color:"#a33a31",boxShadow:"0 8px 28px #160b2b30",fontSize:12}}>{message}</div>}<div style={{position:"fixed",left:16,bottom:14,zIndex:1000,display:"flex",alignItems:"center",gap:10,padding:"9px 13px",borderRadius:14,background:"#241735",color:"#fff",boxShadow:"0 8px 28px #160b2b55",fontSize:12}}>
       <ShieldCheck size={16}/><span>{selected.name} · {selected.role}</span>
       {companies.length > 1 && <select aria-label="اختيار المنشأة" value={companyId} onChange={(e)=>{const c=companies.find(x=>x.id===e.target.value);if(c){setCompanyId(c.id);sessionStorage.setItem("silsila-company-id",c.id);sessionStorage.setItem("silsila-member-role",c.role);}}} style={{maxWidth:150}}>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>}
 
