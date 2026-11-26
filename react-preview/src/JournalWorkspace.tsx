@@ -31,6 +31,7 @@ export default function JournalWorkspace(){
  const [draftDescription,setDraftDescription]=useState("");
  const [draftDate,setDraftDate]=useState(today());
  const [draftLines,setDraftLines]=useState<DraftLine[]>([emptyLine(),emptyLine()]);
+ const [editorOriginal,setEditorOriginal]=useState({description:"",date:today(),lines:[emptyLine(),emptyLine()]});
 
  const load=async()=>{
   if(!live||!supabase){setEntries([]);setAccounts([]);setParties([]);setLoading(false);setError("سجّل الدخول إلى المنشأة لعرض دفتر القيود الفعلي.");return;}
@@ -67,27 +68,27 @@ export default function JournalWorkspace(){
  const draftCredit=draftLines.reduce((s,l)=>s+(Number(l.credit)||0),0);
  const draftBalanced=draftDebit>0&&Math.abs(draftDebit-draftCredit)<0.005;
  const updateLine=(index:number,patch:Partial<DraftLine>)=>setDraftLines(old=>old.map((line,i)=>i===index?{...line,...patch}:line));
- const openNew=()=>{setEditingId(null);setDraftDescription("");setDraftDate(today());setDraftLines([emptyLine(),emptyLine()]);setMessage("");setError("");setEditorOpen(true);};
+ const openNew=()=>{const nextLines=[emptyLine(),emptyLine()];setEditingId(null);setDraftDescription("");setDraftDate(today());setDraftLines(nextLines);setEditorOriginal({description:"",date:today(),lines:nextLines.map(l=>({...l}))});setMessage("");setError("");setEditorOpen(true);};
  const openEdit=(entry:Entry)=>{
-  setEditingId(entry.id);setDraftDescription(entry.description);setDraftDate(entry.date);
-  setDraftLines(entry.lines.map(l=>({accountId:accounts.find(a=>a.account_code+" — "+a.account_name===l.account)?.id||"",debit:l.debit?String(l.debit):"",credit:l.credit?String(l.credit):"",partyId:parties.find(p=>p.party_name===l.party)?.id||"",description:l.description||""})));
+  const nextLines=entry.lines.map(l=>({accountId:accounts.find(a=>a.account_code+" — "+a.account_name===l.account)?.id||"",debit:l.debit?String(l.debit):"",credit:l.credit?String(l.credit):"",partyId:parties.find(p=>p.party_name===l.party)?.id||"",description:l.description||""}));
+  setEditingId(entry.id);setDraftDescription(entry.description);setDraftDate(entry.date);setDraftLines(nextLines);setEditorOriginal({description:entry.description,date:entry.date,lines:nextLines.map(l=>({...l}))});
   setMessage("");setError("");setEditorOpen(true);
  };
  const closeEditor=()=>{setEditorOpen(false);setEditingId(null);};
- const saveDraft=async()=>{
-  if(!live||!supabase)return;
-  if(!canManage){setMessage("صلاحيات حسابك لا تسمح بإنشاء أو تعديل قيود اليومية.");return;}
-  if(!draftDescription.trim()||!draftDate){setMessage("بيان القيد وتاريخه مطلوبان.");return;}
-  if(draftLines.length<2){setMessage("يجب أن يحتوي القيد على سطرين على الأقل.");return;}
+ const saveDraft=async():Promise<boolean>=>{
+  if(!live||!supabase)return false;
+  if(!canManage){setMessage("صلاحيات حسابك لا تسمح بإنشاء أو تعديل قيود اليومية.");return false;}
+  if(!draftDescription.trim()||!draftDate){setMessage("بيان القيد وتاريخه مطلوبان.");return false;}
+  if(draftLines.length<2){setMessage("يجب أن يحتوي القيد على سطرين على الأقل.");return false;}
   const lines=draftLines.map((l,i)=>({account_id:l.accountId,party_id:l.partyId||null,branch_id:null,debit:Number(l.debit)||0,credit:Number(l.credit)||0,description:l.description.trim()||draftDescription.trim(),row:i+1}));
   const invalid=lines.find(l=>!l.account_id||l.debit<0||l.credit<0||!((l.debit>0&&l.credit===0)||(l.credit>0&&l.debit===0)));
-  if(invalid){setMessage("راجع سطور القيد: اختر حسابًا وأدخل قيمة مدين أو دائن فقط في كل سطر.");return;}
+  if(invalid){setMessage("راجع سطور القيد: اختر حسابًا وأدخل قيمة مدين أو دائن فقط في كل سطر.");return false;}
   setSaving(true);setMessage("");setError("");
   const {data,error}=await supabase.rpc("erp_save_journal_draft",{p_company_id:companyId,p_entry_date:draftDate,p_description:draftDescription.trim(),p_lines:lines,p_entry_id:editingId});
   setSaving(false);
-  if(error){setMessage("لم يتم حفظ مسودة القيد: "+error.message);return;}
+  if(error){setMessage("لم يتم حفظ مسودة القيد: "+error.message);return false;}
   setMessage("تم حفظ مسودة القيد في قاعدة سلسلة.");
-  closeEditor();await load();
+  closeEditor();await load();return true;
  };
  const post=async(entry:Entry)=>{
   if(!live||!supabase||!canManage)return;
@@ -112,8 +113,8 @@ export default function JournalWorkspace(){
     {entries.filter(e=>statusFilter==="all"||e.status===statusFilter).filter(e=>[e.number,e.date,e.description].join(" ").toLowerCase().includes(query.toLowerCase())||e.lines.some(l=>[l.party,l.account,l.description].join(" ").toLowerCase().includes(query.toLowerCase()))).map(e=>e.lines.map((r,i)=><tr key={r.id}><td><b>{i===0?e.number:""}</b></td><td>{i===0?e.date:""}</td><td>{i===0?e.description:r.description}</td><td>{r.account}</td><td className="journal-amount">{r.debit?money(r.debit):"—"}</td><td className="journal-amount">{r.credit?money(r.credit):"—"}</td><td>{i===0?<span className={e.status==="posted"?"journal-status posted":"journal-status draft"}>{e.status==="posted"?"مرحل":"مسودة"}</span>:""}</td><td>{i===0&&e.status==="draft"&&canManage?<div className="journal-row-actions"><button onClick={()=>openEdit(e)} disabled={saving}><FileText size={13}/> تعديل</button><button onClick={()=>void post(e)} disabled={postingId===e.id}><Send size={13}/>{postingId===e.id?"جارٍ الترحيل":"ترحيل"}</button></div>:i===0?"—":""}</td></tr>))}{!entries.length&&<tr><td colSpan={8} className="journal-empty">{loading?"جارٍ تحميل القيود...":error||"لا توجد قيود مسجلة."}</td></tr>}
    </tbody></table></div>
   </div>
-  {editorOpen&&<div className="journal-editor">
-   <div className="journal-editor-head"><div><h3>{editingId?"تعديل مسودة قيد":"إنشاء قيد يومية — مسودة"}</h3><span>الحفظ ينشئ مسودة فقط؛ الترحيل خطوة منفصلة بعد توازن القيد.</span></div><button onClick={closeEditor} aria-label="إغلاق المحرر"><X size={17}/></button></div>
+  {editorOpen&&<EditDrawer title={editingId?"تعديل مسودة قيد":"إنشاء قيد يومية — مسودة"} dirty={JSON.stringify({description:draftDescription,date:draftDate,lines:draftLines})!==JSON.stringify(editorOriginal)} saving={saving} error={message} onSave={saveDraft} onDiscard={()=>{setDraftDescription(editorOriginal.description);setDraftDate(editorOriginal.date);setDraftLines(editorOriginal.lines.map(l=>({...l})));setMessage("");setError("");}} onClose={closeEditor}><div className="journal-editor">
+   <div className="journal-editor-head"><div><h3>{editingId?"تعديل مسودة قيد":"إنشاء قيد يومية — مسودة"}</h3><span>الحفظ ينشئ مسودة فقط؛ الترحيل خطوة منفصلة بعد توازن القيد.</span></div><button onClick={()=>window.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))} aria-label="إغلاق المحرر"><X size={17}/></button></div>
    <div className="journal-editor-meta"><label>بيان القيد *<input value={draftDescription} onChange={e=>setDraftDescription(e.target.value)} placeholder="وصف القيد"/></label><label>تاريخ القيد *<input type="date" value={draftDate} onChange={e=>setDraftDate(e.target.value)}/></label></div>
    <div className="journal-editor-lines"><table><thead><tr><th>الحساب *</th><th>الطرف</th><th>البيان</th><th>مدين</th><th>دائن</th><th></th></tr></thead><tbody>{draftLines.map((line,i)=><tr key={i}>
     <td><select value={line.accountId} onChange={e=>updateLine(i,{accountId:e.target.value})}><option value="">اختر حسابًا قابلًا للترحيل</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>)}</select></td>
@@ -124,8 +125,8 @@ export default function JournalWorkspace(){
     <td><button className="journal-remove-line" onClick={()=>setDraftLines(old=>old.filter((_,n)=>n!==i))} disabled={draftLines.length<=2} title="حذف السطر"><Trash2 size={14}/></button></td>
    </tr>)}</tbody></table></div>
    <div className="journal-editor-foot"><button className="journal-action" onClick={()=>setDraftLines(old=>[...old,emptyLine()])}><Plus size={14}/> إضافة سطر</button><div><span>إجمالي المدين: <b>{money(draftDebit)}</b></span><span>إجمالي الدائن: <b>{money(draftCredit)}</b></span><span className={draftBalanced?"balanced":"unbalanced"}>الفرق: <b>{money(draftDebit-draftCredit)}</b></span></div></div>
-   <div className="journal-editor-actions"><button className="journal-action primary" onClick={()=>void saveDraft()} disabled={saving}><Save size={14}/>{saving?"جارٍ الحفظ":"حفظ المسودة"}</button><button className="journal-action" onClick={closeEditor}>إلغاء</button></div>
-  </div>}
+   <div className="journal-editor-actions"><button className="journal-action primary" onClick={()=>void saveDraft()} disabled={saving}><Save size={14}/>{saving?"جارٍ الحفظ":"حفظ المسودة"}</button><button className="journal-action" onClick={()=>window.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))}>إلغاء</button></div>
+  </div></EditDrawer>}
   {error&&<div className="operation-feedback warning">{error}</div>}{message&&<div className="operation-feedback">{message}</div>}
   <div className="journal-list"><div className="journal-list-head"><div><h3><Scale size={17}/> ميزان المراجعة</h3><span>تجميع حركة القيود المرحلة فقط، دون المسودات أو الأرصدة الافتتاحية.</span></div></div><div className="journal-table-scroll"><table><thead><tr><th>الحساب</th><th>مدين</th><th>دائن</th><th>صافي الحركة</th></tr></thead><tbody>{trial.map(([account,v])=><tr key={account}><td>{account}</td><td>{money(v.debit)}</td><td>{money(v.credit)}</td><td>{money(v.debit-v.credit)}</td></tr>)}<tr><th>الإجمالي</th><th>{money(trial.reduce((s,[,v])=>s+v.debit,0))}</th><th>{money(trial.reduce((s,[,v])=>s+v.credit,0))}</th><th>{money(trial.reduce((s,[,v])=>s+v.debit-v.credit,0))}</th></tr></tbody></table></div></div>
   <div className="journal-footnote"><Scale size={15}/> {live?"القيود والمسودات تُقرأ من قاعدة سلسلة. الترحيل يتحقق من توازن القيد والفترة المالية والحسابات من خلال إجراء قاعدة البيانات.":"دفتر القيود يتطلب تسجيل الدخول إلى المنشأة ولا يعرض بيانات محلية بديلة."}</div>
