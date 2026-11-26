@@ -80,7 +80,7 @@ export default function LiveDocumentsWorkspace({kind}:{kind:Kind}){
    supabase.from(docTable).select("id,document_number,document_date,document_type,status,subtotal,discount_total,tax_total,grand_total,customer_id,supplier_id,warehouse_id,branch_id,notes,created_at",{count:"exact"}).eq("company_id",companyId).order("created_at",{ascending:false}).range(docPage*DOC_PAGE_SIZE,(docPage+1)*DOC_PAGE_SIZE-1),
    supabase.from("erp_journal_entries").select("id,source_id,source_type,status").eq("company_id",companyId).eq("source_type",kind==="sale"?"sales_accounting":"purchase_accounting").eq("status","posted").limit(500)
   ]);
-  const error=br.error||wh.error||it.error||un.error||pa.error||documents.error||journals.error;
+  const error=br.error||wh.error||it.error||un.error||pa.error||bal.error||res.error||documents.error||journals.error;
   if(error){setMessage("تعذر تحميل بيانات التشغيل: "+error.message);setLoading(false);return;}
   const branchMap=new Map<string,string>((br.data||[]).map((b:any)=>[b.id,b.branch_name]));
   const warehouseRows=(wh.data||[]).map((w:any)=>({...w,branchName:branchMap.get(w.branch_id)||"فرع غير محدد"}));
