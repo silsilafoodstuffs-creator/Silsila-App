@@ -106,13 +106,13 @@ export default function FoundationWorkspace({kind}:{kind:Kind}){
   if(kind==="activity-categories"){initial.workspace_id=activities[0]?.id||"";initial.activity_type=activities[0]?.activity_type||"";initial.activity_name=activities[0]?.workspace_name||"";}
   if(kind==="brand-groups"){initial.activity_code=activities[0]?.code||"ACT001";}
   if(kind==="brands"){initial.activity_code=activities[0]?.code||"ACT001";initial.brand_group_id=groups[0]?.id||"";}
-  setForm(initial);
+  setForm(initial);setFormOriginal({...initial});
  };
- const startEdit=(r:Row)=>{setEditing(r);setForm({...r});};
+ const startEdit=(r:Row)=>{setEditing(r);setForm({...r});setFormOriginal({...r});};
  const setField=(key:string,value:any)=>setForm((old:Row)=>({...old,[key]:value}));
- const save=async()=>{
-  if(!supabase)return;
-  for(const f of cfg.fields){if(f.required&&!textValue(form[f.key]).trim()){setError("حقل «"+f.label+"» مطلوب.");return;}}
+ const save=async():Promise<boolean>=>{
+  if(!supabase)return false;
+  for(const f of cfg.fields){if(f.required&&!textValue(form[f.key]).trim()){setError("حقل «"+f.label+"» مطلوب.");return false;}}
   setSaving(true);setError("");setNotice("");
   try{
    if(kind==="company"){
@@ -167,8 +167,8 @@ export default function FoundationWorkspace({kind}:{kind:Kind}){
      if(error)throw error;if(!created)throw new Error("لم يتم تأكيد إنشاء السجل.");
     }
    }
-   setNotice("تم حفظ التعديلات في قاعدة البيانات بنجاح.");await load();if(kind!=="company")setEditing(null);
-  }catch(e:any){setError("لم يتم الحفظ: "+(e?.message||String(e)));}
+   setNotice("تم حفظ التعديلات في قاعدة البيانات بنجاح.");await load();setEditing(null);return true;
+  }catch(e:any){setError("لم يتم الحفظ: "+(e?.message||String(e)));return false;}
   finally{setSaving(false);}
  };
  const remove=async(r:Row)=>{
