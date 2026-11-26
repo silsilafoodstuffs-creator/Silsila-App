@@ -343,7 +343,7 @@ test("sales delivery and purchase receipt open live document workspaces without 
   await page.locator(".nav-item").filter({ hasText: "أذون التسليم" }).click();
   await expect(page.getByRole("heading", { name: "إذن تسليم مبيعات" })).toBeVisible();
   await expect(page.getByText(/سجّل الدخول بحساب المنشأة لفتح مستندات التشغيل الحقيقية/)).toBeVisible();
-  await expect(page.getByText(/لا توجد مستندات محفوظة في قاعدة المنشأة حتى الآن/)).toHaveCount(0);
+  await expect(page.getByText("مؤسسة النور التجارية", { exact: true })).toHaveCount(0);
 
   await page.locator(".nav-main-toggle").filter({ hasText: "المشتريات" }).click();
   await page.locator(".nav-subgroup-toggle").filter({ hasText: "حركات" }).click();
