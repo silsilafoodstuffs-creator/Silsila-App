@@ -69,7 +69,7 @@ export default function LiveStocktakeWorkspace(){
   setError("");setBusy(true);
   const {data,error}=await supabase.from("erp_stocktake_lines").select("id,item_id,warehouse_id,available_snapshot,reserved_snapshot,physical_snapshot,counted_quantity,variance_quantity,unit_id,conversion_factor,valuation_price,valuation_value").eq("stocktake_id",doc.id).order("created_at");
   setBusy(false);
-  if(error){setError("تعذر تحميل بنود المحضر: "+error.message);return;}
+  if(error){setError("تعذر تحميل بنود المحضر: "+error.message);setBusy(false);return;}
   const rows=(data||[]) as Line[];
   const initial:Record<string,string>={};
   for(const line of rows){const factor=n(line.conversion_factor)||1;initial[line.id]=(n(line.counted_quantity)/factor).toFixed(3);}
