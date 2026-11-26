@@ -16,7 +16,7 @@ export default function CashOrdersWorkspace(){
  const [filter,setFilter]=useState("all"),[loading,setLoading]=useState(live),[saving,setSaving]=useState(false),[notice,setNotice]=useState("");
  const [cashboxByOrder,setCashboxByOrder]=useState<Record<string,string>>({}),[accountByOrder,setAccountByOrder]=useState<Record<string,string>>({});
  const selectedParty=parties.find(p=>p.id===partyId),selectedDoc=salesDocs.find(d=>d.id===salesDocId);
- const outstanding=selectedDoc?Math.max(0,Number(selectedDoc.grand_total)-Number(selectedDoc.paid_total)):0;
+ const reservedForDoc=(id:string)=>orders.filter(o=>o.sales_document_id===id&&o.status!=="cancelled").reduce((sum,o)=>sum+Number(o.amount),0);\n const outstanding=selectedDoc?Math.max(0,Number(selectedDoc.grand_total)-Number(selectedDoc.paid_total)-reservedForDoc(selectedDoc.id)):0;
  const load=async()=>{
   if(!live||!supabase){setLoading(false);return}setLoading(true);setNotice("");
   const [o,p,c,a,d]=await Promise.all([
@@ -32,7 +32,7 @@ export default function CashOrdersWorkspace(){
  useEffect(()=>{void load()},[companyId,live]);
  const visible=useMemo(()=>orders.filter(o=>filter==="all"||o.status===filter),[orders,filter]);
  const partyOptions=parties.filter(p=>partyType==="customer"?(p.party_kind==="customer"||p.party_kind==="both"):partyType==="supplier"?(p.party_kind==="supplier"||p.party_kind==="both"):true);
- const docOptions=salesDocs.filter(d=>d.customer_id===partyId&&Number(d.grand_total)>Number(d.paid_total));
+ const docOptions=salesDocs.filter(d=>d.customer_id===partyId&&Number(d.grand_total)-Number(d.paid_total)-reservedForDoc(d.id)>0);
  const reset=()=>{setPartyId("");setSalesDocId("");setAmount("");setDescription("");setDate(today())};
  const save=async()=>{
   if(!live||!supabase||!canCreate)return;
@@ -67,9 +67,9 @@ export default function CashOrdersWorkspace(){
   <div className="operation-heading"><div className="operation-title"><span className="operation-icon"><Wallet size={22}/></span><div><small>{live?"اتصال مباشر بقاعدة سلسلة":"وضع المعاينة"}</small><h2>أوامر الصرف والتوريد</h2><p>إنشاء الأوامر واعتمادها ثم تنفيذها وربط الحركة بسند الخزينة.</p></div></div><span className="demo-pill">{live?"متصل بقاعدة المنشأة":"معاينة فقط"}</span></div>
   <div className="treasury-editor"><div className="treasury-editor-head"><div><b><Plus size={16}/> أمر جديد</b><small>الأمر لا يغيّر الأرصدة إلا بعد التنفيذ</small></div><div className="treasury-switch"><button className={type==="receipt"?"selected receipt":"receipt"} onClick={()=>{setType("receipt");setPartyType("customer");setPartyId("");setSalesDocId("")}}>أمر توريد / تحصيل</button><button className={type==="payment"?"selected payment":"payment"} onClick={()=>{setType("payment");setPartyType("supplier");setPartyId("");setSalesDocId("")}}>أمر صرف</button></div></div>
    <div className="treasury-fields">
-    <label><span>نوع الطرف</span><select value={partyType} onChange={e=>{setPartyType(e.target.value as typeof partyType);setPartyId("");setSalesDocId("")}}><option value="customer">عميل</option><option value="supplier">مورد</option></select></label>
+    <label><span>نوع الطرف</span><input value={partyType==="customer"?"عميل":"مورد"} disabled readOnly/></label>
     <label><span>{partyType==="customer"?"العميل":"المورد"}</span><select value={partyId} onChange={e=>{setPartyId(e.target.value);setSalesDocId("")}}><option value="">اختر الطرف</option>{partyOptions.map(p=><option key={p.id} value={p.id}>{p.party_name}</option>)}</select></label>
-    {type==="receipt"&&partyType==="customer"&&<label><span>ربط بأمر بيع (اختياري)</span><select value={salesDocId} onChange={e=>{setSalesDocId(e.target.value);const d=salesDocs.find(x=>x.id===e.target.value);if(d)setAmount(String(Math.max(0,Number(d.grand_total)-Number(d.paid_total))))}}><option value="">بدون ربط بأمر بيع</option>{docOptions.map(d=><option key={d.id} value={d.id}>{d.document_number} — متبقي {money(Number(d.grand_total)-Number(d.paid_total))} ج.م</option>)}</select></label>}
+    {type==="receipt"&&partyType==="customer"&&<label><span>ربط بأمر بيع (اختياري)</span><select value={salesDocId} onChange={e=>{setSalesDocId(e.target.value);const d=salesDocs.find(x=>x.id===e.target.value);if(d)setAmount(String(Math.max(0,Number(d.grand_total)-Number(d.paid_total))))}}><option value="">بدون ربط بأمر بيع</option>{docOptions.map(d=><option key={d.id} value={d.id}>{d.document_number} — متبقي {money(Number(d.grand_total)-Number(d.paid_total)-reservedForDoc(d.id))} ج.م</option>)}</select></label>}
     <label><span>تاريخ الأمر</span><input type="date" value={date} max={today()} onChange={e=>setDate(e.target.value)}/></label>
     <label><span>المبلغ (ج.م)</span><input type="number" min="0.01" step="0.01" max={salesDocId?outstanding:undefined} value={amount} onChange={e=>setAmount(e.target.value)}/></label>
     <label className="treasury-notes"><span>البيان</span><input value={description} onChange={e=>setDescription(e.target.value)} placeholder="بيان الأمر"/></label>
