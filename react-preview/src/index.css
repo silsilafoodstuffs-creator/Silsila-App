@@ -1719,3 +1719,7 @@ main .content table tbody tr{height:40px}
 .company-logo-field input[type=file]{grid-column:1/-1;height:auto;min-height:40px;padding:7px;background:#fff}
 .company-logo-field small{font-size:11px;color:#81718e}
 .foundation-clickable-row:focus-visible{outline:2px solid #ffa015;outline-offset:-2px}
+
+/* Keep the shared refresh action aligned with the screen title on every React screen. */
+.screen-title-refresh{flex:0 0 36px;margin-inline-start:8px}
+@media(max-width:430px){.screen-title-refresh{width:32px;height:32px;flex-basis:32px;margin-inline-start:5px}}
