@@ -97,6 +97,10 @@ test("all seven foundation screens open from general settings", async ({ page })
   ]) {
     await page.locator(".nav-item").getByText(title, { exact: true }).first().click();
     await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
+    if (title === "سياسات البرنامج") {
+      await expect(page.getByRole("navigation", { name: "تصنيفات سياسات البرنامج" })).toBeVisible();
+      await expect(page.getByRole("button", { name: /تكويدية/ })).toBeVisible();
+    }
   }
 
   expect(pageErrors).toEqual([]);
