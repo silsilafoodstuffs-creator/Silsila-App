@@ -6,8 +6,8 @@ import EditDrawer from "./EditDrawer";
 type Department={id:string;department_code:string;name_ar:string;department_level:string;parent_id:string|null;work_location_id:string|null;is_active:boolean};
 type Job={id:string;job_code:string;name_ar:string;department_id:string|null;is_active:boolean};
 type Location={id:string;location_code:string;name_ar:string;location_type:string;address:string|null;is_active:boolean};
-type Form={nameAr:string;nameEn:string;level:string;parentId:string;departmentId:string;locationId:string;locationType:string;address:string};
-const blank:Form={nameAr:"",nameEn:"",level:"directorate",parentId:"",departmentId:"",locationId:"",locationType:"branch",address:""};
+type Form={nameAr:string;level:string;parentId:string;departmentId:string;locationId:string;locationType:string;address:string};
+const blank:Form={nameAr:"",level:"directorate",parentId:"",departmentId:"",locationId:"",locationType:"branch",address:""};
 const levelLabel=(v:string)=>({directorate:"إدارة رئيسية",department:"إدارة",section:"قسم"}[v]||v);
 const locationLabel=(v:string)=>v==="central"?"إدارة مركزية":"فرع";
 
