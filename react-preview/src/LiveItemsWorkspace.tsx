@@ -35,8 +35,8 @@ export default function LiveItemsWorkspace(){
  const save=async():Promise<boolean>=>{if(!editing||!supabase)return false;if(!editing.item_name.trim()){setNotice("اسم الصنف مطلوب.");return false;}setSaving(true);setNotice("");
   const payload={item_name:editing.item_name.trim(),item_name_en:editing.item_name_en||"",barcode:editing.barcode||null,base_unit:editing.base_unit,purchase_price:Number(editing.purchase_price)||0,sale_price:Number(editing.sale_price)||0,reorder_level:Number(editing.reorder_level)||0,tax_rate:Number(editing.tax_rate)||0,discount_limit:Number(editing.discount_limit)||0,category_id:editing.category_id,brand_id:editing.brand_id,brand_name:brands.find(b=>b.id===editing.brand_id)?.name||editing.brand_name||null,is_active:editing.is_active,expiry_tracking:editing.expiry_tracking,show_in_app:editing.show_in_app};
   const {data,error}=await supabase.from("erp_items").update(payload).eq("id",editing.id).eq("company_id",companyId).select("id").maybeSingle();
-  setSaving(false);if(error){setNotice("لم يتم الحفظ: "+error.message);return;}if(!data){setNotice("لم يتم تحديث السجل؛ تحقق من صلاحية التعديل والوصول إلى الشركة.");return;}
-  setNotice("تم حفظ تعديلات الصنف في قاعدة البيانات.");setEditing(null);await load();
+  setSaving(false);if(error){setNotice("لم يتم الحفظ: "+error.message);return false;}if(!data){setNotice("لم يتم تحديث السجل؛ تحقق من صلاحية التعديل والوصول إلى الشركة.");return false;}
+  setNotice("تم حفظ تعديلات الصنف في قاعدة البيانات.");setEditing(null);setEditingOriginal(null);await load();return true;
  };
  const createItem=async()=>{
   if(!supabase||!companyId)return;
