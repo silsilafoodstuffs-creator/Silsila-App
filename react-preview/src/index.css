@@ -1401,11 +1401,11 @@ main .content > section > header h2{
 
 
 /* Silsila typography policy bridge: readable desktop/mobile scale, controlled by Program Policies. */
-:root{--silsila-policy-font:'Tajawal',sans-serif;--silsila-body-size:14px;--silsila-topbar-size:14px;--silsila-section-title-size:17px;--silsila-subheading-size:15px;--silsila-table-head-size:15px;--silsila-table-body-size:14px}
-body{font-family:var(--silsila-policy-font,'Tajawal',sans-serif);font-size:var(--silsila-body-size,14px)}
+:root{--silsila-policy-font:'Tajawal',sans-serif;--silsila-body-color:#241735;--silsila-subheading-color:#241735;--silsila-body-size:14px;--silsila-topbar-size:14px;--silsila-section-title-size:17px;--silsila-subheading-size:15px;--silsila-table-head-size:15px;--silsila-table-body-size:14px}
+body{font-family:var(--silsila-policy-font,'Tajawal',sans-serif);font-size:var(--silsila-body-size,14px);color:var(--silsila-body-color,#241735)}
 .topbar,.crumb,.top-actions{font-size:var(--silsila-topbar-size,14px)}
 .welcome-row h1,.module-heading h2,.operation-title h2{font-size:var(--silsila-screen-title-size,24px);font-family:var(--silsila-policy-font,'Tajawal',sans-serif)}
-.section-head h2,.module-table-head b,.operation-table-head b{font-size:var(--silsila-section-title-size,17px)}
+.section-head h2,.module-table-head b,.operation-table-head b{font-size:var(--silsila-section-title-size,17px);color:var(--silsila-subheading-color,#241735)}
 .panel-head b,.module-heading p,.operation-title p{font-size:var(--silsila-subheading-size,15px)}
 td,.module-table-card td,.operation-table-card td{font-size:var(--silsila-table-body-size,14px)}
 th,.module-table-card th,.operation-table-card th{font-size:var(--silsila-table-head-size,15px)}
