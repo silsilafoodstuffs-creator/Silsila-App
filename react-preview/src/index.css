@@ -1257,3 +1257,35 @@ main .content > section > header h2{
 .live-employee-code-note{grid-column:1/-1;padding:9px 10px;border-radius:8px;background:#f5effb;color:#3e007d;font-size:10px}
 @media(max-width:750px){.live-employee-toolbar{align-items:flex-start;flex-direction:column}.live-employee-toolbar>div:last-child{width:100%;flex-wrap:wrap}.live-employee-toolbar label{flex:1;width:auto}.live-employee-head{align-items:flex-start;flex-wrap:wrap}.live-employee-head>span{margin-right:0}}
 @media(max-width:560px){.live-employee-form{grid-template-columns:1fr}.live-employee-code-note{grid-column:auto}}
+
+
+/* Live HR organization and jobs */
+.live-hr-structure{display:flex;flex-direction:column;gap:10px;min-width:0;color:#241735}
+.live-hr-structure-head{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid #e9e0f0;border-radius:12px;background:#fff}
+.live-hr-structure-icon{width:42px;height:42px;display:grid;place-items:center;flex:0 0 auto;border-radius:11px;background:#3e007d;color:#fff}
+.live-hr-structure-head small{color:#8a7d94;font-size:10px}
+.live-hr-structure-head h2{margin:3px 0;color:#3e007d;font-size:19px}
+.live-hr-structure-head p{margin:0;color:#81758a;font-size:10px}
+.live-hr-structure-head>span{margin-right:auto;padding:6px 9px;border-radius:20px;background:#f5effb;color:#3e007d;font-size:10px}
+.live-hr-structure-panel{padding:12px;border:1px solid #e9e0f0;border-radius:11px;background:#fff;min-width:0}
+.live-hr-structure-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+.live-hr-structure-toolbar>div:first-child>b{color:#3e007d;font-size:12px}
+.live-hr-structure-toolbar small{display:block;margin-top:3px;color:#8a7d94;font-size:10px}
+.live-hr-structure-toolbar>div:last-child{display:flex;align-items:center;gap:5px}
+.live-hr-structure-toolbar label{display:flex;align-items:center;gap:6px;width:min(250px,35vw);height:36px;padding:0 9px;border:1px solid #e7dced;border-radius:8px;color:#8b7b96}
+.live-hr-structure-toolbar input{width:100%;height:34px;border:0;outline:0;font:inherit;font-size:10px}
+.live-hr-structure button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:34px;padding:0 10px;border:1px solid #e7dced;border-radius:8px;background:#fff;color:#3e007d;font-family:inherit;font-size:10px;cursor:pointer}
+.live-hr-structure button:disabled{opacity:.45;cursor:not-allowed}
+.live-hr-structure button.primary{background:#3e007d;color:#fff;border-color:#3e007d}
+.live-hr-structure-table-wrap{width:100%;overflow:auto;border:1px solid #eee7f3;border-radius:8px}
+.live-hr-structure table{width:100%;min-width:680px;border-collapse:separate;border-spacing:0;font-size:10px;white-space:nowrap}
+.live-hr-structure th{height:40px;padding:0 9px;background:#3e007d;color:#fff;text-align:right}
+.live-hr-structure td{height:40px;padding:0 9px;border-bottom:1px solid #f0ebf4;color:#51445c}
+.live-hr-structure tbody tr:nth-child(even){background:#faf8fc}
+.live-hr-structure-error,.live-hr-structure-alert{padding:10px 12px;border:1px solid #f2dfb8;border-radius:8px;background:#fffaf0;color:#8a6122;font-size:10px}
+.live-hr-structure-message{padding:10px 12px;border:1px solid #d8eadf;border-radius:8px;background:#f3fbf5;color:#256642;font-size:10px}
+.live-hr-structure-form{display:flex;flex-direction:column;gap:8px}
+.live-hr-structure-form label{display:flex;flex-direction:column;gap:4px;color:#574963;font-size:10px}
+.live-hr-structure-form input,.live-hr-structure-form select{width:100%;height:40px;padding:0 9px;border:1px solid #e4d9ed;border-radius:7px;background:#fff;color:#241735;font:inherit;font-size:11px;min-width:0}
+.live-hr-structure-code-note{padding:9px 10px;border-radius:8px;background:#f5effb;color:#3e007d;font-size:10px}
+@media(max-width:750px){.live-hr-structure-toolbar{align-items:flex-start;flex-direction:column}.live-hr-structure-toolbar>div:last-child{width:100%;flex-wrap:wrap}.live-hr-structure-toolbar label{flex:1;width:auto}.live-hr-structure-head{align-items:flex-start;flex-wrap:wrap}.live-hr-structure-head>span{margin-right:0}}
