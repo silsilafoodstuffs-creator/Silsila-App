@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabase";
+import EditDrawer from "./EditDrawer";
 import { Search, RefreshCw, Package, Pencil, Save, X, Boxes, Tags, Award, AlertCircle } from "lucide-react";
 
 type Item = { id:string; company_id:string; item_code:string; item_name:string; item_name_en:string; barcode:string|null; base_unit:string; purchase_price:number; sale_price:number; reorder_level:number; tax_rate:number; discount_limit:number; category_id:string|null; brand_id:string|null; brand_name:string|null; is_active:boolean; expiry_tracking:boolean; show_in_app:boolean };
@@ -10,7 +11,7 @@ export default function LiveItemsWorkspace(){
  const companyId=sessionStorage.getItem("silsila-company-id");
  const [items,setItems]=useState<Item[]>([]),[units,setUnits]=useState<Unit[]>([]),[categories,setCategories]=useState<Ref[]>([]),[brands,setBrands]=useState<Ref[]>([]);
  const [search,setSearch]=useState(""),[active,setActive]=useState("all"),[loading,setLoading]=useState(true),[error,setError]=useState(""),[notice,setNotice]=useState("");
- const [editing,setEditing]=useState<Item|null>(null),[saving,setSaving]=useState(false);
+ const [editing,setEditing]=useState<Item|null>(null),[editingOriginal,setEditingOriginal]=useState<Item|null>(null),[saving,setSaving]=useState(false);
  const [showCreate,setShowCreate]=useState(false),[creating,setCreating]=useState(false);
  const [draft,setDraft]=useState({item_name:"",item_name_en:"",barcode:"",category_id:"",brand_id:"",base_unit:"وحدة",purchase_price:"0",sale_price:"0",tax_rate:"0",reorder_level:"0"});
  const load=useCallback(async()=>{
@@ -30,8 +31,8 @@ export default function LiveItemsWorkspace(){
  useEffect(()=>{void load();},[load]);
  const filtered=useMemo(()=>items.filter(i=>(active==="all"||(active==="active"?i.is_active:!i.is_active))&&[i.item_code,i.item_name,i.item_name_en,i.barcode||"",i.brand_name||""].join(" ").toLowerCase().includes(search.trim().toLowerCase())),[items,active,search]);
  const unitRows=useMemo(()=>units.filter(u=>editing?.id===u.item_id),[units,editing]);
- const begin=(item:Item)=>{setNotice("");setEditing({...item});};
- const save=async()=>{if(!editing||!supabase)return;if(!editing.item_name.trim()){setNotice("اسم الصنف مطلوب.");return;}setSaving(true);setNotice("");
+ const begin=(item:Item)=>{setNotice("");setEditingOriginal({...item});setEditing({...item});};
+ const save=async():Promise<boolean>=>{if(!editing||!supabase)return false;if(!editing.item_name.trim()){setNotice("اسم الصنف مطلوب.");return false;}setSaving(true);setNotice("");
   const payload={item_name:editing.item_name.trim(),item_name_en:editing.item_name_en||"",barcode:editing.barcode||null,base_unit:editing.base_unit,purchase_price:Number(editing.purchase_price)||0,sale_price:Number(editing.sale_price)||0,reorder_level:Number(editing.reorder_level)||0,tax_rate:Number(editing.tax_rate)||0,discount_limit:Number(editing.discount_limit)||0,category_id:editing.category_id,brand_id:editing.brand_id,brand_name:brands.find(b=>b.id===editing.brand_id)?.name||editing.brand_name||null,is_active:editing.is_active,expiry_tracking:editing.expiry_tracking,show_in_app:editing.show_in_app};
   const {data,error}=await supabase.from("erp_items").update(payload).eq("id",editing.id).eq("company_id",companyId).select("id").maybeSingle();
   setSaving(false);if(error){setNotice("لم يتم الحفظ: "+error.message);return;}if(!data){setNotice("لم يتم تحديث السجل؛ تحقق من صلاحية التعديل والوصول إلى الشركة.");return;}
@@ -84,7 +85,7 @@ export default function LiveItemsWorkspace(){
    <div className="li-table-wrap"><table className="li-table"><thead><tr><th>كود الصنف</th><th>اسم الصنف</th><th>الفئة</th><th>البراند</th><th>الوحدة الأساسية</th><th>شراء</th><th>بيع</th><th>الوحدات</th><th>الحالة</th><th>تعديل</th></tr></thead><tbody>{filtered.map(i=><tr key={i.id}><td className="li-code">{i.item_code}</td><td><b>{i.item_name}</b>{i.barcode&&<span className="li-sub">{i.barcode}</span>}</td><td>{categories.find(c=>c.id===i.category_id)?.name||"—"}</td><td>{brands.find(b=>b.id===i.brand_id)?.name||i.brand_name||"—"}</td><td>{i.base_unit}</td><td>{money(i.purchase_price)}</td><td>{money(i.sale_price)}</td><td>{units.filter(u=>u.item_id===i.id&&!u.is_implicit).length}</td><td><span className={i.is_active?"li-status":"li-status li-off"}>{i.is_active?"نشط":"موقوف"}</span></td><td><button className="li-action" onClick={()=>begin(i)}><Pencil size={14}/> تعديل</button></td></tr>)}{!loading&&!filtered.length&&<tr><td colSpan={10} className="li-empty">لا توجد أصناف مطابقة في سجل المنشأة.</td></tr>}</tbody></table>{loading&&<div className="li-empty">جارٍ تحميل بيانات الأصناف والوحدات والمراجع...</div>}</div>
    <div className="li-sub">عرض أول 500 صنف. يتم تحديث البيانات من قاعدة المنشأة مباشرة.</div>
   </div>
-  {editing&&<div className="li-editor"><h3>تعديل بيانات الصنف · {editing.item_code}</h3><div className="li-editor-grid">
+  {editing&&<EditDrawer title={"تعديل بيانات الصنف · "+editing.item_code} dirty={JSON.stringify(editing)!==JSON.stringify(editingOriginal)} saving={saving} onSave={save} onDiscard={()=>{setEditing(editingOriginal);setNotice("");}} onClose={()=>{setEditing(null);setEditingOriginal(null);}}><div className="li-editor"><h3>تعديل بيانات الصنف · {editing.item_code}</h3><div className="li-editor-grid">
    <label>اسم الصنف<input value={editing.item_name} onChange={e=>setEditing(v=>v?{...v,item_name:e.target.value}:v)}/></label>
    <label>الاسم بالإنجليزية<input value={editing.item_name_en||""} onChange={e=>setEditing(v=>v?{...v,item_name_en:e.target.value}:v)}/></label>
    <label>الباركود<input value={editing.barcode||""} onChange={e=>setEditing(v=>v?{...v,barcode:e.target.value}:v)}/></label>
@@ -97,7 +98,7 @@ export default function LiveItemsWorkspace(){
    <label>الضريبة %<input type="number" min="0" value={editing.tax_rate} onChange={e=>setEditing(v=>v?{...v,tax_rate:Number(e.target.value)}:v)}/></label>
    <label>حد الخصم %<input type="number" min="0" value={editing.discount_limit} onChange={e=>setEditing(v=>v?{...v,discount_limit:Number(e.target.value)}:v)}/></label>
    <label>الحالة<select value={editing.is_active?"true":"false"} onChange={e=>setEditing(v=>v?{...v,is_active:e.target.value==="true"}:v)}><option value="true">نشط</option><option value="false">موقوف</option></select></label>
-  </div><div className="li-unit-list">{unitRows.map(u=><span className="li-unit" key={u.id}>{u.unit_name} · ×{u.conversion_factor}{u.is_base_unit?" · أساسية":""}{u.is_implicit?" · تلقائية مخفية":""}{!u.is_selectable?" · غير قابلة للاختيار":""}</span>)}</div><div className="li-editor-actions"><button className="li-action li-primary" disabled={saving} onClick={()=>void save()}><Save size={15}/>{saving?"جارٍ الحفظ":"حفظ التعديلات"}</button><button className="li-action" onClick={()=>setEditing(null)}><X size={15}/> إلغاء</button></div></div>}
+  </div><div className="li-unit-list">{unitRows.map(u=><span className="li-unit" key={u.id}>{u.unit_name} · ×{u.conversion_factor}{u.is_base_unit?" · أساسية":""}{u.is_implicit?" · تلقائية مخفية":""}{!u.is_selectable?" · غير قابلة للاختيار":""}</span>)}</div><div className="li-editor-actions"><button className="li-action li-primary" disabled={saving} onClick={()=>void save()}><Save size={15}/>{saving?"جارٍ الحفظ":"حفظ التعديلات"}</button><button className="li-action" onClick={()=>{if(JSON.stringify(editing)!==JSON.stringify(editingOriginal)){setNotice("لديك تعديلات غير محفوظة.");}else{setEditing(null);setEditingOriginal(null);}}}><X size={15}/> إلغاء</button></div></div></EditDrawer>}
   {notice&&<div className="li-note">{notice}</div>}
   <div className="li-sub"><Tags size={14}/> ربط الفئات والبراندات من السجلات المركزية. <Award size={14}/> أكواد الأصناف لا تُكتب يدويًا؛ المولّد المركزي يحددها عند إنشاء صنف جديد.</div>
  </section>;
