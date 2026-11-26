@@ -48,7 +48,7 @@ export default function JournalWorkspace(){
   const entryIds=(je.data||[]).map((e:any)=>e.id);
   const jl=entryIds.length?await supabase.from("erp_journal_lines").select("id,entry_id,account_id,description,debit,credit,party_id").in("entry_id",entryIds):{data:[],error:null};
   const err=je.error||jl.error||ac.error||pa.error||lb.error;
-  if(err){setMessage("");setError("تعذر تحميل دفتر القيود: "+err.message);setEntries([]);setLoading(false);return;}
+  if(err){setMessage("");setError("تعذر تحميل دفتر القيود: "+err.message);setEntries([]);setLedgerBalances([]);setLoading(false);return;}
   const accountMap=new Map<string,string>((ac.data||[]).map((a:any)=>[a.id,a.account_code+" — "+a.account_name]));
   const partyMap=new Map<string,string>((pa.data||[]).map((p:any)=>[p.id,p.party_name]));
   const linesByEntry=new Map<string,Line[]>();
