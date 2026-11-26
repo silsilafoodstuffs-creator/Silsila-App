@@ -112,8 +112,20 @@ export default function LiveDocumentsWorkspace({kind}:{kind:Kind}){
   if(!selectedParty){setMessage("أضف واختر "+(kind==="sale"?"عميلًا":"موردًا")+" فعليًا من شاشة "+(kind==="sale"?"العملاء":"الموردين")+" أولًا.");return;}
   if(!selectedWarehouse){setMessage("لا يوجد مخزن نشط متاح في نطاق صلاحيتك.");return;}
   if(!date||date>today()){setMessage("تاريخ المستند مطلوب ولا يجوز أن يكون مستقبليًا.");return;}
-  if(!lines.length||lines.some(l=>!l.itemId||Number(l.qty)<=0||Number(l.price)<=0)){setMessage("أكمل الصنف والكمية والسعر في كل البنود.");return;}
-  for(let i=0;i<lines.length;i++){const l=lines[i],it=items.find(x=>x.id===l.itemId);if(!it){setMessage("أحد الأصناف لم يعد متاحًا.");return;}if(kind==="sale"&&available(l.itemId)<lineTotals[i].baseQty){setMessage("الرصيد المتاح غير كافٍ للصنف "+it.item_name+"؛ المتاح "+money(available(l.itemId))+" "+it.base_unit+".");return;}}
+  if(!lines.length||lines.some(l=>!l.itemId||!Number.isFinite(Number(l.qty))||Number(l.qty)<=0||!Number.isFinite(Number(l.price))||Number(l.price)<0||!Number.isFinite(Number(l.discount))||Number(l.discount)<0)){setMessage("أكمل الصنف والكمية الصحيحة والسعر غير السالب والخصم الصحيح في كل البنود.");return;}
+  const requestedByItem=new Map<string,number>();
+  for(let i=0;i<lines.length;i++){
+   const line=lines[i],item=items.find(x=>x.id===line.itemId);
+   if(!item){setMessage("أحد الأصناف لم يعد متاحًا.");return;}
+   requestedByItem.set(line.itemId,(requestedByItem.get(line.itemId)||0)+lineTotals[i].baseQty);
+  }
+  if(kind==="sale"){
+   for(const [itemId,required] of requestedByItem){
+    const item=items.find(x=>x.id===itemId)!;
+    const availableQty=available(itemId);
+    if(availableQty<required){setMessage("إجمالي الكمية المطلوبة للصنف "+item.item_name+" ("+money(required)+" "+item.base_unit+") أكبر من المتاح ("+money(availableQty)+" "+item.base_unit+"). قلّل الكمية أو راجع الحجوزات.");return;}
+   }
+  }
   setSaving(true);setMessage("");
   const now=Date.now();
   const header:any={company_id:companyId,branch_id:selectedWarehouse.branch_id,warehouse_id:warehouseId,document_date:date,document_type:kind==="sale"?"delivery":"receipt",status:"draft",subtotal:0,discount_total:0,tax_total:0,grand_total:0,paid_total:0,auto_number:now,created_by:userId,is_demo_data:false,notes:notes.trim()||null};
