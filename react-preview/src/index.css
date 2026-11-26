@@ -1430,3 +1430,22 @@ button,input,select,textarea{font-family:var(--silsila-policy-font,'Tajawal',san
 .program-policies .pp-meta,.program-policies .pp-user-picker label,.program-policies .pp-preview-list>div{font-size:13px!important}
 .program-policies .pp-table code,.program-policies .pp-meta code{font-size:12px!important}
 @media(max-width:680px){.program-policies .pp-head h2{font-size:21px!important}.program-policies .pp-head p{font-size:12px!important}.program-policies .pp-tabs{max-width:100%}.program-policies .pp-table{min-width:980px}}
+
+/* Persistent company form card and branch row interactions */
+.foundation-company-card{background:#fff;border:1px solid #e9e0f1;border-radius:14px;overflow:hidden;box-shadow:0 5px 18px #24173508}
+.foundation-company-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:linear-gradient(110deg,#f6effc,#fffaf3);border-bottom:1px solid #eee7f3}
+.foundation-company-card-head>div:first-child{display:grid;gap:3px}.foundation-company-card-head small{color:#8b69a4;font-size:11px}.foundation-company-card-head h3{margin:0;color:#3E007D;font-size:18px}.foundation-company-card-head span{font-size:12px;color:#756581}
+.foundation-company-card-head button{min-height:38px;padding:0 13px;border-radius:8px;border:1px solid #e8deef;background:#fff;color:#54227e;display:flex;align-items:center;gap:7px;font:inherit;font-size:13px}
+.foundation-company-card-head .foundation-save{background:#3E007D;color:#fff;border-color:#3E007D}
+.foundation-company-card-actions{display:flex;gap:7px;flex-wrap:wrap}
+.foundation-company-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;padding:8px 16px}
+.foundation-company-fields label{display:flex;align-items:center;gap:12px;min-width:0;min-height:54px;padding:7px 10px;border-bottom:1px solid #f0ebf4}
+.foundation-company-fields label span{flex:0 0 118px;color:#756581;font-size:13px;font-weight:700}
+.foundation-company-fields label b,.foundation-company-fields label input{flex:1;min-width:0;color:#241735;font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.foundation-company-fields label input{height:38px;padding:0 9px;border:1px solid #e8e0ee;border-radius:7px;background:#fff;font:inherit;outline-color:#8b55b4}
+.foundation-company-confirm{position:fixed;inset:0;z-index:1300;background:#160b2266;display:grid;place-items:center;padding:18px}
+.foundation-company-confirm section{width:min(430px,100%);padding:23px;background:#fff;border-radius:15px;box-shadow:0 20px 65px #160b2255;text-align:center}
+.foundation-company-confirm section>svg{color:#b97927}.foundation-company-confirm h3{margin:8px 0;color:#3E007D;font-size:18px}.foundation-company-confirm p{color:#756581;font-size:13px}
+.foundation-company-confirm section>div{display:grid;gap:8px;margin-top:16px}.foundation-company-confirm button{min-height:40px;border-radius:8px;padding:8px 12px;font:inherit;font-size:13px;background:#f4f0f7;color:#59476a}.foundation-company-confirm button:first-child{background:#3E007D;color:#fff}.foundation-company-confirm button:nth-child(2){background:#fff1ef;color:#a33a31}
+.foundation-clickable-row{cursor:pointer}.foundation-clickable-row:hover td{background:#f3eafb}
+@media(max-width:760px){.foundation-company-fields{grid-template-columns:1fr}.foundation-company-fields label span{flex-basis:108px}.foundation-company-card-head{align-items:flex-start;flex-direction:column}.foundation-company-card-head button{width:100%;justify-content:center}}
