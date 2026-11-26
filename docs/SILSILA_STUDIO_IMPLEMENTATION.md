@@ -49,3 +49,19 @@ Silsila Studio is the single integrated design workspace in ERP navigation under
 - Data-source table names and column names come from a fixed registry; callers cannot supply arbitrary identifiers.
 - Company isolation and write permissions are enforced by RLS and owner/admin role policies. Anonymous access is revoked.
 - Published custom designs render read-only in the published-design viewer. Business mutations must continue through the ERP's existing validated business workflows.
+
+
+## React migration checkpoint — 2026-11-26
+
+The parallel React branch now includes an initial functional Studio workspace and a separate published-design viewer:
+
+- react-preview/src/StudioWorkspace.tsx lists company-scoped designs and opens versioned design documents.
+- Draft save uses the existing erp_studio_save_draft RPC with optimistic revision checking; approval, publish, and restore use the existing Studio RPCs.
+- Revision history reads erp_studio_design_versions; published designs are exposed through a separate read-only screen.
+- The React document validator rejects unsupported schema versions, unknown component types, duplicate/oversized IDs, invalid parent containers, cyclic nesting, invalid design kinds, and data sources outside the fixed allow-list.
+- Preview bindings are read-only, company-scoped, limited to 50 rows per source, and exclude demo rows for sources that expose is_demo_data.
+- Preview button actions are simulations only. Published components are read-only.
+
+**Parity is not complete.** The current React editor is a foundation, not a full port of the Flutter Studio. It does not yet include the complete 10-tab editor experience, multi-select/drag-resize, undo/redo, visual grouping and layer tree, offline encrypted draft cache, full component renderer parity, asset upload/crop, or automatic published-design integration into existing ERP screens. Existing Flutter Studio remains the full-featured editor until these gaps are implemented and verified. Do not delete or disable Flutter Studio based on this checkpoint.
+
+Validation: React Preview Validation builds the Vite app and runs Playwright browser smoke tests. This is not yet an authenticated owner/admin end-to-end test of save/restore/approve/publish against production data.
