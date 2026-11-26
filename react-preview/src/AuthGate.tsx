@@ -18,6 +18,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [companyId, setCompanyId] = useState("");
   const [preview, setPreview] = useState(false);
+  const [editDirty, setEditDirty] = useState(false);
+  const [pendingCompanyId, setPendingCompanyId] = useState("");
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [email, setEmail] = useState(() => { try { return localStorage.getItem("silsila-login-email") || ""; } catch { return ""; } });
@@ -169,6 +171,39 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     setBusy(false);
   };
 
+  const applyCompany = (id: string) => {
+    const company = companies.find((item) => item.id === id);
+    if (!company) return;
+    setCompanyId(company.id);
+    sessionStorage.setItem("silsila-company-id", company.id);
+    sessionStorage.setItem("silsila-member-role", company.role);
+  };
+  const requestCompanyChange = (id: string) => {
+    if (id === companyId) return;
+    if (editDirty) {
+      setPendingCompanyId(id);
+      window.dispatchEvent(new Event("silsila:edit-request-close"));
+    } else applyCompany(id);
+  };
+  useEffect(() => {
+    const editState = (event: Event) => setEditDirty(Boolean((event as CustomEvent<{dirty?:boolean}>).detail?.dirty));
+    const editClosed = () => {
+      setEditDirty(false);
+      setPendingCompanyId((next) => {
+        if (next) applyCompany(next);
+        return "";
+      });
+    };
+    const editCancelled = () => setPendingCompanyId("");
+    window.addEventListener("silsila:edit-state", editState);
+    window.addEventListener("silsila:edit-closed", editClosed);
+    window.addEventListener("silsila:edit-navigation-cancel", editCancelled);
+    return () => {
+      window.removeEventListener("silsila:edit-state", editState);
+      window.removeEventListener("silsila:edit-closed", editClosed);
+      window.removeEventListener("silsila:edit-navigation-cancel", editCancelled);
+    };
+  }, [companies]);
   const signOut = async (): Promise<boolean> => {
     if (supabase) {
       const { error } = await supabase.auth.signOut();
@@ -200,7 +235,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     const selected = companies.find((c) => c.id === companyId) || companies[0];
     return <AuthContext.Provider value={{signOut,preview:false}}><div key={selected.id}>{children}</div>{message&&<div role="alert" style={{position:"fixed",right:18,top:18,zIndex:1400,maxWidth:420,padding:"11px 14px",borderRadius:10,background:"#fff1ef",color:"#a33a31",boxShadow:"0 8px 28px #160b2b30",fontSize:12}}>{message}</div>}<div style={{position:"fixed",left:16,bottom:14,zIndex:1000,display:"flex",alignItems:"center",gap:10,padding:"9px 13px",borderRadius:14,background:"#241735",color:"#fff",boxShadow:"0 8px 28px #160b2b55",fontSize:12}}>
       <ShieldCheck size={16}/><span>{selected.name} · {selected.role}</span>
-      {companies.length > 1 && <select aria-label="اختيار المنشأة" value={companyId} onChange={(e)=>{const c=companies.find(x=>x.id===e.target.value);if(c){setCompanyId(c.id);sessionStorage.setItem("silsila-company-id",c.id);sessionStorage.setItem("silsila-member-role",c.role);}}} style={{maxWidth:150}}>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>}
+      {companies.length > 1 && <select aria-label="اختيار المنشأة" value={companyId} onChange={(e)=>requestCompanyChange(e.target.value)} style={{maxWidth:150}}>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>}
 
     </div></AuthContext.Provider>;
   }
