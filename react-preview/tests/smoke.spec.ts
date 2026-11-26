@@ -165,3 +165,18 @@ test("chart of accounts is connected to the live Supabase ledger", async ({ page
   await expect(page.getByText(/سجّل الدخول إلى المنشأة لعرض دليل الحسابات الحقيقي/)).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
+
+
+test("journal workspace separates draft saving from posting", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", error => pageErrors.push(error.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: /دخول المعاينة/ }).click();
+  await page.locator(".nav-main-toggle").filter({ hasText: "الإدارة المالية" }).click();
+  await page.locator(".nav-subgroup-toggle").filter({ hasText: "حركات" }).click();
+  await page.locator(".nav-item").filter({ hasText: "قيود اليومية" }).click();
+  await expect(page.getByRole("heading", { name: "قيود اليومية", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "قيد جديد", exact: true })).toBeDisabled();
+  await expect(page.getByText(/سجّل الدخول إلى المنشأة لعرض دفتر القيود الفعلي/)).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
