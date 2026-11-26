@@ -33,7 +33,7 @@ export default function EditDrawer({title,dirty,saving=false,onSave,onDiscard,on
   window.addEventListener("silsila:edit-save",directSave);
   window.addEventListener("beforeunload",beforeUnload);
   return()=>{window.removeEventListener("keydown",key);window.removeEventListener("silsila:edit-request-close",externalClose);window.removeEventListener("silsila:edit-save",directSave);window.removeEventListener("beforeunload",beforeUnload);};
- },[confirmOpen,dirty,isSaving]);
+ },[confirmOpen,dirty,isSaving,onSave,onSaveError,onClose]);
  const saveAndClose=async()=>{
   if(busy.current||isSaving)return;
   busy.current=true;setInternalSaving(true);
