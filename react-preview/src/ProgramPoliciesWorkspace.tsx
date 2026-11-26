@@ -4,7 +4,7 @@ import {supabase} from "./supabase";
 
 type Policy=Record<string,any>;
 const categories=["الكل","برمجية","تكويدية","محاسبية","مخزنية","بيعية","شرائية","إدارية","الخطوط والألوان","الهوية البصرية"];
-const hiddenKeys=new Set(["code_generation_registry","code_type.cash_voucher","code_type.sales_representative","code_type.sales_campaign","code_type.customer_monthly_goal","code_type.employee_monthly_target"]);
+const hiddenKeys=new Set<string>();
 const codePolicy=(p:Policy)=>p.category==="تكويدية"||String(p.policy_key||"").startsWith("code_")||String(p.policy_key||"").startsWith("geo_code.")||String(p.policy_key||"").startsWith("category_code.")||String(p.policy_key||"").startsWith("item_code");
 const text=(v:any)=>v==null?"":String(v);
 const parseObject=(v:any)=>{try{const x=JSON.parse(text(v));return x&&typeof x==="object"&&!Array.isArray(x)?x:null;}catch{return null;}};
@@ -61,7 +61,7 @@ export default function ProgramPoliciesWorkspace(){
  useEffect(()=>{void load();},[load]);
  const visible=useMemo(()=>rows.filter(p=>(category==="الكل"||p.category===category)&&(!query.trim()||[p.policy_code,p.policy_key,p.name_ar,p.name_en,p.category,p.policy_value].some(v=>text(v).toLowerCase().includes(query.trim().toLowerCase())))),[rows,category,query]);
  const counts=useMemo(()=>Object.fromEntries(categories.map(c=>[c,c==="الكل"?rows.length:rows.filter(p=>p.category===c).length])),[rows]);
- const isLocked=(p:Policy)=>codePolicy(p)&&(!lockCheckReady||lockedCodes.has("__ALL_CODE_POLICIES_LOCKED_UNTIL_CHECK__")||lockedCodes.has(text(p.policy_key)));
+ const isLocked=(p:Policy)=>codePolicy(p); // Read-only in React until exact legacy code-policy parity is migrated; never rewrite issued-code rules.
  const openEditor=(p:Policy)=>{setSelected(p);setDraft({...p});setError("");setNotice("");};
  const closeEditor=()=>{setSelected(null);setDraft({});};
  const update=async()=>{
