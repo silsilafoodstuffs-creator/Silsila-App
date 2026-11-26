@@ -135,3 +135,10 @@
 - أحدث Deployment متاح للمشروع `silsila-react-preview` يرد HTTP 200، لكن فحص ملف JS/CSS المنشور لم يجد مفاتيح السياسات الجديدة أو محرر الألوان؛ أي أن الرابط الحالي يعرض بناءً أقدم، وليس هذه التعديلات.
 - لم أنشئ مشروع Vercel جديدًا، ولم أربط GitHub أو أنشر من فرع التطوير دون طلب منفصل؛ لم يتغير نشر الإنتاج.
 - كود React نفسه اجتاز `npm install`, `npm run build` واختبارات Playwright على commit `d249491` بنتيجة Success. آخر تغييرات التوثيق لا تغيّر كود الواجهة.
+
+
+## React Studio migration update — 2026-11-26
+
+An initial React Studio route and published-design viewer were added on react-parallel-preview-2026-11-25. They reuse the existing Studio tables and RPC contract rather than introducing a parallel schema. Drafts, revisions, restore, approval and publish are wired to the existing RPCs; data preview is restricted to the same explicit read-only source allow-list.
+
+This does not close the Studio runtime gap. The React editor still lacks the full Flutter editor's component and interaction parity, offline draft cache, and automatic rendering inside existing ERP pages. Keep the Flutter implementation available until authenticated end-to-end verification and the remaining React parity work are complete.
