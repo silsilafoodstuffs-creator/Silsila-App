@@ -95,7 +95,7 @@ test("all seven foundation screens open from general settings", async ({ page })
     "مجموعات البراندات",
     "البراندات"
   ]) {
-    await page.locator(".nav-item").filter({ hasText: title }).first().click();
+    await page.locator(".nav-item").getByText(title, { exact: true }).first().click();
     await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   }
 
