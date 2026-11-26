@@ -1474,3 +1474,17 @@ th,.module-table-card th,.operation-table-card th{font-family:var(--silsila-head
 .section-head h2,.module-table-head b,.operation-table-head b{font-family:var(--silsila-subheading-font,var(--silsila-policy-font,'Tajawal',sans-serif))}
 .panel-head b,.module-heading p,.operation-title p{font-family:var(--silsila-secondary-font,var(--silsila-policy-font,'Tajawal',sans-serif))}
 .program-policies .pp-head h2{font-family:var(--silsila-main-font,var(--silsila-policy-font,'Tajawal',sans-serif))}
+
+/* Program Policies: compact classic ERP header with Silsila purple identity. */
+.program-policies .pp-head{min-height:48px;padding:5px 10px;border:0;border-radius:5px;background:#3E007D!important;box-shadow:none;color:#fff}
+.program-policies .pp-head-icon{width:30px;height:30px;background:transparent;color:#FFA015;border-radius:0}
+.program-policies .pp-head h2{color:#fff!important;font-size:18px!important;font-weight:800}
+.program-policies .pp-head p{color:#eee3f8!important;font-size:11px!important;margin:2px 0 0}
+.program-policies .pp-count{color:#fff}
+.program-policies .pp-table{min-width:1200px}
+.program-policies .pp-table th{background:#3E007D!important;color:#fff!important;border:0!important}
+.program-policies .pp-table tbody tr{height:40px}
+.program-policies .pp-table td{height:40px;padding:5px 9px}
+.program-policies .pp-tab{height:36px;padding:0 12px;border-radius:6px}
+.program-policies .pp-tab.active{background:#3E007D;border-color:#3E007D;color:#fff}
+@media(max-width:680px){.program-policies .pp-head{align-items:center}.program-policies .pp-head h2{font-size:17px!important}.program-policies .pp-head p{font-size:10px!important}}
