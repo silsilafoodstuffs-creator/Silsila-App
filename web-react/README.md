@@ -1,25 +1,36 @@
-# Silsila React Web Performance POC
+# Silsila React Web workspace
 
-Isolated React + TypeScript + Vite proof of concept. It is not connected to Supabase and uses 10,000 generated mock category records in browser memory.
+This is the React + TypeScript + Vite web client being migrated alongside the existing Flutter mobile application.
 
-## Run locally
-```bash
-cd web-react
-npm install
-npm run dev
-npm run build
-npm test
+## Supabase connection
+
+Set these Vite build-time variables in the deployment environment:
+
+```env
+VITE_SUPABASE_URL=https://teitsopmhruczplwlwgn.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-project-publishable-key
 ```
 
-## Scope
-- Arabic RTL shell and Silsila visual tokens.
-- Activity filter and deferred search.
-- Fixed-height virtualized list to avoid rendering thousands of DOM rows at once.
-- Responsive layout.
+The browser client uses only the Supabase publishable key. Never put a Supabase secret/service-role key in this project or any `VITE_*` variable. Authentication uses the existing Supabase Auth email/password accounts and persisted sessions.
 
-## Explicit exclusions
-No production credentials, Supabase client, real customer data, writes, authentication, or migration. No route replacement or production deployment. Functional parity, authorization parity, database pagination, and performance comparison against Flutter Web remain acceptance gates.
+## Current migration slice: Item Categories
 
-CI validation is executed by `.github/workflows/react-web-poc.yml` on changes to this isolated directory.
+- Reads real `public.categories` rows from Supabase.
+- Uses server-side search, activity filtering, sorting, count and pagination.
+- Reads activity choices from `public.activity_types`.
+- RLS remains the authority for row visibility.
+- Create/update/delete are intentionally not exposed until the category table has reviewed write policies and matching authorization tests.
+- No generated mock category records are included.
 
-Type checking includes Vite's client declarations for stylesheets.
+## Local development
+
+```bash
+cp .env.example .env.local
+# replace the publishable key with the project's publishable key
+npm install
+npm test
+npm run build
+npm run dev
+```
+
+The Vercel project root directory is `web-react`; its shared Tajawal font is loaded from the repository's existing `assets/fonts/Tajawal.ttf` file.
