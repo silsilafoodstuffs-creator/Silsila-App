@@ -1656,3 +1656,16 @@ input:not([type=checkbox]):not([type=radio]):not([type=color]):focus,select:focu
  .welcome-row h1{font-size:22px!important}
  .program-policies .pp-table{min-width:1100px!important}
 }
+
+/* Final catch-all for grids that use workspace-specific table wrappers. */
+main .content table thead th{
+ background:#3E007D!important;background-image:none!important;color:#fff!important;
+ font-family:var(--silsila-header-font,var(--silsila-policy-font,'Tajawal',sans-serif))!important;
+ font-size:var(--silsila-table-head-size,15px)!important;font-weight:800!important;
+ height:40px!important;padding:5px 10px!important;border-bottom:1px solid #6d42a0!important;
+}
+main .content table tbody td{
+ font-family:var(--silsila-policy-font,'Tajawal',sans-serif)!important;
+ font-size:var(--silsila-table-body-size,14px)!important;color:var(--silsila-body-color,#241735)!important;
+}
+main .content table tbody tr{height:40px}
