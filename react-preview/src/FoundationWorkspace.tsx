@@ -18,15 +18,33 @@ const textValue=(v:any)=>v==null?"":String(v);
 export default function FoundationWorkspace({kind}:{kind:Kind}){
  const cfg=defs[kind],Icon=cfg.icon;
  const [companyId]=useState(()=>sessionStorage.getItem("silsila-company-id")||"");
+ const [userId]=useState(()=>sessionStorage.getItem("silsila-user-id")||"");
+ const [role]=useState(()=>sessionStorage.getItem("silsila-member-role")||"viewer");
  const [rows,setRows]=useState<Row[]>([]),[query,setQuery]=useState(""),[category,setCategory]=useState("الكل");
  const [loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
  const [editing,setEditing]=useState<Row|null>(null),[form,setForm]=useState<Row>({});
  const [extra,setExtra]=useState<Row>({}),[activities,setActivities]=useState<Row[]>([]),[groups,setGroups]=useState<Row[]>([]);
+ const [permissions,setPermissions]=useState<Row[]>([]);
+ const adminRole=["owner","admin"].includes(role);
+ const permissionKey="إعدادات عامة::بيانات أساسية::"+cfg.title;
+ const permission=permissions.find(p=>p.menu_key===permissionKey)||permissions.find(p=>p.menu_key==="إعدادات عامة::بيانات أساسية::*")||permissions.find(p=>p.menu_key==="إعدادات عامة::*::*");
+ const roleCanWrite=kind==="company"?adminRole:(kind==="policies"||kind==="activities"||kind==="brand-groups"||kind==="brands")?adminRole:kind==="activity-categories"?["owner","admin","manager"].includes(role):["owner","admin","manager","operator","accountant"].includes(role);
+ const canRead=permission?.allow_access!==false;
+ const canAdd=permission?permission.can_add===true:(kind!=="company"&&kind!=="policies"&&roleCanWrite);
+ const canEdit=permission?(permission.can_edit===true||permission.can_save===true):roleCanWrite;
+ const canDeactivate=permission?permission.can_delete===true:adminRole;
+ const groupsForActivity=groups.filter(g=>!form.activity_code||g.activity_code===form.activity_code);
  const load=useCallback(async()=>{
   if(!supabase){setError("اتصال قاعدة البيانات غير مهيأ.");setLoading(false);return;}
   if(!companyId){setError("لا توجد شركة نشطة في جلسة الدخول.");setLoading(false);return;}
   setLoading(true);setError("");setNotice("");
   try{
+   if(!userId)throw new Error("جلسة المستخدم غير مكتملة. أعد تسجيل الدخول.");
+   const {data:permissionRows,error:permissionError}=await supabase.from("erp_user_permissions").select("menu_key,allow_access,can_add,can_edit,can_delete,can_save").eq("company_id",companyId).eq("user_id",userId);
+   if(permissionError)throw permissionError;
+   const loadedPermissions=permissionRows||[];setPermissions(loadedPermissions);
+   const exact=loadedPermissions.find((p:any)=>p.menu_key==="إعدادات عامة::بيانات أساسية::"+cfg.title)||loadedPermissions.find((p:any)=>p.menu_key==="إعدادات عامة::بيانات أساسية::*")||loadedPermissions.find((p:any)=>p.menu_key==="إعدادات عامة::*::*");
+   if(exact?.allow_access===false)throw new Error("لا تملك صلاحية عرض هذه الشاشة.");
    if(kind==="company"){
     const {data,error}=await supabase.from("erp_companies").select("id,legal_name,trade_name,tax_number,commercial_register,phone,email,address,base_currency,is_active").eq("id",companyId).maybeSingle();
     if(error)throw error;if(!data)throw new Error("لم يتم العثور على بيانات الشركة أو لا توجد صلاحية لعرضها.");
@@ -74,20 +92,40 @@ export default function FoundationWorkspace({kind}:{kind:Kind}){
   try{
    if(kind==="company"){
     const payload={legal_name:textValue(form.legal_name).trim(),trade_name:textValue(form.trade_name).trim()||null,tax_number:textValue(form.tax_number).trim()||null,commercial_register:textValue(form.commercial_register).trim()||null,phone:textValue(form.phone).trim()||null,email:textValue(form.email).trim()||null,address:textValue(form.address).trim()||null,base_currency:textValue(form.base_currency||"EGP").trim().toUpperCase()};
-    const {error}=await supabase.from("erp_companies").update(payload).eq("id",companyId);if(error)throw error;
+    if(!canEdit)throw new Error("لا تملك صلاحية تعديل بيانات الشركة.");
+    const {data:updatedCompany,error}=await supabase.from("erp_companies").update(payload).eq("id",companyId).select("id").single();if(error)throw error;if(!updatedCompany)throw new Error("لم يتم تأكيد تحديث بيانات الشركة.");
     const current=await supabase.auth.getUser();const extras={...extra,english_name:textValue(form.english_name),company_code:textValue(form.company_code),tax_office:textValue(form.tax_office),country:textValue(form.country||"مصر"),phone2:textValue(form.phone2),logo_path:extra.logo_path||""};
-    const {error:extraError}=await supabase.from("erp_company_settings").upsert({company_id:companyId,setting_key:"company_profile_extra",setting_value:extras,updated_by:current.data.user?.id||null},{onConflict:"company_id,setting_key"});if(extraError)throw extraError;
+    const {data:updatedExtra,error:extraError}=await supabase.from("erp_company_settings").upsert({company_id:companyId,setting_key:"company_profile_extra",setting_value:extras,updated_by:current.data.user?.id||null},{onConflict:"company_id,setting_key"}).select("company_id").single();if(extraError)throw extraError;if(!updatedExtra)throw new Error("لم يتم تأكيد حفظ البيانات الإضافية.");
    }else if(kind==="policies"){
+    if(!canEdit)throw new Error("لا تملك صلاحية تعديل سياسات البرنامج.");
     if(!editing?.id)throw new Error("لا يمكن إنشاء سياسة غير معرفة في دليل سياسات المشروع.");
-    const {error}=await supabase.from(cfg.table).update({policy_value:textValue(form.policy_value),is_enabled:form.is_enabled===true,apply_to_all:form.apply_to_all===true,updated_at:new Date().toISOString()}).eq("id",editing.id).eq("company_id",companyId);if(error)throw error;
+    const {data:updatedPolicy,error}=await supabase.from(cfg.table).update({policy_value:textValue(form.policy_value),is_enabled:form.is_enabled===true,apply_to_all:form.apply_to_all===true,updated_at:new Date().toISOString()}).eq("id",editing.id).eq("company_id",companyId).select("id").single();if(error)throw error;if(!updatedPolicy)throw new Error("لم يتم تأكيد تحديث السياسة.");
    }else{
+    if(editing?.id&&!canEdit)throw new Error("لا تملك صلاحية تعديل هذا السجل.");
+    if(!editing?.id&&!canAdd)throw new Error("لا تملك صلاحية إضافة سجلات جديدة.");
     const payload:Row={...form};
     delete payload.id;delete payload.created_at;delete payload.updated_at;
-    if(kind==="activity-categories"){payload.workspace_id=payload.workspace_id||activities[0]?.id;if(!payload.workspace_id)throw new Error("لا توجد مساحة نشاط مرتبطة بالشركة.");}
-    if(kind==="brands"){const g=groups.find(x=>x.id===payload.brand_group_id);payload.brand_group=g?.group_name||null;}
+    if(kind==="activity-categories"){
+     payload.workspace_id=payload.workspace_id||activities[0]?.id;
+     if(!payload.workspace_id)throw new Error("لا توجد مساحة نشاط مرتبطة بالشركة.");
+     const workspace=activities.find(x=>x.id===payload.workspace_id);
+     if(!workspace)throw new Error("اختر مساحة نشاط صحيحة.");
+     payload.activity_type=workspace.activity_type;payload.activity_name=workspace.workspace_name;
+    }
+    if(kind==="brand-groups"&&!activities.some(a=>a.code===payload.activity_code))throw new Error("اختر نشاطًا صحيحًا لمجموعة البراندات.");
+    if(kind==="brands"){
+     const g=groups.find(x=>x.id===payload.brand_group_id&&x.activity_code===payload.activity_code);
+     if(!g)throw new Error("اختر مجموعة براندات تابعة للنشاط المحدد.");
+     payload.brand_group=g.group_name;
+    }
     if(cfg.companyScoped)payload.company_id=companyId;
-    if(editing?.id){const {error}=await supabase.from(cfg.table).update(payload).eq("id",editing.id).eq(cfg.companyScoped?"company_id":"id",cfg.companyScoped?companyId:editing.id);if(error)throw error;}
-    else{const {error}=await supabase.from(cfg.table).insert(payload);if(error)throw error;}
+    if(editing?.id){
+     const {data:updated,error}=await supabase.from(cfg.table).update(payload).eq("id",editing.id).eq(cfg.companyScoped?"company_id":"id",cfg.companyScoped?companyId:editing.id).select("id").single();
+     if(error)throw error;if(!updated)throw new Error("لم يتم تأكيد تحديث السجل.");
+    }else{
+     const {data:created,error}=await supabase.from(cfg.table).insert(payload).select("id").single();
+     if(error)throw error;if(!created)throw new Error("لم يتم تأكيد إنشاء السجل.");
+    }
    }
    setNotice("تم حفظ التعديلات في قاعدة البيانات بنجاح.");await load();if(kind!=="company")setEditing(null);
   }catch(e:any){setError("لم يتم الحفظ: "+(e?.message||String(e)));}
@@ -95,27 +133,27 @@ export default function FoundationWorkspace({kind}:{kind:Kind}){
  };
  const remove=async(r:Row)=>{
   if(!supabase||kind==="policies"||kind==="company")return;
+  if(!canDeactivate){setError("لا تملك صلاحية تعطيل هذا السجل.");return;}
   if(!window.confirm("تأكيد تعطيل السجل؟ سيتم تغيير حالته دون حذف البيانات المرتبطة."))return;
-  const statusField=kind==="activities"?"is_active":"is_active";
-  let update=supabase.from(cfg.table).update({[statusField]:false}).eq("id",r.id);if(cfg.companyScoped)update=update.eq("company_id",companyId);const {error}=await update;
-  if(error)setError("تعذر تعطيل السجل: "+error.message);else{setNotice("تم تعطيل السجل دون حذفه.");await load();}
+  const {data:updated,error:deactivateError}=await supabase.from(cfg.table).update({is_active:false}).eq("id",r.id).eq(cfg.companyScoped?"company_id":"id",cfg.companyScoped?companyId:r.id).select("id").single();
+  if(deactivateError)setError("تعذر تعطيل السجل: "+deactivateError.message);else if(!updated)setError("لم يتم تأكيد تعطيل السجل.");else{setNotice("تم تعطيل السجل دون حذفه.");await load();}
  };
  const policyCategories=["الكل",...Array.from(new Set(rows.map(r=>r.category).filter(Boolean)))];
  return <section className="foundation-workspace" dir="rtl">
   <header className="foundation-head"><span><Icon size={22}/></span><div><small>سلسلة · البيانات الفعلية للمشروع القديم</small><h2>{cfg.title}</h2><p>{cfg.description}</p></div><b><Database size={15}/>{rows.length.toLocaleString("ar-EG")} سجل</b></header>
-  {error&&<div className="foundation-error"><AlertTriangle size={16}/>{error}</div>}{notice&&<div className="foundation-notice"><CheckCircle2 size={16}/>{notice}</div>}
-  {kind!=="company"&&<div className="foundation-tools"><label><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="ابحث بالكود أو الاسم..."/></label>{kind==="policies"&&<select value={category} onChange={e=>setCategory(e.target.value)}>{policyCategories.map(x=><option key={x}>{x}</option>)}</select>}<button onClick={()=>void load()}><RefreshCw size={15}/> تحديث</button>{kind!=="policies"&&<button className="foundation-add" onClick={startNew}><Plus size={15}/> إضافة جديد</button>}</div>}
-  {kind==="company"&&<div className="foundation-tools"><span>بيانات الشركة المسجلة حاليًا</span><button onClick={()=>void load()}><RefreshCw size={15}/> تحديث</button><button className="foundation-add" onClick={()=>startEdit(rows[0]||{})}><Pencil size={15}/> تعديل البيانات</button></div>}
+  {error&&<div className="foundation-error"><AlertTriangle size={16}/>{error}</div>}{notice&&<div className="foundation-notice"><CheckCircle2 size={16}/>{notice}</div>}{!canRead&&<div className="foundation-error"><AlertTriangle size={16}/>لا تملك صلاحية عرض هذه الشاشة.</div>}
+  {kind!=="company"&&<div className="foundation-tools"><label><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="ابحث بالكود أو الاسم..."/></label>{kind==="policies"&&<select value={category} onChange={e=>setCategory(e.target.value)}>{policyCategories.map(x=><option key={x}>{x}</option>)}</select>}<button onClick={()=>void load()}><RefreshCw size={15}/> تحديث</button>{kind!=="policies"&&<button className="foundation-add" onClick={startNew} disabled={!canAdd}><Plus size={15}/> إضافة جديد</button>}</div>}
+  {kind==="company"&&<div className="foundation-tools"><span>بيانات الشركة المسجلة حاليًا</span><button onClick={()=>void load()}><RefreshCw size={15}/> تحديث</button><button className="foundation-add" onClick={()=>startEdit(rows[0]||{})} disabled={!canEdit}><Pencil size={15}/> تعديل البيانات</button></div>}
   {editing&&<div className="foundation-editor"><div className="foundation-editor-head"><b>{kind==="company"?"تعديل بيانات الشركة":kind==="policies"?"تعديل السياسة: "+(editing.name_ar||editing.policy_key):editing.id?"تعديل سجل":"إضافة سجل جديد"}</b><button onClick={()=>setEditing(null)} aria-label="إغلاق"><X size={17}/></button></div>
    {kind==="policies"? <div className="foundation-form"><label><span>قيمة السياسة</span><textarea value={textValue(form.policy_value)} onChange={e=>setField("policy_value",e.target.value)}/></label><label className="foundation-check"><input type="checkbox" checked={form.is_enabled===true} disabled={editing.policy_key==="data_integrity.prevent_delete_with_references"} onChange={e=>setField("is_enabled",e.target.checked)}/> السياسة مفعّلة</label><label className="foundation-check"><input type="checkbox" checked={form.apply_to_all===true} disabled={editing.policy_key==="data_integrity.prevent_delete_with_references"} onChange={e=>setField("apply_to_all",e.target.checked)}/> تطبق على جميع المستخدمين</label></div>:
-   <div className="foundation-form">{cfg.fields.map(f=><label key={f.key}><span>{f.label}{f.required?" *":""}</span>{f.options?<select value={textValue(form[f.key])} onChange={e=>setField(f.key,e.target.value)}>{f.options.map(o=><option key={o} value={o}>{o}</option>)}</select>:f.key==="brand_group_id"?<select value={textValue(form[f.key])} onChange={e=>setField(f.key,e.target.value)}>{groups.map(g=><option key={g.id} value={g.id}>{g.group_code} · {g.group_name}</option>)}</select>:f.key==="activity_type"&&kind==="activity-categories"?<select value={textValue(form.workspace_id)} onChange={e=>{const w=activities.find(x=>x.id===e.target.value);setForm((old:Row)=>({...old,workspace_id:e.target.value,activity_type:w?.activity_type||"",activity_name:w?.workspace_name||""}));}}>{activities.map(w=><option key={w.id} value={w.id}>{w.workspace_name}</option>)}</select>:<input type={f.type||"text"} value={textValue(form[f.key])} onChange={e=>setField(f.key,f.type==="number"?Number(e.target.value):e.target.value)}/>}</label>)}
+   <div className="foundation-form">{cfg.fields.map(f=><label key={f.key}><span>{f.label}{f.required?" *":""}</span>{f.options?<select value={textValue(form[f.key])} onChange={e=>setField(f.key,e.target.value)}>{f.options.map(o=><option key={o} value={o}>{o}</option>)}</select>:f.key==="brand_group_id"?<select value={textValue(form[f.key])} onChange={e=>setField(f.key,e.target.value)}><option value="">اختر مجموعة البراندات</option>{groupsForActivity.map(g=><option key={g.id} value={g.id}>{g.group_code} · {g.group_name}</option>)}</select>:f.key==="activity_type"&&kind==="activity-categories"?<select value={textValue(form.workspace_id)} onChange={e=>{const w=activities.find(x=>x.id===e.target.value);setForm((old:Row)=>({...old,workspace_id:e.target.value,activity_type:w?.activity_type||"",activity_name:w?.workspace_name||""}));}}>{activities.map(w=><option key={w.id} value={w.id}>{w.workspace_name}</option>)}</select>:f.key==="activity_code"&&(kind==="brand-groups"||kind==="brands")?<select value={textValue(form.activity_code)} onChange={e=>{const next=e.target.value;const first=groups.find(g=>g.activity_code===next);setForm((old:Row)=>({...old,activity_code:next,...(kind==="brands"?{brand_group_id:first?.id||"",brand_group:first?.group_name||""}:{})}));}}>{activities.map(a=><option key={a.code} value={a.code}>{a.code} · {a.name}</option>)}</select>:<input type={f.type||"text"} value={textValue(form[f.key])} onChange={e=>setField(f.key,f.type==="number"?Number(e.target.value):e.target.value)}/>}</label>)}
     {kind==="branches"&&<><label className="foundation-check"><input type="checkbox" checked={form.is_main===true} onChange={e=>setField("is_main",e.target.checked)}/> فرع رئيسي</label><label className="foundation-check"><input type="checkbox" checked={form.is_active!==false} onChange={e=>setField("is_active",e.target.checked)}/> نشط</label></>}
     {(kind==="activities"||kind==="brand-groups"||kind==="brands")&&<><label className="foundation-check"><input type="checkbox" checked={form.is_active!==false} onChange={e=>setField("is_active",e.target.checked)}/> نشط</label><label className="foundation-check"><input type="checkbox" checked={form.show_in_app!==false} onChange={e=>setField("show_in_app",e.target.checked)}/> يظهر في تطبيق سلسلة</label></>}
    </div>}
-   <div className="foundation-editor-actions"><button className="foundation-save" disabled={saving} onClick={()=>void save()}><Save size={15}/>{saving?"جارٍ الحفظ...":"حفظ البيانات"}</button><button onClick={()=>setEditing(null)}>إلغاء</button></div>
+   <div className="foundation-editor-actions"><button className="foundation-save" disabled={saving||(!canEdit&&!canAdd)} onClick={()=>void save()}><Save size={15}/>{saving?"جارٍ الحفظ...":"حفظ البيانات"}</button><button onClick={()=>setEditing(null)}>إلغاء</button></div>
   </div>}
   {kind==="company"?<div className="foundation-company-summary">{rows.map(r=><div key={r.id}><b>{r.trade_name||r.legal_name}</b><span>{r.legal_name}</span><span>{r.phone||"—"} · {r.email||"—"}</span><span>{r.address||"—"}</span><strong>{r.base_currency||"EGP"}</strong></div>)}</div>:
-  <div className="foundation-table-wrap"><table><thead><tr>{cfg.columns.map(c=><th key={c}>{({policy_code:"الكود",category:"التصنيف",name_ar:"السياسة",policy_value:"القيمة",is_enabled:"التفعيل",apply_to_all:"النطاق",legal_name:"الاسم القانوني",trade_name:"الاسم التجاري",tax_number:"الرقم الضريبي",commercial_register:"السجل التجاري",phone:"الهاتف",email:"البريد",base_currency:"العملة",address:"العنوان",branch_code:"الكود",branch_name:"الفرع",branch_name_en:"الاسم الإنجليزي",is_main:"رئيسي",code:"الكود",name:"النشاط",name_en:"الاسم الإنجليزي",sort_order:"الترتيب",activity_type:"كود النشاط",activity_name:"النشاط",customer_category:"الفئة",group_code:"الكود",group_name:"المجموعة",group_name_en:"الاسم الإنجليزي",activity_code:"النشاط",brand_code:"الكود",brand_name:"البراند",brand_name_en:"الاسم الإنجليزي",brand_group:"المجموعة",show_in_app:"عرض بالتطبيق"} as Record<string,string>)[c]||c}</th>) }<th>الإجراءات</th></tr></thead><tbody>{visible.map(r=><tr key={r.id}>{cfg.columns.map(c=><td key={c}>{c==="is_enabled"||c==="apply_to_all"||c==="is_active"||c==="is_main"||c==="show_in_app"?<span className={r[c]?"foundation-yes":"foundation-no"}>{r[c]?"نعم":"لا"}</span>:c==="policy_value"?<span className="foundation-value">{textValue(r[c]).slice(0,100)||"—"}</span>:textValue(r[c])||"—"}</td>)}<td><div className="foundation-actions"><button title="تعديل" onClick={()=>startEdit(r)}><Pencil size={14}/></button>{kind!=="policies"&&r.is_active!==false&&<button title="تعطيل" onClick={()=>void remove(r)}><X size={14}/></button>}</div></td></tr>)}{!loading&&!visible.length&&<tr><td colSpan={cfg.columns.length+1} className="foundation-empty">لا توجد سجلات مطابقة.</td></tr>}</tbody></table>{loading&&<div className="foundation-empty">جارٍ تحميل البيانات الحقيقية...</div>}</div>}
+  <div className="foundation-table-wrap"><table><thead><tr>{cfg.columns.map(c=><th key={c}>{({policy_code:"الكود",category:"التصنيف",name_ar:"السياسة",policy_value:"القيمة",is_enabled:"التفعيل",apply_to_all:"النطاق",legal_name:"الاسم القانوني",trade_name:"الاسم التجاري",tax_number:"الرقم الضريبي",commercial_register:"السجل التجاري",phone:"الهاتف",email:"البريد",base_currency:"العملة",address:"العنوان",branch_code:"الكود",branch_name:"الفرع",branch_name_en:"الاسم الإنجليزي",is_main:"رئيسي",code:"الكود",name:"النشاط",name_en:"الاسم الإنجليزي",sort_order:"الترتيب",activity_type:"كود النشاط",activity_name:"النشاط",customer_category:"الفئة",group_code:"الكود",group_name:"المجموعة",group_name_en:"الاسم الإنجليزي",activity_code:"النشاط",brand_code:"الكود",brand_name:"البراند",brand_name_en:"الاسم الإنجليزي",brand_group:"المجموعة",show_in_app:"عرض بالتطبيق"} as Record<string,string>)[c]||c}</th>) }<th>الإجراءات</th></tr></thead><tbody>{visible.map(r=><tr key={r.id}>{cfg.columns.map(c=><td key={c}>{c==="is_enabled"||c==="apply_to_all"||c==="is_active"||c==="is_main"||c==="show_in_app"?<span className={r[c]?"foundation-yes":"foundation-no"}>{r[c]?"نعم":"لا"}</span>:c==="policy_value"?<span className="foundation-value">{textValue(r[c]).slice(0,100)||"—"}</span>:textValue(r[c])||"—"}</td>)}<td><div className="foundation-actions"><button title="تعديل" onClick={()=>startEdit(r)} disabled={!canEdit}><Pencil size={14}/></button>{kind!=="policies"&&r.is_active!==false&&<button title="تعطيل" onClick={()=>void remove(r)} disabled={!canDeactivate}><X size={14}/></button></div></td></tr>)}{!loading&&!visible.length&&<tr><td colSpan={cfg.columns.length+1} className="foundation-empty">لا توجد سجلات مطابقة.</td></tr>}</tbody></table>{loading&&<div className="foundation-empty">جارٍ تحميل البيانات الحقيقية...</div>}</div>}
   <p className="foundation-foot">تُحفظ التعديلات في جداول المشروع الأصلية وتخضع لصلاحيات Supabase وعلاقات البيانات. لا يتم حذف السجلات المرتبطة من هذه الشاشة.</p>
  </section>;
 }
