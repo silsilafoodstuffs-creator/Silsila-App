@@ -5,7 +5,7 @@ import { isSupabaseConfigured, supabase } from "./supabase";
 import SILSILA_LOGO from "./brand";
 
 type Company = { id: string; name: string; role: string };
-type AuthContextValue = { signOut: () => Promise<void>; preview: boolean };
+type AuthContextValue = { signOut: () => Promise<boolean>; preview: boolean };
 const AuthContext = createContext<AuthContextValue | null>(null);
 export const useAuth = () => useContext(AuthContext);
 type ActivityOption = { code: string; name: string };
@@ -169,8 +169,11 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     setBusy(false);
   };
 
-  const signOut = async () => {
-    await supabase?.auth.signOut();
+  const signOut = async (): Promise<boolean> => {
+    if (supabase) {
+      const { error } = await supabase.auth.signOut();
+      if (error) { setMessage("تعذر تسجيل الخروج: " + error.message); return false; }
+    }
     sessionStorage.removeItem("silsila-company-id");
     sessionStorage.removeItem("silsila-user-id");
     sessionStorage.removeItem("silsila-member-role");
@@ -180,6 +183,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     setCompanyId("");
     setPreview(false);
     setPassword("");
+    return true;
   };
 
   const enterPreview = () => {
