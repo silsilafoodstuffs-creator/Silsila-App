@@ -5,13 +5,14 @@ type Props={
  title:string;
  dirty:boolean;
  saving?:boolean;
+ error?:string;
  onSave:()=>Promise<boolean>;
  onDiscard:()=>void;
  onClose:()=>void;
  children:React.ReactNode;
 };
 
-export default function EditDrawer({title,dirty,saving=false,onSave,onDiscard,onClose,children}:Props){
+export default function EditDrawer({title,dirty,saving=false,onSave,onDiscard,onClose,children,error=""}:Props){
  const [confirmOpen,setConfirmOpen]=useState(false);\n const [saveError,setSaveError]=useState("");
  const busy=useRef(false);
  const requestClose=()=>{if(saving||busy.current)return;if(dirty)setConfirmOpen(true);else onClose();};
@@ -38,7 +39,7 @@ export default function EditDrawer({title,dirty,saving=false,onSave,onDiscard,on
     <div className="silsila-edit-confirm-icon"><AlertTriangle size={22}/></div>
     <h3 id="silsila-edit-confirm-title">هل ترغب في حفظ التعديلات؟</h3>
     <p>لديك تغييرات لم يتم حفظها بعد. اختر كيف تريد المتابعة.</p>
-    {saveError&&<p role="alert" className="silsila-edit-save-error">{saveError}</p>}\n    <div className="silsila-edit-confirm-actions">
+    {(error||saveError)&&<p role="alert" className="silsila-edit-save-error">{error||saveError}</p>}\n    <div className="silsila-edit-confirm-actions">
      <button className="primary" type="button" onClick={()=>void saveAndClose()} disabled={saving}><Save size={15}/>{saving?"جارٍ الحفظ...":"نعم، حفظ التعديلات"}</button>
      <button className="danger" type="button" onClick={discardAndClose} disabled={saving}>لا، تجاهل التعديلات</button>
      <button className="quiet" type="button" onClick={()=>setConfirmOpen(false)} disabled={saving}>إلغاء الأمر</button>
