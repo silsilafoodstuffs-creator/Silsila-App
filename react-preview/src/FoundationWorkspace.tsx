@@ -15,6 +15,15 @@ const defs:Record<Kind,{title:string;table:string;icon:any;description:string;co
  brands:{title:"البراندات",table:"erp_brands",icon:Award,description:"العلامات التجارية وربط كل براند بنشاط ومجموعة، مع الاحتفاظ بالصور والترتيب الحاليين.",columns:["brand_code","brand_name","brand_name_en","brand_group","activity_code","is_active","show_in_app"],fields:[{key:"brand_code",label:"كود البراند",required:true},{key:"brand_name",label:"اسم البراند",required:true},{key:"brand_name_en",label:"الاسم بالإنجليزية"},{key:"activity_code",label:"النشاط",required:true},{key:"brand_group_id",label:"مجموعة البراند",required:true,type:"select"}],search:["brand_code","brand_name","brand_name_en","brand_group","activity_code"],companyScoped:true}
 };
 const textValue=(v:any)=>v==null?"":String(v);
+const permissionAliases:Record<Kind,string[]> = {
+ policies:["إدارة البرنامج::بيانات أساسية::إعدادات البرنامج"],
+ company:["إدارة البرنامج::بيانات أساسية::بيانات الشركة"],
+ branches:["إدارة البرنامج::بيانات أساسية::الفروع ومراكز التكلفة"],
+ activities:[],
+ "activity-categories":[],
+ "brand-groups":[],
+ brands:[]
+};
 export default function FoundationWorkspace({kind}:{kind:Kind}){
  const cfg=defs[kind],Icon=cfg.icon;
  const [companyId]=useState(()=>sessionStorage.getItem("silsila-company-id")||"");
@@ -27,7 +36,7 @@ export default function FoundationWorkspace({kind}:{kind:Kind}){
  const [permissions,setPermissions]=useState<Row[]>([]);
  const adminRole=["owner","admin"].includes(role);
  const permissionKey="إعدادات عامة::بيانات أساسية::"+cfg.title;
- const permission=permissions.find(p=>p.menu_key===permissionKey)||permissions.find(p=>p.menu_key==="إعدادات عامة::بيانات أساسية::*")||permissions.find(p=>p.menu_key==="إعدادات عامة::*::*");
+ const permission=permissions.find(p=>[permissionKey,...permissionAliases[kind]].includes(p.menu_key))||permissions.find(p=>p.menu_key==="إعدادات عامة::بيانات أساسية::*")||permissions.find(p=>p.menu_key==="إعدادات عامة::*::*")||permissions.find(p=>p.menu_key==="إدارة البرنامج::بيانات أساسية::*")||permissions.find(p=>p.menu_key==="إدارة البرنامج::*::*");
  const roleCanWrite=kind==="company"?adminRole:(kind==="policies"||kind==="activities"||kind==="brand-groups"||kind==="brands")?adminRole:kind==="activity-categories"?["owner","admin","manager"].includes(role):["owner","admin","manager","operator","accountant"].includes(role);
  const canRead=permission?.allow_access!==false;
  const canAdd=canRead&&(permission?permission.can_add===true:(kind!=="company"&&kind!=="policies"&&roleCanWrite));
@@ -43,7 +52,7 @@ export default function FoundationWorkspace({kind}:{kind:Kind}){
    const {data:permissionRows,error:permissionError}=await supabase.from("erp_user_permissions").select("menu_key,allow_access,can_add,can_edit,can_delete,can_save").eq("company_id",companyId).eq("user_id",userId);
    if(permissionError)throw permissionError;
    const loadedPermissions=permissionRows||[];setPermissions(loadedPermissions);
-   const exact=loadedPermissions.find((p:any)=>p.menu_key==="إعدادات عامة::بيانات أساسية::"+cfg.title)||loadedPermissions.find((p:any)=>p.menu_key==="إعدادات عامة::بيانات أساسية::*")||loadedPermissions.find((p:any)=>p.menu_key==="إعدادات عامة::*::*");
+   const exact=loadedPermissions.find((p:any)=>[ "إعدادات عامة::بيانات أساسية::"+cfg.title,...permissionAliases[kind] ].includes(p.menu_key))||loadedPermissions.find((p:any)=>p.menu_key==="إعدادات عامة::بيانات أساسية::*")||loadedPermissions.find((p:any)=>p.menu_key==="إعدادات عامة::*::*")||loadedPermissions.find((p:any)=>p.menu_key==="إدارة البرنامج::بيانات أساسية::*")||loadedPermissions.find((p:any)=>p.menu_key==="إدارة البرنامج::*::*");
    if(exact?.allow_access===false)throw new Error("لا تملك صلاحية عرض هذه الشاشة.");
    if(kind==="company"){
     const {data,error}=await supabase.from("erp_companies").select("id,legal_name,trade_name,tax_number,commercial_register,phone,email,address,base_currency,is_active").eq("id",companyId).maybeSingle();
