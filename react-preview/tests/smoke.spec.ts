@@ -177,6 +177,6 @@ test("journal workspace separates draft saving from posting", async ({ page }) =
   await page.locator(".nav-item").filter({ hasText: "قيود اليومية" }).click();
   await expect(page.getByRole("heading", { name: "قيود اليومية", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "قيد جديد", exact: true })).toBeDisabled();
-  await expect(page.getByText(/سجّل الدخول إلى المنشأة لعرض دفتر القيود الفعلي/)).toBeVisible();
+  await expect(page.locator(".operation-feedback.warning")).toContainText("سجّل الدخول إلى المنشأة لعرض دفتر القيود الفعلي");
   expect(pageErrors).toEqual([]);
 });
