@@ -1460,3 +1460,10 @@ th,.module-table-card th,.operation-table-card th{font-family:var(--silsila-head
 .program-policies .pp-head h2{color:var(--silsila-title-color,#3E007D)}
 .program-policies .pp-head p{font-family:var(--silsila-policy-font,'Tajawal',sans-serif)}
 .program-policies .pp-field label,.program-policies .pp-field input,.program-policies .pp-field select,.program-policies .pp-field textarea{font-family:var(--silsila-policy-font,'Tajawal',sans-serif)}
+
+/* Keep the two-row searchable grid header readable while scrolling. */
+.live-master-table-wrap thead tr.column-filter-row th,.live-business-table thead tr.column-filter-row th{top:0;z-index:3}
+.live-master-table-wrap thead tr:not(.column-filter-row) th,.live-business-table thead tr:not(.column-filter-row) th{top:44px;z-index:2}
+.live-master-table-wrap th,.live-business-table th{font-family:var(--silsila-header-font,var(--silsila-policy-font,'Tajawal',sans-serif));font-size:var(--silsila-table-head-size,15px)}
+.live-master-table-wrap td,.live-business-table td{font-size:var(--silsila-table-body-size,14px);color:var(--silsila-body-color,#241735)}
+@media(max-width:700px){.live-master-table-wrap thead tr:not(.column-filter-row) th,.live-business-table thead tr:not(.column-filter-row) th{top:42px}}
