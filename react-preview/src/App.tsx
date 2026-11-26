@@ -21,6 +21,7 @@ const LivePartiesWorkspace = lazy(() => import("./LivePartiesWorkspace"));
 const LiveBusinessWorkspace = lazy(() => import("./LiveBusinessWorkspace"));
 const ExecutiveDashboard = lazy(() => import("./ExecutiveDashboard"));
 import SILSILA_LOGO from "./brand";
+import AuthGate, { useAuth } from "./AuthGate";
 import { supabase } from "./supabase";
 import { MapPin, Heart, LogOut, Info, PanelRightClose, PanelRightOpen, Activity, ArrowDownLeft, ArrowUpLeft, Bell, Boxes, BriefcaseBusiness, Building2, CalendarDays, ChevronDown, ChevronLeft, CircleHelp, ClipboardList, Command, CreditCard, Download, FileBarChart, Home, LayoutDashboard, LifeBuoy, Menu, MoreHorizontal, Package, Plus, ReceiptText, Search, Settings2, ShoppingBag, ShoppingCart, Sparkles, Truck, Users, Wallet, X, LockKeyhole, Eye, EyeOff, Mail, ShieldCheck, GitBranch, Layers3, Tags, Award, UserRoundCog, KeyRound, SlidersHorizontal, RefreshCw, Scale } from "lucide-react";
 
@@ -63,7 +64,8 @@ const nav = [
 ];
 const money = (n:number) => new Intl.NumberFormat("ar-EG").format(n);
 const roleLabels:Record<string,string>={owner:"مالك المنشأة",admin:"مدير النظام",accountant:"محاسب",manager:"مدير",operator:"مشغّل",viewer:"مشاهدة فقط"};
-function App(){
+function AppContent(){
+ const auth=useAuth();
  const memberRole=sessionStorage.getItem("silsila-member-role")||"";
  const authenticated=Boolean(sessionStorage.getItem("silsila-user-id"));
  const [active,setActive]=useState("الملخص التنفيذي"); const [collapsed,setCollapsed]=useState(false); const [mobileMenuOpen,setMobileMenuOpen]=useState(false); const [period,setPeriod]=useState("آخر 30 يومًا"); const [expandedMain,setExpandedMain]=useState<string>("إعدادات عامة"); const [expandedSub,setExpandedSub]=useState<string>("إعدادات عامة::بيانات أساسية");
@@ -139,7 +141,7 @@ function App(){
     <footer>© 2026 سلسلة — بنربط السوق ببعضه <span>إصدار React التجريبي · تختلف مصادر البيانات حسب الشاشة</span></footer>
    </div>
   </main>
-  {exitDialog&&<div className="dialog-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setExitDialog(false)}}><section className="exit-dialog" role="dialog" aria-modal="true" aria-labelledby="exit-dialog-title"><div className="exit-dialog-icon"><LogOut size={23}/></div><h2 id="exit-dialog-title">تأكيد الخروج من البرنامج</h2><p>هل أنت متأكد أنك تريد الخروج من برنامج سلسلة؟ تأكد من حفظ أي تغييرات قبل المتابعة.</p><div className="exit-dialog-actions"><button className="exit-confirm" onClick={()=>{void (async()=>{if(supabase){const {error}=await supabase.auth.signOut();if(error){setNotice(true);setExitDialog(false);return;}}["silsila-company-id","silsila-user-id","silsila-member-role","silsila-preview-mode"].forEach(key=>sessionStorage.removeItem(key));setExitDialog(false);window.location.reload();})();}}>نعم، خروج</button><button className="exit-no" onClick={()=>setExitDialog(false)}>لا</button><button className="exit-cancel" onClick={()=>setExitDialog(false)}>إلغاء الأمر</button></div></section></div>}{notice&&<div className="toast"><Sparkles size={17}/><span>هذه الوظيفة ضمن مرحلة تصميم المعاينة، وسيتم ربطها بالبيانات والصلاحيات لاحقًا.</span><button onClick={()=>setNotice(false)}><X size={16}/></button></div>}
+  {exitDialog&&<div className="dialog-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setExitDialog(false)}}><section className="exit-dialog" role="dialog" aria-modal="true" aria-labelledby="exit-dialog-title"><div className="exit-dialog-icon"><LogOut size={23}/></div><h2 id="exit-dialog-title">تأكيد الخروج من البرنامج</h2><p>هل أنت متأكد أنك تريد الخروج من برنامج سلسلة؟ تأكد من حفظ أي تغييرات قبل المتابعة.</p><div className="exit-dialog-actions"><button className="exit-confirm" onClick={()=>{void (async()=>{await auth?.signOut();setExitDialog(false);})();}}>نعم، خروج</button><button className="exit-no" onClick={()=>setExitDialog(false)}>لا</button><button className="exit-cancel" onClick={()=>setExitDialog(false)}>إلغاء الأمر</button></div></section></div>}{notice&&<div className="toast"><Sparkles size={17}/><span>هذه الوظيفة ضمن مرحلة تصميم المعاينة، وسيتم ربطها بالبيانات والصلاحيات لاحقًا.</span><button onClick={()=>setNotice(false)}><X size={16}/></button></div>}
  </div>
 }
-export default App;
+export default function App(){return <AuthGate><AppContent/></AuthGate>; }
