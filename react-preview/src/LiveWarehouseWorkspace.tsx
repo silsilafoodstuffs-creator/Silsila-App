@@ -32,9 +32,9 @@ export default function LiveWarehouseWorkspace(){
  const save=async():Promise<boolean>=>{
   if(!supabase||!live)return false;
   if(!canEdit){setError("لا تملك صلاحية تعديل بيانات المخازن.");return false;}
-  if(!form.branch_id||!form.warehouse_code.trim()||!form.warehouse_name.trim()){setError("اختر الفرع وأدخل كود المخزن واسمه.");return false;}
+  if(!form.branch_id||!form.warehouse_name.trim()){setError("اختر الفرع وأدخل اسم المخزن.");return false;}
   setSaving(true);setError("");setMessage("");
-  const payload={company_id:companyId,branch_id:form.branch_id,warehouse_code:form.warehouse_code.trim(),warehouse_name:form.warehouse_name.trim(),warehouse_name_en:form.warehouse_name_en.trim()||null,address:form.address.trim()||null,location:form.location.trim()||null,phone:form.phone.trim()||null,updated_at:new Date().toISOString()};
+  const payload={company_id:companyId,branch_id:form.branch_id,warehouse_code:editing?form.warehouse_code.trim():"",warehouse_name:form.warehouse_name.trim(),warehouse_name_en:form.warehouse_name_en.trim()||null,address:form.address.trim()||null,location:form.location.trim()||null,phone:form.phone.trim()||null,updated_at:new Date().toISOString()};
   const result=editing?await supabase.from("erp_warehouses").update(payload).eq("company_id",companyId).eq("id",form.id).select("id").maybeSingle():await supabase.from("erp_warehouses").insert(payload).select("id").single();
   if(result.error||!result.data){setError("لم يتم حفظ المخزن: "+(result.error?.message||"لم تسمح صلاحيات المنشأة بالتعديل أو لم يتم إرجاع السجل."));setSaving(false);return false;}
   setMessage(editing?"تم تحديث بيانات المخزن في قاعدة المنشأة.":"تم إضافة المخزن إلى قاعدة المنشأة.");
@@ -53,7 +53,7 @@ export default function LiveWarehouseWorkspace(){
   {error&&<div className="live-master-error">{error}</div>}{message&&<div className="live-warehouse-message">{message}</div>}
   {showForm&&<EditDrawer canEdit={canEdit}  initialMode={editing?"view":"edit"} title={editing?"بيانات المخزن":"إضافة مخزن جديد"} dirty={JSON.stringify(form)!==JSON.stringify(formOriginal)} saving={saving} error={error} onSaveError={()=>setSaving(false)} onSave={save} onDiscard={()=>{setForm(formOriginal);setError("");setMessage("");}} onClose={()=>setShowForm(false)}><div className="live-warehouse-form"><div className="live-warehouse-form-head"><b>{editing?"تعديل بيانات المخزن":"إضافة مخزن جديد"}</b><button onClick={()=>window.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))} aria-label="إغلاق"><X size={17}/></button></div><div className="live-warehouse-fields">
    <label><span>الفرع *</span><select value={form.branch_id} onChange={e=>setForm(v=>({...v,branch_id:e.target.value}))}><option value="">اختر الفرع</option>{branches.filter(b=>b.is_active).map(b=><option key={b.id} value={b.id}>{b.branch_code} — {b.branch_name}</option>)}</select></label>
-   <label><span>كود المخزن *</span><input value={form.warehouse_code} onChange={e=>setForm(v=>({...v,warehouse_code:e.target.value}))} placeholder="أدخل الكود وفق سياسة التكويد"/></label>
+   <label><span>كود المخزن</span><input value={form.warehouse_code} readOnly placeholder={editing?"الكود المعتمد":"يُولّد تلقائيًا عند الحفظ وفق سياسة التكويد"}/></label>
    <label><span>اسم المخزن *</span><input value={form.warehouse_name} onChange={e=>setForm(v=>({...v,warehouse_name:e.target.value}))} placeholder="اسم المخزن"/></label>
    <label><span>الاسم بالإنجليزية</span><input value={form.warehouse_name_en} onChange={e=>setForm(v=>({...v,warehouse_name_en:e.target.value}))}/></label>
    <label><span>العنوان</span><input value={form.address} onChange={e=>setForm(v=>({...v,address:e.target.value}))}/></label>
