@@ -23,9 +23,17 @@ const createDoc=(name:string,kind="screen"):StudioDoc=>({schemaVersion:2,id:"loc
 const safeDocument=(raw:any):StudioDoc=>{
  if(!raw||typeof raw!=="object"||![1,2].includes(Number(raw.schemaVersion))||!Array.isArray(raw.nodes)||raw.nodes.length>500)throw new Error("مخطط التصميم غير صالح أو تجاوز 500 مكوّن.");
  const allowed=new Set(library.map(x=>x.type)),ids=new Set<string>();
- const nodes:StudioNode[]=raw.nodes.map((n:any)=>{if(!n||typeof n.id!=="string"||!n.id||ids.has(n.id)||!allowed.has(n.type)||!n.props||typeof n.props!=="object"||Array.isArray(n.props))throw new Error("يوجد مكوّن غير صالح أو معرّف مكرر أو نوع غير مسموح.");ids.add(n.id);return {id:n.id,type:n.type,props:n.props,parentId:n.parentId||null};});
- for(const n of nodes){if(n.parentId){const parent=nodes.find(x=>x.id===n.parentId);if(!parent||parent.type!=="container")throw new Error("الحاوية الأب غير صالحة.");}}
- return {schemaVersion:2,id:String(raw.id||"local-"+Date.now()),name:String(raw.name||"تصميم جديد"),designKind:String(raw.designKind||"screen"),updatedAt:new Date().toISOString(),remoteId:raw.remoteId||null,remoteRevision:Number(raw.remoteRevision)||0,pendingSync:raw.pendingSync===true,bindings:raw.bindings&&typeof raw.bindings==="object"?raw.bindings:{},settings:raw.settings&&typeof raw.settings==="object"?raw.settings:{},nodes};
+ const nodes:StudioNode[]=raw.nodes.map((n:any)=>{if(!n||typeof n.id!=="string"||!n.id||n.id.length>120||ids.has(n.id)||!allowed.has(n.type)||!n.props||typeof n.props!=="object"||Array.isArray(n.props))throw new Error("يوجد مكوّن غير صالح أو معرّف مكرر أو نوع غير مسموح.");ids.add(n.id);return {id:n.id,type:n.type,props:n.props,parentId:n.parentId||null};});
+ const byId=new Map(nodes.map(n=>[n.id,n]));
+ for(const n of nodes){
+  const visited=new Set<string>([n.id]);let parentId=n.parentId||null;
+  while(parentId){const parent=byId.get(parentId);if(!parent||parent.type!=="container")throw new Error("الحاوية الأب غير صالحة.");if(visited.has(parentId))throw new Error("يوجد تداخل دائري في طبقات التصميم.");visited.add(parentId);parentId=parent.parentId||null;}
+  const binding=n.props.binding;if(binding&&typeof binding==="object"&&binding.source&&!Object.prototype.hasOwnProperty.call(sources,String(binding.source)))throw new Error("مصدر البيانات غير موجود في القائمة الآمنة.");
+ }
+ const kind=String(raw.designKind||"screen");if(!["screen","report","icon","tree","table","grid","form","component"].includes(kind))throw new Error("نوع التصميم غير مسجل.");
+ const bindings=raw.bindings&&typeof raw.bindings==="object"&&!Array.isArray(raw.bindings)?raw.bindings:{};
+ for(const value of Object.values(bindings)){if(value&&typeof value==="object"&&(value as any).source&&!Object.prototype.hasOwnProperty.call(sources,String((value as any).source)))throw new Error("يوجد ربط بمصدر بيانات غير مسموح.");}
+ return {schemaVersion:2,id:String(raw.id||"local-"+Date.now()),name:String(raw.name||"تصميم جديد"),designKind:kind,updatedAt:new Date().toISOString(),remoteId:raw.remoteId||null,remoteRevision:Number(raw.remoteRevision)||0,pendingSync:raw.pendingSync===true,bindings,settings:raw.settings&&typeof raw.settings==="object"&&!Array.isArray(raw.settings)?raw.settings:{},nodes};
 };
 export default function StudioWorkspace(){
  const companyId=sessionStorage.getItem("silsila-company-id")||"";
