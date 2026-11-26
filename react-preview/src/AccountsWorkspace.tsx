@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { BookOpen, Plus, RefreshCw, Search, ShieldCheck, Power, Database, X } from "lucide-react";
 import { supabase } from "./supabase";
+import EditDrawer from "./EditDrawer";
 
 type Account = {
  id:string; company_id:string; parent_id:string|null; account_code:string; account_name:string;
