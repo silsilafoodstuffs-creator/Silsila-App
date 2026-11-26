@@ -1095,3 +1095,6 @@ main .content > section > header h2{
 .journal-editor-foot b{color:#3e007d}.journal-editor-foot .balanced{color:#167347}.journal-editor-foot .unbalanced{color:#b66a1e}
 .journal-editor-actions{display:flex;gap:7px}
 @media(max-width:700px){.journal-editor{padding:11px}.journal-editor-meta{grid-template-columns:1fr}.journal-editor-foot{align-items:stretch;flex-direction:column}.journal-editor-foot>div{justify-content:space-between}.journal-editor-actions .journal-action{flex:1}}
+
+.treasury-switch button.selected.transfer{background:#f1eaff;color:#3e007d}
+.treasury-switch button.transfer{border:1px solid #e9e1ef}
