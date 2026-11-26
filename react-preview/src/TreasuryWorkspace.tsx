@@ -111,7 +111,7 @@ export default function TreasuryWorkspace(){
   </div>
   <div className="treasury-editor">
    <div className="treasury-editor-head"><div><b><ReceiptText size={16}/> إنشاء سند جديد</b><small>الحفظ ينشئ مسودة؛ الترحيل منفصل ويولّد قيدًا متوازنًا</small></div>
-    <div className="treasury-switch"><button className={kind==="receipt"?"selected receipt":"receipt"} onClick={()=>setKind("receipt")}><ArrowDownToLine size={15}/> سند قبض</button><button className={kind==="payment"?"selected payment":"payment"} onClick={()=>setKind("payment")}><ArrowUpFromLine size={15}/> سند صرف</button><button className={kind==="transfer"?"selected transfer":"transfer"} onClick={()=>setKind("transfer")}><RefreshCw size={15}/> تحويل</button></div>
+    <div className="treasury-switch"><button className={kind==="receipt"?"selected receipt":"receipt"} onClick={()=>{setKind("receipt");setPartyId("");}}><ArrowDownToLine size={15}/> سند قبض</button><button className={kind==="payment"?"selected payment":"payment"} onClick={()=>{setKind("payment");setPartyId("");}}><ArrowUpFromLine size={15}/> سند صرف</button><button className={kind==="transfer"?"selected transfer":"transfer"} onClick={()=>{setKind("transfer");setPartyId("");}}><RefreshCw size={15}/> تحويل</button></div>
    </div>
    <div className="treasury-fields">
     {kind!=="transfer"&&<label><span>{kind==="receipt"?"العميل (اختياري)":"المورد / المستفيد (اختياري)"}</span><select value={partyId} onChange={e=>setPartyId(e.target.value)}><option value="">بدون ربط بطرف</option>{parties.filter(p=>p.party_kind===(kind==="receipt"?"customer":"supplier")||p.party_kind==="both").map(p=><option key={p.id} value={p.id}>{p.party_name}</option>)}</select></label>}
@@ -119,7 +119,7 @@ export default function TreasuryWorkspace(){
     {kind==="transfer"?<label><span>خزينة الاستلام</span><select value={destinationCashboxId} onChange={e=>setDestinationCashboxId(e.target.value)}><option value="">اختر خزينة الاستلام</option>{cashboxes.filter(c=>c.id!==cashboxId&&c.branch_id===selectedCashbox?.branch_id).map(c=><option key={c.id} value={c.id}>{c.cashbox_name} — {c.branchName}</option>)}</select></label>:<label><span>الحساب المقابل</span><select value={counterAccountId} onChange={e=>setCounterAccountId(e.target.value)}>{counterAccounts.map(a=><option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>)}</select></label>}
     <label><span>تاريخ السند</span><input type="date" value={date} max={today()} onChange={e=>setDate(e.target.value)}/></label>
     <label><span>المبلغ (ج.م)</span><input type="number" min="0.01" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)}/></label>
-    <label><span>مرجع الفاتورة (اختياري)</span><input value={reference} onChange={e=>setReference(e.target.value)} placeholder="رقم فاتورة أو مستند"/></label>
+    <label><span>مرجع المستند (اختياري)</span><input value={reference} onChange={e=>setReference(e.target.value)} placeholder="رقم مستند أو مرجع خارجي"/></label>
     <label className="treasury-notes"><span>بيان / ملاحظات</span><input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="تفاصيل إضافية للسند"/></label>
    </div>
    <div className="treasury-form-actions"><button className="operation-save" onClick={saveDraft} disabled={saving||loading||!canCreate}><Plus size={16}/> {saving?"جارٍ الحفظ...":"حفظ كمسودة"}</button><span>الترحيل ينشئ قيد اليومية ويربطه بالسند داخل معاملة قاعدة البيانات.</span></div>
