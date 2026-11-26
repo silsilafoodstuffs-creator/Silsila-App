@@ -1,7 +1,7 @@
 name: Silsila React Preview Validation
 on:
   push:
-    branches: [react-parallel-preview-2026-11-25]
+    branches: [react-parallel-preview-2026-11-25, react-migration-mainline-2026-11-26]
     paths:
       - 'react-preview/**'
       - '.github/workflows/react-preview-validation.yml'
