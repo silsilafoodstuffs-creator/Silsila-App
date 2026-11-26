@@ -1,6 +1,7 @@
--- Public schema defaults were granting broad table privileges to anon and
--- table-level DDL privileges to authenticated. RLS cannot protect TRUNCATE.
--- No anon write policies exist in public; preserve SELECT and authenticated CRUD.
+-- Remove anonymous direct-write and browser-role DDL grants from all public
+-- tables/views. No anon write policies exist in public, all base tables have
+-- RLS enabled, and all public views are security_invoker.
+-- Preserve SELECT for anon and CRUD for authenticated; RLS remains authoritative.
 DO $$
 DECLARE
   relation_row record;
@@ -26,14 +27,10 @@ BEGIN
 END
 $$;
 
--- Apply the same least-privilege rules to future objects created by either
--- migration owner so new tables do not silently re-open the same grants.
+-- Future objects created by the postgres migration owner must follow the
+-- same least-privilege policy. supabase_admin-owned defaults are managed by
+-- that role and require a separate owner-authorized Dashboard operation.
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM anon;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
-  REVOKE TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM authenticated;
-
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
-  REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM anon;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
   REVOKE TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM authenticated;
