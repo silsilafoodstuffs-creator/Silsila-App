@@ -14,7 +14,7 @@ const fmt=(value:number)=>new Intl.NumberFormat("ar-EG",{maximumFractionDigits:3
 const money=(value:number)=>new Intl.NumberFormat("ar-EG",{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value)||0);
 const emptyTransfer:TransferForm={itemId:"",sourceId:"",targetId:"",quantity:"1",notes:""};
 
-export default function LiveInventoryWorkspace(){
+export default function LiveInventoryWorkspace({mode="balances"}:{mode?:"balances"|"transfers"}){
  const companyId=sessionStorage.getItem("silsila-company-id")||"";
  const live=Boolean(supabase&&companyId);
  const [warehouses,setWarehouses]=useState<Warehouse[]>([]);
@@ -100,13 +100,13 @@ export default function LiveInventoryWorkspace(){
  });
  const movementLabels:Record<string,string>={opening:"رصيد افتتاحي",purchase_receipt:"استلام مشتريات",sales_issue:"صرف مبيعات",customer_return:"مرتجع عميل",supplier_return:"مرتجع مورد",transfer_in:"تحويل وارد",transfer_out:"تحويل صادر",adjustment:"تسوية مخزنية",waste:"هالك"};
  return <section className="live-inventory" dir="rtl">
-  <div className="live-inventory-hero"><div className="live-inventory-mark"><Boxes size={24}/></div><div><small>المخازن · دفتر المخزون الفعلي</small><h2>أرصدة المخزون</h2><p>الأرصدة والتكلفة والحركات تُقرأ مباشرة من دفتر الحركات المعتمد في قاعدة سلسلة.</p></div><span className="live-inventory-status">{live?"متصل بقاعدة البيانات":"يتطلب تسجيل الدخول"}</span></div>
+  <div className="live-inventory-hero"><div className="live-inventory-mark"><Boxes size={24}/></div><div><small>المخازن · دفتر المخزون الفعلي</small><h2>{mode==="transfers"?"التحويلات المخزنية":"أرصدة المخزون"}</h2><p>الأرصدة والتكلفة والحركات تُقرأ مباشرة من دفتر الحركات المعتمد في قاعدة سلسلة.</p></div><span className="live-inventory-status">{live?"متصل بقاعدة البيانات":"يتطلب تسجيل الدخول"}</span></div>
   {!live&&<div className="live-inventory-alert">سجّل الدخول إلى المنشأة لعرض أرصدة المخزون الفعلية.</div>}
   {message&&<div className="live-inventory-message">{message}</div>}
   {live&&<>
    <div className="live-inventory-kpis"><article><small>سجلات الأرصدة في الصفحة</small><strong>{fmt(filtered.length)} / {fmt(total)}</strong></article><article><small>كمية الصفحة الحالية</small><strong>{fmt(pageQuantity)}</strong></article><article><small>قيمة المخزون في الصفحة</small><strong>{money(pageValue)} ج.م</strong></article><article><small>الحركات المسجلة</small><strong>{fmt(movementTotal)}</strong></article></div>
    <div className="live-inventory-panel">
-    <div className="live-inventory-toolbar"><div><b><Package size={17}/> أرصدة حسب الصنف والمخزن</b><small>الكمية والقيمة ومتوسط التكلفة من دفتر الحركات</small></div><div className="live-inventory-actions"><button onClick={openTransfer} disabled={warehouses.length<2||!items.length}><ArrowLeftRight size={15}/> تحويل مخزني</button><button onClick={()=>void load()} disabled={loading}><RefreshCw size={15}/> تحديث</button></div></div>
+    <div className="live-inventory-toolbar"><div><b><Package size={17}/> {mode==="transfers"?"الأرصدة المتاحة للتحويل":"أرصدة حسب الصنف والمخزن"}</b><small>الكمية والقيمة ومتوسط التكلفة من دفتر الحركات</small></div><div className="live-inventory-actions"><button onClick={openTransfer} disabled={warehouses.length<2||!items.length}><ArrowLeftRight size={15}/> تحويل مخزني</button><button onClick={()=>void load()} disabled={loading}><RefreshCw size={15}/> تحديث</button></div></div>
     <div className="live-inventory-filters"><label><Search size={15}/><input value={query} onChange={e=>{setQuery(e.target.value);setPage(0);}} placeholder="بحث بكود الصنف أو الاسم أو المخزن"/></label><select value={warehouseFilter} onChange={e=>{setWarehouseFilter(e.target.value);setPage(0);}}><option value="all">كل المخازن</option>{warehouses.map(w=><option key={w.id} value={w.id}>{w.warehouse_code} — {w.warehouse_name}</option>)}</select></div>
     <div className="live-inventory-table-wrap"><table><thead><tr><th>كود الصنف</th><th>الصنف</th><th>المخزن</th><th>الوحدة الأساسية</th><th>الرصيد الفعلي</th><th>المحجوز</th><th>المتاح</th><th>متوسط التكلفة</th><th>قيمة المخزون</th><th>آخر حركة</th></tr></thead><tbody>
     {loading?<tr><td colSpan={10} className="live-inventory-empty">جارٍ تحميل البيانات الفعلية...</td></tr>:filtered.map(row=>{const item=itemMap.get(row.item_id),wh=warehouseMap.get(row.warehouse_id),reserved=reservedFor(row.warehouse_id,row.item_id);return <tr key={row.warehouse_id+row.item_id}><td>{item?.item_code||"—"}</td><td><b>{item?.item_name||"صنف غير معروف"}</b></td><td>{wh?.warehouse_name||"مخزن غير معروف"}</td><td>{item?.base_unit||"—"}</td><td>{fmt(row.quantity_on_hand)}</td><td>{fmt(reserved)}</td><td className="live-inventory-available">{fmt(Math.max(0,Number(row.quantity_on_hand)-reserved))}</td><td>{money(row.average_unit_cost)} ج.م</td><td>{money(row.inventory_value)} ج.م</td><td>{row.last_movement_at?new Date(row.last_movement_at).toLocaleString("ar-EG"):"—"}</td></tr>})}
