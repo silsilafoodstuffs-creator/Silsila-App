@@ -313,3 +313,20 @@ test("employee master opens the live HR workspace without sample employee record
   await expect(page.getByText("موظف مبيعات تجريبي", { exact: true })).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
+
+
+test("HR organization and jobs use live master-data editors without seeded records", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", error => pageErrors.push(error.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: /دخول المعاينة/ }).click();
+  await page.locator(".nav-main-toggle").filter({ hasText: "الموارد البشرية" }).click();
+  await page.locator(".nav-subgroup-toggle").filter({ hasText: "بيانات أساسية" }).click();
+  await page.locator(".nav-item").filter({ hasText: "الهيكل التنظيمي" }).click();
+  await expect(page.getByRole("heading", { name: "الهيكل التنظيمي", exact: true })).toBeVisible();
+  await expect(page.getByText(/سجّل الدخول إلى المنشأة لعرض البيانات التنظيمية الفعلية/)).toBeVisible();
+  await page.locator(".nav-item").filter({ hasText: "الوظائف والتعيينات" }).click();
+  await expect(page.getByRole("heading", { name: "الوظائف والتعيينات", exact: true })).toBeVisible();
+  await expect(page.getByText(/سجّل الدخول إلى المنشأة لعرض البيانات التنظيمية الفعلية/)).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
