@@ -1390,3 +1390,11 @@ main .content > section > header h2{
 @media(max-width:1100px){.sidebar{width:250px}.main{width:calc(100% - 250px);margin-right:250px}.silsila-visual-hero{grid-template-columns:1fr 1.2fr}.silsila-visual-art{display:none}}
 @media(max-width:800px){.sidebar{width:78px;padding:18px 10px}.main{width:calc(100% - 78px);margin-right:78px}.topbar{height:66px;padding:0 13px}.content{padding:18px 13px}.silsila-visual-hero{grid-template-columns:1fr;gap:9px;text-align:center;padding:16px}.silsila-visual-brand{justify-content:center}.silsila-visual-brand img{width:62px;height:62px}.silsila-visual-copy h2{font-size:21px}.silsila-visual-copy p{font-size:10px}.executive-live-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.silsila-visual-brand b{font-size:27px}.silsila-visual-brand small{font-size:9px}.executive-live-grid{grid-template-columns:1fr}.executive-live-head{align-items:flex-start}.executive-live-head p{line-height:1.7}.top-user-name{max-width:76px}}
+
+.silsila-quick-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.silsila-quick-actions button{display:flex;align-items:center;justify-content:center;gap:9px;min-height:48px;padding:8px 12px;border:1px solid #e5d4f0;border-radius:12px;background:linear-gradient(135deg,#fff,#faf5ff);color:#4d2074;font:inherit;font-size:11px;font-weight:900;box-shadow:0 4px 14px #4a0f7409;transition:transform .18s,border-color .18s,box-shadow .18s}
+.silsila-quick-actions button svg{color:#8b20d4;filter:drop-shadow(0 0 5px #d78cff77)}
+.silsila-quick-actions button:hover{transform:translateY(-2px);border-color:#d59bf0;box-shadow:0 7px 18px #8422bd1b,0 0 12px #e6b4ff55}
+.silsila-quick-actions button:nth-child(2) svg{color:#ff27c3}.silsila-quick-actions button:nth-child(3) svg{color:#ffa015}.silsila-quick-actions button:nth-child(4) svg{color:#18a86e}
+@media(max-width:800px){.silsila-quick-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.silsila-quick-actions button{justify-content:flex-start}}
+@media(max-width:420px){.silsila-quick-actions button{font-size:10px;padding:8px}.silsila-quick-actions button svg{width:16px}}
