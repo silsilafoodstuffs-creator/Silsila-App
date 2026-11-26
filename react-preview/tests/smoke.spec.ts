@@ -288,7 +288,7 @@ test("warehouse transfers and stocktakes open live inventory workflows", async (
   await page.goto("/");
   await page.getByRole("button", { name: /دخول المعاينة/ }).click();
   await page.locator(".nav-main-toggle").filter({ hasText: "المخازن" }).click();
-  await page.locator(".nav-subgroup-toggle").filter({ hasText: "بيانات أساسية" }).click();
+  await page.locator(".nav-subgroup-toggle").filter({ hasText: "حركات" }).click();
   await page.locator(".nav-item").filter({ hasText: "التحويلات المخزنية" }).click();
   await expect(page.getByRole("heading", { name: "التحويلات المخزنية", exact: true })).toBeVisible();
   await expect(page.getByText(/سجّل الدخول إلى المنشأة لعرض أرصدة المخزون الفعلية/)).toBeVisible();
