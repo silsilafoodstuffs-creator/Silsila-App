@@ -91,6 +91,7 @@ export default function ProgramPoliciesWorkspace(){
     }
     const registryRow=await supabase.from("erp_program_policies").select("id,policy_value").eq("company_id",companyId).eq("policy_key","code_generation_registry").maybeSingle();
     if(registryRow.error)throw registryRow.error;
+    if(!registryRow.data)throw new Error("سجل التكويد المركزي غير موجود؛ تم إلغاء الحفظ لحماية الأكواد الحالية.");
     if(registryRow.data){
      let payload=parseObject(registryRow.data.policy_value)||{},types=parseObject(payload.types)||{};
      const legacy:Record<string,string>={"code_policy.employee":"employee","code_policy.user":"user","code_policy.supplier":"supplier","code_policy.representative":"delegate","code_policy.branch":"branch","code_policy.department":"department","code_policy.work_location":"work_location","code_policy.job":"job","code_policy.grade":"grade","code_policy.salary_element":"salary_element"};
