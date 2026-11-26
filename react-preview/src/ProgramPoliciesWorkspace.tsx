@@ -85,7 +85,7 @@ export default function ProgramPoliciesWorkspace(){
     if(codeKey==="customer_code"){
      if(!/^[A-Za-z]{1,10}$/.test(text(cfg.prefix))||Number(cfg.geo_digits)!==8||Number(cfg.serial_digits)<1||Number(cfg.serial_digits)>12)throw new Error("كود العميل يتطلب بادئة صحيحة و8 أرقام جغرافية وتسلسلًا من 1 إلى 12.");
     }else if(codeKey==="item_code"){
-     if(!/^[A-Za-z]{3}$/.test(text(cfg.prefix))||Number(cfg.category_digits)!==6||Number(cfg.brand_digits)!==4||Number(cfg.serial_digits)<1||Number(cfg.serial_digits)>8)throw new Error("كود الصنف يحتفظ بـ6 أرقام للفئات و4 للبراند، مع بادئة من 3 أحرف وتسلسل من 1 إلى 8.");
+     if(!/^[A-Za-z]{3}$/.test(text(cfg.prefix))||Number(cfg.category_digits)!==8||Number(cfg.brand_digits)!==4||Number(cfg.serial_digits)<1||Number(cfg.serial_digits)>8)throw new Error("كود الصنف يحتفظ بـ8 أرقام للفئات (النشاط + 3 مستويات) و4 للبراند، مع بادئة من 3 أحرف وتسلسل من 1 إلى 8.");
     }else if(codeKey.startsWith("code_policy.")||codeKey.startsWith("code_type.")){
      if(!/^[A-Za-z]{3}$/.test(text(cfg.prefix))||Number(cfg.digits)<1||Number(cfg.digits)>12)throw new Error("بادئة الكود يجب أن تكون 3 أحرف إنجليزية وعدد الأرقام من 1 إلى 12.");
     }
@@ -102,7 +102,7 @@ export default function ProgramPoliciesWorkspace(){
      }else if(codeKey==="customer_code"){
       types.customer={...(parseObject(types.customer)||{}),prefix:cfg.prefix,digits:cfg.serial_digits,serial_digits:cfg.serial_digits,geo_digits:8,fields:[{name:"كود الدولة والمحافظة والحي/المركز والمنطقة بدون حروف",digits:8},{name:"تسلسل العميل",digits:cfg.serial_digits}]};
      }else if(codeKey==="item_code"){
-      payload.item_prefix=cfg.prefix;payload.item_segments={main:2,sub:2,secondary:2,serial:cfg.serial_digits};
+      payload.item_prefix=cfg.prefix;payload.item_segments={...(parseObject(payload.item_segments)||{}),main:2,sub:2,secondary:2,serial:cfg.serial_digits};
      }
      payload.types=types;
      const {error:registryError}=await supabase.from("erp_program_policies").update({policy_value:JSON.stringify(payload),updated_at:new Date().toISOString()}).eq("id",registryRow.data.id).eq("company_id",companyId);
@@ -120,7 +120,7 @@ export default function ProgramPoliciesWorkspace(){
  const codeDetails=(p:Policy)=>{
   const key=text(p.policy_key),cfg=parseObject(p.policy_value)||{};
   if(key==="customer_code")return {prefix:text(cfg.prefix)||"Cus",structure:`${cfg.geo_digits??8} أرقام جغرافية + ${cfg.serial_digits??4} تسلسلية`,example:`${text(cfg.prefix)||"Cus"}000000000001`};
-  if(key==="item_code")return {prefix:text(cfg.prefix)||"Itm",structure:`${cfg.category_digits??6} أرقام فئات + ${cfg.brand_digits??4} للبراند + ${cfg.serial_digits??3} للتسلسل`,example:`${text(cfg.prefix)||"Itm"}0000000000000001`};
+  if(key==="item_code")return {prefix:text(cfg.prefix)||"Itm",structure:`${cfg.category_digits??8} أرقام فئات + ${cfg.brand_digits??4} للبراند + ${cfg.serial_digits??3} للتسلسل`,example:`${text(cfg.prefix)||"Itm"}${"0".repeat(Math.max(0,Number(cfg.category_digits??8)+Number(cfg.brand_digits??4)+Number(cfg.serial_digits??3)-1))}1`};
   if(key.startsWith("geo_code.")||key.startsWith("category_code.")||key==="brand_code"){
    const own=Number(cfg.digits??(key==="brand_code"?4:2)),parent=Number(cfg.parent_digits??0),prefix=text(cfg.prefix);
    return {prefix,structure:parent?`${parent} موروثة + ${own} خاصة`:`${own} أرقام`,example:prefix+"0".repeat(Math.max(0,parent+own-1))+"1"};
@@ -168,7 +168,7 @@ export default function ProgramPoliciesWorkspace(){
      {valueKind(selected)==="codeConfig"&&json?<div className="pp-code-editor">
        <div><label>البادئة</label><input dir="ltr" maxLength={selected.policy_key==="customer_code"?10:3} value={text(json.prefix)} readOnly={selected.policy_key.startsWith("geo_code.")||selected.policy_key.startsWith("category_code.")||selected.policy_key==="brand_code"||isLocked(selected)} onChange={e=>setJson("prefix",e.target.value.toUpperCase())}/></div>
        {selected.policy_key==="customer_code"?<><div><label>الخانات الجغرافية (ثابتة)</label><input value="8" readOnly/></div><div><label>خانات التسلسل</label><input type="number" min="1" max="12" value={Number(json.serial_digits??4)} disabled={isLocked(selected)} onChange={e=>setJson("serial_digits",Number(e.target.value))}/></div></>:
-       selected.policy_key==="item_code"?<><div><label>خانات الفئات (موروثة وثابتة)</label><input value="6" readOnly/></div><div><label>خانات البراند (ثابتة)</label><input value="4" readOnly/></div><div><label>خانات التسلسل</label><input type="number" min="1" max="8" value={Number(json.serial_digits??3)} disabled={isLocked(selected)} onChange={e=>setJson("serial_digits",Number(e.target.value))}/></div></>:
+       selected.policy_key==="item_code"?<><div><label>خانات الفئات (النشاط + 3 مستويات)</label><input value="8" readOnly/></div><div><label>خانات البراند (ثابتة)</label><input value="4" readOnly/></div><div><label>خانات التسلسل</label><input type="number" min="1" max="8" value={Number(json.serial_digits??3)} disabled={isLocked(selected)} onChange={e=>setJson("serial_digits",Number(e.target.value))}/></div></>:
        <div><label>عدد الأرقام</label><input type="number" min="1" max="12" value={Number(json.digits??2)} readOnly={selected.policy_key.startsWith("geo_code.")||selected.policy_key.startsWith("category_code.")||selected.policy_key==="brand_code"||isLocked(selected)} onChange={e=>setJson("digits",Number(e.target.value))}/></div>}
        <div className="pp-code-preview"><b>معاينة الكود</b><code>{codeDetails({...selected,policy_value:JSON.stringify(draft.policy_value?json:{})})?.example||"—"}</code><small>لا يتم تغيير تقسيمات الكود المعتمدة أو ترتيب مكوناتها.</small></div>
       </div>:
