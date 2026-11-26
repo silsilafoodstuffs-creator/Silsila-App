@@ -1,6 +1,7 @@
 import {useEffect,useMemo,useState} from "react";
 import {CreditCard,Plus,RefreshCw,Search,Pencil,Save,Power,X,Landmark,Wallet,ShieldCheck} from "lucide-react";
 import {supabase} from "./supabase";
+import EditDrawer from "./EditDrawer";
 type Cashbox={id:string;company_id:string;branch_id:string;account_id:string;cashbox_code:string;cashbox_name:string;is_bank_account:boolean;bank_name:string|null;account_number_masked:string|null;checkbook_sheet_count:number;is_active:boolean;branch_name?:string;account_label?:string;voucher_count?:number;draft_count?:number};
 type Branch={id:string;branch_name:string;branch_code:string;is_active:boolean};
 type Account={id:string;account_code:string;account_name:string;account_type:string;is_active:boolean};
@@ -12,6 +13,8 @@ export default function LiveCashboxesWorkspace(){
  const [query,setQuery]=useState(""),[status,setStatus]=useState("active"),[loading,setLoading]=useState(live),[saving,setSaving]=useState(false);
  const [notice,setNotice]=useState(""),[error,setError]=useState(""),[editing,setEditing]=useState<Cashbox|null>(null),[showForm,setShowForm]=useState(false);
  const [name,setName]=useState(""),[branchId,setBranchId]=useState(""),[accountId,setAccountId]=useState(""),[isBank,setIsBank]=useState(false),[bankName,setBankName]=useState(""),[maskedNumber,setMaskedNumber]=useState(""),[sheets,setSheets]=useState("25");
+ const [formOriginal,setFormOriginal]=useState({name:"",branchId:"",accountId:"",isBank:false,bankName:"",maskedNumber:"",sheets:"25"});
+ const snapshot=()=>({name,branchId,accountId,isBank,bankName,maskedNumber,sheets});
  const load=async()=>{
   if(!live||!supabase){setRows([]);setLoading(false);setError("سجّل الدخول إلى المنشأة لعرض خزائنها الفعلية.");return;}
   setLoading(true);setError("");
@@ -39,19 +42,19 @@ export default function LiveCashboxesWorkspace(){
  const visible=useMemo(()=>rows.filter(r=>(status==="all"||(status==="active"?r.is_active:!r.is_active))&&[r.cashbox_code,r.cashbox_name,r.branch_name||"",r.account_label||"",r.bank_name||""].join(" ").toLowerCase().includes(query.toLowerCase())),[rows,status,query]);
  const active=rows.filter(r=>r.is_active);
  const reset=()=>{setEditing(null);setShowForm(false);setName("");setBranchId(branches.find(b=>b.is_active)?.id||"");setAccountId("");setIsBank(false);setBankName("");setMaskedNumber("");setSheets("25");};
- const beginNew=()=>{reset();setBranchId(branches.find(b=>b.is_active)?.id||"");setShowForm(true);setNotice("");};
- const beginEdit=(r:Cashbox)=>{setEditing(r);setName(r.cashbox_name);setBranchId(r.branch_id);setAccountId(r.account_id);setIsBank(r.is_bank_account);setBankName(r.bank_name||"");setMaskedNumber(r.account_number_masked||"");setSheets(String(r.checkbook_sheet_count||25));setShowForm(true);setNotice("");};
- const save=async()=>{
-  if(!live||!supabase||!canEdit)return;
-  if(!name.trim()||!branchId||!accountId){setNotice("اسم الخزينة والفرع وحساب الأستاذ مطلوبة.");return;}
-  if(isBank&&!bankName.trim()){setNotice("اسم البنك مطلوب عند اختيار حساب بنكي.");return;}
-  const sheetCount=Number(sheets);if(!Number.isInteger(sheetCount)||sheetCount<1||sheetCount>1000){setNotice("عدد أوراق دفتر الشيكات يجب أن يكون بين 1 و1000.");return;}
-  if(editing&&(editing.voucher_count||0)>0&&(editing.branch_id!==branchId||editing.account_id!==accountId)){setNotice("لا يمكن تغيير الفرع أو حساب الأستاذ بعد ارتباط الخزينة بسندات؛ حافظ على التاريخ المحاسبي.");return;}
+ const beginNew=()=>{const nextBranch=branches.find(b=>b.is_active)?.id||"";setEditing(null);setName("");setBranchId(nextBranch);setAccountId("");setIsBank(false);setBankName("");setMaskedNumber("");setSheets("25");setFormOriginal({name:"",branchId:nextBranch,accountId:"",isBank:false,bankName:"",maskedNumber:"",sheets:"25"});setShowForm(true);setNotice("");};
+ const beginEdit=(r:Cashbox)=>{const next={name:r.cashbox_name,branchId:r.branch_id,accountId:r.account_id,isBank:r.is_bank_account,bankName:r.bank_name||"",maskedNumber:r.account_number_masked||"",sheets:String(r.checkbook_sheet_count||25)};setEditing(r);setName(next.name);setBranchId(next.branchId);setAccountId(next.accountId);setIsBank(next.isBank);setBankName(next.bankName);setMaskedNumber(next.maskedNumber);setSheets(next.sheets);setFormOriginal({...next});setShowForm(true);setNotice("");};
+ const save=async():Promise<boolean>=>{
+  if(!live||!supabase||!canEdit)return false;
+  if(!name.trim()||!branchId||!accountId){setNotice("اسم الخزينة والفرع وحساب الأستاذ مطلوبة.");return false;}
+  if(isBank&&!bankName.trim()){setNotice("اسم البنك مطلوب عند اختيار حساب بنكي.");return false;}
+  const sheetCount=Number(sheets);if(!Number.isInteger(sheetCount)||sheetCount<1||sheetCount>1000){setNotice("عدد أوراق دفتر الشيكات يجب أن يكون بين 1 و1000.");return false;}
+  if(editing&&(editing.voucher_count||0)>0&&(editing.branch_id!==branchId||editing.account_id!==accountId)){setNotice("لا يمكن تغيير الفرع أو حساب الأستاذ بعد ارتباط الخزينة بسندات؛ حافظ على التاريخ المحاسبي.");return false;}
   setSaving(true);setNotice("");
   const payload={cashbox_name:name.trim(),branch_id:branchId,account_id:accountId,is_bank_account:isBank,bank_name:isBank?bankName.trim():null,account_number_masked:isBank?(maskedNumber.trim()||null):null,checkbook_sheet_count:sheetCount};
   const result=editing?await supabase.from("erp_cashboxes").update(payload).eq("id",editing.id).eq("company_id",companyId).select("id").maybeSingle():await supabase.from("erp_cashboxes").insert({company_id:companyId,...payload}).select("id,cashbox_code").single();
-  setSaving(false);if(result.error){setNotice("لم يتم حفظ الخزينة: "+result.error.message);return;}
-  setNotice(editing?"تم تحديث بيانات الخزينة.":"تم إنشاء الخزينة بكود مركزي "+(result.data as any)?.cashbox_code+".");reset();await load();
+  setSaving(false);if(result.error){setNotice("لم يتم حفظ الخزينة: "+result.error.message);return false;}
+  setNotice(editing?"تم تحديث بيانات الخزينة.":"تم إنشاء الخزينة بكود مركزي "+(result.data as any)?.cashbox_code+".");reset();await load();return true;
  };
  const toggle=async(r:Cashbox)=>{
   if(!live||!supabase||!canEdit)return;
@@ -67,14 +70,14 @@ export default function LiveCashboxesWorkspace(){
   <div className="cashboxes-head"><span><CreditCard size={23}/></span><div><small>الإدارة المالية · الخزائن والحسابات البنكية</small><h2>إدارة الخزائن والبنوك</h2><p>إدارة الخزائن المرتبطة بالفروع وحسابات الأستاذ الفعلية.</p></div><b>{live?"اتصال مباشر":"وضع المعاينة"}</b></div>
   <div className="cashboxes-kpis"><div><span>إجمالي الخزائن</span><strong>{rows.length}</strong></div><div><span>الخزائن النشطة</span><strong>{active.length}</strong></div><div><span>الحسابات البنكية</span><strong>{active.filter(r=>r.is_bank_account).length}</strong></div><div><span>السندات المرتبطة</span><strong>{rows.reduce((s,r)=>s+(r.voucher_count||0),0)}</strong></div></div>
   <div className="cashboxes-panel"><div className="cashboxes-toolbar"><div><b>سجل الخزائن الفعلي</b><small>الكود يُولّد مركزيًا عند الحفظ، ولا يُنشأ أي حساب أستاذ تلقائيًا.</small></div><div><button className="cashboxes-primary" onClick={beginNew} disabled={!live||!canEdit}><Plus size={15}/> إضافة خزينة</button><button onClick={()=>void load()} disabled={loading}><RefreshCw size={14}/> تحديث</button></div></div>
-   {showForm&&<div className="cashboxes-form"><h3>{editing?"تعديل بيانات الخزينة":"إضافة خزينة جديدة"}</h3><div className="cashboxes-fields">
+   {showForm&&<EditDrawer title={editing?"تعديل بيانات الخزينة":"إضافة خزينة جديدة"} dirty={JSON.stringify(snapshot())!==JSON.stringify(formOriginal)} saving={saving} error={notice.startsWith("لم يتم")||notice.startsWith("لا يمكن")||notice.startsWith("اسم ")||notice.startsWith("عدد ")||notice.startsWith("لا تملك")?notice:""} onSave={save} onDiscard={()=>{setName(formOriginal.name);setBranchId(formOriginal.branchId);setAccountId(formOriginal.accountId);setIsBank(formOriginal.isBank);setBankName(formOriginal.bankName);setMaskedNumber(formOriginal.maskedNumber);setSheets(formOriginal.sheets);setNotice("");}} onClose={()=>setShowForm(false)}><div className="cashboxes-form"><h3>{editing?"تعديل بيانات الخزينة":"إضافة خزينة جديدة"}</h3><div className="cashboxes-fields">
     <label>اسم الخزينة *<input value={name} onChange={e=>setName(e.target.value)} placeholder="اسم الخزينة"/></label>
     <label>الفرع *<select value={branchId} disabled={!!editing&&(editing.voucher_count||0)>0} onChange={e=>setBranchId(e.target.value)}><option value="">اختر الفرع</option>{availableBranches.map(b=><option key={b.id} value={b.id}>{b.branch_code} — {b.branch_name}</option>)}</select></label>
     <label>حساب الأستاذ *<select value={accountId} disabled={!!editing&&(editing.voucher_count||0)>0} onChange={e=>setAccountId(e.target.value)}><option value="">اختر حسابًا من الأصول</option>{[...linkedAccounts,...availableAccounts].filter((a,i,x)=>x.findIndex(v=>v.id===a.id)===i).map(a=><option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>)}</select></label>
     <label>نوع الحساب<select value={isBank?"bank":"cash"} onChange={e=>setIsBank(e.target.value==="bank")}><option value="cash">خزينة نقدية</option><option value="bank">حساب بنكي</option></select></label>
     {isBank&&<><label>اسم البنك *<input value={bankName} onChange={e=>setBankName(e.target.value)} placeholder="اسم البنك"/></label><label>رقم الحساب (آخر أرقام فقط)<input value={maskedNumber} onChange={e=>setMaskedNumber(e.target.value)} placeholder="•••• 1234"/></label></>}
     <label>عدد أوراق دفتر الشيكات<input type="number" min="1" max="1000" value={sheets} onChange={e=>setSheets(e.target.value)}/></label>
-   </div><div className="cashboxes-form-actions"><button className="cashboxes-primary" onClick={()=>void save()} disabled={saving}><Save size={14}/>{saving?"جارٍ الحفظ":"حفظ الخزينة"}</button><button onClick={reset}><X size={14}/> إلغاء</button></div><small>سياسة التكويد المركزية تولّد بادئة Csh وتسلسل الخزينة تلقائيًا؛ لا يتم تعديل الكود يدويًا.</small></div>}
+   </div><div className="cashboxes-form-actions"><button className="cashboxes-primary" onClick={()=>void save()} disabled={saving}><Save size={14}/>{saving?"جارٍ الحفظ":"حفظ الخزينة"}</button><button onClick={()=>window.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))}><X size={14}/> إلغاء</button></div><small>سياسة التكويد المركزية تولّد بادئة Csh وتسلسل الخزينة تلقائيًا؛ لا يتم تعديل الكود يدويًا.</small></div></EditDrawer>}
    <div className="cashboxes-filters"><label><Search size={15}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="بحث بالكود أو الاسم أو الفرع أو البنك"/></label><select value={status} onChange={e=>setStatus(e.target.value)}><option value="active">النشطة</option><option value="inactive">الموقوفة</option><option value="all">الكل</option></select></div>
    {error&&<div className="cashboxes-message">{error}</div>}
    <div className="cashboxes-table-wrap"><table><thead><tr><th>كود الخزينة</th><th>اسم الخزينة</th><th>الفرع</th><th>حساب الأستاذ</th><th>النوع</th><th>البنك / الحساب</th><th>السندات</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>{visible.map(r=><tr key={r.id}><td className="cashboxes-code">{r.cashbox_code}</td><td><b>{r.cashbox_name}</b></td><td>{r.branch_name}</td><td>{r.account_label}</td><td>{r.is_bank_account?<span className="cashboxes-bank"><Landmark size={13}/> بنك</span>:<span className="cashboxes-cash"><Wallet size={13}/> نقدية</span>}</td><td>{r.is_bank_account?[r.bank_name,r.account_number_masked].filter(Boolean).join(" · ")||"—":"—"}</td><td>{r.voucher_count||0}{r.draft_count?" ("+r.draft_count+" مسودة)":""}</td><td>{r.is_active?<span className="cashboxes-active"><ShieldCheck size={13}/> نشطة</span>:<span className="cashboxes-inactive">موقوفة</span>}</td><td><div className="cashboxes-row-actions"><button onClick={()=>beginEdit(r)} disabled={!canEdit}><Pencil size={13}/> تعديل</button><button onClick={()=>void toggle(r)} disabled={!canEdit}><Power size={13}/>{r.is_active?"إيقاف":"تفعيل"}</button></div></td></tr>)}{!visible.length&&<tr><td colSpan={9} className="cashboxes-empty">{loading?"جارٍ تحميل الخزائن...":error?"تعذر تحميل السجلات":"لا توجد خزائن مطابقة."}</td></tr>}</tbody></table></div>
