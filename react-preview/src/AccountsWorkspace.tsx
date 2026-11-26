@@ -74,7 +74,7 @@ export default function AccountsWorkspace(){
   setSaving(false);
   if(error){setMessage("لم يتم حفظ الحساب: "+error.message);return false;}
   setMessage("تم إنشاء الحساب بكود مركزي "+data.account_code+" وفق سياسة التكويد الحالية.");
-  resetForm();await load();
+  resetForm();await load();return true;
  };
  const seed=async()=>{
   if(!live||!supabase||!canEdit)return;
