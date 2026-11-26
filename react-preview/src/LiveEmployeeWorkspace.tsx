@@ -18,7 +18,9 @@ export default function LiveEmployeeWorkspace(){
  const companyId=sessionStorage.getItem("silsila-company-id")||"";
  const role=sessionStorage.getItem("silsila-member-role")||"viewer";
  const live=Boolean(supabase&&companyId);
- const canManage=["owner","admin","manager"].includes(role);
+ const canCreate=["owner","admin","manager"].includes(role);
+ const [isHrManager,setIsHrManager]=useState(false);
+ const canManage=canCreate||isHrManager;
  const [employees,setEmployees]=useState<Employee[]>([]);
  const [branches,setBranches]=useState<Branch[]>([]);
  const [departments,setDepartments]=useState<Department[]>([]);
@@ -55,6 +57,15 @@ export default function LiveEmployeeWorkspace(){
   setLoading(false);
  };
  useEffect(()=>{void load();},[companyId,live]);
+ useEffect(()=>{
+  let active=true;
+  const userId=sessionStorage.getItem("silsila-user-id")||"";
+  if(!live||!supabase||!userId){setIsHrManager(false);return ()=>{active=false;};}
+  void supabase.from("erp_company_member_profiles").select("job_title").eq("company_id",companyId).eq("user_id",userId).maybeSingle().then(({data,error})=>{
+   if(active)setIsHrManager(!error&&String(data?.job_title||"").trim()==="مدير موارد بشرية");
+  });
+  return ()=>{active=false;};
+ },[companyId,live]);
  const openNew=()=>{
   const next={...blank,branchId:branches[0]?.id||""};
   setSelected(null);setForm(next);setInitial(next);setError("");setDrawerOpen(true);
@@ -65,7 +76,7 @@ export default function LiveEmployeeWorkspace(){
  };
  const save=async():Promise<boolean>=>{
   if(!supabase||!companyId)return false;
-  if(!canManage){setError("إضافة أو تعديل ملفات الموظفين متاح لمالك المنشأة أو مديرها أو مدير الموارد البشرية.");return false;}
+  if(selected?!canManage:!canCreate){setError(selected?"تعديل ملفات الموظفين متاح لمالك المنشأة أو مديرها أو مدير الموارد البشرية.":"إضافة الموظفين متاحة لمالك المنشأة أو مدير النظام أو المدير.");return false;}
   if(!form.fullName.trim()||!form.branchId){setError("اسم الموظف والفرع مطلوبان.");return false;}
   if(form.nationalId.trim()&&!/^\d{14}$/.test(form.nationalId.trim())){setError("الرقم القومي يجب أن يتكون من 14 رقمًا.");return false;}
   const salary=Number(form.baseSalary);
@@ -95,7 +106,7 @@ export default function LiveEmployeeWorkspace(){
   {error&&!drawerOpen&&<div className="live-employee-error">{error}</div>}{message&&<div className="live-employee-message">{message}</div>}
   {!live&&<div className="live-employee-alert">سجّل الدخول إلى منشأتك لعرض ملفات الموظفين الحقيقية.</div>}
   {live&&<div className="live-employee-panel">
-   <div className="live-employee-toolbar"><div><b><BriefcaseBusiness size={16}/> سجل العاملين</b><small>{filtered.length} موظفًا ضمن السجلات المحمّلة</small></div><div><label><Search size={14}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="بحث بالكود أو الاسم أو الإدارة"/></label><button onClick={()=>void load()} disabled={loading}><RefreshCw size={14}/> تحديث</button><button className="primary" onClick={openNew} disabled={!canManage||!branches.length}><Plus size={14}/> موظف جديد</button></div></div>
+   <div className="live-employee-toolbar"><div><b><BriefcaseBusiness size={16}/> سجل العاملين</b><small>{filtered.length} موظفًا ضمن السجلات المحمّلة</small></div><div><label><Search size={14}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="بحث بالكود أو الاسم أو الإدارة"/></label><button onClick={()=>void load()} disabled={loading}><RefreshCw size={14}/> تحديث</button><button className="primary" onClick={openNew} disabled={!canCreate||!branches.length}><Plus size={14}/> موظف جديد</button></div></div>
    <div className="live-employee-table-wrap"><table><thead><tr className="column-filter-row">{["كود الموظف","اسم الموظف","الفرع","الإدارة","الوظيفة","تاريخ التعيين","الراتب الأساسي","حالة التوظيف","الحالة"].map((label,n)=><th key={label}><input aria-label={"بحث "+label} placeholder={"بحث "+label} value={columnFilters[String(n)]||""} onChange={e=>setColumnFilters(v=>({...v,[String(n)]:e.target.value}))}/></th>)}<th><span className="filter-disabled">—</span></th></tr><tr><th>كود الموظف</th><th>اسم الموظف</th><th>الفرع</th><th>الإدارة</th><th>الوظيفة</th><th>تاريخ التعيين</th><th>الراتب الأساسي</th><th>حالة التوظيف</th><th>نشط أو لا</th><th>الإجراء</th></tr></thead><tbody>{loading?<tr><td colSpan={10}>جارٍ تحميل ملفات الموظفين...</td></tr>:filtered.map(e=><tr key={e.id}><td>{e.employee_code}</td><td><b>{e.full_name}</b></td><td>{branchMap.get(e.branch_id||"")?.branch_name||"—"}</td><td>{e.department_name||departmentMap.get(e.department_id||"")?.name_ar||"—"}</td><td>{e.job_title||jobMap.get(e.job_id||"")?.name_ar||"—"}</td><td>{e.hire_date||"—"}</td><td>{money(Number(e.base_salary))} ج.م</td><td><span className={e.is_active?"active":"inactive"}>{statusLabel(e.employment_status)}</span></td><td><input className="silsila-bool-check" type="checkbox" checked={e.is_active===true} disabled readOnly aria-label={e.is_active===true?"نشط":"لا"}/></td><td><button onClick={()=>openEdit(e)} disabled={!canManage}>تعديل</button></td></tr>)}{!loading&&!filtered.length&&<tr><td colSpan={10}>لا توجد ملفات موظفين مطابقة.</td></tr>}</tbody></table></div>
   </div>}
   {drawerOpen&&<EditDrawer canEdit={canManage}  initialMode={selected?"view":"edit"} title={selected?"ملف موظف":"إضافة موظف جديد"} dirty={dirty} saving={saving} error={error} onSave={save} onSaveError={()=>setSaving(false)} onDiscard={()=>{setForm(initial);setError("");}} onClose={()=>{setDrawerOpen(false);setSelected(null);}}>
