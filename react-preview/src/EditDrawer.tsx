@@ -24,13 +24,13 @@ export default function EditDrawer({title,dirty,saving=false,onSave,onDiscard,on
  const [internalSaving,setInternalSaving]=useState(false);
  const isSaving=saving||internalSaving;
  const busy=useRef(false);
- const requestClose=()=>{if(isSaving||busy.current)return;if(dirty)setConfirmOpen(true);else onClose();};
+ const requestClose=()=>{if(isSaving||busy.current)return;if(dirty){setConfirmMode("save");setConfirmOpen(true);}else onClose();};
  useEffect(()=>{window.dispatchEvent(new CustomEvent("silsila:edit-state",{detail:{dirty}}));},[dirty]);
  useEffect(()=>()=>{window.dispatchEvent(new Event("silsila:edit-closed"));},[]);
  useEffect(()=>{
   const key=(event:KeyboardEvent)=>{if(event.key==="Escape"){event.preventDefault();if(confirmOpen){setConfirmOpen(false);window.dispatchEvent(new Event("silsila:edit-navigation-cancel"));}else requestClose();}};
   const externalClose=()=>requestClose();
-  const directSave=()=>{if(!isSaving)setConfirmOpen(true);};
+  const directSave=()=>{if(!isSaving){setConfirmMode("save");setConfirmOpen(true);}};
   const beforeUnload=(event:BeforeUnloadEvent)=>{if(dirty){event.preventDefault();event.returnValue="";}};
   window.addEventListener("keydown",key);
   window.addEventListener("silsila:edit-request-close",externalClose);
