@@ -10,7 +10,7 @@ const BusinessWorkspace = lazy(() => import("./BusinessWorkspace"));
 const UsersWorkspace = lazy(() => import("./UsersWorkspace"));
 const JournalWorkspace = lazy(() => import("./JournalWorkspace"));
 const AccountsWorkspace = lazy(() => import("./AccountsWorkspace"));
-const InventoryWorkspace = lazy(() => import("./InventoryWorkspace"));
+const InventoryWorkspace = lazy(() => import("./LiveInventoryWorkspace"));
 const LiveWarehouseWorkspace = lazy(() => import("./LiveWarehouseWorkspace"));
 const LiveMasterDataWorkspace = lazy(() => import("./LiveMasterDataWorkspace"));
 const FoundationWorkspace = lazy(() => import("./FoundationWorkspace"));
