@@ -85,6 +85,12 @@ function AppContent(){
    "--silsila-screen-title-size":"21px",
    "--silsila-screen-title-font":"'Tajawal',sans-serif",
    "--silsila-screen-title-weight":"800",
+   "--silsila-body-size":"14px",
+   "--silsila-topbar-size":"14px",
+   "--silsila-section-title-size":"17px",
+   "--silsila-subheading-size":"15px",
+   "--silsila-table-head-size":"15px",
+   "--silsila-table-body-size":"14px",
    "--silsila-table-header-bg":"#3E007D",
    "--silsila-table-header-color":"#FFFFFF",
    "--silsila-table-row-alt":"#FAF8FC",
@@ -100,7 +106,8 @@ function AppContent(){
    "visual_identity.table_row_alt_color":"--silsila-table-row-alt",
    "visual_identity.table_row_hover_color":"--silsila-table-row-hover"
   };
-  const policyKeys=[...Object.keys(policyVars),"appearance.header_background","appearance.screen_background","appearance.header_text","appearance.main_heading","visual_identity.background_color","visual_identity.heading_1"];
+  const fontPolicyKeys=["appearance.header_text","appearance.main_heading","appearance.subheading_1","appearance.subheading_2","appearance.subheading_3","appearance.body_text","visual_identity.heading_1"];
+  const policyKeys=[...Object.keys(policyVars),"appearance.header_background","appearance.screen_background","visual_identity.background_color",...fontPolicyKeys];
   let cancelled=false;
   void supabase.from("erp_program_policies").select("policy_key,policy_value,is_enabled")
    .eq("company_id",companyId).in("policy_key",policyKeys)
@@ -115,10 +122,15 @@ function AppContent(){
     const identityScreen=enabled.find((row:any)=>row.policy_key==="visual_identity.background_color");
     const screenBackground=identityScreen||legacyScreen;
     if(screenBackground&&hex(screenBackground.policy_value))root.style.setProperty("--silsila-screen-bg",screenBackground.policy_value);
-    const headerText=enabled.find((row:any)=>row.policy_key==="appearance.header_text");
-    if(headerText){const style=parseStyle(headerText.policy_value);if(hex(style.color))root.style.setProperty("--silsila-topbar-text",style.color);if(["Tajawal","Kufam","Romman"].includes(style.font))root.style.setProperty("--silsila-topbar-font",style.font+",sans-serif");}
-    const headingStyle=enabled.find((row:any)=>row.policy_key==="visual_identity.heading_1")||enabled.find((row:any)=>row.policy_key==="appearance.main_heading");
-    if(headingStyle){const style=parseStyle(headingStyle.policy_value);const size=Number(style.size);if(Number.isFinite(size)&&size>=18&&size<=32)root.style.setProperty("--silsila-screen-title-size",size+"px");if(["Tajawal","Kufam","Romman"].includes(style.font))root.style.setProperty("--silsila-screen-title-font",style.font+",sans-serif");root.style.setProperty("--silsila-screen-title-weight",style.bold===true?"800":"600");}
+    const applyFontPolicy=(key:string,target:string,min:number,max:number,fallback:number)=>{const row=enabled.find((item:any)=>item.policy_key===key);if(!row)return;const style=parseStyle(row.policy_value);const size=Number(style.size??fallback);if(Number.isFinite(size))root.style.setProperty(target,Math.min(max,Math.max(min,size))+"px");if(["Tajawal","Kufam","Romman"].includes(style.font))root.style.setProperty("--silsila-policy-font",style.font+",sans-serif");if(hex(style.color)&&key==="appearance.header_text")root.style.setProperty("--silsila-topbar-text",style.color);};
+    applyFontPolicy("appearance.header_text","--silsila-topbar-size",12,18,14);
+    applyFontPolicy("appearance.main_heading","--silsila-screen-title-size",20,28,24);
+    applyFontPolicy("visual_identity.heading_1","--silsila-screen-title-size",20,28,24);
+    applyFontPolicy("appearance.subheading_1","--silsila-section-title-size",15,22,17);
+    applyFontPolicy("appearance.subheading_2","--silsila-subheading-size",14,20,15);
+    applyFontPolicy("appearance.subheading_3","--silsila-subheading-size",13,18,14);
+    applyFontPolicy("appearance.body_text","--silsila-body-size",12,18,14);
+    root.style.setProperty("--silsila-table-head-size","15px");root.style.setProperty("--silsila-table-body-size","14px");
     enabled.forEach((row:any)=>{
      const cssVar=policyVars[row.policy_key];
      if(cssVar&&hex(row.policy_value))root.style.setProperty(cssVar,row.policy_value);
