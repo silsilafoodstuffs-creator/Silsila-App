@@ -123,7 +123,7 @@ test("warehouse management opens the live Supabase workspace", async ({ page }) 
   await page.locator(".nav-item").filter({ hasText: "إدارة المخازن" }).click();
   await expect(page.getByRole("heading", { name: "إدارة المخازن", exact: true })).toBeVisible();
   await expect(page.getByText(/تعريف المخازن وربط كل مخزن بفرعه/)).toBeVisible();
-  await expect(page.getByRole("button", { name: /تحديث/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "تحديث", exact: true })).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
 
@@ -139,7 +139,7 @@ test("item catalog opens the live Supabase workspace", async ({ page }) => {
   await page.locator(".nav-item").filter({ hasText: "المخازن والأصناف" }).click();
   await expect(page.getByRole("heading", { name: "المخازن والأصناف", exact: true })).toBeVisible();
   await expect(page.getByText(/دليل الأصناف · بيانات المنشأة المباشرة/)).toBeVisible();
-  await expect(page.getByRole("button", { name: /تحديث/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "تحديث", exact: true })).toBeVisible();
   await expect(page.getByText(/سجّل الدخول إلى المنشأة لعرض سجل الأصناف الفعلي/)).toBeVisible();
   await page.getByRole("button", { name: /إضافة صنف/ }).click();
   await expect(page.getByRole("heading", { name: "إضافة صنف جديد" })).toBeVisible();
@@ -160,7 +160,7 @@ test("chart of accounts is connected to the live Supabase ledger", async ({ page
   await page.locator(".nav-item").filter({ hasText: "دليل الحسابات" }).click();
   await expect(page.getByRole("heading", { name: "دليل الحسابات", exact: true })).toBeVisible();
   await expect(page.getByText(/erp_accounts وerp_account_tree_metrics/)).toBeVisible();
-  await expect(page.getByRole("button", { name: /تحديث/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "تحديث", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /إضافة حساب/ })).toBeDisabled();
   await expect(page.getByText(/سجّل الدخول إلى المنشأة لعرض دليل الحسابات الحقيقي/)).toBeVisible();
   expect(pageErrors).toEqual([]);
