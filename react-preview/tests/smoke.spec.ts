@@ -12,6 +12,8 @@ test("login and preview entry work without production credentials", async ({ pag
   await expect(page.getByText("وضع المعاينة")).toBeVisible();
   await expect(page.getByRole("button", { name: "الملخص التنفيذي" })).toBeVisible();
   await expect(page.getByRole("button", { name: "عن البرنامج" })).toHaveCount(1);
+  await expect.poll(() => page.locator("html").evaluate(el => getComputedStyle(el).getPropertyValue("--silsila-table-header-bg").trim().toLowerCase())).toBe("#3e007d");
+  await expect.poll(() => page.locator("html").evaluate(el => getComputedStyle(el).getPropertyValue("--silsila-table-header-color").trim().toLowerCase())).toBe("#ffffff");
 
   expect(pageErrors).toEqual([]);
 });
