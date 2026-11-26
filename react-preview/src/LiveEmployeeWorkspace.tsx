@@ -3,7 +3,7 @@ import {BriefcaseBusiness,Plus,RefreshCw,Search,UserRound,Users} from "lucide-re
 import {supabase} from "./supabase";
 import EditDrawer from "./EditDrawer";
 
-type Employee={id:string;employee_code:string;full_name:string;full_name_en:string|null;phone:string|null;job_title:string|null;department_name:string|null;hire_date:string|null;employment_status:string;is_active:boolean;base_salary:number;branch_id:string|null;department_id:string|null;job_id:string|null;work_location_id:string|null};
+type Employee={id:string;employee_code:string;full_name:string;phone:string|null;job_title:string|null;department_name:string|null;hire_date:string|null;employment_status:string;is_active:boolean;base_salary:number;branch_id:string|null;department_id:string|null;job_id:string|null;work_location_id:string|null};
 type Branch={id:string;branch_code:string;branch_name:string};
 type Department={id:string;department_code:string;name_ar:string};
 type Job={id:string;job_code:string;name_ar:string;department_id:string|null};
@@ -45,7 +45,7 @@ export default function LiveEmployeeWorkspace(){
   if(!live||!supabase){setLoading(false);return;}
   setLoading(true);setError("");
   const [e,b,d,j,l]=await Promise.all([
-   supabase.from("erp_employees").select("id,employee_code,full_name,full_name_en,phone,job_title,department_name,hire_date,employment_status,is_active,base_salary,branch_id,department_id,job_id,work_location_id").eq("company_id",companyId).order("employee_code").range(0,1999),
+   supabase.from("erp_employees").select("id,employee_code,full_name,phone,job_title,department_name,hire_date,employment_status,is_active,base_salary,branch_id,department_id,job_id,work_location_id").eq("company_id",companyId).order("employee_code").range(0,1999),
    supabase.from("erp_branches").select("id,branch_code,branch_name").eq("company_id",companyId).eq("is_active",true).order("branch_code"),
    supabase.from("erp_hr_departments").select("id,department_code,name_ar").eq("company_id",companyId).eq("is_active",true).order("department_code"),
    supabase.from("erp_hr_jobs").select("id,job_code,name_ar,department_id").eq("company_id",companyId).eq("is_active",true).order("job_code"),
