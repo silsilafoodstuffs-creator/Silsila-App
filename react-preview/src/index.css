@@ -1680,3 +1680,5 @@ main .content table tbody tr{height:40px}
 }
 .column-filter-row th input::placeholder{color:#9584a1!important;opacity:1}
 .column-filter-row th input:focus{border-color:#8d55b7!important;box-shadow:0 0 0 2px #3e007d12!important}
+
+.login-registration-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}.login-registration-actions button{min-height:42px;border:1px solid #d9c4ec;border-radius:10px;background:linear-gradient(135deg,#fff,#f7f0fc);color:#3E007D;font-size:12px;font-weight:800;transition:transform .18s,border-color .18s,box-shadow .18s}.login-registration-actions button:last-child{background:linear-gradient(110deg,#FFA015,#ffd18a);border-color:#f3b44d;color:#3b1c09}.login-registration-actions button:hover{transform:translateY(-1px);border-color:#9b68c5;box-shadow:0 5px 14px #3E007D18}@media(max-width:420px){.login-registration-actions{grid-template-columns:1fr}.login-registration-actions button{min-height:40px}}
