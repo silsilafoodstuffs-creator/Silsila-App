@@ -1296,3 +1296,12 @@ main .content > section > header h2{
 .silsila-bool-check:checked{border-color:#3E007D;background:#3E007D}
 .silsila-bool-check:checked::after{content:"";width:7px;height:4px;border-left:1.5px solid #fff;border-bottom:1.5px solid #fff;transform:rotate(-45deg) translate(0,-1px)}
 .silsila-bool-check:disabled{opacity:1;filter:none}
+
+
+/* Authenticated identity: show the real Supabase profile name without widening the top bar */
+.top-user{min-width:0;max-width:220px}
+.top-user-name{display:block;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#4b365b;font-size:11px;font-weight:800}
+.user-mini>div:nth-child(2){min-width:0}
+.user-mini b{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar.collapsed .top-user-name{display:none}
+@media(max-width:700px){.top-user-name{max-width:86px;font-size:10px}.top-user{gap:5px}}
