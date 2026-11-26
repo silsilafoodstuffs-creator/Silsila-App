@@ -51,7 +51,7 @@ export default function LiveHrStructureWorkspace({kind}:{kind:"department"|"job"
  };
  const save=async():Promise<boolean>=>{
   if(!supabase||!companyId)return false;
-  if(!canManage){setError("تعديل البيانات التنظيمية متاح لمالك المنشأة أو مديرها أو مدير الموارد البشرية.");return false;}
+  if(!canManage){setError("تعديل البيانات التنظيمية متاح لمالك المنشأة أو مدير النظام أو المدير فقط وفق صلاحيات قاعدة البيانات.");return false;}
   if(!form.nameAr.trim()){setError("الاسم بالعربية مطلوب.");return false;}
   if(kind==="department"){
    if(!form.locationId){setError("اختر موقع العمل للإدارة.");return false;}
