@@ -81,12 +81,19 @@ export default function LiveInventoryWorkspace({mode="balances"}:{mode?:"balance
   const qty=Number(transfer.quantity);
   if(!transfer.itemId||!transfer.sourceId||!transfer.targetId||!Number.isFinite(qty)||qty<=0){setTransferError("أكمل الصنف والمخزنين والكمية الصحيحة.");return false;}
   if(transfer.sourceId===transfer.targetId){setTransferError("يجب اختيار مخزنين مختلفين.");return false;}
-  if(currentReserved>0){setTransferError("يوجد رصيد محجوز لهذا الصنف في مخزن الصرف. حرّر الحجز أو نفّذ التحويل من الكمية المتاحة غير المحجوزة.");return false;}
-  if(qty>available){setTransferError("الكمية المطلوبة أكبر من الرصيد المتاح: "+fmt(available)+" "+(currentItem?.base_unit||"وحدة"));return false;}
   setBusy(true);setTransferError("");setMessage("");
+  const [freshBalance,freshReservations]=await Promise.all([
+   supabase.from("erp_stock_balances").select("quantity_on_hand,average_unit_cost").eq("company_id",companyId).eq("warehouse_id",transfer.sourceId).eq("item_id",transfer.itemId).maybeSingle(),
+   supabase.from("erp_stock_reservations").select("quantity_base").eq("company_id",companyId).eq("warehouse_id",transfer.sourceId).eq("item_id",transfer.itemId).eq("status","active")
+  ]);
+  if(freshBalance.error||freshReservations.error){setBusy(false);setTransferError("تعذر التحقق من الرصيد الفعلي والحجوزات قبل التحويل: "+(freshBalance.error||freshReservations.error)?.message);return false;}
+  const actualOnHand=Number(freshBalance.data?.quantity_on_hand||0);
+  const actualReserved=(freshReservations.data||[]).reduce((sum,row)=>sum+Number(row.quantity_base||0),0);
+  const actualAvailable=Math.max(0,actualOnHand-actualReserved);
+  if(qty>actualAvailable){setBusy(false);setTransferError("الكمية المطلوبة أكبر من الرصيد المتاح بعد استبعاد الحجوزات: "+fmt(actualAvailable)+" "+(currentItem?.base_unit||"وحدة"));return false;}
   const {data,error}=await supabase.rpc("erp_transfer_inventory_between_warehouses",{
    p_company_id:companyId,p_source_warehouse_id:transfer.sourceId,p_target_warehouse_id:transfer.targetId,
-   p_item_id:transfer.itemId,p_quantity:qty,p_unit_cost:Number(sourceBalance?.average_unit_cost||currentItem?.purchase_price||0),
+   p_item_id:transfer.itemId,p_quantity:qty,p_unit_cost:Number(freshBalance.data?.average_unit_cost||currentItem?.purchase_price||0),
    p_transfer_date:new Date().toISOString(),p_batch_number:null,p_expiry_date:null,p_notes:transfer.notes.trim()||null
   });
   setBusy(false);
