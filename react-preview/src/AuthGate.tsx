@@ -97,6 +97,10 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     setCompanyId(chosen.id);
     sessionStorage.setItem("silsila-company-id", chosen.id);
     sessionStorage.setItem("silsila-user-id", current.user.id);
+    const metadata = current.user.user_metadata || {};
+    const profileName = String(metadata.full_name || metadata.name || metadata.display_name || "").trim();
+    if (profileName) sessionStorage.setItem("silsila-user-name", profileName);
+    else sessionStorage.removeItem("silsila-user-name");
     sessionStorage.setItem("silsila-member-role", chosen.role);
     sessionStorage.removeItem("silsila-preview-mode");
     setBusy(false);
@@ -212,6 +216,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     setMessage("");
     sessionStorage.removeItem("silsila-company-id");
     sessionStorage.removeItem("silsila-user-id");
+    sessionStorage.removeItem("silsila-user-name");
     sessionStorage.removeItem("silsila-member-role");
     sessionStorage.removeItem("silsila-preview-mode");
     setSession(null);
