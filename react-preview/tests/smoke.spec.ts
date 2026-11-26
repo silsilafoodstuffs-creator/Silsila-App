@@ -141,5 +141,10 @@ test("item catalog opens the live Supabase workspace", async ({ page }) => {
   await expect(page.getByText(/دليل الأصناف · بيانات المنشأة المباشرة/)).toBeVisible();
   await expect(page.getByRole("button", { name: /تحديث/ })).toBeVisible();
   await expect(page.getByText(/سجّل الدخول إلى المنشأة لعرض سجل الأصناف الفعلي/)).toBeVisible();
+  await page.getByRole("button", { name: /إضافة صنف/ }).click();
+  await expect(page.getByRole("heading", { name: "إضافة صنف جديد" })).toBeVisible();
+  await expect(page.getByLabel("اسم الصنف *")).toBeVisible();
+  await expect(page.getByLabel("الفئة الثانوية *")).toBeVisible();
+  await expect(page.getByRole("button", { name: /حفظ الصنف وتوليد الكود/ })).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
