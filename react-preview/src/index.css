@@ -1221,3 +1221,39 @@ main .content > section > header h2{
 .live-stocktake-note svg{flex:0 0 auto;color:#3e007d}
 @media(max-width:750px){.live-stocktake-create{grid-template-columns:1fr}.live-stocktake-create>button{width:100%}.live-stocktake-head{align-items:flex-start;flex-wrap:wrap}.live-stocktake-head>span{margin-right:0}}
 @media(max-width:560px){.live-stocktake-summary{grid-template-columns:1fr}.live-stocktake-target{grid-template-columns:1fr}.live-stocktake-drawer-actions{flex-direction:column}.live-stocktake-drawer-actions button{width:100%}}
+
+
+/* Live HR employee master */
+.live-employee{display:flex;flex-direction:column;gap:10px;min-width:0;color:#241735}
+.live-employee-head{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid #e9e0f0;border-radius:12px;background:#fff}
+.live-employee-icon{width:42px;height:42px;display:grid;place-items:center;flex:0 0 auto;border-radius:11px;background:#3e007d;color:#fff}
+.live-employee-head small{color:#8a7d94;font-size:10px}
+.live-employee-head h2{margin:3px 0;color:#3e007d;font-size:19px}
+.live-employee-head p{margin:0;color:#81758a;font-size:10px}
+.live-employee-head>span{margin-right:auto;padding:6px 9px;border-radius:20px;background:#f5effb;color:#3e007d;font-size:10px}
+.live-employee-panel{padding:12px;border:1px solid #e9e0f0;border-radius:11px;background:#fff;min-width:0}
+.live-employee-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+.live-employee-toolbar>div:first-child>b{display:flex;align-items:center;gap:6px;color:#3e007d;font-size:12px}
+.live-employee-toolbar small{display:block;margin-top:3px;color:#8a7d94;font-size:10px}
+.live-employee-toolbar>div:last-child{display:flex;align-items:center;gap:5px}
+.live-employee-toolbar label{display:flex;align-items:center;gap:6px;width:min(260px,35vw);height:36px;padding:0 9px;border:1px solid #e7dced;border-radius:8px;color:#8b7b96}
+.live-employee-toolbar input{width:100%;height:34px;border:0;outline:0;font:inherit;font-size:10px}
+.live-employee button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:34px;padding:0 10px;border:1px solid #e7dced;border-radius:8px;background:#fff;color:#3e007d;font-family:inherit;font-size:10px;cursor:pointer}
+.live-employee button:disabled{opacity:.45;cursor:not-allowed}
+.live-employee button.primary{background:#3e007d;color:#fff;border-color:#3e007d}
+.live-employee-table-wrap{width:100%;overflow:auto;border:1px solid #eee7f3;border-radius:8px}
+.live-employee table{width:100%;min-width:850px;border-collapse:separate;border-spacing:0;font-size:10px;white-space:nowrap}
+.live-employee th{height:40px;padding:0 9px;background:#3e007d;color:#fff;text-align:right}
+.live-employee td{height:40px;padding:0 9px;border-bottom:1px solid #f0ebf4;color:#51445c}
+.live-employee tbody tr:nth-child(even){background:#faf8fc}
+.live-employee td .active,.live-employee td .inactive{padding:4px 7px;border-radius:12px;font-size:9px}
+.live-employee td .active{background:#edf8f1;color:#23704c}
+.live-employee td .inactive{background:#fff1ef;color:#a33a31}
+.live-employee-error,.live-employee-alert{padding:10px 12px;border:1px solid #f2dfb8;border-radius:8px;background:#fffaf0;color:#8a6122;font-size:10px}
+.live-employee-message{padding:10px 12px;border:1px solid #d8eadf;border-radius:8px;background:#f3fbf5;color:#256642;font-size:10px}
+.live-employee-form{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.live-employee-form label{display:flex;flex-direction:column;gap:4px;color:#574963;font-size:10px}
+.live-employee-form input,.live-employee-form select{width:100%;height:40px;padding:0 9px;border:1px solid #e4d9ed;border-radius:7px;background:#fff;color:#241735;font:inherit;font-size:11px;min-width:0}
+.live-employee-code-note{grid-column:1/-1;padding:9px 10px;border-radius:8px;background:#f5effb;color:#3e007d;font-size:10px}
+@media(max-width:750px){.live-employee-toolbar{align-items:flex-start;flex-direction:column}.live-employee-toolbar>div:last-child{width:100%;flex-wrap:wrap}.live-employee-toolbar label{flex:1;width:auto}.live-employee-head{align-items:flex-start;flex-wrap:wrap}.live-employee-head>span{margin-right:0}}
+@media(max-width:560px){.live-employee-form{grid-template-columns:1fr}.live-employee-code-note{grid-column:auto}}
