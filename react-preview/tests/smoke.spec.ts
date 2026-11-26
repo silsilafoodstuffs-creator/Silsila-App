@@ -201,6 +201,7 @@ test("treasury screen supports centrally coded inter-cashbox transfers", async (
   await expect(page.getByRole("heading", { name: "سندات القبض والصرف", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "تحويل", exact: true }).click();
   await expect(page.getByText("خزينة الاستلام", { exact: true })).toBeVisible();
+  await expect(page.getByText("مرجع المستند (اختياري)", { exact: true })).toBeVisible();
   await expect(page.getByText(/سجّل الدخول بحساب منشأة لاستخدام الخزينة الفعلية/)).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
