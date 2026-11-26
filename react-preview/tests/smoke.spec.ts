@@ -298,3 +298,18 @@ test("warehouse transfers and stocktakes open live inventory workflows", async (
   await expect(page.getByText(/سجّل الدخول إلى المنشأة لعرض محاضر الجرد الفعلية/)).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
+
+
+test("employee master opens the live HR workspace without sample employee records", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", error => pageErrors.push(error.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: /دخول المعاينة/ }).click();
+  await page.locator(".nav-main-toggle").filter({ hasText: "الموارد البشرية" }).click();
+  await page.locator(".nav-subgroup-toggle").filter({ hasText: "بيانات أساسية" }).click();
+  await page.locator(".nav-item").filter({ hasText: "ملفات الموظفين" }).click();
+  await expect(page.getByRole("heading", { name: "ملفات الموظفين", exact: true })).toBeVisible();
+  await expect(page.getByText(/سجّل الدخول إلى منشأتك لعرض ملفات الموظفين الحقيقية/)).toBeVisible();
+  await expect(page.getByText("موظف مبيعات تجريبي", { exact: true })).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});
