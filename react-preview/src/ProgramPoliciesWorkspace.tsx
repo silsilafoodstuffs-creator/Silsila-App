@@ -3,7 +3,7 @@ import {AlertTriangle,CheckCircle2,ChevronDown,Database,LockKeyhole,Palette,Refr
 import {supabase} from "./supabase";
 
 type Policy=Record<string,any>;
-const categories=["الكل","برمجية","تكويدية","محاسبية","مخزنية","بيعية","شرائية","إدارية","الخطوط والألوان"];
+const categories=["الكل","برمجية","تكويدية","محاسبية","مخزنية","بيعية","شرائية","إدارية","الخطوط والألوان","الهوية البصرية"];
 const hiddenKeys=new Set(["code_generation_registry","code_type.cash_voucher","code_type.sales_representative","code_type.sales_campaign","code_type.customer_monthly_goal","code_type.employee_monthly_target"]);
 const codePolicy=(p:Policy)=>p.category==="تكويدية"||String(p.policy_key||"").startsWith("code_")||String(p.policy_key||"").startsWith("geo_code.")||String(p.policy_key||"").startsWith("category_code.")||String(p.policy_key||"").startsWith("item_code");
 const text=(v:any)=>v==null?"":String(v);
