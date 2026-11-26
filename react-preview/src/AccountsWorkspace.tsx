@@ -1,49 +1,134 @@
-import { useMemo,useState } from "react";
-import { BookOpen,Plus,Search,Trash2,ShieldCheck,Wallet,RefreshCw } from "lucide-react";
-import { readJournal } from "./accounting";
+import { useEffect, useMemo, useState } from "react";
+import { BookOpen, Plus, RefreshCw, Search, ShieldCheck, Power, Database, X } from "lucide-react";
+import { supabase } from "./supabase";
 
-type AccountType="asset"|"liability"|"equity"|"revenue"|"expense";
-type Account={id:string;code:string;name:string;type:AccountType;parent:string;system:boolean;active:boolean};
-const KEY="silsila-react-preview:accounting:chart";
-const types:{value:AccountType;label:string;code:string}[]=[
- {value:"asset",label:"أصول",code:"1"},{value:"liability",label:"التزامات",code:"2"},{value:"equity",label:"حقوق ملكية",code:"3"},{value:"revenue",label:"إيرادات",code:"4"},{value:"expense",label:"مصروفات",code:"5"}
-];
-const defaults:Account[]=[
- {id:"grp-assets",code:"1",name:"الأصول",type:"asset",parent:"",system:true,active:true},
- {id:"grp-liabilities",code:"2",name:"الالتزامات",type:"liability",parent:"",system:true,active:true},
- {id:"grp-equity",code:"3",name:"حقوق الملكية",type:"equity",parent:"",system:true,active:true},
- {id:"grp-revenue",code:"4",name:"الإيرادات",type:"revenue",parent:"",system:true,active:true},
- {id:"grp-expenses",code:"5",name:"المصروفات",type:"expense",parent:"",system:true,active:true},
- {id:"cash",code:"1101",name:"الخزينة الرئيسية",type:"asset",parent:"grp-assets",system:true,active:true},
- {id:"bank",code:"1102",name:"البنك الرئيسي",type:"asset",parent:"grp-assets",system:true,active:true},
- {id:"checks",code:"1103",name:"شيكات تحت التحصيل",type:"asset",parent:"grp-assets",system:true,active:true},
- {id:"card-in",code:"1104",name:"حسابات التحصيل الإلكتروني",type:"asset",parent:"grp-assets",system:true,active:true},
- {id:"inventory",code:"1201",name:"مخزون البضائع",type:"asset",parent:"grp-assets",system:true,active:true},
- {id:"customers",code:"1301",name:"العملاء",type:"asset",parent:"grp-assets",system:true,active:true},
- {id:"vat-in",code:"1302",name:"ضريبة القيمة المضافة - مدخلات",type:"asset",parent:"grp-assets",system:true,active:true},
- {id:"suppliers",code:"2101",name:"الموردون",type:"liability",parent:"grp-liabilities",system:true,active:true},
- {id:"vat-out",code:"2102",name:"ضريبة القيمة المضافة - مخرجات",type:"liability",parent:"grp-liabilities",system:true,active:true},
- {id:"card-out",code:"2103",name:"حسابات الدفع الإلكتروني",type:"liability",parent:"grp-liabilities",system:true,active:true},
- {id:"sales",code:"4101",name:"مبيعات البضائع",type:"revenue",parent:"grp-revenue",system:true,active:true}
-];
-const read=():Account[]=>{try{const raw=localStorage.getItem(KEY);if(!raw)return defaults;const parsed=JSON.parse(raw);return Array.isArray(parsed)?[...defaults.filter(d=>!parsed.some((x:Account)=>x.id===d.id)),...parsed]:defaults;}catch{return defaults;}};
-const money=(n:number)=>new Intl.NumberFormat("ar-EG",{maximumFractionDigits:2}).format(n);
-const typeLabel=(v:AccountType)=>types.find(t=>t.value===v)?.label||v;
+type Account = {
+ id:string; company_id:string; parent_id:string|null; account_code:string; account_name:string;
+ account_type:"asset"|"liability"|"equity"|"revenue"|"expense"; normal_balance:"debit"|"credit";
+ is_postable:boolean; is_active:boolean; own_debit_total:number; own_credit_total:number;
+ own_net_balance:number; own_movement_count:number; subtree_net_balance:number;
+ descendant_account_count:number; descendant_postable_count:number;
+};
+const types=[{value:"asset",label:"الأصول"},{value:"liability",label:"الالتزامات"},{value:"equity",label:"حقوق الملكية"},{value:"revenue",label:"الإيرادات"},{value:"expense",label:"المصروفات"}] as const;
+const typeLabel=(v:string)=>types.find(t=>t.value===v)?.label||v;
+const money=(n:number)=>new Intl.NumberFormat("ar-EG",{maximumFractionDigits:2}).format(Number(n)||0);
+const normalFor=(t:string)=>t==="asset"||t==="expense"?"debit":"credit";
+const roles=["owner","admin","manager","operator","accountant"];
 export default function AccountsWorkspace(){
- const [accounts,setAccounts]=useState<Account[]>(read);
- const [query,setQuery]=useState("");const [typeFilter,setTypeFilter]=useState("all");
- const [showForm,setShowForm]=useState(false);const [code,setCode]=useState("");const [name,setName]=useState("");const [type,setType]=useState<AccountType>("asset");const [parent,setParent]=useState("grp-assets");const [message,setMessage]=useState("");
- const journal=readJournal();
- const rows=useMemo(()=>accounts.filter(a=>a.active&&(typeFilter==="all"||a.type===typeFilter)&&[a.code,a.name,typeLabel(a.type)].join(" ").toLowerCase().includes(query.toLowerCase())).map(a=>{const lines=journal.flatMap(e=>e.lines.filter(l=>l.account===a.name));const debit=lines.reduce((s,l)=>s+l.debit,0),credit=lines.reduce((s,l)=>s+l.credit,0);return {...a,debit,credit,balance:debit-credit};}),[accounts,query,typeFilter,journal]);
- const save=()=>{if(!code.trim()||!name.trim()){setMessage("أدخل كود الحساب واسمه.");return;}if(accounts.some(a=>a.code===code.trim()||a.name.trim().toLowerCase()===name.trim().toLowerCase())){setMessage("كود الحساب أو اسمه مستخدم بالفعل.");return;}const next=[...accounts,{id:"acc-"+Date.now().toString(36),code:code.trim(),name:name.trim(),type,parent,system:false,active:true}];try{localStorage.setItem(KEY,JSON.stringify(next));setAccounts(next);setShowForm(false);setCode("");setName("");setMessage("تمت إضافة الحساب إلى الدليل المحلي.");}catch{setMessage("تعذر حفظ الحساب في مساحة المتصفح.");}};
- const remove=(a:Account)=>{if(a.system){setMessage("الحسابات الأساسية محمية من الحذف.");return;}if(journal.some(e=>e.lines.some(l=>l.account===a.name))){setMessage("لا يمكن حذف حساب له حركات؛ يمكنك تعطيله بدلًا من ذلك.");return;}const next=accounts.map(x=>x.id===a.id?{...x,active:false}:x);localStorage.setItem(KEY,JSON.stringify(next));setAccounts(next);setMessage("تم تعطيل الحساب محليًا.");};
+ const companyId=sessionStorage.getItem("silsila-company-id")||"";
+ const role=sessionStorage.getItem("silsila-member-role")||"viewer";
+ const live=Boolean(supabase&&companyId);
+ const canEdit=roles.includes(role);
+ const [accounts,setAccounts]=useState<Account[]>([]);
+ const [query,setQuery]=useState("");
+ const [typeFilter,setTypeFilter]=useState("all");
+ const [statusFilter,setStatusFilter]=useState("active");
+ const [showForm,setShowForm]=useState(false);
+ const [name,setName]=useState("");
+ const [type,setType]=useState<Account["account_type"]>("asset");
+ const [parent,setParent]=useState("");
+ const [normal,setNormal]=useState<"debit"|"credit">("debit");
+ const [postable,setPostable]=useState(true);
+ const [loading,setLoading]=useState(live);
+ const [saving,setSaving]=useState(false);
+ const [seeding,setSeeding]=useState(false);
+ const [message,setMessage]=useState("");
+ const [error,setError]=useState("");
+
+ const load=async()=>{
+  if(!live||!supabase){setLoading(false);setError("سجّل الدخول إلى المنشأة لعرض دليل الحسابات الحقيقي.");return;}
+  setLoading(true);setError("");
+  const {data,error}=await supabase.from("erp_account_tree_metrics")
+   .select("account_id,company_id,parent_id,account_code,account_name,account_type,normal_balance,is_postable,is_active,own_debit_total,own_credit_total,own_net_balance,own_movement_count,subtree_net_balance,descendant_account_count,descendant_postable_count")
+   .eq("company_id",companyId).order("account_code",{ascending:true});
+  if(error){setAccounts([]);setError("تعذر تحميل دليل الحسابات: "+error.message);setLoading(false);return;}
+  setAccounts((data||[]).map((a:any)=>({...a,id:a.account_id,own_debit_total:Number(a.own_debit_total)||0,own_credit_total:Number(a.own_credit_total)||0,own_net_balance:Number(a.own_net_balance)||0,own_movement_count:Number(a.own_movement_count)||0,subtree_net_balance:Number(a.subtree_net_balance)||0,descendant_account_count:Number(a.descendant_account_count)||0,descendant_postable_count:Number(a.descendant_postable_count)||0})) as Account[]);
+  setLoading(false);
+ };
+ useEffect(()=>{void load();},[companyId,live]);
+
+ const visible=useMemo(()=>accounts.filter(a=>
+  (statusFilter==="all"||(statusFilter==="active"?a.is_active:!a.is_active))&&
+  (typeFilter==="all"||a.account_type===typeFilter)&&
+  [a.account_code,a.account_name,typeLabel(a.account_type)].join(" ").toLowerCase().includes(query.toLowerCase())
+ ),[accounts,statusFilter,typeFilter,query]);
+ const active=accounts.filter(a=>a.is_active);
+ const postedMovements=accounts.reduce((s,a)=>s+a.own_movement_count,0);
+ const totalDebit=accounts.reduce((s,a)=>s+a.own_debit_total,0);
+ const totalCredit=accounts.reduce((s,a)=>s+a.own_credit_total,0);
+ const parentOptions=active.filter(a=>a.account_type===type&&!a.is_postable);
+ const resetForm=()=>{setName("");setType("asset");setParent("");setNormal("debit");setPostable(true);setShowForm(false);};
+ const save=async()=>{
+  if(!live||!supabase)return;
+  if(!canEdit){setMessage("صلاحيات حسابك لا تسمح بإضافة حساب.");return;}
+  if(!name.trim()){setMessage("اسم الحساب مطلوب.");return;}
+  const parentAccount=parent?accounts.find(a=>a.id===parent):null;
+  if(parent&&!parentAccount){setMessage("الحساب الأب المحدد غير صالح.");return;}
+  if(parentAccount&&parentAccount.account_type!==type){setMessage("يجب أن تكون طبيعة الحساب الفرعي متوافقة مع الحساب الأب.");return;}
+  setSaving(true);setMessage("");
+  const {data,error}=await supabase.from("erp_accounts").insert({
+   company_id:companyId,parent_id:parent||null,account_name:name.trim(),account_type:type,
+   normal_balance:normal,is_postable:postable,is_active:true
+  }).select("id,account_code,account_name").single();
+  setSaving(false);
+  if(error){setMessage("لم يتم حفظ الحساب: "+error.message);return;}
+  setMessage("تم إنشاء الحساب بكود مركزي "+data.account_code+" وفق سياسة التكويد الحالية.");
+  resetForm();await load();
+ };
+ const seed=async()=>{
+  if(!live||!supabase||!canEdit)return;
+  if(!window.confirm("سيتم إنشاء شجرة الحسابات القياسية للشركة داخل قاعدة سلسلة. الحسابات الموجودة لن تُكرر. هل تريد المتابعة؟"))return;
+  setSeeding(true);setMessage("");
+  const {data,error}=await supabase.rpc("erp_seed_standard_chart_of_accounts",{p_company_id:companyId});
+  setSeeding(false);
+  if(error){setMessage("تعذر تهيئة شجرة الحسابات: "+error.message);return;}
+  setMessage("اكتملت تهيئة الشجرة القياسية. الحسابات الجديدة: "+String(data??0)+".");
+  await load();
+ };
+ const deactivate=async(a:Account)=>{
+  if(!live||!supabase||!canEdit)return;
+  if(a.descendant_account_count>0){setMessage("لا يمكن إيقاف حساب أب له حسابات فرعية. عالج الحسابات التابعة أولًا.");return;}
+  if(a.own_movement_count>0){setMessage("هذا الحساب له حركات مرحلة؛ لا يمكن إيقافه من دليل الحسابات.");return;}
+  if(!window.confirm("إيقاف الحساب "+a.account_code+" — "+a.account_name+"؟ لن تُحذف أي بيانات."))return;
+  const {error}=await supabase.from("erp_accounts").update({is_active:false}).eq("id",a.id).eq("company_id",companyId);
+  if(error){setMessage("تعذر إيقاف الحساب: "+error.message);return;}
+  setMessage("تم إيقاف الحساب دون حذف سجلاته.");await load();
+ };
+ const depth=(a:Account)=>{let d=0,p=a.parent_id,guard=0;while(p&&guard++<12){const x=accounts.find(z=>z.id===p);if(!x)break;d++;p=x.parent_id;}return d;};
+
  return <section className="accounts-workspace" dir="rtl">
-  <div className="accounts-hero"><span className="accounts-icon"><BookOpen size={22}/></span><div><small>الإدارة المالية · التأسيس المحاسبي</small><h2>دليل الحسابات</h2><p>هيكل الحسابات الأساسي مع حماية الحسابات النظامية وقراءة الحركات المرتبطة بدفتر القيود المحلي.</p></div><span className="accounts-local">محلي للمعاينة</span></div>
-  <div className="accounts-summary"><div><span>إجمالي الحسابات</span><b>{accounts.filter(a=>a.active).length}</b></div><div><span>حسابات أساسية محمية</span><b>{accounts.filter(a=>a.system).length}</b></div><div><span>حسابات مضافة</span><b>{accounts.filter(a=>!a.system&&a.active).length}</b></div><div><span>قيود مرتبطة</span><b>{journal.length}</b></div></div>
-  <div className="accounts-panel"><div className="accounts-panel-head"><div><b>شجرة الحسابات</b><small>الأرصدة المعروضة ناتجة عن القيود المحلية فقط، ولا تشمل أرصدة افتتاحية.</small></div><button className="accounts-add" onClick={()=>setShowForm(v=>!v)}><Plus size={15}/> إضافة حساب</button></div>
-  {showForm&&<div className="accounts-form"><label><span>كود الحساب</span><input value={code} onChange={e=>setCode(e.target.value)} placeholder="مثال 1105"/></label><label><span>اسم الحساب</span><input value={name} onChange={e=>setName(e.target.value)} placeholder="اسم الحساب"/></label><label><span>طبيعة الحساب</span><select value={type} onChange={e=>{const t=e.target.value as AccountType;setType(t);setParent(defaults.find(a=>a.type===t&&a.parent==="")?.id||"");}}>{types.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}</select></label><label><span>الحساب الأب</span><select value={parent} onChange={e=>setParent(e.target.value)}>{accounts.filter(a=>a.type===type&&a.parent===""&&a.active).map(a=><option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}</select></label><div className="accounts-form-actions"><button onClick={save}>حفظ الحساب</button><button className="cancel" onClick={()=>setShowForm(false)}>إلغاء</button></div></div>}
-  <div className="accounts-filters"><div><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="بحث بالكود أو اسم الحساب"/></div><select value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="all">كل الأنواع</option>{types.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}</select><button onClick={()=>{setAccounts(read());setMessage("تم تحديث الدليل من التخزين المحلي.");}}><RefreshCw size={14}/> تحديث</button></div>
-  <div className="accounts-table-scroll"><table><thead><tr><th>كود الحساب</th><th>اسم الحساب</th><th>النوع</th><th>مدين</th><th>دائن</th><th>صافي الحركة</th><th>الحماية</th><th>إجراء</th></tr></thead><tbody>{rows.map(a=><tr key={a.id}><td className="accounts-code">{a.code}</td><td><b>{a.name}</b></td><td>{typeLabel(a.type)}</td><td>{money(a.debit)}</td><td>{money(a.credit)}</td><td className="accounts-balance">{money(a.balance)}</td><td>{a.system?<span className="accounts-protected"><ShieldCheck size={13}/> نظامي</span>:"قابل للإدارة"}</td><td>{a.system?<span className="accounts-lock">محمي</span>:<button className="accounts-delete" onClick={()=>remove(a)} title="تعطيل الحساب"><Trash2 size={14}/></button>}</td></tr>)}{!rows.length&&<tr><td colSpan={8} className="accounts-empty">لا توجد حسابات مطابقة.</td></tr>}</tbody></table></div>
-  </div>{message&&<div className="accounts-message" role="status">{message}</div>}<div className="accounts-note"><Wallet size={15}/> هذه بداية دليل الحسابات وليست إعدادًا محاسبيًا نهائيًا. لا توجد أرصدة افتتاحية أو ميزان مراجعة معتمد، كما أن الربط مع دليل إنتاجي وقاعدة بيانات مشتركة لم يُفعّل بعد.</div>
+  <div className="accounts-hero"><span className="accounts-icon"><BookOpen size={22}/></span><div><small>الإدارة المالية · الدليل المحاسبي</small><h2>دليل الحسابات</h2><p>شجرة الحسابات والأرصدة المرحلة من قاعدة سلسلة، مع توليد مركزي لأكواد الحسابات.</p></div><span className="accounts-local">{live?"اتصال مباشر":"غير متصل"}</span></div>
+  <div className="accounts-summary">
+   <div><span>الحسابات النشطة</span><b>{active.length}</b></div>
+   <div><span>الحسابات القابلة للترحيل</span><b>{active.filter(a=>a.is_postable).length}</b></div>
+   <div><span>الحركات المرحلة</span><b>{postedMovements}</b></div>
+   <div><span>فرق المدين والدائن</span><b>{money(totalDebit-totalCredit)} ج.م</b></div>
+  </div>
+  <div className="accounts-panel">
+   <div className="accounts-panel-head"><div><b>شجرة الحسابات الفعلية</b><small>المصدر: erp_accounts وerp_account_tree_metrics — الأرصدة من القيود المرحلة فقط.</small></div>
+    <div className="accounts-head-actions">{accounts.length===0&&live&&canEdit&&<button className="accounts-add secondary" disabled={seeding} onClick={()=>void seed()}><Database size={14}/>{seeding?"جارٍ التهيئة":"تهيئة الشجرة القياسية"}</button>}<button className="accounts-add" disabled={!canEdit||!live} onClick={()=>setShowForm(v=>!v)}><Plus size={15}/> إضافة حساب</button></div>
+   </div>
+   {showForm&&<div className="accounts-form live-form">
+    <label><span>اسم الحساب *</span><input value={name} onChange={e=>setName(e.target.value)} placeholder="اسم الحساب"/></label>
+    <label><span>طبيعة الحساب</span><select value={type} onChange={e=>{const t=e.target.value as Account["account_type"];setType(t);setNormal(normalFor(t));setParent("");}}>{types.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}</select></label>
+    <label><span>الحساب الأب</span><select value={parent} onChange={e=>setParent(e.target.value)}><option value="">حساب رئيسي</option>{parentOptions.map(a=><option key={a.id} value={a.id}>{a.account_code} · {a.account_name}</option>)}</select></label>
+    <label><span>الرصيد الطبيعي</span><select value={normal} onChange={e=>setNormal(e.target.value as "debit"|"credit")}><option value="debit">مدين</option><option value="credit">دائن</option></select></label>
+    <label><span>قابل للترحيل</span><select value={postable?"yes":"no"} onChange={e=>setPostable(e.target.value==="yes")}><option value="yes">نعم — حساب حركة</option><option value="no">لا — حساب تجميعي</option></select></label>
+    <div className="accounts-form-actions"><button disabled={saving} onClick={()=>void save()}>{saving?"جارٍ الحفظ":"حفظ الحساب وتوليد الكود"}</button><button className="cancel" onClick={resetForm}><X size={13}/> إلغاء</button></div>
+    <small className="accounts-code-note">كود الحساب لا يُكتب يدويًا؛ يتم توليده تلقائيًا من سياسة التكويد المركزية في قاعدة البيانات.</small>
+   </div>}
+   <div className="accounts-filters"><div><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="بحث بالكود أو اسم الحساب"/></div>
+    <select value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="all">كل أنواع الحسابات</option>{types.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}</select>
+    <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="active">النشطة</option><option value="inactive">الموقوفة</option><option value="all">الكل</option></select>
+    <button onClick={()=>void load()} disabled={loading}><RefreshCw size={14}/> تحديث</button>
+   </div>
+   {error&&<div className="accounts-message">{error}</div>}
+   <div className="accounts-table-scroll"><table><thead><tr><th>كود الحساب</th><th>اسم الحساب</th><th>النوع</th><th>الرصيد الطبيعي</th><th>مدين</th><th>دائن</th><th>صافي الحركة</th><th>الطبيعة</th><th>الحالة / الإجراء</th></tr></thead><tbody>
+    {visible.map(a=><tr key={a.id}><td className="accounts-code">{a.account_code}</td><td><span style={{paddingRight:depth(a)*16}}><b>{a.account_name}</b></span></td><td>{typeLabel(a.account_type)}</td><td>{a.normal_balance==="debit"?"مدين":"دائن"}</td><td>{money(a.own_debit_total)}</td><td>{money(a.own_credit_total)}</td><td className="accounts-balance">{money(a.own_net_balance)}</td><td>{a.is_postable?"حساب حركة":"حساب تجميعي"}</td><td>{a.is_active?<span className="accounts-protected"><ShieldCheck size={13}/> نشط</span>:<span className="accounts-lock">موقوف</span>}{a.is_active&&canEdit&&<button className="accounts-delete" title="إيقاف دون حذف" onClick={()=>void deactivate(a)}><Power size={14}/></button>}</td></tr>)}
+    {!visible.length&&<tr><td colSpan={9} className="accounts-empty">{loading?"جارٍ تحميل دليل الحسابات...":error?"تعذر عرض البيانات":"لا توجد حسابات مطابقة في قاعدة الشركة."}</td></tr>}
+   </tbody></table></div>
+  </div>
+  {message&&<div className="accounts-message" role="status">{message}</div>}
+  <div className="accounts-note"><ShieldCheck size={15}/> الحسابات والحركات لا تُحذف من هذه الشاشة. أكواد الحسابات تُولّد مركزيًا، وصلاحيات الحفظ والإيقاف محكومة بسياسات RLS في قاعدة سلسلة.</div>
  </section>;
 }
