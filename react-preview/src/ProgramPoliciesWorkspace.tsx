@@ -1,6 +1,7 @@
 import {useCallback,useEffect,useMemo,useState} from "react";
 import {AlertTriangle,CheckCircle2,Database,Eye,FileDown,FileText,LockKeyhole,Palette,Printer,RefreshCw,Save,Search,Settings2,ShieldCheck,SlidersHorizontal,X} from "lucide-react";
 import {supabase} from "./supabase";
+import EditDrawer from "./EditDrawer";
 
 type Policy=Record<string,any>;
 const categories=["الكل","برمجية","تكويدية","محاسبية","مخزنية","بيعية","شرائية","إدارية","الخطوط والألوان","الهوية البصرية"];
@@ -13,7 +14,7 @@ export default function ProgramPoliciesWorkspace(){
  const userId=sessionStorage.getItem("silsila-user-id")||"";
  const role=sessionStorage.getItem("silsila-member-role")||"viewer";
  const [rows,setRows]=useState<Policy[]>([]),[category,setCategory]=useState("الكل"),[query,setQuery]=useState("");
- const [selected,setSelected]=useState<Policy|null>(null),[draft,setDraft]=useState<Policy>({});
+ const [selected,setSelected]=useState<Policy|null>(null),[selectedOriginal,setSelectedOriginal]=useState<Policy|null>(null),[draft,setDraft]=useState<Policy>({});
  const [loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
  const [permissionsReady,setPermissionsReady]=useState(false),[canRead,setCanRead]=useState(true),[canEdit,setCanEdit]=useState(false);
  const [lockedCodes,setLockedCodes]=useState<Set<string>>(new Set()),[lockCheckReady,setLockCheckReady]=useState(false);
@@ -62,16 +63,16 @@ export default function ProgramPoliciesWorkspace(){
  const visible=useMemo(()=>rows.filter(p=>(category==="الكل"||p.category===category)&&(!query.trim()||[p.policy_code,p.policy_key,p.name_ar,p.name_en,p.category,p.policy_value].some(v=>text(v).toLowerCase().includes(query.trim().toLowerCase())))),[rows,category,query]);
  const counts=useMemo(()=>Object.fromEntries(categories.map(c=>[c,c==="الكل"?rows.length:rows.filter(p=>p.category===c).length])),[rows]);
  const isLocked=(p:Policy)=>{if(!codePolicy(p))return false;const key=text(p.policy_key);return !lockCheckReady||lockedCodes.has("__ALL_CODE_POLICIES_LOCKED_UNTIL_CHECK__")||lockedCodes.has(key);}; // Honor the database lock registry: protect issued-code policies, but allow unlocked policies to use the existing central coding rules.
- const openEditor=(p:Policy)=>{setSelected(p);setDraft({...p});setError("");setNotice("");};
- const closeEditor=()=>{setSelected(null);setDraft({});};
- const update=async()=>{
-  if(!supabase||!selected)return;
-  if(!canEdit){setError("لا تملك صلاحية تعديل السياسات.");return;}
-  if(isLocked(selected)){setError("سياسة التكويد محمية حاليًا لضمان عدم تغيير الأكواد الصادرة. لم يتم تعديل أي قيمة.");return;}
+ const openEditor=(p:Policy)=>{setSelected(p);setSelectedOriginal({...p});setDraft({...p});setError("");setNotice("");};
+ const closeEditor=()=>{setSelected(null);setSelectedOriginal(null);setDraft({});};
+ const update=async():Promise<boolean>=>{
+  if(!supabase||!selected)return false;
+  if(!canEdit){setError("لا تملك صلاحية تعديل السياسات.");return false;}
+  if(isLocked(selected)){setError("سياسة التكويد محمية حاليًا لضمان عدم تغيير الأكواد الصادرة. لم يتم تعديل أي قيمة.");return false;}
   const key=text(selected.policy_key),value=text(draft.policy_value);
-  if(key==="visual_identity.program_name"&&!programName.trim()){setError("اسم المشروع مطلوب.");return;}
+  if(key==="visual_identity.program_name"&&!programName.trim()){setError("اسم المشروع مطلوب.");return false;}
   if(key.startsWith("visual_identity.")&&key.endsWith("_color")&&!/^#[0-9a-fA-F]{6}$/.test(value)){setError("قيمة اللون غير صحيحة. استخدم صيغة HEX مثل #FFA015.");return;}
-  if(key==="appearance.header_background"||key==="appearance.screen_background"){if(!/^#[0-9a-fA-F]{6}$/.test(value)){setError("أدخل لونًا صحيحًا بصيغة HEX.");return;}}
+  if(key==="appearance.header_background"||key==="appearance.screen_background"){if(!/^#[0-9a-fA-F]{6}$/.test(value)){setError("أدخل لونًا صحيحًا بصيغة HEX.");return false;}}
   setSaving(true);setError("");setNotice("");
   try{
    if(key==="visual_identity.program_name"||key==="visual_identity.logo"){
@@ -162,7 +163,7 @@ export default function ProgramPoliciesWorkspace(){
    <button onClick={printPolicies}><FileText size={15}/> PDF</button>
   </div>
   <nav className="pp-tabs" aria-label="تصنيفات سياسات البرنامج">{categories.map(c=><button key={c} className={"pp-tab"+(category===c?" active":"")} onClick={()=>{setCategory(c);setSelected(null);}}>{c}<small>{counts[c]||0}</small></button>)}</nav>
-  {selected&&<div className="pp-editor"><div className="pp-editor-head"><Settings2 size={19}/><h3>{fieldLabel(selected)}</h3><button onClick={closeEditor} aria-label="إغلاق"><X size={17}/></button></div>
+  {selected&&<EditDrawer title={fieldLabel(selected)} dirty={JSON.stringify(draft)!==JSON.stringify(selectedOriginal)||((selected.policy_key==="visual_identity.program_name")&&programName!==text(programSettings.program_name))||((selected.policy_key==="visual_identity.logo")&&logoBase64!==text(programSettings.logo_base64))} saving={saving} onSave={update} onDiscard={()=>{setDraft({...selectedOriginal});setError("");setNotice("");}} onClose={closeEditor}><div className="pp-editor"><div className="pp-editor-head"><Settings2 size={19}/><h3>{fieldLabel(selected)}</h3><button onClick={closeEditor} aria-label="إغلاق"><X size={17}/></button></div>
    <div className="pp-fields">
     <div className="pp-field full"><label>قيمة السياسة</label>
      {valueKind(selected)==="codeConfig"&&json?<div className="pp-code-editor">
@@ -189,7 +190,7 @@ export default function ProgramPoliciesWorkspace(){
    {isLocked(selected)&&<div className="pp-alert"><LockKeyhole size={16}/>سياسة التكويد مقفلة للحفاظ على الأكواد الحالية، أو تعذر التحقق من حالة القفل. لا يمكن تعديلها الآن.</div>}
    <div className="pp-meta"><span>كود السياسة: <b>{text(selected.policy_code)||"—"}</b></span><span>المفتاح: <code>{text(selected.policy_key)}</code></span><span>التصنيف: {text(selected.category)}</span></div>
    <div className="pp-actions"><button className="pp-save" disabled={saving||!canEdit||!editMode||isLocked(selected)} onClick={()=>void update()}><Save size={16}/>{saving?"جارٍ الحفظ...":"حفظ التعديلات"}</button><button className="pp-btn" onClick={closeEditor}>إلغاء</button></div>
-  </div>}
+  </div></EditDrawer>}
   {loading?<div className="pp-empty">جارٍ تحميل السياسات المحفوظة...</div>:!canRead?<div className="pp-empty">لا تملك صلاحية عرض هذه الشاشة.</div>:visible.length===0?<div className="pp-empty">لا توجد سياسات مطابقة.</div>:<div className="pp-table-wrap"><table className="pp-table"><thead><tr><th>م</th><th>كود السياسة</th><th>بيانات السياسة</th><th>القيمة / التركيب</th>{category==="تكويدية"&&<><th>البادئة</th><th>مثال الكود</th></>}<th>التفعيل</th><th>نطاق التطبيق</th><th>عدد المستخدمين</th><th>الإجراء</th></tr></thead><tbody>{visible.map((p,i)=>{const details=codeDetails(p);return <tr key={p.id}><td>{i+1}</td><td dir="ltr">{text(p.policy_code)||"—"}</td><td><strong>{fieldLabel(p)}</strong><small dir="ltr">{text(p.policy_key)}</small></td><td className="pp-value-cell">{details?details.structure:(text(p.policy_value)||"—")}</td>{category==="تكويدية"&&<><td dir="ltr">{details?.prefix||"—"}</td><td dir="ltr">{details?.example||"—"}</td></>}<td><span className={"pp-state "+(p.is_enabled?"on":"off")}>{p.is_enabled?"مفعّلة":"متوقفة"}</span></td><td>{p.apply_to_all?"كل المستخدمين":"مستخدمون محددون"}</td><td>{(p.user_ids||[]).length}</td><td><button className="pp-edit" disabled={!canEdit||!editMode||isLocked(p)} onClick={()=>openEditor(p)}><Palette size={14}/> تعديل</button>{isLocked(p)&&<small className="pp-lock-note">محمية بعد بدء التكويد</small>}</td></tr>})}</tbody></table></div>}
   {previewOpen&&<div className="pp-modal-backdrop" onClick={()=>setPreviewOpen(false)}><div className="pp-preview-modal" onClick={e=>e.stopPropagation()}><div className="pp-editor-head"><h3>معاينة سياسات البرنامج — {category}</h3><button onClick={()=>setPreviewOpen(false)}><X size={17}/></button></div><p>عدد السياسات المعروضة: {visible.length} من إجمالي {rows.length} سياسة.</p><div className="pp-preview-list">{visible.map(p=><div key={p.id}><b>{text(p.policy_code)} · {fieldLabel(p)}</b><span>{text(p.policy_value)||"—"}</span></div>)}</div><div className="pp-actions"><button className="pp-btn" onClick={printPolicies}>طباعة المعاينة</button><button className="pp-save" onClick={()=>setPreviewOpen(false)}>إغلاق</button></div></div></div>}
   <footer style={{fontSize:11,color:"#8a7b95",padding:"4px 2px"}}>مصدر البيانات: erp_program_policies · السياسات الأساسية والقديمة محفوظة في قاعدة البيانات المشتركة. يتم إخفاء السجلات الداخلية المكررة فقط وفق سلوك الشاشة الأصلية.</footer>
