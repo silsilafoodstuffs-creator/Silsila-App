@@ -9,7 +9,7 @@ test("login and preview entry work without production credentials", async ({ pag
   await expect(page.getByAltText("شعار سلسلة").first()).toBeVisible();
 
   await page.getByRole("button", { name: /دخول المعاينة/ }).click();
-  await expect(page.getByText("وضع المعاينة")).toBeVisible();
+  await expect(page.getByRole("complementary").getByText("وضع المعاينة", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "الملخص التنفيذي" })).toBeVisible();
   await expect(page.getByRole("button", { name: "عن البرنامج" })).toHaveCount(1);
   await expect.poll(() => page.locator("html").evaluate(el => getComputedStyle(el).getPropertyValue("--silsila-table-header-bg").trim().toLowerCase())).toBe("#3e007d");
@@ -25,7 +25,7 @@ test("main menus are grouped into basic data, movements and reports", async ({ p
   await page.getByRole("button", { name: "المبيعات" }).click();
   await expect(page.getByRole("button", { name: "بيانات أساسية" })).toBeVisible();
   await expect(page.getByRole("button", { name: "حركات" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "تقارير" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "تقارير", exact: true })).toBeVisible();
 
   await page.locator(".nav-main-toggle").filter({ hasText: "عن البرنامج" }).click();
   await page.locator(".nav-subgroup-toggle").filter({ hasText: "معلومات البرنامج" }).click();
@@ -55,7 +55,7 @@ test("sidebar collapse toggle stays available and exit dialog supports all choic
 
   await page.getByRole("button", { name: "خروج من البرنامج" }).click();
   await page.getByRole("button", { name: "إلغاء الأمر" }).click();
-  await expect(page.getByText("وضع المعاينة")).toBeVisible();
+  await expect(page.getByRole("complementary").getByText("وضع المعاينة", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "خروج من البرنامج" }).click();
   await page.getByRole("button", { name: "نعم، خروج" }).click();
