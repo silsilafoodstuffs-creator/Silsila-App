@@ -35,13 +35,14 @@ export default function ExecutiveDashboard({period,onNavigate}:{period:string;on
  const load=async()=>{
   if(!supabase||!companyId){setMetrics(blank);setPrevious(blank);setCustomers(null);setSalesReps([]);setBuyers([]);setError("سجّل الدخول إلى منشأة نشطة لعرض المؤشرات الفعلية.");setLoading(false);setAccess("denied");return;}
   setLoading(true);setError("");
+  const db=supabase;
   try{
    const {data:{user}}=await supabase.auth.getUser();
    if(!user)throw new Error("انتهت جلسة الدخول. سجّل الدخول مرة أخرى.");
    const role=(sessionStorage.getItem("silsila-member-role")||"").toLowerCase();
    let permitted=["owner","admin","administrator","systemadmin"].includes(role);
    if(!permitted){
-    const {data:erpUser,error:userError}=await supabase.from("erp_users").select("id").eq("company_id",companyId).eq("auth_user_id",user.id).eq("is_active",true).maybeSingle();
+    const {data:erpUser,error:userError}=await db.from("erp_users").select("id").eq("company_id",companyId).eq("auth_user_id",user.id).eq("is_active",true).maybeSingle();
     if(userError)throw userError;
     if(erpUser?.id){
      const {data:permission,error:permissionError}=await supabase.from("erp_user_permission_matrix").select("can_access").eq("company_id",companyId).eq("user_id",erpUser.id).eq("menu_name","إعدادات عامة").eq("submenu_name","بيانات أساسية").eq("page_name","الملخص التنفيذي").maybeSingle();
@@ -53,7 +54,7 @@ export default function ExecutiveDashboard({period,onNavigate}:{period:string;on
    setAccess("allowed");
    const prior=previousYearSpan(span);
    const fetchMetrics=async(start:string,end:string):Promise<Metrics>=>{
-    const {data,error}=await supabase.rpc("erp_get_executive_metrics",{p_company_id:companyId,p_month_start:start,p_month_end:end});
+    const {data,error}=await db.rpc("erp_get_executive_metrics",{p_company_id:companyId,p_month_start:start,p_month_end:end});
     if(error)throw error;
     const row=data as any;
     return {sales:val(row,"sales"),purchases:val(row,"purchases"),grossProfit:val(row,"gross_profit_estimate"),expenses:val(row,"expenses")};
@@ -80,7 +81,7 @@ export default function ExecutiveDashboard({period,onNavigate}:{period:string;on
    for(const rep of reps){if(rep.is_demo_data===true)continue;const id=String(rep.id);repTotals.set(id,{id,name:rep.rep_name||rep.rep_code||"مندوب غير مسمى",total:0,count:0});}
    for(const doc of salesDocs){const id=String(doc.sales_rep_id||"");const item=repTotals.get(id);if(item){item.total+=Number(doc.grand_total||0)*(doc.document_type==="return"?-1:1);item.count++;}}
    setSalesReps([...repTotals.values()].filter(x=>x.count>0).sort((a,b)=>b.total-a.total).slice(0,5));
-   const authByEmployee=new Map(users.map((u:any)=>[String(u.employee_id),String(u.auth_user_id)]));
+   const authByEmployee=new Map<string,string>(users.map((u:any):[string,string]=>[String(u.employee_id),String(u.auth_user_id)]));
    const employeeByUser=new Map<string,any>();
    for(const emp of employees){if(emp.is_demo_data===true)continue;const authId=authByEmployee.get(String(emp.id));if(authId)employeeByUser.set(authId,emp);employeeByUser.set(String(emp.id),emp);}
    const buyerTotals=new Map<string,StaffRow>();
