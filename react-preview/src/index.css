@@ -1467,3 +1467,10 @@ th,.module-table-card th,.operation-table-card th{font-family:var(--silsila-head
 .live-master-table-wrap th,.live-business-table th{font-family:var(--silsila-header-font,var(--silsila-policy-font,'Tajawal',sans-serif));font-size:var(--silsila-table-head-size,15px)}
 .live-master-table-wrap td,.live-business-table td{font-size:var(--silsila-table-body-size,14px);color:var(--silsila-body-color,#241735)}
 @media(max-width:700px){.live-master-table-wrap thead tr:not(.column-filter-row) th,.live-business-table thead tr:not(.column-filter-row) th{top:42px}}
+
+/* Font family and size hierarchy follows the active visual identity policy. */
+.topbar,.crumb,.top-actions{font-size:var(--silsila-topbar-size,14px)}
+.welcome-row h1,.module-heading h2,.operation-title h2{font-family:var(--silsila-main-font,var(--silsila-policy-font,'Tajawal',sans-serif))}
+.section-head h2,.module-table-head b,.operation-table-head b{font-family:var(--silsila-subheading-font,var(--silsila-policy-font,'Tajawal',sans-serif))}
+.panel-head b,.module-heading p,.operation-title p{font-family:var(--silsila-secondary-font,var(--silsila-policy-font,'Tajawal',sans-serif))}
+.program-policies .pp-head h2{font-family:var(--silsila-main-font,var(--silsila-policy-font,'Tajawal',sans-serif))}
