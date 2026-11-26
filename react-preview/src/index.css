@@ -1449,3 +1449,14 @@ button,input,select,textarea{font-family:var(--silsila-policy-font,'Tajawal',san
 .foundation-company-confirm section>div{display:grid;gap:8px;margin-top:16px}.foundation-company-confirm button{min-height:40px;border-radius:8px;padding:8px 12px;font:inherit;font-size:13px;background:#f4f0f7;color:#59476a}.foundation-company-confirm button:first-child{background:#3E007D;color:#fff}.foundation-company-confirm button:nth-child(2){background:#fff1ef;color:#a33a31}
 .foundation-clickable-row{cursor:pointer}.foundation-clickable-row:hover td{background:#f3eafb}
 @media(max-width:760px){.foundation-company-fields{grid-template-columns:1fr}.foundation-company-fields label span{flex-basis:108px}.foundation-company-card-head{align-items:flex-start;flex-direction:column}.foundation-company-card-head button{width:100%;justify-content:center}}
+
+/* Live typography policy bindings and classic ERP policy-grid proportions */
+.welcome-row h1,.module-heading h2,.operation-title h2{color:var(--silsila-title-color,#3E007D)}
+.section-head h2,.module-table-head b,.operation-table-head b{color:var(--silsila-subheading-color,#3E007D)}
+.panel-head b,.module-heading p,.operation-title p{color:var(--silsila-secondary-heading-color,#51445C)}
+th,.module-table-card th,.operation-table-card th{font-family:var(--silsila-header-font,var(--silsila-policy-font,'Tajawal',sans-serif))}
+.program-policies .pp-table tbody tr{height:40px}
+.program-policies .pp-table td{height:40px;padding:5px 10px;line-height:1.5}
+.program-policies .pp-head h2{color:var(--silsila-title-color,#3E007D)}
+.program-policies .pp-head p{font-family:var(--silsila-policy-font,'Tajawal',sans-serif)}
+.program-policies .pp-field label,.program-policies .pp-field input,.program-policies .pp-field select,.program-policies .pp-field textarea{font-family:var(--silsila-policy-font,'Tajawal',sans-serif)}
