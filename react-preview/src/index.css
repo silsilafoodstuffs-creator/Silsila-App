@@ -1488,3 +1488,171 @@ th,.module-table-card th,.operation-table-card th{font-family:var(--silsila-head
 .program-policies .pp-tab{height:36px;padding:0 12px;border-radius:6px}
 .program-policies .pp-tab.active{background:#3E007D;border-color:#3E007D;color:#fff}
 @media(max-width:680px){.program-policies .pp-head{align-items:center}.program-policies .pp-head h2{font-size:17px!important}.program-policies .pp-head p{font-size:10px!important}}
+
+
+/* =========================================================
+   SILSILA VISUAL SYSTEM — unified light pearl / royal purple
+   Applied as the final theme layer to every React workspace.
+   ========================================================= */
+:root{
+ --silsila-primary:#3E007D;
+ --silsila-primary-deep:#30005F;
+ --silsila-primary-soft:#6A27A5;
+ --silsila-orange:#FFA015;
+ --silsila-pink:#FF27C3;
+ --silsila-canvas:#F7F4FB;
+ --silsila-surface:#FFFFFF;
+ --silsila-line:#E7DDF0;
+ --silsila-ink:#241735;
+ --silsila-muted:#51445C;
+ --silsila-body-color:#241735;
+ --silsila-policy-font:'Tajawal',sans-serif;
+ --silsila-main-font:'Tajawal',sans-serif;
+ --silsila-subheading-font:'Tajawal',sans-serif;
+ --silsila-header-font:'Tajawal',sans-serif;
+ --silsila-screen-title-size:24px;
+ --silsila-section-title-size:17px;
+ --silsila-table-head-size:15px;
+ --silsila-table-body-size:14px;
+}
+html,body,#root{min-height:100%;font-family:var(--silsila-policy-font,'Tajawal',sans-serif)}
+body{background:var(--silsila-canvas)!important;color:var(--silsila-ink)}
+button,input,select,textarea{font-family:var(--silsila-policy-font,'Tajawal',sans-serif)}
+.shell{background:var(--silsila-canvas)!important}
+.sidebar{
+ background:
+  radial-gradient(ellipse at 12% 0%,#9b55d833 0%,transparent 38%),
+  radial-gradient(ellipse at 100% 94%,#ffa0151c 0%,transparent 28%),
+  linear-gradient(165deg,#4b0a91 0%,#3E007D 52%,#30005F 100%)!important;
+ border-left:1px solid #b879e4!important;
+ box-shadow:-8px 0 28px #3e007d20,inset 1px 0 0 #ffffff20!important;
+ color:#fff!important;
+}
+.brand{border-bottom-color:#ffffff30!important}
+.brand-mark{background:linear-gradient(145deg,#b56af0,#6d27ad)!important;box-shadow:0 0 20px #d59bff55,inset 0 1px 0 #ffffff55!important}
+.brand-copy b{color:#fff!important}
+.brand-copy span,.brand-copy i{color:#ead8fa!important}
+.workspace{background:#ffffff16!important;border:1px solid #ffffff2c!important;box-shadow:inset 0 1px 0 #ffffff18!important}
+.workspace-icon{background:linear-gradient(145deg,#ffbf62,#ffa015)!important;color:#3E007D!important}
+.nav-scroll{scrollbar-color:#d8b5f177 transparent}
+.nav-group>small{color:#e3c9f7!important}
+.nav-main-toggle,.nav-subgroup-toggle{color:#f4eafa!important}
+.nav-main-toggle:hover,.nav-subgroup-toggle:hover{background:#ffffff16!important;color:#fff!important}
+.nav-subgroup-toggle.expanded{color:#fff!important}
+.nav-item{color:#f0e5f8!important;border:1px solid transparent!important}
+.nav-item:hover{background:#ffffff17!important;color:#fff!important}
+.nav-item.active{
+ background:linear-gradient(105deg,#8c3bc8 0%,#7023ad 58%,#5b168f 100%)!important;
+ border-color:#d5a3fa55!important;
+ color:#fff!important;
+ box-shadow:0 5px 16px #17002f42,inset 0 1px 0 #ffffff35!important;
+}
+.nav-favorite{color:#e6d4f5!important}
+.nav-favorite.active{color:#ff9ddd!important}
+.sidebar-exit{color:#f5eafb!important}
+.help-card{background:linear-gradient(135deg,#ffffff1c,#ffffff0b)!important;border-color:#ffffff30!important}
+.help-icon{color:#ffc16b!important}
+.help-card span,.user-mini span{color:#ead9f6!important}
+.user-mini{border-top-color:#ffffff30!important}
+.avatar{background:linear-gradient(145deg,#ffbd60,#ffa015)!important;color:#3E007D!important}
+.main{background:var(--silsila-canvas)!important}
+.topbar{
+ height:66px!important;
+ background:#ffffffef!important;
+ border-bottom:1px solid #e8dff0!important;
+ box-shadow:0 3px 15px #3e007d08!important;
+ backdrop-filter:blur(16px)!important;
+}
+.crumb,.top-actions{font-family:var(--silsila-policy-font,'Tajawal',sans-serif)!important}
+.crumb b{color:var(--silsila-primary)!important;font-weight:900!important}
+.icon-btn{border-color:#e8def0!important;color:var(--silsila-primary)!important;box-shadow:0 2px 8px #3e007d0a!important}
+.icon-btn:hover,.icon-btn.active{background:#f4eafa!important;border-color:#c9a6e5!important;color:var(--silsila-primary)!important}
+.search{background:#faf8fc!important;border-color:#e8def0!important;color:#806f8e!important}
+.content{background:transparent!important}
+.welcome-row h1{
+ color:var(--silsila-primary)!important;
+ font-family:var(--silsila-main-font,var(--silsila-policy-font,'Tajawal',sans-serif))!important;
+ font-size:var(--silsila-screen-title-size,24px)!important;
+ font-weight:900!important;
+}
+.welcome-row h1 span{color:var(--silsila-primary-soft)!important}
+.welcome-row p,.module-heading p{color:var(--silsila-muted)!important}
+.eyebrow{color:#7a3bb3!important}
+.btn-primary,.module-primary,.login-submit{
+ background:linear-gradient(110deg,#7028aa 0%,#3E007D 100%)!important;
+ border:1px solid #8f51bd!important;
+ box-shadow:0 5px 15px #3e007d24,inset 0 1px 0 #ffffff35!important;
+ color:#fff!important;
+}
+.btn-primary:hover,.module-primary:hover{filter:brightness(1.08);box-shadow:0 7px 20px #3e007d35,inset 0 1px 0 #ffffff45!important}
+.btn-outline,.toolbar-button,.pp-refresh,.pp-btn{border-color:#dfd1eb!important;color:var(--silsila-primary)!important;background:#fff!important}
+.section-head h2,.panel-head h3,.module-table-head b,.operation-table-head b{
+ color:var(--silsila-primary)!important;
+ font-family:var(--silsila-subheading-font,var(--silsila-policy-font,'Tajawal',sans-serif))!important;
+ font-size:var(--silsila-section-title-size,17px)!important;
+ font-weight:900!important;
+}
+.panel,.kpi-card,.module-stats>div,.module-table-card,.operation-table-card,.operation-form-grid,.operation-notes,.operation-totals{
+ background:#fff!important;border-color:var(--silsila-line)!important;box-shadow:0 4px 16px #3e007d08!important;
+}
+.kpi-card.featured{background:linear-gradient(135deg,#4b0a91,#3E007D)!important;color:#fff!important}
+.module-banner,.operation-heading,.foundation-head,.accounts-hero,.inventory-hero,.live-master-head,.live-business-head,.executive-live-head,.live-parties-head,.settings-hero,.program-policies .pp-head{
+ background:#3E007D!important;border:1px solid #6d32a2!important;box-shadow:0 5px 16px #3e007d1c,inset 0 1px 0 #ffffff1b!important;
+}
+.module-banner b,.module-banner h1,.module-banner h2,.operation-heading h1,.operation-heading h2,.foundation-head h1,.foundation-head h2,.accounts-hero h1,.accounts-hero h2,.inventory-hero h1,.inventory-hero h2,.live-master-head h1,.live-master-head h2,.live-business-head h1,.live-business-head h2,.executive-live-head h1,.executive-live-head h2,.live-parties-head h1,.live-parties-head h2,.settings-hero h1,.settings-hero h2,.program-policies .pp-head h2,.program-policies .pp-head p,.program-policies .pp-count{
+ color:#fff!important;text-shadow:none!important;
+}
+.module-banner span,.operation-heading p,.operation-heading small{color:#f0e4fa!important}
+.module-large-icon,.module-icon{background:linear-gradient(145deg,#ead8fb,#f7edff)!important;color:#64249e!important}
+.module-table-card th,.operation-table-scroll th,.table-wrap thead th,.live-master-table-wrap th,.live-business-table th,.live-parties-table-wrap th,.settings-table thead th,.accounts-table-scroll th,.inventory-table-scroll th,.users-table-scroll th,.users-permission-table th,.program-policies .pp-table th{
+ background:#3E007D!important;
+ background-image:none!important;
+ color:#fff!important;
+ border-bottom:1px solid #6d42a0!important;
+ box-shadow:none!important;
+ font-family:var(--silsila-header-font,var(--silsila-policy-font,'Tajawal',sans-serif))!important;
+ font-size:var(--silsila-table-head-size,15px)!important;
+ font-weight:800!important;
+ height:40px!important;
+ padding:5px 10px!important;
+}
+.module-table-card td,.operation-table-scroll td,.table-wrap td,.live-master-table-wrap td,.live-business-table td,.live-parties-table-wrap td,.settings-table td,.program-policies .pp-table td{
+ color:var(--silsila-body-color,#241735)!important;
+ font-family:var(--silsila-policy-font,'Tajawal',sans-serif)!important;
+ font-size:var(--silsila-table-body-size,14px)!important;
+}
+.module-table-card tbody tr,.operation-table-scroll tbody tr,.table-wrap tbody tr,.live-master-table-wrap tbody tr,.live-business-table tbody tr,.live-parties-table-wrap tbody tr,.program-policies .pp-table tbody tr{height:40px!important}
+.module-table-card tbody tr:nth-child(even),.operation-table-scroll tbody tr:nth-child(even),.table-wrap tbody tr:nth-child(even),.live-master-table-wrap tbody tr:nth-child(even),.live-business-table tbody tr:nth-child(even),.live-parties-table-wrap tbody tr:nth-child(even),.program-policies .pp-table tbody tr:nth-child(even){background:#FAF8FC!important}
+.module-table-card tbody tr:hover,.operation-table-scroll tbody tr:hover,.table-wrap tbody tr:hover,.live-master-table-wrap tbody tr:hover,.live-business-table tbody tr:hover,.live-parties-table-wrap tbody tr:hover,.program-policies .pp-table tbody tr:hover{background:#F5EFFB!important}
+.module-table-card td,.operation-table-scroll td,.table-wrap td,.live-master-table-wrap td,.live-business-table td,.live-parties-table-wrap td,.program-policies .pp-table td{height:40px!important;padding:5px 10px!important;line-height:1.45}
+input:not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea{
+ font-family:var(--silsila-policy-font,'Tajawal',sans-serif)!important;
+ color:var(--silsila-ink)!important;
+}
+input:not([type=checkbox]):not([type=radio]):not([type=color]):focus,select:focus,textarea:focus{
+ border-color:#9b65c4!important;box-shadow:0 0 0 3px #3e007d14!important;outline:none!important;
+}
+.module-search,.operation-form-grid input,.operation-form-grid select,.cell-input,.pp-field input,.pp-field select,.pp-field textarea{min-height:40px!important}
+.program-policies .pp-head{min-height:52px!important;padding:7px 12px!important;border-radius:8px!important}
+.program-policies .pp-head h2{font-size:20px!important;font-weight:900!important}
+.program-policies .pp-head p{font-size:12px!important;color:#f0e4fa!important}
+.program-policies .pp-head-icon{background:transparent!important;border:0!important;box-shadow:none!important;color:#FFA015!important}
+.program-policies .pp-tabs .pp-tab{height:40px!important;border-radius:7px!important;font-size:14px!important}
+.program-policies .pp-tabs .pp-tab.active{background:#3E007D!important;color:#fff!important;border-color:#3E007D!important;box-shadow:0 4px 12px #3e007d22!important}
+.program-policies .pp-quick-actions button{height:40px!important;border-radius:7px!important;font-size:13px!important}
+.program-policies .pp-quick-actions button:first-child{background:#edf3ff!important;color:#315da8!important;border-color:#d8e5ff!important}
+.program-policies .pp-table-wrap{border-color:#e5d9ec!important;border-radius:8px!important}
+.program-policies .pp-table{min-width:1100px!important}
+.program-policies .pp-table th{background:#3E007D!important;color:#fff!important}
+.program-policies .pp-table td{font-size:14px!important}
+.pp-save,.pp-edit{background:#3E007D!important;color:#fff!important;border:1px solid #6d32a2!important}
+.pp-edit{background:#f2e8fa!important;color:#3E007D!important}
+.toast{background:#3E007D!important;border-color:#8e58b8!important}
+@media(max-width:800px){
+ .sidebar{width:min(310px,88vw)!important;padding:12px!important}
+ .sidebar:not(.mobile-open){width:78px!important}
+ .topbar{height:60px!important;padding:0 12px!important}
+ .content{padding:18px 12px!important}
+ .welcome-row h1{font-size:22px!important}
+ .program-policies .pp-table{min-width:1100px!important}
+}
