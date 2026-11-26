@@ -64,7 +64,9 @@ export default function FoundationWorkspace({kind}:{kind:Kind}){
     const {data,error}=await supabase.from("erp_companies").select("id,legal_name,trade_name,tax_number,commercial_register,phone,email,address,base_currency,is_active").eq("id",companyId).maybeSingle();
     if(error)throw error;if(!data)throw new Error("لم يتم العثور على بيانات الشركة أو لا توجد صلاحية لعرضها.");
     const {data:extraRow}=await supabase.from("erp_company_settings").select("setting_value").eq("company_id",companyId).eq("setting_key","company_profile_extra").maybeSingle();
-    const merged={...data,...(extraRow?.setting_value||{})};setRows([merged]);setExtra(extraRow?.setting_value||{});setEditing(null);setForm(merged);setFormOriginal(merged);
+    let extraSettings=extraRow?.setting_value||{};
+    if(!textValue(extraSettings.company_code).trim()&&adminRole){const {data:generated,error:codeError}=await supabase.rpc("erp_assign_company_code",{p_company_id:companyId});if(codeError)throw codeError;extraSettings={...extraSettings,company_code:textValue(generated)};}
+    const merged={...data,...extraSettings};setRows([merged]);setExtra(extraSettings);setEditing(null);setForm(merged);setFormOriginal(merged);
     if(merged.logo_path){const {data:signed,error:signedError}=await supabase.storage.from("erp-company-assets").createSignedUrl(merged.logo_path,900);if(!signedError)setLogoPreviewUrl(signed?.signedUrl||"");}else setLogoPreviewUrl("");
    }else{
     let q=supabase.from(cfg.table).select(kind==="policies"?"id,company_id,policy_key,policy_code,category,name_ar,is_enabled,apply_to_all,user_ids,policy_value":kind==="brands"?"id,company_id,brand_code,brand_name,brand_group,brand_group_id,activity_code,is_active,show_in_app,display_order,is_system":kind==="brand-groups"?"id,company_id,group_code,group_name,activity_code,is_active,show_in_app":kind==="branches"?"id,company_id,branch_code,branch_name,phone,phone2,email,address,location,governorate_id,district_id,area_id,is_main,is_active":"*");
