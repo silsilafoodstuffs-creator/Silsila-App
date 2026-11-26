@@ -330,3 +330,25 @@ test("HR organization and jobs use live master-data editors without seeded recor
   await expect(page.getByText(/سجّل الدخول إلى المنشأة لعرض البيانات التنظيمية الفعلية/)).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
+
+
+test("sales delivery and purchase receipt open live document workspaces without fabricated records", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", error => pageErrors.push(error.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: /دخول المعاينة/ }).click();
+
+  await page.locator(".nav-main-toggle").filter({ hasText: "المبيعات" }).click();
+  await page.locator(".nav-subgroup-toggle").filter({ hasText: "حركات" }).click();
+  await page.locator(".nav-item").filter({ hasText: "أذون التسليم" }).click();
+  await expect(page.getByRole("heading", { name: "إذن تسليم مبيعات" })).toBeVisible();
+  await expect(page.getByText(/سجّل الدخول بحساب المنشأة لفتح مستندات التشغيل الحقيقية/)).toBeVisible();
+  await expect(page.getByText(/لا توجد مستندات محفوظة في قاعدة المنشأة حتى الآن/)).toHaveCount(0);
+
+  await page.locator(".nav-main-toggle").filter({ hasText: "المشتريات" }).click();
+  await page.locator(".nav-subgroup-toggle").filter({ hasText: "حركات" }).click();
+  await page.locator(".nav-item").filter({ hasText: "أذون الاستلام" }).click();
+  await expect(page.getByRole("heading", { name: "إذن استلام مشتريات" })).toBeVisible();
+  await expect(page.getByText(/سجّل الدخول بحساب المنشأة لفتح مستندات التشغيل الحقيقية/)).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
