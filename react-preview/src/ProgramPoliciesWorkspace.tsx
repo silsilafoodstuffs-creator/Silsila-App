@@ -92,7 +92,7 @@ export default function ProgramPoliciesWorkspace(){
  },[rows]);
  const visible=useMemo(()=>rows.filter((p,index)=>{
   if(category!=="الكل"&&p.category!==category)return false;
-  if(query.trim()&&![p.policy_code,p.policy_key,p.name_ar,p.name_en,p.category,p.policy_value].some(v=>text(v).toLowerCase().includes(query.trim().toLowerCase())))return false;
+  if(query.trim()&&![p.policy_code,p.policy_key,p.name_ar,p.category,p.policy_value].some(v=>text(v).toLowerCase().includes(query.trim().toLowerCase())))return false;
   const cfg=parseObject(p.policy_value)||{},key=text(p.policy_key);
   const prefix=text(cfg.prefix)||(key==="customer_code"?"Cus":key==="item_code"?"Itm":key.startsWith("geo_code.")?({"geo_code.country":"Con","geo_code.governorate":"Gov","geo_code.district":"Dis","geo_code.area":"Rig"}[key]||""):"");
   const digits=key==="customer_code"?Number(cfg.geo_digits??8)+Number(cfg.serial_digits??4):key==="item_code"?Number(cfg.category_digits??8)+Number(cfg.brand_digits??4)+Number(cfg.serial_digits??3):Number(cfg.parent_digits??0)+Number(cfg.digits??0);
