@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 const ModuleWorkspace = lazy(() => import("./ModuleWorkspace"));
 const OperationsWorkspace = lazy(() => import("./OperationsWorkspace"));
 const LiveDocumentsWorkspace = lazy(() => import("./LiveDocumentsWorkspace"));
@@ -61,7 +61,39 @@ function App(){
  const memberRole=sessionStorage.getItem("silsila-member-role")||"";
  const authenticated=Boolean(sessionStorage.getItem("silsila-user-id"));
  const [active,setActive]=useState("الملخص التنفيذي"); const [collapsed,setCollapsed]=useState(false); const [mobileMenuOpen,setMobileMenuOpen]=useState(false); const [period,setPeriod]=useState("آخر 30 يومًا"); const [expandedMain,setExpandedMain]=useState<string>("إعدادات عامة"); const [expandedSub,setExpandedSub]=useState<string>("إعدادات عامة::بيانات أساسية");
- const [notice,setNotice]=useState(false); const [exitDialog,setExitDialog]=useState(false); const [quickOpen,setQuickOpen]=useState(false); const [favorites,setFavorites]=useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem("silsila-favorites")||"[]")}catch{return []}}); const toggleFavorite=(name:string)=>setFavorites(current=>{const next=current.includes(name)?current.filter(x=>x!==name):[...current,name];try{localStorage.setItem("silsila-favorites",JSON.stringify(next))}catch{}return next;}); const [dashboardFilters,setDashboardFilters]=useState<string[]>(Array(5).fill(""));
+ const [notice,setNotice]=useState(false);
+ useEffect(()=>{
+  const root=document.documentElement;
+  const defaults:Record<string,string>={
+   "--silsila-screen-title-color":"#3E007D",
+   "--silsila-table-header-bg":"#FFA015",
+   "--silsila-table-header-color":"#241735",
+   "--silsila-table-row-alt":"#FAF8FC",
+   "--silsila-table-row-hover":"#F5EFFB"
+  };
+  Object.entries(defaults).forEach(([key,value])=>root.style.setProperty(key,value));
+  const companyId=sessionStorage.getItem("silsila-company-id")||"";
+  if(!authenticated||!companyId||!supabase)return;
+  const policyVars:Record<string,string>={
+   "visual_identity.screen_title_color":"--silsila-screen-title-color",
+   "visual_identity.table_header_color":"--silsila-table-header-bg",
+   "visual_identity.table_header_text_color":"--silsila-table-header-color",
+   "visual_identity.table_row_alt_color":"--silsila-table-row-alt",
+   "visual_identity.table_row_hover_color":"--silsila-table-row-hover"
+  };
+  let cancelled=false;
+  void supabase.from("erp_program_policies").select("policy_key,policy_value,is_enabled")
+   .eq("company_id",companyId).in("policy_key",Object.keys(policyVars))
+   .then(({data,error})=>{
+    if(cancelled||error||!data)return;
+    data.forEach((row:any)=>{
+     const cssVar=policyVars[row.policy_key];
+     if(cssVar&&row.is_enabled&&/^#[0-9a-fA-F]{6}$/.test(String(row.policy_value||"")))
+      root.style.setProperty(cssVar,row.policy_value);
+    });
+   });
+  return ()=>{cancelled=true;};
+ },[authenticated]); const [exitDialog,setExitDialog]=useState(false); const [quickOpen,setQuickOpen]=useState(false); const [favorites,setFavorites]=useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem("silsila-favorites")||"[]")}catch{return []}}); const toggleFavorite=(name:string)=>setFavorites(current=>{const next=current.includes(name)?current.filter(x=>x!==name):[...current,name];try{localStorage.setItem("silsila-favorites",JSON.stringify(next))}catch{}return next;}); const [dashboardFilters,setDashboardFilters]=useState<string[]>(Array(5).fill(""));
  const [entered,setEntered]=useState(true); const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [showPassword,setShowPassword]=useState(false); const [loginMessage,setLoginMessage]=useState("");
  if(!entered) return <div className="login-screen" dir="rtl"><div className="login-orb orb-one"/><div className="login-orb orb-two"/><div className="login-layout"><section className="login-brand-panel"><div className="login-brand"><div className="login-brand-mark"><img src={SILSILA_LOGO} alt="شعار سلسلة"/></div><div><b>سلسلة</b><span>ERP · BUSINESS OS</span></div></div><div className="login-brand-copy"><span className="login-eyebrow"><Sparkles size={14}/> منصة إدارة الأعمال المتكاملة</span><h1>تجارتك اليومية<br/><em>تبدأ من هنا</em></h1><p>منظومة واحدة تربط عملياتك وعملاءك ومخزونك وحساباتك في تجربة عمل متكاملة.</p><div className="login-feature-list"><span><ShieldCheck size={17}/> إدارة مركزية للأعمال</span><span><Boxes size={17}/> مبيعات ومشتريات ومخازن</span><span><Wallet size={17}/> متابعة مالية وتشغيلية</span></div></div><div className="login-brand-footer">سلسلة .. بنربط السوق ببعضه</div></section><section className="login-form-panel"><div className="login-mobile-brand"><div className="login-brand-mark"><img src={SILSILA_LOGO} alt="شعار سلسلة"/></div><b>سلسلة</b></div><div className="login-form-heading"><span>مرحبًا بعودتك</span><h2>تسجيل الدخول</h2><p>أدخل بيانات حسابك للمتابعة إلى مساحة العمل.</p></div><form className="login-form" onSubmit={e=>{e.preventDefault();setLoginMessage("تسجيل الدخول الفعلي غير مفعّل بعد. لم يتم التحقق من الحساب أو كلمة المرور.");}}><label><span>البريد الإلكتروني</span><div className="login-input-wrap"><Mail size={17}/><input type="email" autoComplete="username" placeholder="name@company.com" value={email} onChange={e=>setEmail(e.target.value)} required/></div></label><label><span>كلمة المرور</span><div className="login-input-wrap"><LockKeyhole size={17}/><input type={showPassword?"text":"password"} autoComplete="current-password" placeholder="أدخل كلمة المرور" value={password} onChange={e=>setPassword(e.target.value)} required/><button type="button" onClick={()=>setShowPassword(!showPassword)} aria-label={showPassword?"إخفاء كلمة المرور":"إظهار كلمة المرور"}>{showPassword?<EyeOff size={17}/>:<Eye size={17}/>}</button></div></label><div className="login-form-meta"><label className="login-remember"><input type="checkbox"/> تذكرني</label><button type="button" onClick={()=>setLoginMessage("استعادة كلمة المرور ستتاح بعد ربط خدمة المصادقة.")}>نسيت كلمة المرور؟</button></div><button className="login-submit" type="submit">تسجيل الدخول <ChevronLeft size={17}/></button>{loginMessage&&<div className="login-message" role="status">{loginMessage}</div>}</form><div className="login-preview-access"><div><b>تريد استكشاف الواجهة الآن؟</b><span>الدخول للمعاينة لا يحتاج حسابًا ولا يفعّل صلاحيات حقيقية.</span></div><button type="button" onClick={()=>setEntered(true)}>دخول المعاينة <ChevronLeft size={15}/></button></div><div className="login-security-note"><ShieldCheck size={15}/> المصادقة الحقيقية وربط الحسابات قيد الإعداد</div><footer>© 2026 سلسلة · جميع الحقوق محفوظة</footer></section></div></div>;
  return <div className="shell">
