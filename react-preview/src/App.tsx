@@ -65,7 +65,13 @@ function App(){
  useEffect(()=>{
   const root=document.documentElement;
   const defaults:Record<string,string>={
+   "--silsila-topbar-bg":"#FFFFFF",
+   "--silsila-topbar-text":"#38244C",
+   "--silsila-screen-bg":"#FFFFFF",
    "--silsila-screen-title-color":"#3E007D",
+   "--silsila-screen-title-size":"21px",
+   "--silsila-screen-title-font":"'Tajawal',sans-serif",
+   "--silsila-screen-title-weight":"800",
    "--silsila-table-header-bg":"#FFA015",
    "--silsila-table-header-color":"#241735",
    "--silsila-table-row-alt":"#FAF8FC",
@@ -81,15 +87,28 @@ function App(){
    "visual_identity.table_row_alt_color":"--silsila-table-row-alt",
    "visual_identity.table_row_hover_color":"--silsila-table-row-hover"
   };
+  const policyKeys=[...Object.keys(policyVars),"appearance.header_background","appearance.screen_background","appearance.header_text","appearance.main_heading","visual_identity.background_color","visual_identity.heading_1"];
   let cancelled=false;
   void supabase.from("erp_program_policies").select("policy_key,policy_value,is_enabled")
-   .eq("company_id",companyId).in("policy_key",Object.keys(policyVars))
+   .eq("company_id",companyId).in("policy_key",policyKeys)
    .then(({data,error})=>{
     if(cancelled||error||!data)return;
-    data.forEach((row:any)=>{
+    const enabled=data.filter((row:any)=>row.is_enabled===true);
+    const hex=(value:any)=>/^#[0-9a-fA-F]{6}$/.test(String(value||""));
+    const parseStyle=(value:any)=>{try{const parsed=JSON.parse(String(value||"{}"));return parsed&&typeof parsed==="object"?parsed:{};}catch{return {};}};
+    const appearanceHeader=enabled.find((row:any)=>row.policy_key==="appearance.header_background");
+    if(appearanceHeader&&hex(appearanceHeader.policy_value))root.style.setProperty("--silsila-topbar-bg",appearanceHeader.policy_value);
+    const legacyScreen=enabled.find((row:any)=>row.policy_key==="appearance.screen_background");
+    const identityScreen=enabled.find((row:any)=>row.policy_key==="visual_identity.background_color");
+    const screenBackground=identityScreen||legacyScreen;
+    if(screenBackground&&hex(screenBackground.policy_value))root.style.setProperty("--silsila-screen-bg",screenBackground.policy_value);
+    const headerText=enabled.find((row:any)=>row.policy_key==="appearance.header_text");
+    if(headerText){const style=parseStyle(headerText.policy_value);if(hex(style.color))root.style.setProperty("--silsila-topbar-text",style.color);if(["Tajawal","Kufam","Romman"].includes(style.font))root.style.setProperty("--silsila-topbar-font",style.font+",sans-serif");}
+    const headingStyle=enabled.find((row:any)=>row.policy_key==="visual_identity.heading_1")||enabled.find((row:any)=>row.policy_key==="appearance.main_heading");
+    if(headingStyle){const style=parseStyle(headingStyle.policy_value);const size=Number(style.size);if(Number.isFinite(size)&&size>=18&&size<=32)root.style.setProperty("--silsila-screen-title-size",size+"px");if(["Tajawal","Kufam","Romman"].includes(style.font))root.style.setProperty("--silsila-screen-title-font",style.font+",sans-serif");root.style.setProperty("--silsila-screen-title-weight",style.bold===true?"800":"600");}
+    enabled.forEach((row:any)=>{
      const cssVar=policyVars[row.policy_key];
-     if(cssVar&&row.is_enabled&&/^#[0-9a-fA-F]{6}$/.test(String(row.policy_value||"")))
-      root.style.setProperty(cssVar,row.policy_value);
+     if(cssVar&&hex(row.policy_value))root.style.setProperty(cssVar,row.policy_value);
     });
    });
   return ()=>{cancelled=true;};
