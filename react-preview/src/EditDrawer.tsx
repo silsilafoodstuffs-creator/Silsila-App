@@ -10,38 +10,43 @@ type Props={
  onSave:()=>Promise<boolean>;
  onDiscard:()=>void;
  onClose:()=>void;
+ onSaveError?:()=>void;
  children:ReactNode;
 };
 
-export default function EditDrawer({title,dirty,saving=false,onSave,onDiscard,onClose,children,error=""}:Props){
+export default function EditDrawer({title,dirty,saving=false,onSave,onDiscard,onClose,onSaveError,children,error=""}:Props){
  const [confirmOpen,setConfirmOpen]=useState(false);
  const [saveError,setSaveError]=useState("");
+ const [internalSaving,setInternalSaving]=useState(false);
+ const isSaving=saving||internalSaving;
  const busy=useRef(false);
- const requestClose=()=>{if(saving||busy.current)return;if(dirty)setConfirmOpen(true);else onClose();};
+ const requestClose=()=>{if(isSaving||busy.current)return;if(dirty)setConfirmOpen(true);else onClose();};
  useEffect(()=>{window.dispatchEvent(new CustomEvent("silsila:edit-state",{detail:{dirty}}));},[dirty]);
  useEffect(()=>()=>{window.dispatchEvent(new Event("silsila:edit-closed"));},[]);
  useEffect(()=>{
   const key=(event:KeyboardEvent)=>{if(event.key==="Escape"){event.preventDefault();if(confirmOpen){setConfirmOpen(false);window.dispatchEvent(new Event("silsila:edit-navigation-cancel"));}else requestClose();}};
   const externalClose=()=>requestClose();
+  const directSave=()=>void saveAndClose();
   const beforeUnload=(event:BeforeUnloadEvent)=>{if(dirty){event.preventDefault();event.returnValue="";}};
   window.addEventListener("keydown",key);
   window.addEventListener("silsila:edit-request-close",externalClose);
+  window.addEventListener("silsila:edit-save",directSave);
   window.addEventListener("beforeunload",beforeUnload);
-  return()=>{window.removeEventListener("keydown",key);window.removeEventListener("silsila:edit-request-close",externalClose);window.removeEventListener("beforeunload",beforeUnload);};
- },[confirmOpen,dirty,saving]);
+  return()=>{window.removeEventListener("keydown",key);window.removeEventListener("silsila:edit-request-close",externalClose);window.removeEventListener("silsila:edit-save",directSave);window.removeEventListener("beforeunload",beforeUnload);};
+ },[confirmOpen,dirty,isSaving]);
  const saveAndClose=async()=>{
-  if(busy.current||saving)return;
-  busy.current=true;
+  if(busy.current||isSaving)return;
+  busy.current=true;setInternalSaving(true);
   try{setSaveError("");const saved=await onSave();if(saved){setConfirmOpen(false);onClose();}}
-  catch(error){setSaveError(error instanceof Error?error.message:"تعذر حفظ التعديلات. النافذة ما زالت مفتوحة.");}
-  finally{busy.current=false;}
+  catch(error){onSaveError?.();setSaveError(error instanceof Error?error.message:"تعذر حفظ التعديلات. النافذة ما زالت مفتوحة.");}
+  finally{busy.current=false;setInternalSaving(false);}
  };
  const discardAndClose=()=>{onDiscard();setConfirmOpen(false);onClose();};
  return <div className="silsila-edit-layer" dir="rtl">
   <button className="silsila-edit-scrim" aria-label="إغلاق نافذة التعديل" onClick={requestClose}/>
   <aside className="silsila-edit-drawer" role="dialog" aria-modal="true" aria-label={title}>
-   <header className="silsila-edit-drawer-head"><div><small>سلسلة · تعديل البيانات</small><h2>{title}</h2></div><button type="button" aria-label="إغلاق" onClick={requestClose} disabled={saving}><X size={19}/></button></header>
-   <div className="silsila-edit-drawer-body">{error&&<div role="alert" className="silsila-edit-inline-error">{error}</div>}{children}</div>
+   <header className="silsila-edit-drawer-head"><div><small>سلسلة · تعديل البيانات</small><h2>{title}</h2></div><button type="button" aria-label="إغلاق" onClick={requestClose} disabled={isSaving}><X size={19}/></button></header>
+   <div className="silsila-edit-drawer-body">{(error||saveError)&&<div role="alert" className="silsila-edit-inline-error">{error||saveError}</div>}{children}</div>
   </aside>
   {confirmOpen&&<div className="silsila-edit-confirm-backdrop" role="presentation">
    <section className="silsila-edit-confirm" role="alertdialog" aria-modal="true" aria-labelledby="silsila-edit-confirm-title">
@@ -50,9 +55,9 @@ export default function EditDrawer({title,dirty,saving=false,onSave,onDiscard,on
     <p>لديك تغييرات لم يتم حفظها بعد. اختر كيف تريد المتابعة.</p>
     {(error||saveError)&&<p role="alert" className="silsila-edit-save-error">{error||saveError}</p>}
     <div className="silsila-edit-confirm-actions">
-     <button className="primary" type="button" onClick={()=>void saveAndClose()} disabled={saving}><Save size={15}/>{saving?"جارٍ الحفظ...":"نعم، حفظ التعديلات"}</button>
-     <button className="danger" type="button" onClick={discardAndClose} disabled={saving}>لا، تجاهل التعديلات</button>
-     <button className="quiet" type="button" onClick={()=>{setConfirmOpen(false);window.dispatchEvent(new Event("silsila:edit-navigation-cancel"));}} disabled={saving}>إلغاء الأمر</button>
+     <button className="primary" type="button" onClick={()=>void saveAndClose()} disabled={isSaving}><Save size={15}/>{isSaving?"جارٍ الحفظ...":"نعم، حفظ التعديلات"}</button>
+     <button className="danger" type="button" onClick={discardAndClose} disabled={isSaving}>لا، تجاهل التعديلات</button>
+     <button className="quiet" type="button" onClick={()=>{setConfirmOpen(false);window.dispatchEvent(new Event("silsila:edit-navigation-cancel"));}} disabled={isSaving}>إلغاء الأمر</button>
     </div>
    </section>
   </div>}
