@@ -18,7 +18,7 @@ export default function LiveItemsWorkspace(){
   if(!supabase||!companyId){setLoading(false);setError("سجّل الدخول إلى المنشأة لعرض سجل الأصناف الفعلي. وضع المعاينة لا يعرض بيانات منشأة.");return;}
   setLoading(true);setError("");
   const [ir,ur,cr,br]=await Promise.all([
-   supabase.from("erp_items").select("id,company_id,item_code,item_name ,barcode,base_unit,purchase_price,sale_price,reorder_level,tax_rate,discount_limit,category_id,brand_id,brand_name,is_active,expiry_tracking,show_in_app").eq("company_id",companyId).order("item_name").limit(500),
+   supabase.from("erp_items").select("id,company_id,item_code,item_name,barcode,base_unit,purchase_price,sale_price,reorder_level,tax_rate,discount_limit,category_id,brand_id,brand_name,is_active,expiry_tracking,show_in_app").eq("company_id",companyId).order("item_name").limit(500),
    supabase.from("erp_item_units").select("id,item_id,unit_code,unit_name,conversion_factor,is_base_unit,unit_level,inner_quantity,is_active,is_implicit,is_selectable").eq("company_id",companyId).order("conversion_factor",{ascending:false}).limit(3000),
    supabase.from("erp_item_categories").select("id,category_name,category_code").eq("company_id",companyId).eq("is_active",true).order("category_name").limit(1000),
    supabase.from("erp_brands").select("id,brand_name,brand_code").eq("company_id",companyId).eq("is_active",true).order("brand_name").limit(1000)
