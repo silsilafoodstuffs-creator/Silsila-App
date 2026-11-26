@@ -100,6 +100,7 @@ test("all seven foundation screens open from general settings", async ({ page })
     if (title === "سياسات البرنامج") {
       await expect(page.getByRole("navigation", { name: "تصنيفات سياسات البرنامج" })).toBeVisible();
       await expect(page.getByRole("button", { name: /تكويدية/ })).toBeVisible();
+      await expect(page.getByRole("button", { name: /الهوية البصرية/ })).toBeVisible();
     }
   }
 
