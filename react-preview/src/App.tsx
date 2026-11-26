@@ -82,7 +82,12 @@ function AppContent(){
    "--silsila-topbar-text":"#38244C",
    "--silsila-screen-bg":"#FFFFFF",
    "--silsila-screen-title-color":"#3E007D",
-   "--silsila-screen-title-size":"21px",
+   "--silsila-screen-title-size":"24px",
+   "--silsila-main-font":"'Tajawal',sans-serif",
+   "--silsila-subheading-font":"'Tajawal',sans-serif",
+   "--silsila-header-font":"'Tajawal',sans-serif",
+   "--silsila-policy-font":"'Tajawal',sans-serif",
+   "--silsila-body-color":"#241735",
    "--silsila-screen-title-font":"'Tajawal',sans-serif",
    "--silsila-screen-title-weight":"800",
    "--silsila-body-size":"14px",
@@ -122,7 +127,7 @@ function AppContent(){
     const identityScreen=enabled.find((row:any)=>row.policy_key==="visual_identity.background_color");
     const screenBackground=identityScreen||legacyScreen;
     if(screenBackground&&hex(screenBackground.policy_value))root.style.setProperty("--silsila-screen-bg",screenBackground.policy_value);
-    const applyFontPolicy=(key:string,target:string,min:number,max:number,fallback:number)=>{const row=enabled.find((item:any)=>item.policy_key===key);if(!row)return;const style=parseStyle(row.policy_value);const size=Number(style.size??fallback);if(Number.isFinite(size))root.style.setProperty(target,Math.min(max,Math.max(min,size))+"px");if(["Tajawal","Kufam","Romman"].includes(style.font))root.style.setProperty("--silsila-policy-font",style.font+",sans-serif");if(hex(style.color)){if(key==="appearance.header_text")root.style.setProperty("--silsila-topbar-text",style.color);else if(key==="appearance.main_heading"||key==="visual_identity.heading_1")root.style.setProperty("--silsila-screen-title-color",style.color);else if(key==="appearance.body_text")root.style.setProperty("--silsila-body-color",style.color);else root.style.setProperty("--silsila-subheading-color",style.color);}};
+    const applyFontPolicy=(key:string,target:string,min:number,max:number,fallback:number)=>{const row=enabled.find((item:any)=>item.policy_key===key);if(!row)return;const style=parseStyle(row.policy_value);const size=Number(style.size??fallback);if(Number.isFinite(size))root.style.setProperty(target,Math.min(max,Math.max(min,size))+"px");if(["Tajawal","Kufam","Romman"].includes(style.font)){const family="\'"+style.font+"\',sans-serif";const fontTarget=key==="appearance.header_text"?"--silsila-header-font":key==="appearance.main_heading"||key==="visual_identity.heading_1"?"--silsila-main-font":key==="appearance.subheading_1"?"--silsila-subheading-font":key==="appearance.subheading_2"||key==="appearance.subheading_3"?"--silsila-secondary-font":"--silsila-policy-font";root.style.setProperty(fontTarget,family);if(key==="appearance.body_text")root.style.setProperty("--silsila-policy-font",family);}if(style.bold!==undefined)root.style.setProperty(key==="appearance.main_heading"?"--silsila-screen-title-weight":"--silsila-policy-weight",style.bold?"900":"600");if(hex(style.color)){if(key==="appearance.header_text")root.style.setProperty("--silsila-topbar-text",style.color);else if(key==="appearance.main_heading"||key==="visual_identity.heading_1")root.style.setProperty("--silsila-screen-title-color",style.color);else if(key==="appearance.body_text")root.style.setProperty("--silsila-body-color",style.color);else root.style.setProperty("--silsila-subheading-color",style.color);}};
     applyFontPolicy("appearance.header_text","--silsila-topbar-size",12,18,14);
     applyFontPolicy("appearance.main_heading","--silsila-screen-title-size",20,28,24);
     applyFontPolicy("visual_identity.heading_1","--silsila-screen-title-size",20,28,24);
