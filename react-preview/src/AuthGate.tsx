@@ -209,6 +209,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signOut();
       if (error) { setMessage("تعذر تسجيل الخروج: " + error.message); return false; }
     }
+    setMessage("");
     sessionStorage.removeItem("silsila-company-id");
     sessionStorage.removeItem("silsila-user-id");
     sessionStorage.removeItem("silsila-member-role");
