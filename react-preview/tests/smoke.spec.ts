@@ -267,3 +267,16 @@ test("inventory balances use the live stock ledger rather than local demo storag
   await expect(page.getByText(/سجّل الدخول إلى المنشأة لعرض أرصدة المخزون الفعلية/)).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
+
+
+test("unmigrated ERP screens never show seeded sample records", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /دخول المعاينة/ }).click();
+  await page.locator(".nav-main-toggle").filter({ hasText: "المبيعات" }).click();
+  await page.locator(".nav-subgroup-toggle").filter({ hasText: "حركات" }).click();
+  await page.locator(".nav-item").filter({ hasText: "أوامر البيع" }).click();
+  await expect(page.getByRole("heading", { name: "أوامر البيع", exact: true })).toBeVisible();
+  await expect(page.getByText(/غير مفعّلة للتشغيل الفعلي/)).toBeVisible();
+  await expect(page.getByText(/لن نعرض سجلات افتراضية أو نحفظ بيانات محلية/)).toBeVisible();
+  await expect(page.getByText("مؤسسة النور التجارية", { exact: true })).toHaveCount(0);
+});
