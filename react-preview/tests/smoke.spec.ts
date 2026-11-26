@@ -111,3 +111,19 @@ test("all seven foundation screens open from general settings", async ({ page })
 
   expect(pageErrors).toEqual([]);
 });
+
+
+test("warehouse management opens the live Supabase workspace", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", error => pageErrors.push(error.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: /دخول المعاينة/ }).click();
+  await page.locator(".nav-main-toggle").filter({ hasText: "المخازن" }).click();
+  await page.locator(".nav-subgroup-toggle").filter({ hasText: "بيانات أساسية" }).click();
+  await page.locator(".nav-item").filter({ hasText: "إدارة المخازن" }).click();
+  await expect(page.getByRole("heading", { name: "إدارة المخازن", exact: true })).toBeVisible();
+  await expect(page.getByText(/تعريف المخازن وربط كل مخزن بفرعه/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /تحديث/ })).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
+
