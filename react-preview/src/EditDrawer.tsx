@@ -18,10 +18,16 @@ export default function EditDrawer({title,dirty,saving=false,onSave,onDiscard,on
  const [saveError,setSaveError]=useState("");
  const busy=useRef(false);
  const requestClose=()=>{if(saving||busy.current)return;if(dirty)setConfirmOpen(true);else onClose();};
+ useEffect(()=>{window.dispatchEvent(new CustomEvent("silsila:edit-state",{detail:{dirty}}));},[dirty]);
+ useEffect(()=>()=>{window.dispatchEvent(new Event("silsila:edit-closed"));},[]);
  useEffect(()=>{
-  const key=(event:KeyboardEvent)=>{if(event.key==="Escape"){event.preventDefault();if(confirmOpen)setConfirmOpen(false);else requestClose();}};
+  const key=(event:KeyboardEvent)=>{if(event.key==="Escape"){event.preventDefault();if(confirmOpen){setConfirmOpen(false);window.dispatchEvent(new Event("silsila:edit-navigation-cancel"));}else requestClose();}};
+  const externalClose=()=>requestClose();
+  const beforeUnload=(event:BeforeUnloadEvent)=>{if(dirty){event.preventDefault();event.returnValue="";}};
   window.addEventListener("keydown",key);
-  return()=>window.removeEventListener("keydown",key);
+  window.addEventListener("silsila:edit-request-close",externalClose);
+  window.addEventListener("beforeunload",beforeUnload);
+  return()=>{window.removeEventListener("keydown",key);window.removeEventListener("silsila:edit-request-close",externalClose);window.removeEventListener("beforeunload",beforeUnload);};
  },[confirmOpen,dirty,saving]);
  const saveAndClose=async()=>{
   if(busy.current||saving)return;
@@ -46,7 +52,7 @@ export default function EditDrawer({title,dirty,saving=false,onSave,onDiscard,on
     <div className="silsila-edit-confirm-actions">
      <button className="primary" type="button" onClick={()=>void saveAndClose()} disabled={saving}><Save size={15}/>{saving?"جارٍ الحفظ...":"نعم، حفظ التعديلات"}</button>
      <button className="danger" type="button" onClick={discardAndClose} disabled={saving}>لا، تجاهل التعديلات</button>
-     <button className="quiet" type="button" onClick={()=>setConfirmOpen(false)} disabled={saving}>إلغاء الأمر</button>
+     <button className="quiet" type="button" onClick={()=>{setConfirmOpen(false);window.dispatchEvent(new Event("silsila:edit-navigation-cancel"));}} disabled={saving}>إلغاء الأمر</button>
     </div>
    </section>
   </div>}
