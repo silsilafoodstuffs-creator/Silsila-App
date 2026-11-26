@@ -73,8 +73,8 @@ function App(){
    "--silsila-screen-title-size":"21px",
    "--silsila-screen-title-font":"'Tajawal',sans-serif",
    "--silsila-screen-title-weight":"800",
-   "--silsila-table-header-bg":"#FFA015",
-   "--silsila-table-header-color":"#241735",
+   "--silsila-table-header-bg":"#3E007D",
+   "--silsila-table-header-color":"#FFFFFF",
    "--silsila-table-row-alt":"#FAF8FC",
    "--silsila-table-row-hover":"#F5EFFB"
   };
