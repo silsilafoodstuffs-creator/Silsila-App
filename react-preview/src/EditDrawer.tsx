@@ -26,7 +26,8 @@ export default function EditDrawer({title,dirty,saving=false,onSave,onDiscard,on
  const saveAndClose=async()=>{
   if(busy.current||saving)return;
   busy.current=true;
-  try{const saved=await onSave();if(saved){setConfirmOpen(false);onClose();}}
+  try{setSaveError("");const saved=await onSave();if(saved){setConfirmOpen(false);onClose();}}
+  catch(error){setSaveError(error instanceof Error?error.message:"تعذر حفظ التعديلات. النافذة ما زالت مفتوحة.");}
   finally{busy.current=false;}
  };
  const discardAndClose=()=>{onDiscard();setConfirmOpen(false);onClose();};
