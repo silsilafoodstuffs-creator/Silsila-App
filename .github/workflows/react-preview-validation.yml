@@ -11,6 +11,11 @@ on:
       - 'react-preview/**'
       - '.github/workflows/react-preview-validation.yml'
   workflow_dispatch:
+
+concurrency:
+  group: silsila-react-preview-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-browser-test:
     runs-on: ubuntu-latest
