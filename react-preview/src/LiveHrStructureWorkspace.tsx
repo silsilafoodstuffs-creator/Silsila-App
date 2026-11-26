@@ -65,15 +65,15 @@ export default function LiveHrStructureWorkspace({kind}:{kind:"department"|"job"
   setSaving(true);setError("");setMessage("");
   try{
    if(kind==="department"){
-    const payload={company_id:companyId,department_code:selected?(selected as Department).department_code:"",name_ar:form.nameAr.trim(),name_en:form.nameEn.trim(),department_level:form.level,parent_id:form.level==="directorate"?null:form.parentId,work_location_id:form.locationId,is_active:true};
+    const payload={company_id:companyId,department_code:selected?(selected as Department).department_code:"",name_ar:form.nameAr.trim(),name_en:form.nameEn.trim(),department_level:form.level,parent_id:form.level==="directorate"?null:form.parentId,work_location_id:form.locationId,is_active:selected?selected.is_active:true};
     const result=selected?await supabase.from("erp_hr_departments").update(payload).eq("id",selected.id).eq("company_id",companyId):await supabase.from("erp_hr_departments").insert(payload);
     if(result.error)throw result.error;
    }else if(kind==="job"){
-    const payload={company_id:companyId,job_code:selected?(selected as Job).job_code:"",name_ar:form.nameAr.trim(),name_en:form.nameEn.trim(),department_id:form.departmentId,is_active:true};
+    const payload={company_id:companyId,job_code:selected?(selected as Job).job_code:"",name_ar:form.nameAr.trim(),name_en:form.nameEn.trim(),department_id:form.departmentId,is_active:selected?selected.is_active:true};
     const result=selected?await supabase.from("erp_hr_jobs").update(payload).eq("id",selected.id).eq("company_id",companyId):await supabase.from("erp_hr_jobs").insert(payload);
     if(result.error)throw result.error;
    }else{
-    const payload={company_id:companyId,location_code:selected?(selected as Location).location_code:"",name_ar:form.nameAr.trim(),location_type:form.locationType,address:form.address.trim()||null,is_active:true};
+    const payload={company_id:companyId,location_code:selected?(selected as Location).location_code:"",name_ar:form.nameAr.trim(),location_type:form.locationType,address:form.address.trim()||null,is_active:selected?selected.is_active:true};
     const result=selected?await supabase.from("erp_hr_work_locations").update(payload).eq("id",selected.id).eq("company_id",companyId):await supabase.from("erp_hr_work_locations").insert(payload);
     if(result.error)throw result.error;
    }
