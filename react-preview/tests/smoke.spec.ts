@@ -180,3 +180,19 @@ test("journal workspace separates draft saving from posting", async ({ page }) =
   await expect(page.locator(".operation-feedback.warning")).toContainText("سجّل الدخول إلى المنشأة لعرض دفتر القيود الفعلي");
   expect(pageErrors).toEqual([]);
 });
+
+
+test("treasury screen supports centrally coded inter-cashbox transfers", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", error => pageErrors.push(error.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: /دخول المعاينة/ }).click();
+  await page.locator(".nav-main-toggle").filter({ hasText: "الإدارة المالية" }).click();
+  await page.locator(".nav-subgroup-toggle").filter({ hasText: "حركات" }).click();
+  await page.locator(".nav-item").filter({ hasText: "سندات القبض والصرف" }).click();
+  await expect(page.getByRole("heading", { name: "سندات القبض والصرف", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "تحويل", exact: true }).click();
+  await expect(page.getByText("خزينة الاستلام", { exact: true })).toBeVisible();
+  await expect(page.getByText(/سجّل الدخول بحساب منشأة لاستخدام الخزينة الفعلية/)).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
