@@ -187,13 +187,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   };
   useEffect(() => {
     const editState = (event: Event) => setEditDirty(Boolean((event as CustomEvent<{dirty?:boolean}>).detail?.dirty));
-    const editClosed = () => {
-      setEditDirty(false);
-      setPendingCompanyId((next) => {
-        if (next) applyCompany(next);
-        return "";
-      });
-    };
+    const editClosed = () => setEditDirty(false);
     const editCancelled = () => setPendingCompanyId("");
     window.addEventListener("silsila:edit-state", editState);
     window.addEventListener("silsila:edit-closed", editClosed);
@@ -204,6 +198,12 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       window.removeEventListener("silsila:edit-navigation-cancel", editCancelled);
     };
   }, [companies]);
+  useEffect(() => {
+    if (!editDirty && pendingCompanyId) {
+      applyCompany(pendingCompanyId);
+      setPendingCompanyId("");
+    }
+  }, [editDirty, pendingCompanyId, companies]);
   const signOut = async (): Promise<boolean> => {
     if (supabase) {
       const { error } = await supabase.auth.signOut();
