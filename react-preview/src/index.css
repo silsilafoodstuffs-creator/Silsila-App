@@ -685,3 +685,11 @@ main .content > section > header h2{
 .live-parties-table-wrap tbody tr:hover{
  background:var(--silsila-table-row-hover);
 }
+
+
+.foundation-table-wrap tbody tr:hover td,
+.live-master-table-wrap tbody tr:hover td,
+.live-business-table tbody tr:hover td,
+.live-parties-table-wrap tbody tr:hover td{
+ background:var(--silsila-table-row-hover)!important;
+}
