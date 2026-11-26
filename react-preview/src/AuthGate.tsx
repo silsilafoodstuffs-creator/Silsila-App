@@ -32,6 +32,18 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const [userTypes, setUserTypes] = useState<string[]>([]);
   const [accountType, setAccountType] = useState("إدارة نشاط");
   const [activityUserType, setActivityUserType] = useState("مستخدم رئيسي للنشاط");
+  const [registerMode, setRegisterMode] = useState<"user" | "activity" | null>(null);
+  const [registerBusy, setRegisterBusy] = useState(false);
+  const [registerError, setRegisterError] = useState("");
+  const [registerName, setRegisterName] = useState("");
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerPhone, setRegisterPhone] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [registerConfirm, setRegisterConfirm] = useState("");
+  const [registerActivity, setRegisterActivity] = useState("");
+  const [registerAccountType, setRegisterAccountType] = useState("");
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showRegisterConfirm, setShowRegisterConfirm] = useState(false);
 
   useEffect(() => {
     const client = supabase;
@@ -163,6 +175,78 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     }
   };
 
+  const normalizePhone = (value: string) => {
+    const digits = value.replace(/[٠-٩۰-۹]/g, (digit) => String.fromCharCode(48 + (digit.charCodeAt(0) >= 0x0660 && digit.charCodeAt(0) <= 0x0669 ? digit.charCodeAt(0) - 0x0660 : digit.charCodeAt(0) - 0x06f0))).replace(/[^0-9+]/g, "");
+    if (digits.startsWith("+")) return digits;
+    if (digits.startsWith("00")) return "+" + digits.slice(2);
+    if (digits.startsWith("20")) return "+" + digits;
+    if (digits.startsWith("0") && digits.length >= 10) return "+20" + digits.slice(1);
+    return "+" + digits;
+  };
+
+  const openRegistration = (mode: "user" | "activity") => {
+    setRegisterMode(mode);
+    setRegisterError("");
+    setRegisterName("");
+    setRegisterEmail("");
+    setRegisterPhone("");
+    setRegisterPassword("");
+    setRegisterConfirm("");
+    setRegisterActivity(activity || activities[0]?.code || "");
+    setRegisterAccountType(mode === "activity" ? "إدارة نشاط" : (userTypes.includes(accountType) ? accountType : userTypes[0] || ""));
+  };
+
+  const register = async (event: FormEvent) => {
+    event.preventDefault();
+    const client = supabase;
+    if (!client || !isSupabaseConfigured) { setRegisterError("إعداد اتصال Supabase غير مكتمل."); return; }
+    if (!registerMode) return;
+    const phoneDigits = registerPhone.replace(/[^0-9٠-٩۰-۹]/g, "");
+    if (!registerName.trim()) { setRegisterError("اكتب اسم النشاط التجاري أو صاحب الحساب."); return; }
+    if (!registerEmail.trim().includes("@") || !registerEmail.trim().includes(".")) { setRegisterError("أدخل بريدًا إلكترونيًا صحيحًا."); return; }
+    if (!registerActivity) { setRegisterError("اختر نوع النشاط."); return; }
+    if (phoneDigits.length < 10 || phoneDigits.length > 15) { setRegisterError("أدخل رقم هاتف صحيحًا من 10 إلى 15 رقمًا."); return; }
+    if (registerPassword.length < 8 || !/[A-Z]/.test(registerPassword) || !/[a-z]/.test(registerPassword) || !/[0-9]/.test(registerPassword) || !/[^A-Za-z0-9]/.test(registerPassword)) {
+      setRegisterError("كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، وحرف كبير وصغير ورقم ورمز.");
+      return;
+    }
+    if (registerPassword !== registerConfirm) { setRegisterError("كلمتا المرور غير متطابقتين."); return; }
+    setRegisterBusy(true);
+    setRegisterError("");
+    try {
+      const { data, error } = await client.auth.signUp({
+        email: registerEmail.trim().toLowerCase(),
+        password: registerPassword,
+        options: { data: {
+          full_name: registerName.trim(),
+          contact_phone: normalizePhone(registerPhone),
+          account_type: registerMode === "activity" ? "إدارة نشاط" : registerAccountType,
+          activity_type: registerActivity,
+          activity_user_type: registerMode === "activity" ? "مستخدم رئيسي للنشاط" : activityUserType,
+        } },
+      });
+      if (error) throw error;
+      if (!data.user) throw new Error("لم يتم إنشاء الحساب.");
+      if (data.session) {
+        setRegisterMode(null);
+        setSession(data.session);
+        const ok = await loadCompanies(data.session);
+        if (!ok) {
+          await client.auth.signOut();
+          setSession(null);
+          setRegisterError("تم إنشاء الحساب، لكن لا توجد عضوية منشأة نشطة مرتبطة به. راجع ربط الحساب بالمنشأة قبل الدخول.");
+        }
+      } else {
+        setRegisterMode(null);
+        setMessage("تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيد الحساب قبل تسجيل الدخول.");
+      }
+    } catch (error) {
+      setRegisterError(error instanceof Error ? error.message : "تعذر إنشاء الحساب. حاول مرة أخرى.");
+    } finally {
+      setRegisterBusy(false);
+    }
+  };
+
   const resetPassword = async () => {
     const client = supabase;
     if (!client || !email.trim()) {
@@ -283,11 +367,29 @@ export default function AuthGate({ children }: { children: ReactNode }) {
           <button className="login-submit" type="submit" disabled={busy}>{busy?"جارٍ التحقق...":"تسجيل الدخول"} <ArrowLeft size={17}/></button>
           {message&&<div className="login-message" role="status">{message}</div>}
         </form>
+        <div className="login-registration-actions">
+          <button type="button" onClick={() => openRegistration("user")}>إنشاء مستخدم جديد</button>
+          <button type="button" onClick={() => openRegistration("activity")}>تسجيل حساب نشاط</button>
+        </div>
         <div className="login-preview-access"><div><b>استكشاف التصميم أولاً</b><span>لن يتم الاتصال ببيانات الإنتاج في وضع المعاينة.</span></div><button type="button" onClick={enterPreview}>دخول المعاينة <ArrowLeft size={15}/></button></div>
         <div className="login-security-note"><Building2 size={15}/> صلاحيات المنشأة تُطبّق من قاعدة البيانات</div>
         <footer>© 2026 سلسلة · جميع الحقوق محفوظة</footer>
       </section>
       </div>
+      {registerMode && <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !registerBusy) setRegisterMode(null); }} style={{position:"fixed",inset:0,zIndex:2000,background:"#160b28a8",display:"grid",placeItems:"center",padding:16}}>
+        <form onSubmit={register} dir="rtl" style={{width:"min(100%,520px)",maxHeight:"90vh",overflowY:"auto",background:"#fff",borderRadius:20,padding:22,boxShadow:"0 24px 80px #12051f66",display:"grid",gap:12}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><div><span style={{fontSize:11,color:"#8b55b4"}}>سلسلة · تسجيل آمن</span><h2 style={{margin:"4px 0",fontSize:21,color:"#3E007D"}}>{registerMode === "activity" ? "تسجيل حساب نشاط" : "إنشاء مستخدم جديد"}</h2></div><button type="button" disabled={registerBusy} onClick={()=>setRegisterMode(null)} aria-label="إغلاق" style={{background:"#f5effb",color:"#3E007D",borderRadius:9,width:34,height:34}}>×</button></div>
+          <label style={{display:"grid",gap:5,fontSize:12,color:"#51415f"}}>اسم النشاط التجاري / صاحب الحساب<input value={registerName} onChange={e=>setRegisterName(e.target.value)} required autoComplete="name" style={{height:42,border:"1px solid #e4d9ed",borderRadius:9,padding:"0 11px",font: "inherit"}}/></label>
+          <label style={{display:"grid",gap:5,fontSize:12,color:"#51415f"}}>البريد الإلكتروني<input type="email" value={registerEmail} onChange={e=>setRegisterEmail(e.target.value)} required autoComplete="email" style={{height:42,border:"1px solid #e4d9ed",borderRadius:9,padding:"0 11px",font:"inherit"}}/></label>
+          <label style={{display:"grid",gap:5,fontSize:12,color:"#51415f"}}>نوع النشاط<select value={registerActivity} onChange={e=>setRegisterActivity(e.target.value)} required style={{height:42,border:"1px solid #e4d9ed",borderRadius:9,padding:"0 11px",font:"inherit"}}><option value="">اختر النشاط</option>{activities.map(item=><option key={item.code} value={item.code}>{item.name}</option>)}</select></label>
+          {registerMode === "user" && <label style={{display:"grid",gap:5,fontSize:12,color:"#51415f"}}>نوع الحساب<select value={registerAccountType} onChange={e=>setRegisterAccountType(e.target.value)} required style={{height:42,border:"1px solid #e4d9ed",borderRadius:9,padding:"0 11px",font:"inherit"}}><option value="">اختر نوع الحساب</option>{userTypes.map(type=><option key={type} value={type}>{type}</option>)}</select></label>}
+          <label style={{display:"grid",gap:5,fontSize:12,color:"#51415f"}}>رقم الهاتف<input type="tel" value={registerPhone} onChange={e=>setRegisterPhone(e.target.value)} required autoComplete="tel" style={{height:42,border:"1px solid #e4d9ed",borderRadius:9,padding:"0 11px",font:"inherit"}}/></label>
+          <label style={{display:"grid",gap:5,fontSize:12,color:"#51415f"}}>كلمة المرور<div style={{display:"flex",border:"1px solid #e4d9ed",borderRadius:9,alignItems:"center",paddingInline:10}}><input type={showRegisterPassword?"text":"password"} value={registerPassword} onChange={e=>setRegisterPassword(e.target.value)} required autoComplete="new-password" style={{height:42,border:0,outline:0,flex:1,minWidth:0,font:"inherit"}}/><button type="button" onClick={()=>setShowRegisterPassword(v=>!v)} aria-label="إظهار كلمة المرور" style={{background:"transparent",color:"#7442a0"}}>{showRegisterPassword?<EyeOff size={17}/>:<Eye size={17}/>}</button></div><small style={{color:"#93859f"}}>8 أحرف على الأقل، حرف كبير وصغير ورقم ورمز</small></label>
+          <label style={{display:"grid",gap:5,fontSize:12,color:"#51415f"}}>تأكيد كلمة المرور<div style={{display:"flex",border:"1px solid #e4d9ed",borderRadius:9,alignItems:"center",paddingInline:10}}><input type={showRegisterConfirm?"text":"password"} value={registerConfirm} onChange={e=>setRegisterConfirm(e.target.value)} required autoComplete="new-password" style={{height:42,border:0,outline:0,flex:1,minWidth:0,font:"inherit"}}/><button type="button" onClick={()=>setShowRegisterConfirm(v=>!v)} aria-label="إظهار تأكيد كلمة المرور" style={{background:"transparent",color:"#7442a0"}}>{showRegisterConfirm?<EyeOff size={17}/>:<Eye size={17}/>}</button></div></label>
+          {registerError && <div role="alert" style={{background:"#fff0ef",color:"#a33a31",borderRadius:9,padding:10,fontSize:12,lineHeight:1.7}}>{registerError}</div>}
+          <div style={{display:"flex",gap:9}}><button type="button" disabled={registerBusy} onClick={()=>setRegisterMode(null)} style={{height:43,flex:1,borderRadius:9,background:"#f5effb",color:"#3E007D"}}>إلغاء</button><button type="submit" disabled={registerBusy} style={{height:43,flex:1,borderRadius:9,background:"#3E007D",color:"#fff",fontWeight:800}}>{registerBusy?"جارٍ إنشاء الحساب...":"إنشاء الحساب"}</button></div>
+        </form>
+      </div>}
       <footer className="login-frame-footer"><span>© 2026 سلسلة · جميع الحقوق محفوظة</span><strong>سلسلة .. بنربط السوق ببعضه</strong></footer>
     </div>
   </div>;
