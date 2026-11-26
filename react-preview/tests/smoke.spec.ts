@@ -353,3 +353,18 @@ test("sales delivery and purchase receipt open live document workspaces without 
   await expect(page.getByText(/سجّل الدخول بحساب المنشأة لفتح مستندات التشغيل الحقيقية/)).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
+
+test("cash order collection and payment workflow opens without seeded data", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", error => pageErrors.push(error.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: /دخول المعاينة/ }).click();
+  await page.locator(".nav-main-toggle").filter({ hasText: "الإدارة المالية" }).click();
+  await page.locator(".nav-subgroup-toggle").filter({ hasText: "حركات" }).click();
+  await page.locator(".nav-item").filter({ hasText: "أوامر الصرف والتوريد" }).click();
+  await expect(page.getByRole("heading", { name: "أوامر الصرف والتوريد", exact: true })).toBeVisible();
+  await expect(page.getByText(/سجّل الدخول بحساب منشأة لعرض أوامر الخزينة الفعلية/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "حفظ الأمر", exact: true })).toBeDisabled();
+  await expect(page.getByText("مؤسسة النور التجارية", { exact: true })).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});
