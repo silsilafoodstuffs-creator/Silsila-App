@@ -932,3 +932,72 @@ main .content > section > header h2{
  box-shadow:0 4px 12px #3e007d25!important;
  text-shadow:none!important;
 }
+
+
+/* Final Silsila screen-title and table-header standard: solid purple, white text */
+:root{
+  --silsila-screen-title-color:#FFFFFF;
+  --silsila-screen-title-bg:#3E007D;
+  --silsila-table-header-bg:#3E007D;
+  --silsila-table-header-color:#FFFFFF;
+}
+.foundation-head,
+.accounts-hero,
+.inventory-hero,
+.live-master-head,
+.live-business-head,
+.executive-live-head,
+.live-parties-head,
+.operation-heading,
+.module-banner,
+.program-policies .pp-head,
+.settings-hero{
+  background:#3E007D!important;
+  border-color:#3E007D!important;
+  box-shadow:0 4px 12px #3e007d18!important;
+}
+.foundation-head h2,
+.accounts-hero h2,
+.inventory-hero h2,
+.live-master-head h2,
+.live-business-head h2,
+.executive-live-head h2,
+.live-parties-head h2,
+.operation-heading h1,
+.operation-heading h2,
+.module-banner h1,
+.module-banner h2,
+.module-banner b,
+.program-policies .pp-head h2,
+.program-policies .pp-head p,
+.program-policies .pp-count,
+.settings-hero h1,
+.settings-hero h2{
+  color:#FFFFFF!important;
+  text-shadow:none!important;
+}
+.main .content table thead th,
+.foundation-table-wrap th,
+.accounts-table-scroll th,
+.inventory-table-scroll th,
+.live-master-table-wrap th,
+.live-business-table th,
+.live-parties-table-wrap th,
+.settings-table thead th,
+.table-wrap thead th,
+.operation-table-scroll th,
+.module-table-card th,
+.program-policies .pp-table th{
+  background:#3E007D!important;
+  color:#FFFFFF!important;
+  border-bottom:1px solid #6D42A0!important;
+  box-shadow:none!important;
+  font-weight:800!important;
+}
+.program-policies .pp-tabs .pp-tab.active{
+  background:#3E007D!important;
+  color:#FFFFFF!important;
+  border-color:#3E007D!important;
+  box-shadow:none!important;
+  text-shadow:none!important;
+}
