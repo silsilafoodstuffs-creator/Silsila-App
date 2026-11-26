@@ -730,3 +730,122 @@ main .content > section > header h2{
  .executive-live-head h2,
  .live-parties-head h2{font-size:19px}
 }
+
+
+/* Silsila Neon Galaxy visual hierarchy — screen titles, table headers and policy tabs */
+:root{
+ --silsila-neon-purple:#3E007D;
+ --silsila-neon-violet:#6426A0;
+ --silsila-neon-glow:#A94DFF;
+ --silsila-neon-pink:#FF27C3;
+ --silsila-neon-white:#FFFFFF;
+}
+.foundation-head,
+.accounts-hero,
+.inventory-hero,
+.live-master-head,
+.live-business-head,
+.executive-live-head,
+.live-parties-head,
+.operation-heading,
+.module-banner{
+ background:
+  radial-gradient(ellipse at 12% 0%,#a94dff55 0%,transparent 42%),
+  linear-gradient(112deg,#260047 0%,#3E007D 48%,#6426A0 78%,#3E007D 100%)!important;
+ border:1px solid #8f43cf!important;
+ box-shadow:0 8px 26px #3e007d2b, inset 0 1px 0 #ffffff24!important;
+}
+.foundation-head h2,
+.accounts-hero h2,
+.inventory-hero h2,
+.live-master-head h2,
+.live-business-head h2,
+.executive-live-head h2,
+.live-parties-head h2,
+.operation-heading h1,
+.operation-heading h2,
+.module-banner b,
+.module-banner h1,
+.module-banner h2{
+ color:#fff!important;
+ text-shadow:0 1px 12px #d8a8ff42;
+}
+.foundation-head small,
+.foundation-head p,
+.accounts-hero small,
+.accounts-hero p,
+.inventory-hero small,
+.inventory-hero p,
+.live-master-head small,
+.live-master-head p,
+.live-business-head small,
+.live-business-head p,
+.executive-live-head small,
+.executive-live-head p,
+.live-parties-head small,
+.live-parties-head p,
+.operation-heading p,
+.module-banner span{
+ color:#f0e1ff!important;
+}
+.foundation-head>span,
+.operation-icon{
+ background:linear-gradient(145deg,#a94dff,#6426A0)!important;
+ color:#fff!important;
+ border:1px solid #ffffff55!important;
+ box-shadow:0 0 18px #b65cff55;
+}
+.main .content table thead th,
+.foundation-table-wrap th,
+.accounts-table-scroll th,
+.inventory-table-scroll th,
+.live-master-table-wrap th,
+.live-business-table th,
+.live-parties-table-wrap th,
+.settings-table thead th,
+.table-wrap thead th,
+.operation-table-scroll th,
+.module-table-card th,
+.program-policies .pp-table th{
+ background:linear-gradient(105deg,#310052 0%,#3E007D 48%,#7026A8 100%)!important;
+ color:#fff!important;
+ font-weight:900!important;
+ border-bottom:1px solid #a64de0!important;
+ box-shadow:inset 0 1px 0 #ffffff20;
+}
+.program-policies .pp-head{
+ background:
+  radial-gradient(ellipse at 12% 0%,#a94dff66 0%,transparent 42%),
+  linear-gradient(112deg,#260047 0%,#3E007D 48%,#6426A0 100%)!important;
+ border:1px solid #8f43cf!important;
+ box-shadow:0 8px 26px #3e007d2b,inset 0 1px 0 #ffffff24!important;
+}
+.program-policies .pp-head h2,
+.program-policies .pp-head p,
+.program-policies .pp-count{color:#fff!important}
+.program-policies .pp-head-icon{
+ background:linear-gradient(145deg,#a94dff,#6426A0)!important;
+ border:1px solid #ffffff55;
+ box-shadow:0 0 18px #b65cff55;
+}
+.program-policies .pp-tabs .pp-tab{
+ background:linear-gradient(145deg,#fff 0%,#f7efff 100%);
+ border:1px solid #d8b9f2;
+ color:#512078;
+ box-shadow:0 2px 8px #3e007d0d;
+ transition:background .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+.program-policies .pp-tabs .pp-tab:hover{
+ background:linear-gradient(120deg,#f0ddff,#ffe7fb);
+ border-color:#a94dff;
+ color:#3E007D;
+ box-shadow:0 0 0 2px #a94dff20,0 5px 14px #3e007d18;
+}
+.program-policies .pp-tabs .pp-tab.active{
+ background:linear-gradient(112deg,#260047 0%,#3E007D 48%,#7026A8 100%)!important;
+ border:1px solid #b86aff!important;
+ color:#fff!important;
+ box-shadow:0 0 0 1px #a94dff44,0 5px 18px #7026a855,inset 0 1px 0 #ffffff30!important;
+ text-shadow:0 1px 8px #d8a8ff55;
+}
+.program-policies .pp-tabs .pp-tab.active small{color:#fff!important;opacity:.9}
