@@ -1001,3 +1001,37 @@ main .content > section > header h2{
   box-shadow:none!important;
   text-shadow:none!important;
 }
+
+
+/* Enforce the approved solid-purple column header row across every React data table */
+.main .content table th,
+.main .content table thead th,
+.main .content [role="columnheader"],
+.foundation-table-wrap th,
+.accounts-table-scroll th,
+.inventory-table-scroll th,
+.business-table-scroll th,
+.journal-table-scroll th,
+.live-master-table-wrap th,
+.live-business-table th,
+.live-parties-table-wrap th,
+.settings-table-scroll th,
+.settings-table th,
+.table-wrap th,
+.operation-table-scroll th,
+.module-table-card th,
+.users-table-scroll th,
+.users-permission-table th,
+.program-policies .pp-table th{
+  background-color:#3E007D!important;
+  background-image:none!important;
+  color:#FFFFFF!important;
+  border-color:#6D42A0!important;
+  box-shadow:none!important;
+  text-shadow:none!important;
+  font-weight:800!important;
+}
+.main .content table thead th *,
+.main .content [role="columnheader"] *{
+  color:#FFFFFF!important;
+}
