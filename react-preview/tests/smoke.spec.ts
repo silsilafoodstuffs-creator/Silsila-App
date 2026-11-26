@@ -101,6 +101,9 @@ test("all seven foundation screens open from general settings", async ({ page })
       await expect(page.getByRole("navigation", { name: "تصنيفات سياسات البرنامج" })).toBeVisible();
       await expect(page.getByRole("button", { name: /تكويدية/ })).toBeVisible();
       await expect(page.getByRole("button", { name: /الهوية البصرية/ })).toBeVisible();
+      for (const action of ["تحديث", "حفظ", "تعديل", "معاينة", "طباعة", "Excel", "PDF"]) {
+        await expect(page.locator(".pp-quick-actions").getByRole("button", { name: new RegExp(action) })).toBeVisible();
+      }
     }
   }
 
