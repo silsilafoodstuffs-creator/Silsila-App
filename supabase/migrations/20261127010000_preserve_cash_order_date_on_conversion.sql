@@ -129,5 +129,8 @@ begin
 end;
 $$;
 
+comment on function public.erp_convert_cash_order(uuid, uuid, uuid) is
+  'Converts an approved cash order atomically and preserves erp_cash_orders.order_date on the resulting cash movement and voucher.';
+
 revoke all on function public.erp_convert_cash_order(uuid, uuid, uuid) from public, anon;
 grant execute on function public.erp_convert_cash_order(uuid, uuid, uuid) to authenticated;
