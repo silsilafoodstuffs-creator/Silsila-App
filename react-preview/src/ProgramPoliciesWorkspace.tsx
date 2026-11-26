@@ -31,7 +31,7 @@ export default function ProgramPoliciesWorkspace(){
    if(permError)throw permError;
    const keys=["إعدادات عامة::بيانات أساسية::سياسات البرنامج","إدارة البرنامج::بيانات أساسية::إعدادات البرنامج","إعدادات عامة::بيانات أساسية::*","إعدادات عامة::*::*","إدارة البرنامج::بيانات أساسية::*","إدارة البرنامج::*::*"];
    const permission=(perms||[]).find((p:any)=>keys.includes(p.menu_key));
-   setCanRead(permission?.allow_access!==false);setCanEdit(["owner","admin"].includes(role)||(permission?.can_edit===true||permission?.can_save===true));setPermissionsReady(true);
+   setCanRead(permission?.allow_access!==false);setCanEdit(["owner","مالك","admin","ادمن","مدير النظام","مدير"].includes(role.trim().toLowerCase()));setPermissionsReady(true);
    if(permission?.allow_access===false)throw new Error("لا تملك صلاحية عرض سياسات البرنامج.");
    const {data,error}=await supabase.from("erp_program_policies").select("*").eq("company_id",companyId).order("category",{ascending:true}).order("policy_code",{ascending:true});
    if(error)throw error;
