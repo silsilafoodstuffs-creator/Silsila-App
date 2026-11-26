@@ -12,10 +12,11 @@ type Props={
  onClose:()=>void;
  onSaveError?:()=>void;
  initialMode?:"view"|"edit";
+ canEdit?:boolean;
  children:ReactNode;
 };
 
-export default function EditDrawer({title,dirty,saving=false,onSave,onDiscard,onClose,onSaveError,initialMode="edit",children,error=""}:Props){
+export default function EditDrawer({title,dirty,saving=false,onSave,onDiscard,onClose,onSaveError,initialMode="edit",canEdit=true,children,error=""}:Props){
  const [confirmOpen,setConfirmOpen]=useState(false);
  const [viewMode,setViewMode]=useState(initialMode==="view");
  const [saveError,setSaveError]=useState("");
@@ -47,7 +48,7 @@ export default function EditDrawer({title,dirty,saving=false,onSave,onDiscard,on
  return <div className="silsila-edit-layer" dir="rtl">
   <button className="silsila-edit-scrim" aria-label="إغلاق نافذة التعديل" onClick={requestClose}/>
   <aside className="silsila-edit-drawer" role="dialog" aria-modal="true" aria-label={title}>
-   <header className="silsila-edit-drawer-head"><div><small>سلسلة · {viewMode?"معاينة البيانات":"تعديل البيانات"}</small><h2>{title}</h2></div><div className="silsila-edit-drawer-tools">{viewMode?<button type="button" className="drawer-edit-toggle" onClick={()=>setViewMode(false)} disabled={isSaving}><Pencil size={15}/> تعديل</button>:<><button type="button" className="drawer-edit-toggle" onClick={()=>{onDiscard();setViewMode(true);}} disabled={isSaving}><RotateCcw size={15}/> العدول عن التعديل</button><button type="button" className="drawer-save-toggle" onClick={()=>{if(dirty)setConfirmOpen(true);else setViewMode(true);}} disabled={isSaving}><Save size={15}/> حفظ</button></>}<button type="button" aria-label="إغلاق" onClick={requestClose} disabled={isSaving}><X size={19}/></button></div></header>
+   <header className="silsila-edit-drawer-head"><div><small>سلسلة · {viewMode?"معاينة البيانات":"تعديل البيانات"}</small><h2>{title}</h2></div><div className="silsila-edit-drawer-tools">{viewMode?<button type="button" className="drawer-edit-toggle" onClick={()=>setViewMode(false)} disabled={isSaving||!canEdit}><Pencil size={15}/> تعديل</button>:<><button type="button" className="drawer-edit-toggle" onClick={()=>{onDiscard();setViewMode(true);}} disabled={isSaving}><RotateCcw size={15}/> العدول عن التعديل</button><button type="button" className="drawer-save-toggle" onClick={()=>{if(dirty)setConfirmOpen(true);else setViewMode(true);}} disabled={isSaving||!canEdit}><Save size={15}/> حفظ</button></>}<button type="button" aria-label="إغلاق" onClick={requestClose} disabled={isSaving}><X size={19}/></button></div></header>
    <div className="silsila-edit-drawer-body">{(error||saveError)&&<div role="alert" className="silsila-edit-inline-error">{error||saveError}</div>}<fieldset disabled={viewMode} className="silsila-edit-drawer-fieldset">{children}</fieldset></div>
   </aside>
   {confirmOpen&&<div className="silsila-edit-confirm-backdrop" role="presentation">
