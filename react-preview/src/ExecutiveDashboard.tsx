@@ -1,7 +1,7 @@
 import {useEffect,useMemo,useState} from "react";
 import {supabase} from "./supabase";
 import SILSILA_LOGO from "./brand";
-import {Activity,ArrowDownLeft,ArrowUpLeft,CalendarDays,Package,RefreshCw,ShoppingCart,Users,Wallet,ChartNoAxesCombined,Sparkles} from "lucide-react";
+import {Activity,ArrowDownLeft,ArrowUpLeft,CalendarDays,Package,RefreshCw,ShoppingCart,Users,Wallet,ChartNoAxesCombined,Sparkles,Camera,FileBarChart} from "lucide-react";
 const money=(n:number)=>new Intl.NumberFormat("ar-EG",{maximumFractionDigits:2}).format(n);
 function range(period:string){const end=new Date();end.setHours(23,59,59,999);const start=new Date(end);if(period==="اليوم")start.setHours(0,0,0,0);else if(period==="آخر 7 أيام")start.setDate(start.getDate()-6);else if(period==="آخر 30 يومًا")start.setDate(start.getDate()-29);else if(period==="هذا الشهر")start.setDate(1);else if(period==="هذا الربع"){start.setMonth(Math.floor(start.getMonth()/3)*3,1);}else if(period==="هذا العام"){start.setMonth(0,1);}return {start:start.toISOString().slice(0,10),end:end.toISOString().slice(0,10)};}
 export default function ExecutiveDashboard({period,onNavigate}:{period:string;onNavigate:(name:string)=>void}){
@@ -26,6 +26,12 @@ export default function ExecutiveDashboard({period,onNavigate}:{period:string;on
    <div className="silsila-visual-brand"><img src={SILSILA_LOGO} alt="شعار سلسلة"/><div><b>سلسلة</b><span>SILSILA · BUSINESS OS</span><small>سلسلة .. بنربط السوق ببعضه</small></div></div>
    <div className="silsila-visual-copy"><small><Sparkles size={14}/> منظومة إدارة أعمالك المتكاملة</small><h2>تجارتك اليومية تبدأ من هنا</h2><p>إدارة أكثر وضوحًا، وقرارات أسرع، وسوق مربوط ببعضه</p><div className="silsila-visual-underline"/></div>
    <div className="silsila-visual-art" aria-hidden="true"><div className="silsila-visual-bars"><i/><i/><i/><i/><i/></div><div className="silsila-visual-cart"><ShoppingCart size={58}/><span><Package size={25}/></span></div><div className="silsila-visual-orbit"/></div>
+  </div>
+  <div className="silsila-quick-actions">
+   <button onClick={()=>onNavigate("فواتير البيع")}><ShoppingCart size={18}/><span>فاتورة البيع</span></button>
+   <button onClick={()=>onNavigate("جامع صور الأصناف")}><Camera size={18}/><span>جامع صور الأصناف</span></button>
+   <button onClick={()=>onNavigate("المخازن والأصناف")}><Package size={18}/><span>إدارة الأصناف</span></button>
+   <button onClick={()=>onNavigate("تقارير المبيعات")}><FileBarChart size={18}/><span>تقارير المبيعات</span></button>
   </div>
   <div className="executive-live-head"><div><small>لوحة الأداء · بيانات فعلية من قاعدة المنشأة</small><h2>مؤشرات الأداء الرئيسية</h2><p>الفترة: {span.start} — {span.end} · المستندات المرحلة فقط · استبعاد السجلات التجريبية</p></div><button onClick={()=>void load()} disabled={loading}><RefreshCw size={15}/> تحديث</button></div>
   {error&&<div className="executive-live-error">{error}</div>}
