@@ -83,7 +83,8 @@ export default function LiveStocktakeWorkspace(){
   if(error){setError("تعذر إنشاء محضر الجرد: "+error.message);return;}
   const id=String(data);setNotes("");await load();
   const created:Stocktake={id,warehouse_id:warehouseId,status:"draft",count_mode:"detailed",valuation_basis:"",source:"stocktake",created_at:new Date().toISOString(),notes:null};
-  setMessage("تم إنشاء محضر جرد فعلي بمخزن "+(warehouseMap.get(warehouseId)?.warehouse_name||"المخزن المحدد"));
+  const selectedWarehouse=warehouseMap.get(warehouseId);
+  setMessage("تم إنشاء محضر جرد فعلي بمخزن "+(selectedWarehouse?selectedWarehouse.warehouse_name:"المخزن المحدد"));
   await loadLines(created);
  };
  const saveOrPost=async():Promise<boolean>=>{
