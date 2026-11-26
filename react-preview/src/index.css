@@ -635,3 +635,13 @@ main .content > section > header h2{
 }
 .foundation-head h2{color:var(--silsila-screen-title-color)!important}
 .foundation-table-wrap th{padding:10px 11px!important}
+
+
+/* Policy editor: accessible color controls for visual identity values */
+.foundation-color-editor>div{display:flex;align-items:center;gap:8px;min-width:0}
+.foundation-color-editor input[type="color"]{width:46px;height:40px;padding:3px;border:1px solid #e8deef;border-radius:8px;background:#fff;cursor:pointer}
+.foundation-color-editor input[type="text"]{height:40px;max-width:180px;padding:0 10px;border:1px solid #e8deef;border-radius:8px;color:#241735;font:600 13px ui-monospace,monospace}
+.foundation-color-editor i{width:32px;height:32px;border:1px solid #d9d0df;border-radius:8px;display:block;flex:0 0 auto}
+.foundation-color-editor small{color:#877a90;font-size:11px}
+.foundation-policy-meta{display:flex;flex-wrap:wrap;gap:8px 16px;color:#887a91;font-size:11px}
+.foundation-policy-meta code{direction:ltr;color:#5b3977}
