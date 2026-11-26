@@ -252,3 +252,18 @@ test("unsaved edits defer sidebar navigation until the drawer is closed", async 
   await page.evaluate(() => window.dispatchEvent(new Event("silsila:edit-closed")));
   await expect(page.getByRole("heading", { name: "سياسات البرنامج", exact: true })).toBeVisible();
 });
+
+
+test("inventory balances use the live stock ledger rather than local demo storage", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", error => pageErrors.push(error.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: /دخول المعاينة/ }).click();
+  await page.locator(".nav-main-toggle").filter({ hasText: "المخازن" }).click();
+  await page.locator(".nav-subgroup-toggle").filter({ hasText: "بيانات أساسية" }).click();
+  await page.locator(".nav-item").filter({ hasText: "أرصدة المخزون" }).click();
+  await expect(page.getByRole("heading", { name: "أرصدة المخزون", exact: true })).toBeVisible();
+  await expect(page.getByText(/الأرصدة والتكلفة والحركات تُقرأ مباشرة من دفتر الحركات المعتمد/)).toBeVisible();
+  await expect(page.getByText(/سجّل الدخول إلى المنشأة لعرض أرصدة المخزون الفعلية/)).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
