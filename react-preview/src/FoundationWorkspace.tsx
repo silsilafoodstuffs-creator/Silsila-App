@@ -33,15 +33,15 @@ export default function FoundationWorkspace({kind}:{kind:Kind}){
  const [loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
  const [editing,setEditing]=useState<Row|null>(null),[form,setForm]=useState<Row>({});
  const [extra,setExtra]=useState<Row>({}),[activities,setActivities]=useState<Row[]>([]),[groups,setGroups]=useState<Row[]>([]);
- const [permissions,setPermissions]=useState<Row[]>([]);
+ const [permissions,setPermissions]=useState<Row[]>([]),[permissionsReady,setPermissionsReady]=useState(false);
  const adminRole=["owner","admin"].includes(role);
  const permissionKey="إعدادات عامة::بيانات أساسية::"+cfg.title;
  const permission=permissions.find(p=>[permissionKey,...permissionAliases[kind]].includes(p.menu_key))||permissions.find(p=>p.menu_key==="إعدادات عامة::بيانات أساسية::*")||permissions.find(p=>p.menu_key==="إعدادات عامة::*::*")||permissions.find(p=>p.menu_key==="إدارة البرنامج::بيانات أساسية::*")||permissions.find(p=>p.menu_key==="إدارة البرنامج::*::*");
  const roleCanWrite=kind==="company"?adminRole:(kind==="policies"||kind==="activities"||kind==="brand-groups"||kind==="brands")?adminRole:kind==="activity-categories"?["owner","admin","manager"].includes(role):["owner","admin","manager","operator","accountant"].includes(role);
- const canRead=permission?.allow_access!==false;
- const canAdd=canRead&&(permission?permission.can_add===true:(kind!=="company"&&kind!=="policies"&&roleCanWrite));
- const canEdit=canRead&&(permission?(permission.can_edit===true||permission.can_save===true):roleCanWrite);
- const canDeactivate=canRead&&(permission?permission.can_delete===true:adminRole);
+ const canRead=!permissionsReady||permission?.allow_access!==false;
+ const canAdd=permissionsReady&&canRead&&(permission?permission.can_add===true:(kind!=="company"&&kind!=="policies"&&roleCanWrite));
+ const canEdit=permissionsReady&&canRead&&(permission?(permission.can_edit===true||permission.can_save===true):roleCanWrite);
+ const canDeactivate=permissionsReady&&canRead&&(permission?permission.can_delete===true:adminRole);
  const groupsForActivity=groups.filter(g=>!form.activity_code||g.activity_code===form.activity_code);
  const load=useCallback(async()=>{
   if(!supabase){setError("اتصال قاعدة البيانات غير مهيأ.");setLoading(false);return;}
@@ -51,7 +51,7 @@ export default function FoundationWorkspace({kind}:{kind:Kind}){
    if(!userId)throw new Error("جلسة المستخدم غير مكتملة. أعد تسجيل الدخول.");
    const {data:permissionRows,error:permissionError}=await supabase.from("erp_user_permissions").select("menu_key,allow_access,can_add,can_edit,can_delete,can_save").eq("company_id",companyId).eq("user_id",userId);
    if(permissionError)throw permissionError;
-   const loadedPermissions=permissionRows||[];setPermissions(loadedPermissions);
+   const loadedPermissions=permissionRows||[];setPermissions(loadedPermissions);setPermissionsReady(true);
    const exact=loadedPermissions.find((p:any)=>[ "إعدادات عامة::بيانات أساسية::"+cfg.title,...permissionAliases[kind] ].includes(p.menu_key))||loadedPermissions.find((p:any)=>p.menu_key==="إعدادات عامة::بيانات أساسية::*")||loadedPermissions.find((p:any)=>p.menu_key==="إعدادات عامة::*::*")||loadedPermissions.find((p:any)=>p.menu_key==="إدارة البرنامج::بيانات أساسية::*")||loadedPermissions.find((p:any)=>p.menu_key==="إدارة البرنامج::*::*");
    if(exact?.allow_access===false)throw new Error("لا تملك صلاحية عرض هذه الشاشة.");
    if(kind==="company"){
