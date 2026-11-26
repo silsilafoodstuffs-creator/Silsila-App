@@ -1,0 +1,44 @@
+name: Silsila React Preview Validation
+on:
+  push:
+    branches: [react-parallel-preview-2026-11-25]
+    paths:
+      - 'react-preview/**'
+      - '.github/workflows/react-preview-validation.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'react-preview/**'
+      - '.github/workflows/react-preview-validation.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: silsila-react-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-browser-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: react-preview
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run build
+      - name: Install Chromium for browser smoke tests
+        run: npx playwright install --with-deps chromium
+      - name: Run React browser smoke tests
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: silsila-react-preview-validation
+          path: |
+            react-preview/playwright-report
+            react-preview/test-results
+            react-preview/dist
+          if-no-files-found: ignore
