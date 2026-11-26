@@ -1179,3 +1179,45 @@ main .content > section > header h2{
 .pending-workspace-note{display:flex;align-items:flex-start;gap:8px;margin-top:14px;padding:11px 12px;border:1px solid #eee7f3;border-radius:9px;background:#faf8fc;color:#766a81;font-size:10px;line-height:1.8}
 .pending-workspace-note svg{flex:0 0 auto;color:#3e007d;margin-top:2px}
 @media(max-width:600px){.pending-workspace{padding:16px;gap:10px}.pending-workspace-icon{width:40px;height:40px}.pending-workspace-copy h2{font-size:17px}}
+
+
+/* Live physical stocktake */
+.live-stocktake{display:flex;flex-direction:column;gap:10px;color:#241735;min-width:0}
+.live-stocktake-head{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid #e9e0f0;border-radius:12px;background:#fff}
+.live-stocktake-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:11px;background:#3e007d;color:#fff;flex:0 0 auto}
+.live-stocktake-head small{color:#8a7d94;font-size:10px}
+.live-stocktake-head h2{margin:3px 0;color:#3e007d;font-size:19px}
+.live-stocktake-head p{margin:0;color:#81758a;font-size:10px}
+.live-stocktake-head>span{margin-right:auto;padding:6px 9px;border-radius:20px;background:#f5effb;color:#3e007d;font-size:10px;white-space:nowrap}
+.live-stocktake-create,.live-stocktake-list{padding:12px;border:1px solid #e9e0f0;border-radius:11px;background:#fff}
+.live-stocktake-create{display:grid;grid-template-columns:1fr 1.4fr auto;align-items:end;gap:7px}
+.live-stocktake-create label,.live-stocktake-target label{display:flex;flex-direction:column;gap:4px;color:#574963;font-size:10px}
+.live-stocktake-create input,.live-stocktake-create select,.live-stocktake-target select,.live-stocktake table input{height:40px;padding:0 9px;border:1px solid #e4d9ed;border-radius:7px;background:#fff;color:#241735;font:inherit;font-size:11px;min-width:0}
+.live-stocktake button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:34px;padding:0 10px;border:1px solid #e7dced;border-radius:8px;background:#fff;color:#3e007d;font-family:inherit;font-size:10px;cursor:pointer}
+.live-stocktake button:disabled{opacity:.45;cursor:not-allowed}
+.live-stocktake-create>button{height:40px;background:#3e007d;color:#fff;border-color:#3e007d}
+.live-stocktake-list-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:#3e007d;font-size:12px}
+.live-stocktake-table-wrap{width:100%;overflow:auto;border:1px solid #eee7f3;border-radius:8px}
+.live-stocktake table{width:100%;min-width:720px;border-collapse:separate;border-spacing:0;font-size:10px;white-space:nowrap}
+.live-stocktake th{height:40px;padding:0 9px;background:#3e007d;color:#fff;text-align:right}
+.live-stocktake td{height:40px;padding:4px 9px;border-bottom:1px solid #f0ebf4;color:#51445c}
+.live-stocktake tbody tr:nth-child(even){background:#faf8fc}
+.live-stocktake td small{display:block;color:#968aa0;font-size:9px}
+.live-stocktake .draft{color:#94621d;background:#fff5e5;padding:4px 7px;border-radius:12px}
+.live-stocktake .posted{color:#23704c;background:#edf8f1;padding:4px 7px;border-radius:12px}
+.live-stocktake-error,.live-stocktake-alert{padding:10px 12px;border:1px solid #f2dfb8;border-radius:8px;background:#fffaf0;color:#8a6122;font-size:10px}
+.live-stocktake-message{padding:10px 12px;border:1px solid #d8eadf;border-radius:8px;background:#f3fbf5;color:#256642;font-size:10px}
+.live-stocktake-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-bottom:10px}
+.live-stocktake-summary>div{display:flex;flex-direction:column;gap:4px;padding:9px;border:1px solid #eee7f3;border-radius:8px;background:#faf8fc}
+.live-stocktake-summary small{color:#8a7d94;font-size:9px}
+.live-stocktake-summary b{color:#3e007d;font-size:14px}
+.live-stocktake table input{width:110px}
+.live-stocktake .shortage{color:#b23b35;font-weight:700}
+.live-stocktake .increase{color:#23704c;font-weight:700}
+.live-stocktake-target{display:grid;grid-template-columns:1fr 1.5fr;gap:7px;margin-top:10px}
+.live-stocktake-drawer-actions{display:flex;gap:6px;justify-content:flex-start;margin-top:12px}
+.live-stocktake-drawer-actions button:last-child{background:#3e007d;color:#fff;border-color:#3e007d}
+.live-stocktake-note{display:flex;align-items:flex-start;gap:7px;padding:10px 12px;border:1px solid #eee7f3;border-radius:9px;background:#faf8fc;color:#766a81;font-size:10px;line-height:1.8}
+.live-stocktake-note svg{flex:0 0 auto;color:#3e007d}
+@media(max-width:750px){.live-stocktake-create{grid-template-columns:1fr}.live-stocktake-create>button{width:100%}.live-stocktake-head{align-items:flex-start;flex-wrap:wrap}.live-stocktake-head>span{margin-right:0}}
+@media(max-width:560px){.live-stocktake-summary{grid-template-columns:1fr}.live-stocktake-target{grid-template-columns:1fr}.live-stocktake-drawer-actions{flex-direction:column}.live-stocktake-drawer-actions button{width:100%}}
