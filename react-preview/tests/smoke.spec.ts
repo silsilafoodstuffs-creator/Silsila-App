@@ -78,3 +78,26 @@ test("mobile preview does not create page-level horizontal overflow", async ({ p
   }));
   expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport + 2);
 });
+
+test("all seven foundation screens open from general settings", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", error => pageErrors.push(error.message));
+
+  await page.goto("/");
+  await page.getByRole("button", { name: /دخول المعاينة/ }).click();
+
+  for (const title of [
+    "سياسات البرنامج",
+    "بيانات الشركة",
+    "فروع الشركة",
+    "الأنشطة",
+    "فئات الأنشطة",
+    "مجموعات البراندات",
+    "البراندات"
+  ]) {
+    await page.locator(".nav-item").filter({ hasText: title }).first().click();
+    await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
+  }
+
+  expect(pageErrors).toEqual([]);
+});
