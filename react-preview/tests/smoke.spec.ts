@@ -219,3 +219,36 @@ test("cashbox administration is connected to live company data", async ({ page }
   await expect(page.locator(".cashboxes-message")).toContainText("سجّل الدخول إلى المنشأة لعرض خزائنها الفعلية");
   expect(pageErrors).toEqual([]);
 });
+
+
+test("unsaved edits defer sidebar navigation until the drawer is closed", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /دخول المعاينة/ }).click();
+  await expect(page.getByRole("heading", { name: "مؤشرات الأداء الرئيسية" })).toBeVisible();
+
+  await page.evaluate(() => {
+    (window as any).__editCloseRequested = false;
+    window.addEventListener("silsila:edit-request-close", () => {
+      (window as any).__editCloseRequested = true;
+    }, { once: true });
+    window.dispatchEvent(new CustomEvent("silsila:edit-state", { detail: { dirty: true } }));
+  });
+  await page.waitForTimeout(50);
+  await page.locator(".nav-item").getByText("سياسات البرنامج", { exact: true }).first().click();
+  await expect.poll(() => page.evaluate(() => (window as any).__editCloseRequested)).toBe(true);
+  await expect(page.getByRole("heading", { name: "مؤشرات الأداء الرئيسية" })).toBeVisible();
+
+  await page.evaluate(() => window.dispatchEvent(new Event("silsila:edit-navigation-cancel")));
+  await expect(page.getByRole("heading", { name: "مؤشرات الأداء الرئيسية" })).toBeVisible();
+
+  await page.evaluate(() => {
+    (window as any).__editCloseRequested = false;
+    window.addEventListener("silsila:edit-request-close", () => {
+      (window as any).__editCloseRequested = true;
+    }, { once: true });
+  });
+  await page.locator(".nav-item").getByText("سياسات البرنامج", { exact: true }).first().click();
+  await expect.poll(() => page.evaluate(() => (window as any).__editCloseRequested)).toBe(true);
+  await page.evaluate(() => window.dispatchEvent(new Event("silsila:edit-closed")));
+  await expect(page.getByRole("heading", { name: "سياسات البرنامج", exact: true })).toBeVisible();
+});
