@@ -71,7 +71,7 @@ export default function ProgramPoliciesWorkspace(){
   if(isLocked(selected)){setError("سياسة التكويد محمية حاليًا لضمان عدم تغيير الأكواد الصادرة. لم يتم تعديل أي قيمة.");return false;}
   const key=text(selected.policy_key),value=text(draft.policy_value);
   if(key==="visual_identity.program_name"&&!programName.trim()){setError("اسم المشروع مطلوب.");return false;}
-  if(key.startsWith("visual_identity.")&&key.endsWith("_color")&&!/^#[0-9a-fA-F]{6}$/.test(value)){setError("قيمة اللون غير صحيحة. استخدم صيغة HEX مثل #FFA015.");return;}
+  if(key.startsWith("visual_identity.")&&key.endsWith("_color")&&!/^#[0-9a-fA-F]{6}$/.test(value)){setError("قيمة اللون غير صحيحة. استخدم صيغة HEX مثل #FFA015.");return false;}
   if(key==="appearance.header_background"||key==="appearance.screen_background"){if(!/^#[0-9a-fA-F]{6}$/.test(value)){setError("أدخل لونًا صحيحًا بصيغة HEX.");return false;}}
   setSaving(true);setError("");setNotice("");
   try{
@@ -163,7 +163,7 @@ export default function ProgramPoliciesWorkspace(){
    <button onClick={printPolicies}><FileText size={15}/> PDF</button>
   </div>
   <nav className="pp-tabs" aria-label="تصنيفات سياسات البرنامج">{categories.map(c=><button key={c} className={"pp-tab"+(category===c?" active":"")} onClick={()=>{setCategory(c);setSelected(null);}}>{c}<small>{counts[c]||0}</small></button>)}</nav>
-  {selected&&<EditDrawer title={fieldLabel(selected)} dirty={JSON.stringify(draft)!==JSON.stringify(selectedOriginal)||((selected.policy_key==="visual_identity.program_name")&&programName!==text(programSettings.program_name))||((selected.policy_key==="visual_identity.logo")&&logoBase64!==text(programSettings.logo_base64))} saving={saving} onSave={update} onDiscard={()=>{setDraft({...selectedOriginal});setError("");setNotice("");}} onClose={closeEditor}><div className="pp-editor"><div className="pp-editor-head"><Settings2 size={19}/><h3>{fieldLabel(selected)}</h3><button onClick={closeEditor} aria-label="إغلاق"><X size={17}/></button></div>
+  {selected&&<EditDrawer title={fieldLabel(selected)} dirty={JSON.stringify(draft)!==JSON.stringify(selectedOriginal)||((selected.policy_key==="visual_identity.program_name")&&programName!==text(programSettings.program_name))||((selected.policy_key==="visual_identity.logo")&&logoBase64!==text(programSettings.logo_base64))} saving={saving} error={error} onSave={update} onDiscard={()=>{setDraft({...((selectedOriginal||selected)||{})});setProgramName(text(programSettings.program_name)||"سلسلة");setLogoBase64(text(programSettings.logo_base64));setLogoMime(text(programSettings.logo_mime_type));setError("");setNotice("");}} onClose={closeEditor}><div className="pp-editor"><div className="pp-editor-head"><Settings2 size={19}/><h3>{fieldLabel(selected)}</h3><button onClick={closeEditor} aria-label="إغلاق"><X size={17}/></button></div>
    <div className="pp-fields">
     <div className="pp-field full"><label>قيمة السياسة</label>
      {valueKind(selected)==="codeConfig"&&json?<div className="pp-code-editor">
