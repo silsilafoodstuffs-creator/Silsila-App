@@ -49,20 +49,20 @@ const money=(v:any)=>v==null?"—":new Intl.NumberFormat("ar-EG",{maximumFractio
 const val=(v:any,c:Col)=>c.key==="is_active"?<input className="silsila-bool-check" type="checkbox" checked={v===true} disabled readOnly aria-label={v===true?"نشط":"لا"}/>:v==null||v===""?"—":c.kind==="money"?money(v):c.kind==="date"?new Date(v).toLocaleDateString("ar-EG"):c.kind==="percent"?Number(v).toLocaleString("ar-EG")+"%":c.kind==="status"?(v===true?"نشط":v===false?"موقوف":String(v)):String(v);
 export default function LiveBusinessWorkspace({name}:{name:string}){
  const d=defs[name]||defs["علاقات العملاء"],Icon=d.icon,companyId=sessionStorage.getItem("silsila-company-id")||"";
- const [rows,setRows]=useState<any[]>([]),[query,setQuery]=useState(""),[loading,setLoading]=useState(true),[error,setError]=useState(""),[count,setCount]=useState(0),[page,setPage]=useState(0);
+ const [rows,setRows]=useState<any[]>([]),[query,setQuery]=useState(""),[columnFilters,setColumnFilters]=useState<Record<string,string>>({}),[loading,setLoading]=useState(true),[error,setError]=useState(""),[count,setCount]=useState(0),[page,setPage]=useState(0);
  const load=async()=>{if(!supabase||!companyId){setLoading(false);setError("تسجيل دخول المنشأة مطلوب لعرض البيانات الفعلية.");return;}setLoading(true);setError("");
   const {data,error,count}=await supabase.from(d.table).select(d.cols.map(c=>c.key).join(","),{count:"exact"}).eq("company_id",companyId).order(d.order,{ascending:false,nullsFirst:false}).range(page*50,page*50+49);
   if(error){setRows([]);setError("تعذر قراءة "+d.table+": "+error.message);}else{setRows(data||[]);setCount(count||0);}setLoading(false);
  };
  useEffect(()=>{void load();},[d.table,companyId,page]);
- const visible=useMemo(()=>rows.filter(r=>d.cols.some(c=>String(r[c.key]??"").toLowerCase().includes(query.toLowerCase()))),[rows,query,d]);
+ const visible=useMemo(()=>rows.filter(r=>d.cols.some(c=>String(r[c.key]??"").toLowerCase().includes(query.toLowerCase()))&&d.cols.every(c=>String(r[c.key]??"").toLowerCase().includes((columnFilters[c.key]||"").toLowerCase()))),[rows,query,d,columnFilters]);
  const stats=d.cols.filter(c=>c.kind==="money"||c.kind==="percent").slice(0,2);
  return <section className="live-business" dir="rtl">
   <header className="live-business-head"><span><Icon size={23}/></span><div><small>وحدة تشغيلية متصلة بقاعدة بيانات المنشأة</small><h2>{d.title}</h2><p>{d.note}</p></div><b>{count.toLocaleString("ar-EG")} سجل</b></header>
   <div className="live-business-tools"><div><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="بحث داخل السجلات المعروضة..."/></div><button onClick={()=>void load()} disabled={loading}><RefreshCw size={15}/> تحديث</button></div>
   {error&&<div className="live-business-error">{error}</div>}
   <div className="live-business-caption"><span><Database size={14}/> بيانات المنشأة الفعلية — قراءة مباشرة</span><span>عرض {visible.length} من {count}</span></div>
-  <div className="live-business-table"><table><thead><tr>{d.cols.map(c=><th key={c.key}>{c.label}</th>)}</tr></thead><tbody>{visible.map((r,i)=><tr key={r.id||i}>{d.cols.map(c=><td key={c.key}>{val(r[c.key],c)}</td>)}</tr>)}{!loading&&!visible.length&&<tr><td colSpan={d.cols.length} className="live-business-empty">لا توجد سجلات في هذا العرض.</td></tr>}</tbody></table>{loading&&<div className="live-business-empty">جارٍ تحميل البيانات...</div>}</div>
+  <div className="live-business-table"><table><thead><tr className="column-filter-row">{d.cols.map(c=><th key={c.key}><input aria-label={"بحث "+c.label} placeholder={"بحث "+c.label} value={columnFilters[c.key]||""} onChange={e=>setColumnFilters(v=>({...v,[c.key]:e.target.value}))}/></th>)}</tr><tr>{d.cols.map(c=><th key={c.key}>{c.label}</th>)}</tr></thead><tbody>{visible.map((r,i)=><tr key={r.id||i}>{d.cols.map(c=><td key={c.key}>{val(r[c.key],c)}</td>)}</tr>)}{!loading&&!visible.length&&<tr><td colSpan={d.cols.length} className="live-business-empty">لا توجد سجلات في هذا العرض.</td></tr>}</tbody></table>{loading&&<div className="live-business-empty">جارٍ تحميل البيانات...</div>}</div>
   <footer className="live-business-pager"><button disabled={!page} onClick={()=>setPage(p=>p-1)}>السابق</button><span>صفحة {page+1}</span><button disabled={(page+1)*50>=count} onClick={()=>setPage(p=>p+1)}>التالي</button></footer>
   <p className="live-business-guard">هذه شاشة عرض وربط بيانات. لا تُنشئ أو تعدّل أو ترحّل سجلات إنتاجية تلقائيًا. اعتماد العمليات المالية والضريبية والمخزنية يتطلب استكمال دورة الموافقات والتحقق من صلاحياتها.</p>
  </section>;
