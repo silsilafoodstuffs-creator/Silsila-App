@@ -60,6 +60,31 @@ export default function ProgramPoliciesWorkspace(){
   finally{setLoading(false);}
  },[companyId,userId,role]);
  useEffect(()=>{void load();},[load]);
+ useEffect(()=>{
+  const get=(key:string,fallback:any)=>{const row=rows.find(p=>p.policy_key===key);return parseObject(row?.policy_value)||fallback;};
+  const root=document.documentElement.style;
+  const fontName=(value:any)=>["Tajawal","Kufam","Romman"].includes(text(value))?text(value):"Tajawal";
+  const size=(value:any,fallback:number,min=12,max=32)=>Math.min(max,Math.max(min,Number.isFinite(Number(value))?Number(value):fallback));
+  const color=(value:any,fallback:string)=>/^#[0-9a-fA-F]{6}$/.test(text(value))?text(value):fallback;
+  const main=get("appearance.main_heading",{font:"Tajawal",size:24,color:"#3E007D"});
+  const sub1=get("appearance.subheading_1",{font:"Tajawal",size:17,color:"#3E007D"});
+  const sub2=get("appearance.subheading_2",{font:"Tajawal",size:15,color:"#3E007D"});
+  const sub3=get("appearance.subheading_3",{font:"Tajawal",size:15,color:"#3E007D"});
+  const body=get("appearance.body_text",{font:"Tajawal",size:14,color:"#241735"});
+  const header=get("appearance.header_text",{font:"Tajawal",size:15,color:"#FFFFFF"});
+  root.setProperty("--silsila-policy-font","'"+fontName(body.font)+"',sans-serif");
+  root.setProperty("--silsila-screen-title-size",size(main.size,24,18,32)+"px");
+  root.setProperty("--silsila-title-color",color(main.color,"#3E007D"));
+  root.setProperty("--silsila-section-title-size",size(sub1.size,17,14,22)+"px");
+  root.setProperty("--silsila-subheading-size",size(sub2.size,15,12,18)+"px");
+  root.setProperty("--silsila-table-head-size",size(header.size,15,12,18)+"px");
+  root.setProperty("--silsila-table-body-size",size(body.size,14,12,18)+"px");
+  root.setProperty("--silsila-body-size",size(body.size,14,12,18)+"px");
+  root.setProperty("--silsila-subheading-color",color(sub1.color,"#3E007D"));
+  root.setProperty("--silsila-secondary-heading-color",color(sub2.color,"#51445C"));
+  root.setProperty("--silsila-tertiary-heading-color",color(sub3.color,"#51445C"));
+  root.setProperty("--silsila-header-font","'"+fontName(header.font)+"',sans-serif");
+ },[rows]);
  const visible=useMemo(()=>rows.filter(p=>(category==="الكل"||p.category===category)&&(!query.trim()||[p.policy_code,p.policy_key,p.name_ar,p.name_en,p.category,p.policy_value].some(v=>text(v).toLowerCase().includes(query.trim().toLowerCase())))&&[p.policy_code,p.name_ar,p.category,p.policy_value,p.is_enabled?"مفعّلة":"متوقفة",p.apply_to_all?"كل المستخدمين":"مستخدمون محددون",(p.user_ids||[]).length].every((v,n)=>String(v??"").toLowerCase().includes((columnFilters[String(n)]||"").toLowerCase()))),[rows,category,query,columnFilters]);
  const counts=useMemo(()=>Object.fromEntries(categories.map(c=>[c,c==="الكل"?rows.length:rows.filter(p=>p.category===c).length])),[rows]);
  const isLocked=(p:Policy)=>{if(!codePolicy(p))return false;const key=text(p.policy_key);return !lockCheckReady||lockedCodes.has("__ALL_CODE_POLICIES_LOCKED_UNTIL_CHECK__")||lockedCodes.has(key);}; // Honor the database lock registry: protect issued-code policies, but allow unlocked policies to use the existing central coding rules.
