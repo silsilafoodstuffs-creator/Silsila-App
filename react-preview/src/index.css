@@ -693,3 +693,40 @@ main .content > section > header h2{
 .live-parties-table-wrap tbody tr:hover td{
  background:var(--silsila-table-row-hover)!important;
 }
+
+
+/* Runtime bridge for legacy appearance policies that are still valid in React */
+.topbar{
+ background:var(--silsila-topbar-bg,#fff)!important;
+ color:var(--silsila-topbar-text,#38244c);
+}
+.topbar .crumb,
+.topbar .crumb b,
+.topbar .crumb>svg{
+ color:var(--silsila-topbar-text,#38244c)!important;
+}
+.topbar .crumb{font-family:var(--silsila-topbar-font,'Tajawal'),sans-serif}
+.main{background:var(--silsila-screen-bg,#fff)}
+.foundation-head h2,
+.settings-hero h2,
+.welcome-row h1,
+.accounts-hero h2,
+.inventory-hero h2,
+.live-master-head h2,
+.live-business-head h2,
+.executive-live-head h2,
+.live-parties-head h2{
+ font-family:var(--silsila-screen-title-font,'Tajawal'),sans-serif;
+ font-size:var(--silsila-screen-title-size,21px);
+ font-weight:var(--silsila-screen-title-weight,800);
+}
+@media(max-width:650px){
+ .foundation-head h2,
+ .settings-hero h2,
+ .accounts-hero h2,
+ .inventory-hero h2,
+ .live-master-head h2,
+ .live-business-head h2,
+ .executive-live-head h2,
+ .live-parties-head h2{font-size:19px}
+}
