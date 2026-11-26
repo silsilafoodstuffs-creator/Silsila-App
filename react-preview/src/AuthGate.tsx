@@ -160,18 +160,18 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     try {
       if (rememberMe) { localStorage.setItem("silsila-login-email", email.trim()); localStorage.setItem("silsila-remember-login", "true"); }
       else { localStorage.removeItem("silsila-login-email"); localStorage.removeItem("silsila-remember-login"); }
-    } catch { /* Storage may be disabled; sign-in should still work. */ }
-    const { data, error } = await client.auth.signInWithPassword({ email: email.trim(), password });
-    if (error || !data.session) {
-      setMessage("تعذر تسجيل الدخول: " + (error?.message || "لم يتم إنشاء جلسة."));
+      const { data, error } = await client.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+      if (error || !data.session) throw error || new Error("لم يتم إنشاء جلسة دخول.");
+      setSession(data.session);
+      const ok = await loadCompanies(data.session);
+      if (!ok) {
+        await client.auth.signOut();
+        setSession(null);
+      }
+    } catch (error) {
+      setMessage("تعذر تسجيل الدخول: " + (error instanceof Error ? error.message : "تحقق من البريد الإلكتروني وكلمة المرور."));
+    } finally {
       setBusy(false);
-      return;
-    }
-    setSession(data.session);
-    const ok = await loadCompanies(data.session);
-    if (!ok) {
-      await client.auth.signOut();
-      setSession(null);
     }
   };
 
@@ -234,7 +234,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         if (!ok) {
           await client.auth.signOut();
           setSession(null);
-          setRegisterError("تم إنشاء الحساب، لكن لا توجد عضوية منشأة نشطة مرتبطة به. راجع ربط الحساب بالمنشأة قبل الدخول.");
+          setMessage("تم إنشاء الحساب، لكن لا توجد عضوية منشأة نشطة مرتبطة به. راجع ربط الحساب بالمنشأة قبل تسجيل الدخول.");
         }
       } else {
         setRegisterMode(null);
