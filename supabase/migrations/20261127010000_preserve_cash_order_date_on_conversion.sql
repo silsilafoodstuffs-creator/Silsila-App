@@ -30,8 +30,8 @@ begin
   if o.status not in ('approved', 'draft') then
     raise exception 'حالة الأمر لا تسمح بالتنفيذ';
   end if;
-  if o.order_date is null or o.order_date > current_date then
-    raise exception 'تاريخ الأمر غير صالح أو يقع في المستقبل';
+  if o.order_date is null then
+    raise exception 'تاريخ الأمر مطلوب';
   end if;
 
   select cash_issue_mode into v_mode
