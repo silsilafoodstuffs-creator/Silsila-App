@@ -91,6 +91,7 @@ test("all seven foundation screens open from general settings", async ({ page })
   for (const title of [
     "سياسات البرنامج",
     "سلسلة ستوديو",
+    "شاشات الاستوديو المنشورة",
     "بيانات الشركة",
     "فروع الشركة",
     "الأنشطة",
@@ -102,6 +103,9 @@ test("all seven foundation screens open from general settings", async ({ page })
     await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
     if (title === "سلسلة ستوديو") {
       await expect(page.getByText(/لا تملك صلاحية الوصول إلى سلسلة ستوديو/)).toBeVisible();
+    }
+    if (title === "شاشات الاستوديو المنشورة") {
+      await expect(page.getByText(/سجّل الدخول إلى المنشأة لعرض التصميمات المنشورة/)).toBeVisible();
     }
     if (title === "سياسات البرنامج") {
       await expect(page.getByRole("navigation", { name: "تصنيفات سياسات البرنامج" })).toBeVisible();
