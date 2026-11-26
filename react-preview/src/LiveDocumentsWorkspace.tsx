@@ -1,5 +1,5 @@
 import { useEffect,useMemo,useState } from "react";
-import { CheckCircle2,FileText,Package,Plus,RefreshCw,RotateCcw,Save,ShoppingCart,ShoppingBag,Trash2 } from "lucide-react";
+import { CheckCircle2,Eye,FileText,Package,Plus,RefreshCw,RotateCcw,Save,ShoppingCart,ShoppingBag,Trash2 } from "lucide-react";
 import { supabase } from "./supabase";
 
 type Kind="sale"|"purchase";
@@ -11,6 +11,7 @@ type Line={id:string;itemId:string;unitId:string;qty:string;price:string;discoun
 type Doc={id:string;document_number:string;document_date:string;document_type:string;status:string;subtotal:number;discount_total:number;tax_total:number;grand_total:number;customer_id?:string;supplier_id?:string;warehouse_id:string;branch_id:string;notes?:string;created_at:string};
 type Balance={warehouse_id:string;item_id:string;quantity_on_hand:number;average_unit_cost:number};
 type Reservation={warehouse_id:string;item_id:string;quantity_base:number;status:string};
+type DocLine={id:string;item_id:string;quantity:number;unit_price:number;discount_amount:number;tax_amount:number;line_total:number;unit_code:string|null;conversion_factor:number;base_quantity:number;batch_number:string|null;expiry_date:string|null;item_code?:string;item_name?:string;base_unit?:string};
 const money=(n:number)=>new Intl.NumberFormat("ar-EG",{maximumFractionDigits:2}).format(n);
 const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");};
 const round2=(n:number)=>Math.round((n+Number.EPSILON)*100)/100;
@@ -30,6 +31,10 @@ export default function LiveDocumentsWorkspace({kind}:{kind:Kind}){
  const [reservations,setReservations]=useState<Reservation[]>([]);
  const [docs,setDocs]=useState<Doc[]>([]);
  const [journalIds,setJournalIds]=useState<Record<string,string>>({});
+ const [expandedDocId,setExpandedDocId]=useState("");
+ const [detailRows,setDetailRows]=useState<Record<string,DocLine[]>>({});
+ const [detailLoadingId,setDetailLoadingId]=useState("");
+ const [detailErrors,setDetailErrors]=useState<Record<string,string>>({});
  const [warehouseId,setWarehouseId]=useState("");
  const [partyId,setPartyId]=useState("");
  const [date,setDate]=useState(today());
@@ -153,6 +158,23 @@ export default function LiveDocumentsWorkspace({kind}:{kind:Kind}){
   if(accountingError){setMessage("تم ترحيل حركة المخزون للمستند "+doc.document_number+"، لكن القيد المحاسبي لم يكتمل: "+accountingError.message+"؛ استخدم «إعادة محاولة المحاسبة» بعد معالجة السبب.");setSaving(false);return;}
   setMessage("تم ترحيل "+doc.document_number+" مخزنيًا ومحاسبيًا. رقم قيد اليومية: "+String(journalId||"—")+".");setSaving(false);
  };
+ const toggleDetails=async(doc:Doc)=>{
+  if(expandedDocId===doc.id){setExpandedDocId("");return;}
+  setExpandedDocId(doc.id);
+  if(detailRows[doc.id])return;
+  if(!live||!supabase){setDetailErrors(old=>({...old,[doc.id]:"سجّل الدخول لعرض بنود المستند المحفوظة."}));return;}
+  setDetailLoadingId(doc.id);setDetailErrors(old=>({...old,[doc.id]:""}));
+  const lineTable=kind==="sale"?"erp_sales_lines":"erp_purchase_lines";
+  const {data,error}=await supabase.from(lineTable).select("id,item_id,quantity,unit_price,discount_amount,tax_amount,line_total,unit_code,conversion_factor,base_quantity,batch_number,expiry_date").eq("document_id",doc.id).order("created_at");
+  if(error){setDetailErrors(old=>({...old,[doc.id]:"تعذر تحميل بنود المستند: "+error.message}));setDetailLoadingId("");return;}
+  const rows=(data||[]) as DocLine[];
+  const itemIds=[...new Set(rows.map(line=>line.item_id).filter(Boolean))];
+  const {data:itemData,error:itemError}=itemIds.length?await supabase.from("erp_items").select("id,item_code,item_name,base_unit").in("id",itemIds):{data:[],error:null};
+  if(itemError){setDetailErrors(old=>({...old,[doc.id]:"تم تحميل البنود لكن تعذر تحميل أسماء الأصناف: "+itemError.message}));setDetailLoadingId("");return;}
+  const itemMap=new Map((itemData||[]).map((item:any)=>[item.id,item]));
+  setDetailRows(old=>({...old,[doc.id]:rows.map(line=>({...line,...(itemMap.get(line.item_id)||{})}))}));
+  setDetailLoadingId("");
+ };
  const retryAccounting=async(doc:Doc)=>{
   if(!live||!supabase||doc.status!=="posted")return;
   setSaving(true);const {data,error}=await supabase.rpc("erp_post_operational_document_accounting",{p_document_id:doc.id,p_kind:kind==="sale"?"sales":"purchase"});
@@ -197,7 +219,7 @@ export default function LiveDocumentsWorkspace({kind}:{kind:Kind}){
   <div className="operation-actions"><button className="operation-save" onClick={()=>void saveDraft()} disabled={saving||loading||!canCreate||!selectedParty||!selectedWarehouse}><Save size={16}/> {saving?"جارٍ التنفيذ...":"حفظ مسودة فعلية"}</button><button className="operation-reset" onClick={()=>{setLines([blankLine()]);setNotes("");setDate(today());}}><RotateCcw size={15}/> تفريغ النموذج</button></div></>}
   {message&&<div className="operation-feedback">{message}</div>}
   <div className="operation-history"><div className="operation-table-head"><div><b><FileText size={16}/> سجل المستندات</b><small>آخر 100 مستند من قاعدة سلسلة · الترحيل المخزني منفصل عن المحاسبي</small></div><div className="treasury-row-actions"><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="بحث في المستندات"/><button className="operation-add" onClick={()=>void loadData()} disabled={loading}><RefreshCw size={14}/> تحديث</button></div></div>
-   {loading?<div className="operation-empty">جارٍ تحميل السجلات...</div>:filteredDocs.length?<div className="table-wrap"><table><thead><tr className="column-filter-row">{["رقم المستند","الطرف","المخزن","التاريخ","الصافي","الحالة"].map((label,i)=><th key={label}><input aria-label={"بحث "+label} placeholder={"بحث "+label} value={docColumnFilters[String(i)]||""} onChange={e=>setDocColumnFilters(v=>({...v,[String(i)]:e.target.value}))}/></th>)}<th aria-hidden="true">—</th></tr><tr><th>رقم المستند</th><th>الطرف</th><th>المخزن</th><th>التاريخ</th><th>الصافي</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>{filteredDocs.map(d=><tr key={d.id}><td><b>{d.document_number}</b></td><td>{partyOptions.find(p=>p.id===(kind==="sale"?d.customer_id:d.supplier_id))?.party_name||"—"}</td><td>{warehouses.find(w=>w.id===d.warehouse_id)?.warehouse_name||"—"}</td><td>{d.document_date}</td><td className="operation-amount">{money(Number(d.grand_total))} ج.م</td><td><span className={d.status==="posted"?"treasury-status posted":d.status==="cancelled"?"treasury-status":"treasury-status draft"}>{statusLabel(d)}</span></td><td>{d.status==="draft"?<div className="treasury-row-actions"><button className="operation-add" onClick={()=>void postDocument(d)} disabled={saving}><CheckCircle2 size={14}/> ترحيل المخزون والمحاسبة</button><button className="remove-line" title="إلغاء المسودة وتحرير الحجوزات" onClick={()=>void cancelDraft(d)} disabled={saving}><Trash2 size={14}/></button></div>:d.status==="posted"&&!journalIds[d.id]?<button className="operation-add" onClick={()=>void retryAccounting(d)} disabled={saving}>إعادة محاولة المحاسبة</button>:journalIds[d.id]?<small className="treasury-ref">قيد: {journalIds[d.id].slice(0,8)}</small>:<span>—</span>}</td></tr>)}</tbody></table></div>:<div className="operation-empty">لا توجد مستندات محفوظة في قاعدة المنشأة حتى الآن.</div>}
+   {loading?<div className="operation-empty">جارٍ تحميل السجلات...</div>:filteredDocs.length?<div className="table-wrap"><table><thead><tr className="column-filter-row">{["رقم المستند","الطرف","المخزن","التاريخ","الصافي","الحالة"].map((label,i)=><th key={label}><input aria-label={"بحث "+label} placeholder={"بحث "+label} value={docColumnFilters[String(i)]||""} onChange={e=>setDocColumnFilters(v=>({...v,[String(i)]:e.target.value}))}/></th>)}<th aria-hidden="true">—</th></tr><tr><th>رقم المستند</th><th>الطرف</th><th>المخزن</th><th>التاريخ</th><th>الصافي</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>{filteredDocs.map(d=><tr key={d.id}><td><b>{d.document_number}</b></td><td>{partyOptions.find(p=>p.id===(kind==="sale"?d.customer_id:d.supplier_id))?.party_name||"—"}</td><td>{warehouses.find(w=>w.id===d.warehouse_id)?.warehouse_name||"—"}</td><td>{d.document_date}</td><td className="operation-amount">{money(Number(d.grand_total))} ج.م</td><td><span className={d.status==="posted"?"treasury-status posted":d.status==="cancelled"?"treasury-status":"treasury-status draft"}>{statusLabel(d)}</span></td><td><div className="treasury-row-actions"><button className="operation-add" onClick={()=>void toggleDetails(d)}><Eye size={14}/> تفاصيل البنود</button>{d.status==="draft"?<><button className="operation-add" onClick={()=>void postDocument(d)} disabled={saving}><CheckCircle2 size={14}/> ترحيل المخزون والمحاسبة</button><button className="remove-line" title="إلغاء المسودة وتحرير الحجوزات" onClick={()=>void cancelDraft(d)} disabled={saving}><Trash2 size={14}/></button></>:d.status==="posted"&&!journalIds[d.id]?<button className="operation-add" onClick={()=>void retryAccounting(d)} disabled={saving}>إعادة محاولة المحاسبة</button>:journalIds[d.id]?<small className="treasury-ref">قيد: {journalIds[d.id].slice(0,8)}</small>:<span>—</span>}</div></td></tr>{expandedDocId===d.id&&<tr className="document-detail-row"><td colSpan={7}><div className="operation-table-card"><div className="operation-table-head"><b>تفاصيل {d.document_number}</b><small>{detailRows[d.id]?.length||0} بند</small></div>{detailLoadingId===d.id?<div className="operation-empty">جارٍ تحميل البنود...</div>:detailErrors[d.id]?<div className="operation-feedback warning">{detailErrors[d.id]}</div>:detailRows[d.id]?.length?<div className="operation-table-scroll"><table><thead><tr><th>كود الصنف</th><th>الصنف</th><th>الكمية</th><th>الوحدة</th><th>معامل التحويل</th><th>الكمية الأساسية</th><th>سعر الوحدة</th><th>الخصم</th><th>الضريبة</th><th>الإجمالي</th><th>التشغيلة</th><th>الصلاحية</th></tr></thead><tbody>{detailRows[d.id].map(line=><tr key={line.id}><td>{line.item_code||"—"}</td><td>{line.item_name||"صنف غير متاح"}</td><td>{money(Number(line.quantity))}</td><td>{line.unit_code||line.base_unit||"—"}</td><td>{money(Number(line.conversion_factor)||1)}</td><td>{money(Number(line.base_quantity)||Number(line.quantity)*(Number(line.conversion_factor)||1))} {line.base_unit||""}</td><td>{money(Number(line.unit_price))} ج.م</td><td>{money(Number(line.discount_amount))} ج.م</td><td>{money(Number(line.tax_amount))} ج.م</td><td className="operation-amount">{money(Number(line.line_total))} ج.م</td><td>{line.batch_number||"—"}</td><td>{line.expiry_date||"—"}</td></tr>)}</tbody></table></div>:<div className="operation-empty">لا توجد بنود مسجلة لهذا المستند.</div>}</div></td></tr>})}</tbody></table></div>:<div className="operation-empty">لا توجد مستندات محفوظة في قاعدة المنشأة حتى الآن.</div>}
   </div>
   <div className="operation-disclaimer">{kind==="sale"?"هذه المرحلة تنشئ إذن تسليم مبيعات مرتبطًا بحركة المخزون والقيد الآلي؛ إصدار فاتورة ضريبية نهائية وسلسلة عرض السعر/أمر البيع ما زالت مرحلة مستقلة.":"هذه المرحلة تنشئ إذن استلام مشتريات يضيف المخزون ويرحّل أثره المحاسبي وفق خريطة الحسابات؛ ربط أمر التوريد وأمر الشراء والفاتورة الموردية يُستكمل ضمن دورة المستندات."} التحصيل والسداد النقدي يُسجلان بسندات الخزينة المرتبطة.</div>
  </section>;
