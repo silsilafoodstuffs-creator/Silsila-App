@@ -16,7 +16,8 @@ export default function CashOrdersWorkspace(){
  const [filter,setFilter]=useState("all"),[loading,setLoading]=useState(live),[saving,setSaving]=useState(false),[notice,setNotice]=useState("");
  const [cashboxByOrder,setCashboxByOrder]=useState<Record<string,string>>({}),[accountByOrder,setAccountByOrder]=useState<Record<string,string>>({});
  const selectedParty=parties.find(p=>p.id===partyId),selectedDoc=salesDocs.find(d=>d.id===salesDocId);
- const reservedForDoc=(id:string)=>orders.filter(o=>o.sales_document_id===id&&o.status!=="cancelled").reduce((sum,o)=>sum+Number(o.amount),0);\n const outstanding=selectedDoc?Math.max(0,Number(selectedDoc.grand_total)-Number(selectedDoc.paid_total)-reservedForDoc(selectedDoc.id)):0;
+ const reservedForDoc=(id:string)=>orders.filter(o=>o.sales_document_id===id&&o.status!=="cancelled").reduce((sum,o)=>sum+Number(o.amount),0);
+ const outstanding=selectedDoc?Math.max(0,Number(selectedDoc.grand_total)-Number(selectedDoc.paid_total)-reservedForDoc(selectedDoc.id)):0;
  const load=async()=>{
   if(!live||!supabase){setLoading(false);return}setLoading(true);setNotice("");
   const [o,p,c,a,d]=await Promise.all([
