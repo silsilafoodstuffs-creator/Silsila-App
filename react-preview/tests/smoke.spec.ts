@@ -196,3 +196,18 @@ test("treasury screen supports centrally coded inter-cashbox transfers", async (
   await expect(page.getByText(/سجّل الدخول بحساب منشأة لاستخدام الخزينة الفعلية/)).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
+
+
+test("cashbox administration is connected to live company data", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", error => pageErrors.push(error.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: /دخول المعاينة/ }).click();
+  await page.locator(".nav-main-toggle").filter({ hasText: "الإدارة المالية" }).click();
+  await page.locator(".nav-subgroup-toggle").filter({ hasText: "بيانات أساسية" }).click();
+  await page.locator(".nav-item").filter({ hasText: "الخزينة والبنوك" }).click();
+  await expect(page.getByRole("heading", { name: "إدارة الخزائن والبنوك", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "إضافة خزينة", exact: true })).toBeDisabled();
+  await expect(page.locator(".cashboxes-message")).toContainText("سجّل الدخول إلى المنشأة لعرض خزائنها الفعلية");
+  expect(pageErrors).toEqual([]);
+});
