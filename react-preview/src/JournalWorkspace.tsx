@@ -1,6 +1,7 @@
 import { useEffect,useMemo,useState } from "react";
 import { Download,RefreshCw,BookOpen,Scale,Plus,Save,Send,Trash2,X,FileText } from "lucide-react";
 import { supabase } from "./supabase";
+import EditDrawer from "./EditDrawer";
 
 type Line={account:string;debit:number;credit:number;party:string;description:string;entry:string;date:string;source:string;id:string};
 type Entry={id:string;number:string;date:string;description:string;source:string;status:"draft"|"posted"|"reversed";lines:Line[]};
