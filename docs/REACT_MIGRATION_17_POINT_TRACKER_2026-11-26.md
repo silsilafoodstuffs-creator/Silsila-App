@@ -145,3 +145,13 @@
 - الاختبارات والقبول: 50% (React build و17/17 browser tests؛ فحوص Flutter/Android لهذا commit ما زالت جارية).
 - Android وWebView: 60% (مبني سابقًا على commit سابق؛ لا يوجد تثبيت هاتف فعلي).
 - الإجمالي التقديري المحدث: 36% وفق متوسط تقديرات محاور النقل السبعة عشر، وليس نسبة جاهزية الإنتاج.
+
+## تحديث تحقق وتنظيف صلاحيات الموارد البشرية — 26 نوفمبر 2026، 18:20
+
+- اكتمل Full Validation على commit `cda7aca68d3584406f9d8a936bb0ba176c387d7b`: Flutter analyze، Flutter tests، focused company branches test، Flutter Web build، Web artifact verification، Chromium WebView desktop/mobile، Android Release APK build، APK integrity، ورفع artifacts؛ جميع الخطوات ناجحة.
+- على نفس commit: React Preview Validation ناجح، Web App Validation ناجح، وMobile App Validation ناجح.
+- تم تدقيق رسالة صلاحيات شاشة الهيكل التنظيمي؛ كانت توحي أن مدير الموارد البشرية يستطيع تعديل الإدارات والوظائف ومواقع العمل، بينما سياسات RLS الحالية لهذه الجداول تسمح بالتعديل لمالك المنشأة/مدير النظام/المدير فقط. تم تصحيح رسالة المنع في React لتطابق قاعدة البيانات دون توسيع صلاحيات RLS.
+- commit التعديل: `5f23ed153841918f71ea82991a6507e2e4a37f83`. الاختبارات لهذا التعديل الجديد لم تكتمل بعد؛ لا يُنسب نجاح CI الخاص بـ`cda7aca` إلى هذا commit اللاحق.
+- أحدث معاينة READY متاحة ما زالت على commit `35103e32b329d257101654345dabba3b2a33190d` وتستجيب HTTP 200؛ لم يظهر Deployment جديد للـcommit الأحدث وقت الفحص.
+- لا توجد عمليات كتابة على بيانات Supabase، ولا دمج إلى main، ولا تحويل للرابط الرسمي.
+- إجمالي النقل يبقى 37% حتى تحقق الوظائف الجديدة واختبارها؛ نجاح بناء Flutter القديم لا يرفع نسبة نقل وظائف React.
