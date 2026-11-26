@@ -17,6 +17,8 @@ export default function ProgramPoliciesWorkspace(){
  const [loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
  const [permissionsReady,setPermissionsReady]=useState(false),[canRead,setCanRead]=useState(true),[canEdit,setCanEdit]=useState(false);
  const [lockedCodes,setLockedCodes]=useState<Set<string>>(new Set()),[lockCheckReady,setLockCheckReady]=useState(false);
+ const [users,setUsers]=useState<Policy[]>([]);
+ const [editMode,setEditMode]=useState(false),[previewOpen,setPreviewOpen]=useState(false);
  const load=useCallback(async()=>{
   if(!supabase){setError("اتصال قاعدة البيانات غير مهيأ.");setLoading(false);return;}
   if(!companyId||!userId){setError("جلسة الدخول لا تحتوي على الشركة والمستخدم النشطين.");setLoading(false);return;}
@@ -31,6 +33,8 @@ export default function ProgramPoliciesWorkspace(){
    const {data,error}=await supabase.from("erp_program_policies").select("*").eq("company_id",companyId).order("category",{ascending:true}).order("policy_code",{ascending:true});
    if(error)throw error;
    setRows((data||[]).filter((p:any)=>!hiddenKeys.has(text(p.policy_key))));
+   const {data:userRows,error:userError}=await supabase.from("erp_users").select("id,user_code,name_ar").eq("company_id",companyId).order("name_ar");
+   if(!userError)setUsers(userRows||[]);
    try{
     const {data:locks,error:lockError}=await supabase.rpc("erp_code_policy_lock_status",{p_company_id:companyId});
     if(lockError)throw lockError;
@@ -63,6 +67,28 @@ export default function ProgramPoliciesWorkspace(){
   finally{setSaving(false);}
  };
  const fieldLabel=(p:Policy)=>p.name_ar||p.policy_key||"سياسة بدون اسم";
+ const codeDetails=(p:Policy)=>{
+  const key=text(p.policy_key),cfg=parseObject(p.policy_value)||{};
+  if(key==="customer_code")return {prefix:text(cfg.prefix)||"Cus",structure:`${cfg.geo_digits??8} أرقام جغرافية + ${cfg.serial_digits??4} تسلسلية`,example:`${text(cfg.prefix)||"Cus"}000000000001`};
+  if(key==="item_code")return {prefix:text(cfg.prefix)||"Itm",structure:`${cfg.category_digits??6} أرقام فئات + ${cfg.brand_digits??4} للبراند + ${cfg.serial_digits??3} للتسلسل`,example:`${text(cfg.prefix)||"Itm"}0000000000000001`};
+  if(key.startsWith("geo_code.")||key.startsWith("category_code.")||key==="brand_code"){
+   const own=Number(cfg.digits??(key==="brand_code"?4:2)),parent=Number(cfg.parent_digits??0),prefix=text(cfg.prefix);
+   return {prefix,structure:parent?`${parent} موروثة + ${own} خاصة`:`${own} أرقام`,example:prefix+"0".repeat(Math.max(0,parent+own-1))+"1"};
+  }
+  if(key.startsWith("code_policy.")||key.startsWith("code_type.")){
+   const prefix=text(cfg.prefix),digits=Number(cfg.digits??3);
+   return {prefix,structure:`${digits} أرقام تسلسلية`,example:prefix+"0".repeat(Math.max(0,digits-1))+"1"};
+  }
+  return null;
+ };
+ const exportExcel=()=>{
+  const headers=["م","كود السياسة","اسم السياسة","القيمة","الحالة","نطاق التطبيق","عدد المستخدمين"];
+  const lines=[headers,...visible.map((p,i)=>[String(i+1),text(p.policy_code),fieldLabel(p),text(p.policy_value),p.is_enabled?"مفعلة":"متوقفة",p.apply_to_all?"كل المستخدمين":"مستخدمون محددون",String((p.user_ids||[]).length)])];
+  const html="<html><head><meta charset='utf-8'></head><body><table border='1'>"+lines.map(row=>"<tr>"+row.map(v=>"<td>"+String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")+"</td>").join("")+"</tr>").join("")+"</table></body></html>";
+  const url=URL.createObjectURL(new Blob([html],{type:"application/vnd.ms-excel;charset=utf-8"}));
+  const a=document.createElement("a");a.href=url;a.download="Silsila_Program_Policies.xls";a.click();URL.revokeObjectURL(url);
+ };
+ const printPolicies=()=>window.print();
  const valueKind=(p:Policy)=>{const key=text(p.policy_key);if(key==="appearance.dark_mode")return "boolean";if(key==="appearance.theme_preset")return "theme";if(key==="appearance.language")return "language";if(key==="appearance.header_background"||key==="appearance.screen_background"||key.startsWith("visual_identity.")&&key.endsWith("_color"))return "color";if(["inventory_valuation","inventory_count","depreciation","inventory.stocktake.valuation_basis","trader_market.story_duration_unit"].includes(key))return "choice";return "text";};
  const optionsFor=(p:Policy)=>{const k=text(p.policy_key);if(k==="appearance.theme_preset")return ["glossy","classic"];if(k==="appearance.language")return ["العربية","الإنجليزية"];if(k==="inventory_valuation")return ["المتوسط المرجح","الوارد أولاً صادر أولاً (FIFO)","التحديد المحدد"];if(k==="inventory_count")return ["الجرد المستمر","الجرد الدوري"];if(k==="depreciation")return ["القسط الثابت","القسط المتناقص","وحدات الإنتاج"];if(k==="inventory.stocktake.valuation_basis")return ["sale","purchase"];if(k==="trader_market.story_duration_unit")return ["دقيقة","ساعة"];return [];};
  const json=parseObject(draft.policy_value);
@@ -86,12 +112,15 @@ export default function ProgramPoliciesWorkspace(){
     {json&&<><div className="pp-field"><label>معاينة / محتوى JSON</label><textarea dir="ltr" readOnly value={JSON.stringify(json,null,2)}/></div><div className="pp-field"><label>ملاحظة</label><input readOnly value="تُحفظ قيمة السياسة كما هي؛ لا يتم تغيير بنية التكويد تلقائيًا."/></div></>}
     <div className="pp-field"><label>نطاق التطبيق</label><label className="pp-toggle"><input type="checkbox" checked={draft.apply_to_all===true} onChange={e=>setDraft((x:Policy)=>({...x,apply_to_all:e.target.checked}))}/> تطبيق على جميع المستخدمين</label></div>
     <div className="pp-field"><label>حالة السياسة</label><label className="pp-toggle"><input type="checkbox" checked={draft.is_enabled===true} onChange={e=>setDraft((x:Policy)=>({...x,is_enabled:e.target.checked}))}/> السياسة مفعّلة</label></div>
+    <div className="pp-field full"><label>المستخدمون المطبق عليهم</label><label className="pp-toggle"><input type="checkbox" checked={draft.apply_to_all===true} onChange={e=>setDraft((x:Policy)=>({...x,apply_to_all:e.target.checked,user_ids:[]}))}/> جميع المستخدمين</label>{!draft.apply_to_all&&<div className="pp-user-picker">{users.map(u=><label key={u.id}><input type="checkbox" checked={(draft.user_ids||[]).includes(u.id)} onChange={e=>setDraft((x:Policy)=>({...x,user_ids:e.target.checked?[...(x.user_ids||[]),u.id]:(x.user_ids||[]).filter((id:string)=>id!==u.id)}))}/>{u.name_ar||u.user_code||u.id}</label>)}</div>}</div>
    </div>
    {isLocked(selected)&&<div className="pp-alert"><LockKeyhole size={16}/>سياسة التكويد مقفلة للحفاظ على الأكواد الحالية، أو تعذر التحقق من حالة القفل. لا يمكن تعديلها الآن.</div>}
    <div className="pp-meta"><span>كود السياسة: <b>{text(selected.policy_code)||"—"}</b></span><span>المفتاح: <code>{text(selected.policy_key)}</code></span><span>التصنيف: {text(selected.category)}</span></div>
    <div className="pp-actions"><button className="pp-save" disabled={saving||!canEdit||isLocked(selected)} onClick={()=>void update()}><Save size={16}/>{saving?"جارٍ الحفظ...":"حفظ التعديلات"}</button><button className="pp-btn" onClick={closeEditor}>إلغاء</button></div>
   </div>}
-  {loading?<div className="pp-empty">جارٍ تحميل السياسات المحفوظة...</div>:!canRead?<div className="pp-empty">لا تملك صلاحية عرض هذه الشاشة.</div>:visible.length===0?<div className="pp-empty">لا توجد سياسات مطابقة.</div>:<div className="pp-list">{visible.map(p=><article className="pp-card" key={p.id}><div className="pp-card-top"><div style={{minWidth:0,flex:1}}><h3>{fieldLabel(p)}</h3><code>{text(p.policy_code)} · {text(p.policy_key)}</code></div>{p.is_enabled?<ShieldCheck size={18} color="#23834a"/>:<X size={17} color="#a33a31"/>}</div><div className="pp-card-value">{text(p.policy_value)||"لا توجد قيمة محددة"}</div><div className="pp-card-foot"><span className={"pp-state "+(p.is_enabled?"on":"off")}>{p.is_enabled?"مفعّلة":"متوقفة"}</span><span className="pp-state">{p.apply_to_all?"كل المستخدمين":"نطاق محدد"}</span>{isLocked(p)&&<span className="pp-state lock"><LockKeyhole size={11} style={{verticalAlign:"middle"}}/> محمية</span>}<button className="pp-edit" disabled={!canEdit||isLocked(p)} onClick={()=>openEditor(p)}><Palette size={14}/> تعديل السياسة</button></div></article>)}</div>}
-  <footer style={{fontSize:11,color:"#8a7b95",padding:"4px 2px"}}>مصدر البيانات: erp_program_policies · لا تُنشأ نسخ موازية ولا تُحذف سياسات قديمة من هذه الشاشة.</footer>
+  {loading?<div className="pp-empty">جارٍ تحميل السياسات المحفوظة...</div>:!canRead?<div className="pp-empty">لا تملك صلاحية عرض هذه الشاشة.</div>:visible.length===0?<div className="pp-empty">لا توجد سياسات مطابقة.</div>:<div className="pp-table-wrap"><table className="pp-table"><thead><tr><th>م</th><th>كود السياسة</th><th>بيانات السياسة</th><th>القيمة / التركيب</th>{category==="تكويدية"&&<><th>البادئة</th><th>مثال الكود</th></>}<th>التفعيل</th><th>نطاق التطبيق</th><th>عدد المستخدمين</th><th>الإجراء</th></tr></thead><tbody>{visible.map((p,i)=>{const details=codeDetails(p);return <tr key={p.id}><td>{i+1}</td><td dir="ltr">{text(p.policy_code)||"—"}</td><td><strong>{fieldLabel(p)}</strong><small dir="ltr">{text(p.policy_key)}</small></td><td className="pp-value-cell">{details?details.structure:(text(p.policy_value)||"—")}</td>{category==="تكويدية"&&<><td dir="ltr">{details?.prefix||"—"}</td><td dir="ltr">{details?.example||"—"}</td></>}<td><span className={"pp-state "+(p.is_enabled?"on":"off")}>{p.is_enabled?"مفعّلة":"متوقفة"}</span></td><td>{p.apply_to_all?"كل المستخدمين":"مستخدمون محددون"}</td><td>{(p.user_ids||[]).length}</td><td><button className="pp-edit" disabled={!canEdit||isLocked(p)} onClick={()=>openEditor(p)}><Palette size={14}/> تعديل</button>{isLocked(p)&&<small className="pp-lock-note">محمية بعد بدء التكويد</small>}</td></tr>})}</tbody></table></div>}
+  {previewOpen&&<div className="pp-modal-backdrop" onClick={()=>setPreviewOpen(false)}><div className="pp-preview-modal" onClick={e=>e.stopPropagation()}><div className="pp-editor-head"><h3>معاينة سياسات البرنامج — {category}</h3><button onClick={()=>setPreviewOpen(false)}><X size={17}/></button></div><p>عدد السياسات المعروضة: {visible.length} من إجمالي {rows.length} سياسة.</p><div className="pp-preview-list">{visible.map(p=><div key={p.id}><b>{text(p.policy_code)} · {fieldLabel(p)}</b><span>{text(p.policy_value)||"—"}</span></div>)}</div><div className="pp-actions"><button className="pp-btn" onClick={printPolicies}>طباعة المعاينة</button><button className="pp-save" onClick={()=>setPreviewOpen(false)}>إغلاق</button></div></div></div>}
+  <footer style={{fontSize:11,color:"#8a7b95",padding:"4px 2px"}}>مصدر البيانات: erp_program_policies · السياسات الأساسية والقديمة محفوظة في قاعدة البيانات المشتركة. يتم إخفاء السجلات الداخلية المكررة فقط وفق سلوك الشاشة الأصلية.</footer>
+  <style>{`.pp-quick-actions{display:flex;gap:5px;flex-wrap:wrap}.pp-quick-actions button{height:36px;padding:0 11px;border:1px solid #e6dceb;border-radius:8px;background:#fff;color:#49345d;display:flex;align-items:center;gap:6px;font:inherit;font-size:12px}.pp-quick-actions button:disabled{opacity:.45;cursor:not-allowed}.pp-table-wrap{width:100%;overflow:auto;border:1px solid #eadff0;border-radius:12px;background:#fff}.pp-table{width:100%;border-collapse:collapse;min-width:900px;white-space:normal}.pp-table th{background:#FFA015;color:#241735;font-size:12px;padding:11px 9px;text-align:right;white-space:nowrap}.pp-table td{border-bottom:1px solid #f0eaf4;padding:9px;font-size:12px;vertical-align:middle}.pp-table tbody tr:nth-child(even){background:#FAF8FC}.pp-table tbody tr:hover{background:#F5EFFB}.pp-table td small{display:block;color:#9688a1;font-size:10px;margin-top:3px}.pp-value-cell{max-width:330px;overflow-wrap:anywhere}.pp-lock-note{color:#95651a!important}.pp-user-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:7px;max-height:190px;overflow:auto;padding:9px;border:1px solid #eadff0;border-radius:9px}.pp-user-picker label{display:flex;align-items:center;gap:7px;font-size:12px}.pp-modal-backdrop{position:fixed;inset:0;background:#1a0c28a8;z-index:1000;display:grid;place-items:center;padding:18px}.pp-preview-modal{width:min(900px,100%);max-height:85vh;overflow:auto;background:white;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px}.pp-preview-list{display:flex;flex-direction:column;gap:7px}.pp-preview-list>div{display:flex;justify-content:space-between;gap:12px;padding:9px;background:#faf8fc;border-radius:8px;font-size:12px}.pp-preview-list span{max-width:55%;overflow-wrap:anywhere;color:#756984}@media print{.pp-quick-actions,.pp-toolbar,.pp-tabs,.pp-edit,.pp-editor{display:none!important}.program-policies{color:#000}.pp-table-wrap{overflow:visible}.pp-table{min-width:0}}`}</style>
  </section>;
 }
