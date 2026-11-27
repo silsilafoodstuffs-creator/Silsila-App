@@ -33,7 +33,7 @@ class TraderMarketService {
   Future<List<Map<String, dynamic>>> getPosts({
     String? activityType,
     String? postType,
-    int limit = 50,
+    int limit = 100,
   }) async {
     if (limit < 1 || limit > 200) {
       throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
