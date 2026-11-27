@@ -18,11 +18,11 @@ void main() {
     expect(screen, isNot(contains(".select('id,parent_id,category_code,category_name,category_name_en,activity_code,is_active,show_in_app,image_data")));
   });
 
-  test('category images are fetched individually only after selecting a category', () {
-    expect(screen, contains('Future<void> _loadCategoryImage(Map<String, dynamic> row) async'));
-    expect(screen, contains(".select('image_data,image_mime_type,image_attribution,image_source_url')"));
-    expect(screen, contains('_loadCategoryImage(row);'));
-    expect(screen, contains('final Set<String> _categoryImageLoads'));
+  test('visible category page loads image bytes in a tenant-scoped batch', () {
+    expect(screen, contains('Future<void> _loadCategoryImages(Iterable<Map<String, dynamic>> sourceRows) async'));
+    expect(screen, contains(".select('id,image_data,image_mime_type,image_attribution,image_source_url')"));
+    expect(screen, contains(".inFilter('id', batchIds)"));
+    expect(screen, contains('_loadCategoryImages(pageRows);'));
   });
 
   test('hierarchy lookups use a stable ID index instead of scanning the full catalog per row', () {
@@ -35,8 +35,9 @@ void main() {
   });
 
   test('category coding uses the standard Cat prefix for all hierarchy levels', () {
-    expect(screen, contains("'category_code':'Cat$parentDigits${next.toString().padLeft(2, '0')}'"));
-    expect(screen, contains("await saveCode(entry.value[i], categoryPrefix + segment(i + 1));"));
+    expect(screen, contains(r"'category_code':'Cat$parentDigits${next.toString().padLeft(2, '0')}'"));
+    expect(screen, contains('current.startsWith(categoryPrefix)'));
+    expect(screen, contains("update({'category_code': ''})"));
     expect(screen, contains("_s(root['category_code']) + segment(i + 1)"));
     expect(screen, contains("_s(sub['category_code']) + segment(i + 1)"));
   });
