@@ -32,7 +32,7 @@ class DeliveryService {
 
   /// جلب شركات الشحن النشطة.
   Future<List<Map<String, dynamic>>> getShippingCompanies({
-    int limit = 50,
+    int limit = 100,
   }) async {
     _validateLimit(limit);
 
@@ -229,7 +229,7 @@ class DeliveryService {
 
   /// جلب الشحنات التي طلبها المستخدم الحالي.
   Future<List<Map<String, dynamic>>> getMyDeliveries({
-    int limit = 50,
+    int limit = 100,
   }) async {
     _validateLimit(limit);
 
