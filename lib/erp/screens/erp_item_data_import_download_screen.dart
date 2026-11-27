@@ -803,6 +803,10 @@ class ErpItemDataDownloadScreen extends StatefulWidget {
 }
 class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
   List<_ImportRow> _rows=[];String _status='افتح ملف ZIP صادر من شاشة استيراد بيانات اصناف.';bool _busy=false,_all=true;
+  static const int _pageSize = 50;
+  int _pageIndex = 0;
+  final TextEditingController _pageJumpController = TextEditingController();
+  List<_ImportRow> get _visibleRows => _rows.skip(_pageIndex * _pageSize).take(_pageSize).toList(growable: false);
   Future<void> _openZip() async {
     final result=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['zip'],withData:true);
     if(result==null||result.files.single.bytes==null)return;
@@ -840,7 +844,7 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
           sourcePage:modernFormat?cell(row,22):'',
           bytes:files[imagePath],selected:true));
       }
-      setState(() { _rows=loaded; _status='تم فتح ${loaded.length} صفًا. التعديلات محلية ولن تُحفظ في قاعدة البيانات.'; });
+      setState(() { _rows=loaded; _pageIndex=0; _pageJumpController.clear(); _status='تم فتح ${loaded.length} صفًا. التعديلات محلية ولن تُحفظ في قاعدة البيانات.'; });
     }catch(e){setState(()=>_status='تعذر فتح ZIP: $e');}
     finally{if(mounted)setState(()=>_busy=false);}
   }
@@ -857,7 +861,10 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
   String _ext(String url, [Uint8List? bytes]){if(bytes!=null&&bytes.isNotEmpty){if(bytes.length>=8&&bytes[0]==0x89&&bytes[1]==0x50)return 'png';if(bytes.length>=3&&bytes[0]==0xff&&bytes[1]==0xd8&&bytes[2]==0xff)return 'jpg';if(bytes.length>=6&&String.fromCharCodes(bytes.take(6))=='GIF89a')return 'gif';if(bytes.length>=2&&bytes[0]==0x42&&bytes[1]==0x4d)return 'bmp';if(bytes.length>=12&&String.fromCharCodes(bytes.sublist(0,4))=='RIFF'&&String.fromCharCodes(bytes.sublist(8,12))=='WEBP')return 'webp';}final p=Uri.tryParse(url)?.path.toLowerCase()??'';for(final e in ['png','webp','gif','avif','jpeg']){if(p.endsWith('.$e'))return e;}return 'jpg';}
   void _preview(_ImportRow r){showDialog<void>(context:context,builder:(c)=>Dialog(child:Padding(padding:const EdgeInsets.all(12),child:Column(mainAxisSize:MainAxisSize.min,children:[Align(alignment:Alignment.centerRight,child:IconButton(onPressed:()=>Navigator.pop(c),icon:const Icon(Icons.close))),Flexible(child:r.bytes!=null?InteractiveViewer(child:Image.memory(r.bytes!,fit:BoxFit.contain)):Image.network(r.imageUrl,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image))),Text(r.name)]))));}
   @override
+  void dispose(){_pageJumpController.dispose();super.dispose();}
+  @override
   Widget build(BuildContext context) {
+    final pageCount = (_rows.length / _pageSize).ceil().clamp(1, 999999).toInt();
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Column(children: [
@@ -871,9 +878,16 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
             OutlinedButton.icon(onPressed: _busy ? null : _openZip, icon: const Icon(Icons.folder_open, color: Colors.white), label: const Text('فتح ZIP', style: TextStyle(color: Colors.white))),
           ]),
         ),
-        Padding(padding: const EdgeInsets.all(10), child: Row(children: [
-          Expanded(child: Text(_status, style: const TextStyle(fontSize: 12))),
+        Padding(padding: const EdgeInsets.all(10), child: Wrap(spacing: 5, runSpacing: 5, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          SizedBox(width: 340, child: Text(_status, style: const TextStyle(fontSize: 12))),
           FilledButton.icon(onPressed: _busy || _rows.isEmpty ? null : _exportZip, icon: const Icon(Icons.folder_zip), label: const Text('تصدير ZIP المعدل')),
+          if (_rows.isNotEmpty) ...[
+            Text('صفحة ${_pageIndex + 1} من $pageCount • ${_rows.length} سجل'),
+            IconButton(tooltip: 'الصفحة السابقة', onPressed: _busy || _pageIndex == 0 ? null : () => setState(() => _pageIndex--), icon: const Icon(Icons.chevron_right)),
+            for (var page=0; page<pageCount; page++) ChoiceChip(label: Text('${page+1}'), selected: _pageIndex==page, onSelected: _busy ? null : (_) => setState(() => _pageIndex=page), visualDensity: VisualDensity.compact),
+            IconButton(tooltip: 'الصفحة التالية', onPressed: _busy || _pageIndex+1>=pageCount ? null : () => setState(() => _pageIndex++), icon: const Icon(Icons.chevron_left)),
+            SizedBox(width: 76, child: TextField(controller: _pageJumpController, keyboardType: TextInputType.number, textAlign: TextAlign.center, decoration: const InputDecoration(hintText: 'رقم الصفحة', isDense: true, border: OutlineInputBorder()), onSubmitted: (v) { final n=int.tryParse(v); if(n==null||n<1||n>pageCount){setState(()=>_status='رقم الصفحة يجب أن يكون من 1 إلى $pageCount.');return;} setState(()=>_pageIndex=n-1); })),
+          ],
         ])),
         Expanded(
           child: _rows.isEmpty
@@ -923,7 +937,7 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                     const DataColumn(label: Text('العرض')),
                     const DataColumn(label: Text('الارتفاع')),
                   ],
-                  rows: _rows.map((r) => DataRow(cells: [
+                  rows: _visibleRows.map((r) => DataRow(cells: [
                     DataCell(Checkbox(shape: const CircleBorder(), value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
                     DataCell(Text('${_rows.indexOf(r) + 1}')),
                     DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: r.bytes != null ? Image.memory(r.bytes!, fit: BoxFit.contain) : (r.imageUrl.isEmpty ? const Icon(Icons.category_outlined) : Image.network(r.imageUrl, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image)))))),
