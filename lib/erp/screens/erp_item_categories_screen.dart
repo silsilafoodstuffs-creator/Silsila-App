@@ -438,27 +438,27 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       setState(() => _error = _level == 1 ? 'أضف فئة رئيسية أولًا.' : 'أضف فئة فرعية أولًا.');
       return;
     }
-    final codeSource = parentId == null ? _companyCategories : _codingCategories;
+    final draftActivityCode = _selectedActivityCode == '*' ? '01' : _selectedActivityCode;
+    final codeSource = parentId == null
+        ? _companyCategories.where((r) => _s(r['activity_code']) == draftActivityCode)
+        : _codingCategories;
     final siblingsForNew = codeSource.where((r) =>
       _s(r['parent_id']) == (parentId ?? '')).toList();
     final parent = parentId == null ? null : _categoriesById[parentId];
     final parentDigits = parent == null
-        ? ''
+        ? draftActivityCode
         : _s(parent['category_code']).replaceAll(RegExp(r'[^0-9]'), '');
     final lastUsedSegment = siblingsForNew.fold<int>(0, (maximum, sibling) {
-      final code = _s(sibling['category_code']);
-      final digits = code.replaceAll(RegExp(r'[^0-9]'), '');
-      if (!code.startsWith('Cat') ||
-          digits.length != parentDigits.length + 2 ||
+      final digits = _s(sibling['category_code']).replaceAll(RegExp(r'[^0-9]'), '');
+      if (digits.length != parentDigits.length + 2 ||
           !digits.startsWith(parentDigits)) return maximum;
       final value = int.tryParse(digits.substring(parentDigits.length)) ?? 0;
       return value > maximum ? value : maximum;
     });
     final next = lastUsedSegment + 1;
-    final draftActivityCode = _selectedActivityCode == '*' ? '01' : _selectedActivityCode;
     final draft = <String,dynamic>{
       'id':'draft-${DateTime.now().microsecondsSinceEpoch}', 'company_id':_company, 'activity_code':draftActivityCode,
-      'category_code':'Cat$parentDigits${next.toString().padLeft(2, '0')}', 'category_name':'','category_name_en':'',
+      'category_code':'$parentDigits${next.toString().padLeft(2, '0')}', 'category_name':'','category_name_en':'',
       'parent_id':parentId,'is_active':true,'show_in_app':true,'image_url':null,'image_data':null,'image_mime_type':null,'_draft':true,
     };
     setState(() { _editing = true; _all.add(draft); _rebuildCategoryIndexes(); _selectedId = _s(draft['id']); _expandedIds.add(_s(parentId)); _expandedIds.add(_s(draft['id'])); _syncControllers(); });
@@ -853,7 +853,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       setState(() => _error = 'احفظ الفئات الجديدة أولًا قبل إعادة التكويد.');
       return;
     }
-    setState(() { _saving = true; _error = null; _message = 'جارٍ توحيد أكواد الفئات حسب سياسة Cat الهرمية…'; });
+    setState(() { _saving = true; _error = null; _message = 'جارٍ توحيد أكواد الفئات حسب كود النشاط والتسلسل الهرمي…'; });
     try {
       final policyRow = await _db!.from('erp_program_policies')
           .select('policy_value')
@@ -866,16 +866,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       final mainDigits = int.tryParse('${segments is Map ? segments['main'] : ''}') ?? 2;
       final subDigits = int.tryParse('${segments is Map ? segments['sub'] : ''}') ?? 2;
       final secondaryDigits = int.tryParse('${segments is Map ? segments['secondary'] : ''}') ?? 2;
-      final types = policy is Map ? policy['types'] : null;
-      final categoryType = types is Map ? types['category'] : null;
-      final configuredPrefix = policy is Map ? policy['category_prefix']?.toString().trim() : null;
-      final nestedPrefix = categoryType is Map ? categoryType['prefix']?.toString().trim() : null;
-      final categoryPrefix = configuredPrefix != null && configuredPrefix.isNotEmpty
-          ? configuredPrefix
-          : nestedPrefix != null && nestedPrefix.isNotEmpty ? nestedPrefix : 'Cat';
-      if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(categoryPrefix) ||
-          mainDigits < 1 || subDigits < 1 || secondaryDigits < 1) {
-        throw StateError('إعدادات بادئة أو أطوال تكويد الفئات غير صحيحة.');
+      if (mainDigits != 2 || subDigits != 2 || secondaryDigits != 2) {
+        throw StateError('سياسة الفئات الفعلية تتطلب مقطعين من رقمين لكل مستوى.');
       }
 
       final rowsById = <String, Map<String, dynamic>>{
@@ -902,11 +894,9 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         required int segmentDigits,
       }) async {
         final current = _s(row['category_code']);
-        final digits = digitsOf(row);
-        final valid = current.startsWith(categoryPrefix) &&
-            digits.length == parentDigits.length + segmentDigits &&
-            digits.startsWith(parentDigits) &&
-            RegExp(r'^[0-9]+$').hasMatch(digits);
+        final valid = RegExp(r'^[0-9]+$').hasMatch(current) &&
+            current.length == parentDigits.length + segmentDigits &&
+            current.startsWith(parentDigits);
         if (valid) return;
         final updated = await _db!.from('erp_item_categories')
             .update({'category_code': ''})
@@ -921,7 +911,11 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       var subCount = 0;
       var secondaryCount = 0;
       for (final root in roots) {
-        await ensureCode(root, parentDigits: '', segmentDigits: mainDigits);
+        final activityCode = _s(root['activity_code']);
+        if (!RegExp(r'^[0-9]{2}$').hasMatch(activityCode)) {
+          throw StateError('كود النشاط للفئة الرئيسية يجب أن يتكون من رقمين: $activityCode');
+        }
+        await ensureCode(root, parentDigits: activityCode, segmentDigits: mainDigits);
         final rootId = _s(root['id']);
         final rootDigits = digitsOf(root);
         final subs = ordered(rows.where((row) => _s(row['parent_id']) == rootId).toList());
@@ -942,7 +936,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         setState(() {
           _editing = false;
           _hierarchyChanged = false;
-          _message = 'اكتمل توحيد التكويد دون حذف أي سجل: ${roots.length} رئيسية، ${subCount} فرعية، ${secondaryCount} ثانوية. الصيغة Cat + 2+2+2 حسب المستوى.';
+          _message = 'اكتمل توحيد التكويد دون حذف أي سجل: ${roots.length} رئيسية، ${subCount} فرعية، ${secondaryCount} ثانوية. الصيغة كود النشاط + 2+2+2.';
         });
       }
     } catch (error) {
