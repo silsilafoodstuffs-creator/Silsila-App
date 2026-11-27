@@ -48,6 +48,7 @@ void main() {
     expect(screen, contains('required String parentDigits'));
     expect(screen, contains("RegExp(r'^[0-9]{2}$').hasMatch(activityCode)"));
     expect(screen, contains("update({'category_code': ''})"));
+    expect(screen, contains("'category_code':row['_draft'] == true || _hierarchyChanged ? '' : _s(row['category_code'])"));
   });
 
   test('app category service converts stored PostgreSQL bytea to image bytes', () {
