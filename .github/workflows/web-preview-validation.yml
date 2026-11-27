@@ -1,4 +1,4 @@
-name: Silsila Web Preview Validation
+name: Silsila Optional Browser Smoke Test
 
 # Optional manual smoke test; automatic Web validation already checks desktop and mobile browsers.
 on:
@@ -10,33 +10,34 @@ permissions:
 
 # Only the newest preview smoke run for the source branch remains active.
 concurrency:
-  group: silsila-web-preview-validation-${{ github.event.workflow_run.head_branch }}
+  group: silsila-optional-browser-smoke-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   preview:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - name: Checkout the exact validated source
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
-      - name: Download the exact production Web build
-        uses: actions/download-artifact@v4
+      - name: Set up Flutter
+        uses: subosito/flutter-action@fd55f4c5af5b953cc57a2be44cb082c8f6635e8e
         with:
-          name: silsila-web-build-${{ github.event.workflow_run.run_number }}
-          path: build/web
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
-          run-id: ${{ github.event.workflow_run.id }}
+          flutter-version: "3.29.3"
+          cache: true
+
+      - name: Build the current Web app for manual browser smoke test
+        run: |
+          flutter pub get
+          flutter build web --release --pwa-strategy=none --base-href "/Silsila-App/"
 
       - name: Cache Playwright Chromium
         uses: actions/cache@v4
