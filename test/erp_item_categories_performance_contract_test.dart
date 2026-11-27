@@ -39,12 +39,13 @@ void main() {
     expect(screen, isNot(contains('_expandedIds.addAll(_all.map')));
   });
 
-  test('category coding uses the standard Cat prefix for all hierarchy levels', () {
-    expect(screen, contains(r"'category_code':'Cat$parentDigits${next.toString().padLeft(2, '0')}'"));
-    expect(screen, contains('current.startsWith(categoryPrefix)'));
+  test('category coding inherits the two-digit activity code across all hierarchy levels', () {
+    expect(screen, contains(r"'category_code':'$parentDigits${next.toString().padLeft(2, '0')}'"));
+    expect(screen, contains("final draftActivityCode = _selectedActivityCode == '*' ? '01' : _selectedActivityCode;"));
     expect(screen, contains('digits.startsWith(parentDigits)'));
-    expect(screen, contains("update({'category_code': ''})"));
     expect(screen, contains('required String parentDigits'));
+    expect(screen, contains("RegExp(r'^[0-9]{2}$').hasMatch(activityCode)"));
+    expect(screen, contains("update({'category_code': ''})"));
   });
 
   test('app category service converts stored PostgreSQL bytea to image bytes', () {
