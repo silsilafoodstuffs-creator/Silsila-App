@@ -162,8 +162,9 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
   final List<_ImportRow> _rows = [];
   bool _busy = false, _selectAll = true, _crawling = false, _cancelCrawl = false;
   // Render a bounded slice of the full crawl result to keep the browser responsive.
-  static const int _tablePageSize = 100;
+  static const int _tablePageSize = 50;
   int _tablePage = 0;
+  final TextEditingController _tablePageJumpController = TextEditingController();
   List<_ImportRow> get _visibleRows => _rows
       .skip(_tablePage * _tablePageSize)
       .take(_tablePageSize)
@@ -171,7 +172,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
   String _status = 'المصدر الافتراضي: Amazon مصر. يمكنك تغيير الرابط قبل بدء الفحص.';
   static const _headers = ['id','image_file','image_url','name_ar','record_type','code_mode','item_code','category','subcategory','third_category','brand','barcode','sale_price','major_unit','inner_count','minor_unit','other_units','weight','length','width','height','description','source_page'];
   static const _headerLabels = ['المعرف','الصورة','رابط الصورة','اسم الصنف / الفئة','نوع السجل','نوع الكود','كود الصنف / الفئة','الفئة الرئيسية','الفئة الفرعية','الفئة الثانوية','البراند / الماركة','الباركود','السعر','الوحدة الكبرى','العدد الداخلي','الوحدة الصغرى','وحدات أخرى','الوزن','الطول','العرض','الارتفاع','الوصف','صفحة المصدر'];
-  @override void dispose(){_url.dispose();super.dispose();}
+  @override void dispose(){_url.dispose();_tablePageJumpController.dispose();super.dispose();}
   Future<void> _pasteUrl() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final value = data?.text?.trim();
@@ -672,16 +673,21 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                   if (_crawling) OutlinedButton.icon(onPressed: () => setState(() => _cancelCrawl = true), icon: const Icon(Icons.stop_circle_outlined, size: 18), label: const Text('إيقاف الفحص')),
                   if (_rows.isNotEmpty) ...[
                     Text('عرض ${_tablePage * _tablePageSize + 1}–${((_tablePage + 1) * _tablePageSize).clamp(0, _rows.length)} من ${_rows.length}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                    OutlinedButton.icon(
-                      onPressed: _busy || _tablePage == 0 ? null : () => setState(() => _tablePage--),
-                      icon: const Icon(Icons.chevron_right, size: 18),
-                      label: const Text('السجلات السابقة'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _busy || (_tablePage + 1) * _tablePageSize >= _rows.length ? null : () => setState(() => _tablePage++),
-                      icon: const Icon(Icons.chevron_left, size: 18),
-                      label: const Text('السجلات التالية'),
-                    ),
+                    IconButton(tooltip: 'الصفحة السابقة', onPressed: _busy || _tablePage == 0 ? null : () => setState(() => _tablePage--), icon: const Icon(Icons.chevron_right, size: 18)),
+                    for (var page = 0; page < (_rows.length / _tablePageSize).ceil(); page++)
+                      ChoiceChip(label: Text('${page + 1}'), selected: _tablePage == page, onSelected: _busy ? null : (_) => setState(() => _tablePage = page), visualDensity: VisualDensity.compact),
+                    IconButton(tooltip: 'الصفحة التالية', onPressed: _busy || (_tablePage + 1) * _tablePageSize >= _rows.length ? null : () => setState(() => _tablePage++), icon: const Icon(Icons.chevron_left, size: 18)),
+                    SizedBox(width: 76, child: TextField(
+                      controller: _tablePageJumpController, keyboardType: TextInputType.number, textAlign: TextAlign.center,
+                      decoration: const InputDecoration(hintText: 'رقم الصفحة', isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 7)),
+                      onSubmitted: (value) {
+                        final page = int.tryParse(value);
+                        final count = (_rows.length / _tablePageSize).ceil();
+                        if (page == null || page < 1 || page > count) { setState(() => _status = 'رقم الصفحة يجب أن يكون من 1 إلى $count.'); return; }
+                        setState(() { _tablePage = page - 1; _status = 'تم الانتقال إلى الصفحة $page من $count.'; });
+                      },
+                    )),
+                    Text('صفحة ${_tablePage + 1} من ${(_rows.length / _tablePageSize).ceil()}'),
                   ],
                 ],
               ),
