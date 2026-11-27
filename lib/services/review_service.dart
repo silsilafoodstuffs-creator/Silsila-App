@@ -34,7 +34,7 @@ class ReviewService {
   /// جلب تقييمات مورد معين.
   Future<List<Map<String, dynamic>>> getSupplierReviews(
     String supplierId, {
-    int limit = 50,
+    int limit = 100,
   }) async {
     _validateLimit(limit);
 
