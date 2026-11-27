@@ -1,37 +1,9 @@
 name: Silsila Full Validation - All Recent Changes
 
-# Run the complete acceptance suite on Studio and ERP pull requests as well as on demand.
+name: Silsila Full Validation - All Recent Changes
+
+# Optional full-suite run; automatic checks use one production Web validation lane.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "lib/**"
-      - "test/**"
-      - "integration_test/**"
-      - "android/**"
-      - "web/**"
-      - "pubspec.yaml"
-      - "pubspec.lock"
-      - "assets/**"
-      - "docs/**"
-      - "supabase/**"
-      - "tools/**"
-      - ".github/workflows/**"
-  pull_request:
-    branches: [main]
-    paths:
-      - "lib/**"
-      - "test/**"
-      - "integration_test/**"
-      - "android/**"
-      - "web/**"
-      - "pubspec.yaml"
-      - "pubspec.lock"
-      - "assets/**"
-      - "docs/**"
-      - "supabase/**"
-      - "tools/**"
-      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:
@@ -40,7 +12,7 @@ permissions:
 concurrency:
   # A newer commit supersedes the older full validation on the same branch.
   group: silsila-full-validation-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   validate-all:
