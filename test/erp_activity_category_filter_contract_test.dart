@@ -63,7 +63,9 @@ void main() {
     expect(categoryScreen, contains("segments['secondary']"));
     expect(categoryScreen, contains("update({'category_code': ''})"));
     expect(categoryScreen, contains("required String parentDigits"));
-    expect(categoryScreen, contains("'category_code':row['_draft'] == true || _hierarchyChanged ? '' : _s(row['category_code'])"));
+    expect(categoryScreen, contains('bool _categoryNeedsCodeRegeneration(Map<String, dynamic> row)'));
+    expect(categoryScreen, contains('_originalCategoryHierarchy[id]'));
+    expect(categoryScreen, contains("'category_code':_categoryNeedsCodeRegeneration(row) ? '' : _s(row['category_code'])"));
     expect(categoryScreen, contains(".eq('id', _s(row['id']))"));
     expect(categoryScreen, contains("final roots = ordered(rows.where((row) => row['parent_id'] == null).toList());"));
     expect(categoryScreen, contains("final subs = ordered(rows.where((row) => _s(row['parent_id']) == rootId).toList());"));
