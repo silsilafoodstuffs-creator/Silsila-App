@@ -1,33 +1,7 @@
 name: Silsila Mobile App Validation
 
+# Manual-only to avoid duplicating the automatic production validation on every commit.
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "lib/**"
-      - "test/**"
-      - "integration_test/**"
-      - "android/**"
-      - "web/**"
-      - "pubspec.yaml"
-      - "pubspec.lock"
-      - "assets/**"
-      - "supabase/**"
-      - ".github/workflows/**"
-  push:
-    branches: [main]
-    paths:
-      - "lib/**"
-      - "test/**"
-      - "integration_test/**"
-      - "android/**"
-      - "pubspec.yaml"
-      - "pubspec.lock"
-      - "assets/**"
-      - "supabase/**"
-      - "tools/catalog_import/**"
-      - "tools/prepare_android_release.sh"
-      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:
@@ -36,7 +10,7 @@ permissions:
 # Keep one current mobile validation per branch.
 concurrency:
   group: silsila-mobile-validation-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   mobile:
