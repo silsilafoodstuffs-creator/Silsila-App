@@ -38,7 +38,7 @@ class NotificationService {
 
   /// جلب إشعارات المستخدم من الأحدث إلى الأقدم.
   Future<List<Map<String, dynamic>>> getMyNotifications({
-    int limit = 50,
+    int limit = 100,
   }) async {
     _validateLimit(limit);
 
