@@ -1,7 +1,5 @@
 name: Silsila Full Validation - All Recent Changes
 
-name: Silsila Full Validation - All Recent Changes
-
 # Optional full-suite run; automatic checks use one production Web validation lane.
 on:
   workflow_dispatch:
@@ -10,7 +8,7 @@ permissions:
   contents: read
 
 concurrency:
-  # A newer commit supersedes the older full validation on the same branch.
+  # Manual full-suite runs are never cancelled automatically.
   group: silsila-full-validation-${{ github.ref }}
   cancel-in-progress: false
 
