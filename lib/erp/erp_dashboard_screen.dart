@@ -4013,7 +4013,15 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ),
   );
 
+  @override
+  void dispose() {
+    _workspacePageJumpController.dispose();
+    super.dispose();
+  }
+
   void _goHome() => setState(() {
+    _workspaceTablePageIndex = 0;
+    _workspacePageJumpController.clear();
     _module = 'إعدادات عامة';
     _group = 'بيانات أساسية';
     _page = 'بيانات الشركة';
@@ -4027,6 +4035,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       _module = module;
       _group = group;
       _page = page;
+      _workspaceTablePageIndex = 0;
+      _workspacePageJumpController.clear();
       _search = '';
       _selectedRecord = null;
       _expandedModules.add(module);
