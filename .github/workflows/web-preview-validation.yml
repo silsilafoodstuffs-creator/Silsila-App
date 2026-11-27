@@ -1,12 +1,8 @@
 name: Silsila Web Preview Validation
 
+# Optional manual smoke test; automatic Web validation already checks desktop and mobile browsers.
 on:
-  workflow_run:
-    workflows:
-      - Silsila Web App Validation
-    types:
-      - completed
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,7 +11,7 @@ permissions:
 # Only the newest preview smoke run for the source branch remains active.
 concurrency:
   group: silsila-web-preview-validation-${{ github.event.workflow_run.head_branch }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   preview:
