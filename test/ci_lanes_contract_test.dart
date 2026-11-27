@@ -55,79 +55,46 @@ void main() {
     expect(app, contains('space: 5'));
   });
 
-  test('independent mobile, web app, and web preview workflows stay active', () {
-    final mobile = File('.github/workflows/mobile-validation.yml').readAsStringSync();
+  test('one automatic validation lane deploys the exact successful build to permanent GitHub Pages', () {
     final web = File('.github/workflows/web-validation.yml').readAsStringSync();
-    final deploy = File('.github/workflows/deploy.yml').readAsStringSync();
-    final preview = File('.github/workflows/web-preview-validation.yml').readAsStringSync();
-    final release = File('.github/workflows/build.yml').readAsStringSync();
-    // Keep Android validation independent while requiring a signed production APK.
-    expect(mobile, contains('name: Silsila Mobile App Validation'));
-    expect(mobile, contains('flutter test --reporter expanded'));
-    expect(mobile, contains('Analyze Dart code'));
-    expect(mobile, contains('Set up Java 17 for Android Gradle'));
-    expect(mobile, contains('Build Android Release APK'));
-    expect(mobile, contains('timeout-minutes: 25'));
-    expect(mobile, contains('flutter build apk --release'));
-    expect(mobile, isNot(contains('--debug')));
-    expect(mobile, contains('Prepare signed Release APK and Silsila launcher icon'));
-    expect(mobile, contains('Verify Android APK and calculate SHA-256'));
-    expect(mobile, contains('Upload Android Release APK'));
-    expect(mobile, contains('Write Android build result summary'));
-    expect(release, contains('name: Build Silsila Android App'));
-    expect(release, contains('flutter build apk --release'));
-    expect(release, contains('Verify APK signature'));
-    expect(release, contains('Verify APK identity, version, and launcher icon'));
-    expect(release, contains('silsila-android-apk'));
-    expect(release, contains('tools/prepare_android_release.sh'));
-    expect(release, contains('flutter build apk --release'));
     final full = File('.github/workflows/full-validation.yml').readAsStringSync();
     final releaseSetup = File('tools/prepare_android_release.sh').readAsStringSync();
     final maintenance = File('lib/erp/screens/erp_maintenance_center_screen.dart').readAsStringSync();
+
+    expect(web, contains('name: Silsila Web App Validation'));
+    expect(web, contains('flutter analyze lib test --no-fatal-infos --no-fatal-warnings'));
+    expect(web, contains('flutter test --reporter expanded'));
+    expect(web, contains('flutter build web --release'));
+    expect(web, contains('actions/upload-artifact@v4'));
+    expect(web, contains('silsila-web-build-'));
+    expect(web, contains('deploy-github-pages:'));
+    expect(web, contains('actions/deploy-pages@v4'));
+    expect(web, contains('actions/upload-pages-artifact@v3'));
+    expect(web, contains('silsilafoodstuffs-creator.github.io/Silsila-App/'));
+    expect(web, contains('cancel-in-progress: false'));
+    expect(web, contains('github.sha'));
+    expect(web, isNot(contains('workflow_run:')));
+
+    expect(full, contains('workflow_dispatch:'));
+    expect(full, contains('flutter analyze lib test'));
+    expect(full, contains('flutter test'));
     expect(full, contains('flutter build apk --release'));
-    expect(full, isNot(contains('--debug')));
     expect(full, contains('app-release.apk'));
+    expect(full, contains('cancel-in-progress: false'));
+
     expect(releaseSetup, contains('dart run flutter_launcher_icons'));
     expect(releaseSetup, contains('ANDROID_KEYSTORE_BASE64'));
     expect(releaseSetup, contains('signingConfig = signingConfigs.getByName("release")'));
     expect(maintenance, contains('flutter build apk --release'));
     expect(maintenance, isNot(contains('flutter build apk --debug')));
 
-    expect(web, contains('name: Silsila Web App Validation'));
-    expect(web, contains('flutter build web --release'));
-    expect(web, contains('actions/upload-artifact@v4'));
-    expect(web, contains('silsila-web-build-'));
-
-    expect(deploy, contains('name: Silsila Web Preview Deployment'));
-    expect(deploy, contains('Silsila Web App Validation'));
-    expect(deploy, contains('actions/deploy-pages@v4'));
-    expect(deploy, contains('concurrency:'));
-    expect(deploy, contains('group: silsila-pages-main'));
-    expect(deploy, contains('cancel-in-progress: false'));
-    expect(preview, contains('name: Silsila Web Preview Validation'));
-    expect(preview, contains('Silsila Web App Validation'));
-    expect(preview, contains('actions/download-artifact@v4'));
-    expect(preview, contains('tools/web_view_test.mjs'));
-    expect(preview, contains('Run real desktop + mobile WebView smoke tests'));
-    expect(preview, contains('group: silsila-web-preview-validation-'));
-    expect(release, contains('workflow_dispatch:'));
-    expect(release, isNot(contains('workflow_run:')));
-
-    // Keep only the newest validation per branch to prevent obsolete runs
-    // from consuming runners while preserving exact-SHA checkout for each run.
-    for (final workflow in [mobile, web]) {
-      expect(workflow, contains('cancel-in-progress: true'));
-      expect(workflow, contains('github.ref'));
-      expect(workflow, contains('github.sha'));
-    }
-    // Preview smoke tests remain tied to the exact completed Web artifact,
-    // while superseded previews for the same branch are cancelled.
-    expect(preview, contains('cancel-in-progress: true'));
-    expect(preview, contains('github.event.workflow_run.id'));
-    expect(preview, contains('github.event.workflow_run.head_sha'));
-    expect(mobile, contains('workflow_dispatch:'));
-    expect(web, contains('workflow_dispatch:'));
+    expect(File('.github/workflows/deploy.yml').existsSync(), isFalse);
+    expect(File('.github/workflows/build.yml').existsSync(), isFalse);
+    expect(File('.github/workflows/mobile-validation.yml').existsSync(), isFalse);
+    expect(File('.github/workflows/ci-smoke.yml').existsSync(), isFalse);
+    expect(File('.github/workflows/web-preview-validation.yml').existsSync(), isFalse);
   });
+
   test('unified HR permissions migration preserves the consolidated 78-page catalog', () {
     final migration = File('supabase/migrations/20261116034000_unify_hr_permission_template_menu.sql').readAsStringSync();
     final expansion = File('supabase/migrations/20261116034500_complete_hr_manager_template_78_pages.sql').readAsStringSync();
