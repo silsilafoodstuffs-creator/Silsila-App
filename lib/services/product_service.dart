@@ -40,7 +40,7 @@ class ProductService {
     int? categoryId,
     String? supplierId,
     String? search,
-    int limit = 50,
+    int limit = 100,
   }) async {
     _validateLimit(limit);
 
