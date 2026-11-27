@@ -151,7 +151,7 @@ class OrderService {
 
   /// جلب طلبات المستخدم الحالي.
   Future<List<Map<String, dynamic>>> getMyOrders({
-    int limit = 50,
+    int limit = 100,
   }) async {
     if (limit < 1 || limit > 200) {
       throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
