@@ -27,7 +27,7 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
   bool _loading = false;
   bool _loadingMore = false;
   bool _hasMore = false;
-  static const int _pageSize = 50;
+  static const int _pageSize = 100;
   int _pageIndex = 0;
   final TextEditingController _pageJumpController = TextEditingController();
   String? _error;
@@ -451,7 +451,7 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
                         onSubmitted: (value) { final page = int.tryParse(value); if (page != null) _goToPage(page); },
                       )),
                       if (_hasMore || _loadingMore)
-                        TextButton(onPressed: _loadingMore ? null : _loadMore, child: Text(_loadingMore ? 'جارٍ التحميل...' : 'تحميل 50 سجلًا')),
+                        TextButton(onPressed: _loadingMore ? null : _loadMore, child: Text(_loadingMore ? 'جارٍ التحميل...' : 'تحميل 100 سجلًا')),
                     ],
                   ),
                 ),
