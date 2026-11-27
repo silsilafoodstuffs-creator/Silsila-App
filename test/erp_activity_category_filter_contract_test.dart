@@ -32,7 +32,8 @@ void main() {
     expect(categoryScreen, contains("_selectedActivityCode = _selectedActivityCode == '*'"));
     expect(categoryScreen, contains("if (_selectedActivityCode == '*') return true;"));
     expect(categoryScreen, contains("value: '*',"));
-    expect(categoryScreen, contains("final draftActivityCode = _selectedActivityCode == '*' ? '01' : _selectedActivityCode;"));
+    expect(categoryScreen, contains("final parent = parentId == null ? null : _categoriesById[parentId];"));
+    expect(categoryScreen, contains("_normalizeActivityCode(_s(parent['activity_code']))"));
   });
   test('main, sub and secondary category tabs share the compact activity grid contract', () {
     expect(categoryScreen, contains("String _viewMode = 'grid';"));
@@ -60,10 +61,12 @@ void main() {
     expect(categoryScreen, contains("segments['main']"));
     expect(categoryScreen, contains("segments['sub']"));
     expect(categoryScreen, contains("segments['secondary']"));
-    expect(categoryScreen, contains("update({'category_code': code})"));
+    expect(categoryScreen, contains("update({'category_code': ''})"));
+    expect(categoryScreen, contains("required String parentDigits"));
     expect(categoryScreen, contains(".eq('id', _s(row['id']))"));
     expect(categoryScreen, contains("final roots = ordered(rows.where((row) => row['parent_id'] == null).toList());"));
-    expect(categoryScreen, contains("subsByRoot[rootId] = subs;"));
+    expect(categoryScreen, contains("final subs = ordered(rows.where((row) => _s(row['parent_id']) == rootId).toList());"));
+    expect(categoryScreen, contains("final secondary = ordered(rows.where((row) => _s(row['parent_id']) == subId).toList());"));
   });
 
 }
