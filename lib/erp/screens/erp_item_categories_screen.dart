@@ -66,13 +66,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   final Map<String, List<Map<String, dynamic>>> _childrenByParent = <String, List<Map<String, dynamic>>>{};
   final Set<String> _categoryImageLoads = <String>{};
   final Set<String> _categoryImageLoaded = <String>{};
-  List<Map<String,dynamic>> get _codingCategories => <Map<String,dynamic>>[
-    ..._companyCategories.where((row) =>
-      _selectedActivityCode == '*' ||
-      _normalizeActivityCode(_s(row['activity_code'])) ==
-      _normalizeActivityCode(_selectedActivityCode)),
-    ..._all.where((row) => row['_draft'] == true),
-  ];
   final Map<String,TextEditingController> _ar = {};
   final Map<String,TextEditingController> _en = {};
   final Map<String,Uint8List?> _imageBytes = {};
@@ -637,7 +630,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         }
         final selectedBytes = _imageBytes[id];
         final payload = <String,dynamic>{
-          'company_id':_company, 'activity_code':_s(row['activity_code']).isEmpty ? _selectedActivityCode : _s(row['activity_code']), 'category_code':row['_draft'] == true ? '' : _s(row['category_code']), 'category_name':ar,
+          'company_id':_company, 'activity_code':_s(row['activity_code']).isEmpty ? _selectedActivityCode : _s(row['activity_code']), 'category_code':row['_draft'] == true || _hierarchyChanged ? '' : _s(row['category_code']), 'category_name':ar,
           'category_name_en':en, 'parent_id':row['parent_id'], 'is_active':row['is_active'] == true,
           'show_in_app':row['show_in_app'] == true,
           'image_url':(selectedBytes != null || row['_remove_image'] == true) ? null : row['image_url'],
