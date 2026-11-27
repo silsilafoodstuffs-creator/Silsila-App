@@ -32,8 +32,9 @@ npm run test:e2e
 
 ## بيئات التشغيل
 
-- معاينة فرع React الثابتة (تتحدث مع كل نشر ناجح للفرع): https://silsila-react-preview-git-react-parallel-previe-990103-silsila4.vercel.app/
-- قاعدة Supabase المتصلة محددة عبر VITE_SUPABASE_URL وVITE_SUPABASE_PUBLISHABLE_KEY في بيئة Vercel Preview فقط. تم التحقق من وجود المتغيرين دون كشف أي مفاتيح سرية. لا توجد متغيرات Production لهذا المشروع حتى الآن؛ لذلك لا يُعامل نطاق silsila-react-preview.vercel.app على أنه رابط تشغيل رسمي.
+- وجهة النشر المعتمدة: مستودع GitHub مستقل باسم Silsila-React، مع GitHub Pages كرابط تشغيل ثابت. لم يُنشأ المستودع المستقل أو يُفعّل Pages بعد؛ لذلك لا يوجد رابط React رسمي منشور حتى الآن.
+- يُلغى الاعتماد على Vercel نهائيًا، ولا تُستخدم روابط Preview المؤقتة كرابط تشغيل.
+- بعد فصل المستودع، تُضبط VITE_SUPABASE_URL وVITE_SUPABASE_PUBLISHABLE_KEY كإعدادات بناء آمنة في GitHub Actions. لا يوضع أي Service Role Key أو سر إداري داخل تطبيق الواجهة.
 - لا تُنفّذ تغييرات على مخطط قاعدة الإنتاج أو بياناتها دون خطة وموافقة صريحة.
 
 
