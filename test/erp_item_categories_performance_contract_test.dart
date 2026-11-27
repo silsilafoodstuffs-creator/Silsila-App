@@ -34,8 +34,15 @@ void main() {
     expect(screen, isNot(contains('_expandedIds.addAll(_all.map')));
   });
 
+  test('category coding uses the standard Cat prefix for all hierarchy levels', () {
+    expect(screen, contains("'category_code':'Cat$parentDigits${next.toString().padLeft(2, '0')}'"));
+    expect(screen, contains("await saveCode(entry.value[i], categoryPrefix + segment(i + 1));"));
+    expect(screen, contains("_s(root['category_code']) + segment(i + 1)"));
+    expect(screen, contains("_s(sub['category_code']) + segment(i + 1)"));
+  });
+
   test('category table renders a bounded page instead of every row at once', () {
-    expect(screen, contains('static const int _categoryPageSize = 50;'));
+    expect(screen, contains('static const int _categoryPageSize = 100;'));
     expect(screen, contains('final pageRows = visibleRows'));
     expect(screen, contains('rows: pageRows.asMap().entries.map'));
     expect(screen, contains('الصفحة التالية'));
