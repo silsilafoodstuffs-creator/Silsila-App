@@ -57,7 +57,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   static const int _categoryPageSize = 100;
   final TextEditingController _categoryPageJumpController = TextEditingController();
   final ScrollController _categoryVerticalScrollController = ScrollController();
-  String? _parentFilter;
   String? _mainCategoryFilter;
   String? _subCategoryFilter;
   List<Map<String,dynamic>> _all = [];
@@ -287,10 +286,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       _categoryImageLoaded.clear();
       _expandedIds.clear();
       _syncControllers();
-      if (_parentFilter != null &&
-          !_all.any((row) => _s(row['id']) == _parentFilter)) {
-        _parentFilter = null;
-      }
       if (mounted) setState(() {});
     } catch (error) {
       if (mounted) setState(() => _error = 'تعذر تحميل فئات الأصناف: $error');
@@ -455,9 +450,15 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     if (_company == null || _company!.isEmpty) { setState(() => _error = 'حدد الشركة أولًا.'); return; }
     if (_level == 0 && _selectedActivityCode == '*') { setState(() => _error = 'اختر نوع النشاط أولًا لتوليد كود الفئة الرئيسية تلقائيًا.'); return; }
     String? parentId = parentIdOverride;
-    if (parentId == null && _level == 1 && _parents.isNotEmpty) parentId = _parentFilter ?? _s(_parents.first['id']);
+    if (parentId == null && _level == 1 && _parents.isNotEmpty) {
+      final candidates = _parents.where((row) =>
+        _mainCategoryFilter == null || _s(row['id']) == _mainCategoryFilter).toList();
+      if (candidates.isNotEmpty) parentId = _s(candidates.first['id']);
+    }
     if (parentId == null && _level == 2 && _secondaryParents.isNotEmpty) {
-      final candidates = _secondaryParents.where((r) => _parentFilter == null || _s(_parentOf(r)?['id']) == _parentFilter).toList();
+      final candidates = _secondaryParents.where((row) =>
+        (_subCategoryFilter == null || _s(row['id']) == _subCategoryFilter) &&
+        (_mainCategoryFilter == null || _s(_parentOf(row)?['id']) == _mainCategoryFilter)).toList();
       if (candidates.isNotEmpty) parentId = _s(candidates.first['id']);
     }
     if (_level > 0 && parentId == null) {
@@ -1049,7 +1050,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
             _categoryPageIndex = 0;
             if (tab < 3) {
               _level = tab;
-              _parentFilter = null;
               _selectedId = null;
             }
           });
@@ -1098,7 +1098,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                               if (value == null) return;
                               setState(() {
                                 _selectedActivityCode = value;
-                                _parentFilter = null;
                                 _mainCategoryFilter = null;
                                 _subCategoryFilter = null;
                                 _selectedId = null;
