@@ -162,7 +162,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
   final List<_ImportRow> _rows = [];
   bool _busy = false, _selectAll = true, _crawling = false, _cancelCrawl = false;
   // Render a bounded slice of the full crawl result to keep the browser responsive.
-  static const int _tablePageSize = 50;
+  static const int _tablePageSize = 100;
   int _tablePage = 0;
   final TextEditingController _tablePageJumpController = TextEditingController();
   List<_ImportRow> get _visibleRows => _rows
@@ -803,7 +803,7 @@ class ErpItemDataDownloadScreen extends StatefulWidget {
 }
 class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
   List<_ImportRow> _rows=[];String _status='افتح ملف ZIP صادر من شاشة استيراد بيانات اصناف.';bool _busy=false,_all=true;
-  static const int _pageSize = 50;
+  static const int _pageSize = 100;
   int _pageIndex = 0;
   final TextEditingController _pageJumpController = TextEditingController();
   List<_ImportRow> get _visibleRows => _rows.skip(_pageIndex * _pageSize).take(_pageSize).toList(growable: false);
