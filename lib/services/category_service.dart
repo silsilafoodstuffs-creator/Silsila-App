@@ -89,7 +89,11 @@ class CategoryService {
     if (activeOnly) query = query.eq('is_active', true);
     if (activity != null) query = query.eq('activity_type', activity);
     final rows = await query.order('sort_order').order('name').limit(limit);
-    return List<Map<String, dynamic>>.from(rows);
+    return (rows as List).map((raw) {
+      final row = Map<String, dynamic>.from(raw as Map);
+      row['image_data'] = _decodePostgresBytea(row['image_data']);
+      return row;
+    }).toList(growable: false);
   }
 
   /// جلب قسم باستخدام معرّفه.
@@ -106,7 +110,9 @@ class CategoryService {
 
     if (result == null) return null;
 
-    return Map<String, dynamic>.from(result);
+    final row = Map<String, dynamic>.from(result);
+    row['image_data'] = _decodePostgresBytea(row['image_data']);
+    return row;
   }
 
   /// جلب الأقسام الفرعية لقسم رئيسي.
@@ -126,7 +132,11 @@ class CategoryService {
         .order('name')
         .limit(limit);
 
-    return List<Map<String, dynamic>>.from(rows);
+    return (rows as List).map((raw) {
+      final row = Map<String, dynamic>.from(raw as Map);
+      row['image_data'] = _decodePostgresBytea(row['image_data']);
+      return row;
+    }).toList(growable: false);
   }
 
   /// إنشاء قسم جديد.
