@@ -283,7 +283,7 @@ class ErpAppManagementService {
   Future<List<ErpAppActivityEntry>> listActivity({
     required String companyId,
     String? appId,
-    int limit = 50,
+    int limit = 100,
   }) async {
     _requireId(companyId, 'معرّف الشركة مطلوب.');
     var query = _db
