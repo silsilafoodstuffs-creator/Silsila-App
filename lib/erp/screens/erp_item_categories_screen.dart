@@ -54,7 +54,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   int _level = 0;
   int _catalogTab = 0;
   int _categoryPageIndex = 0;
-  static const int _categoryPageSize = 100;
+  static const int _categoryPageSize = 50;
+  final TextEditingController _categoryPageJumpController = TextEditingController();
   String? _parentFilter;
   String? _mainCategoryFilter;
   String? _subCategoryFilter;
@@ -93,6 +94,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     for (final c in _ar.values) { c.dispose(); }
     for (final c in _en.values) { c.dispose(); }
     _searchController.dispose();
+    _categoryPageJumpController.dispose();
     super.dispose();
   }
 
@@ -422,6 +424,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
 
   Future<void> _add({String? parentIdOverride}) async {
     if (_company == null || _company!.isEmpty) { setState(() => _error = 'حدد الشركة أولًا.'); return; }
+    if (_level == 0 && _selectedActivityCode == '*') { setState(() => _error = 'اختر نوع النشاط أولًا لتوليد كود الفئة الرئيسية تلقائيًا.'); return; }
     String? parentId = parentIdOverride;
     if (parentId == null && _level == 1 && _parents.isNotEmpty) parentId = _parentFilter ?? _s(_parents.first['id']);
     if (parentId == null && _level == 2 && _secondaryParents.isNotEmpty) {
@@ -1073,7 +1076,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                   maxLines: 1, overflow: TextOverflow.ellipsis),
                               )),
                             ],
-                            onChanged: _editing || _loading || _saving ? null : (value) {
+                            onChanged: _loading || _saving ? null : (value) {
                               if (value == null) return;
                               setState(() {
                                 _selectedActivityCode = value;
@@ -1081,8 +1084,14 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                 _mainCategoryFilter = null;
                                 _subCategoryFilter = null;
                                 _selectedId = null;
+                                _categoryPageIndex = 0;
+                                _all = _companyCategories.where((row) {
+                                  if (value == '*') return true;
+                                  final code = _normalizeActivityCode(_s(row['activity_code']));
+                                  return code.isEmpty ? value == '01' : code == value;
+                                }).toList();
+                                _rebuildCategoryIndexes();
                               });
-                              _load();
                             },
                           ),
                         ),
@@ -1273,19 +1282,21 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                               children: [
                                 Text('عرض ${visibleRows.isEmpty ? 0 : currentPage * _categoryPageSize + 1}-${(currentPage * _categoryPageSize + pageRows.length)} من ${visibleRows.length} فئة',
                                   style: const TextStyle(fontSize: 12, color: _catPurple)),
-                                Row(mainAxisSize: MainAxisSize.min, children: [
-                                  IconButton(
-                                    tooltip: 'الصفحة السابقة',
-                                    onPressed: currentPage > 0 ? () => setState(() => _categoryPageIndex = currentPage - 1) : null,
-                                    icon: const Icon(Icons.chevron_right),
-                                  ),
-                                  Text('${currentPage + 1} / ${pageCount}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                                  IconButton(
-                                    tooltip: 'الصفحة التالية',
-                                    onPressed: currentPage + 1 < pageCount ? () => setState(() => _categoryPageIndex = currentPage + 1) : null,
-                                    icon: const Icon(Icons.chevron_left),
-                                  ),
-                                ]),
+                                Flexible(child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                    IconButton(tooltip: 'الصفحة السابقة', onPressed: currentPage > 0 ? () => setState(() => _categoryPageIndex = currentPage - 1) : null, icon: const Icon(Icons.chevron_right)),
+                                    for (var page = 0; page < pageCount; page++)
+                                      ChoiceChip(label: Text('${page + 1}'), selected: currentPage == page, onSelected: (_) => setState(() { _categoryPageIndex = page; _categoryPageJumpController.text = '${page + 1}'; }), visualDensity: VisualDensity.compact),
+                                    IconButton(tooltip: 'الصفحة التالية', onPressed: currentPage + 1 < pageCount ? () => setState(() => _categoryPageIndex = currentPage + 1) : null, icon: const Icon(Icons.chevron_left)),
+                                    SizedBox(width: 76, child: TextField(
+                                      controller: _categoryPageJumpController, keyboardType: TextInputType.number, textAlign: TextAlign.center,
+                                      decoration: const InputDecoration(hintText: 'رقم الصفحة', isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 7)),
+                                      onSubmitted: (value) { final requested = int.tryParse(value); if (requested == null || requested < 1 || requested > pageCount) { setState(() => _error = 'رقم الصفحة يجب أن يكون من 1 إلى $pageCount.'); return; } setState(() { _categoryPageIndex = requested - 1; _error = null; }); },
+                                    )),
+                                    Text('صفحة ${currentPage + 1} من $pageCount', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                                  ]),
+                                )),
                               ],
                             ),
                           ),
