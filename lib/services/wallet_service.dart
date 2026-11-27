@@ -77,7 +77,7 @@ class WalletService {
 
   /// جلب سجل معاملات المحفظة.
   Future<List<Map<String, dynamic>>> getTransactions({
-    int limit = 50,
+    int limit = 100,
   }) async {
     _validateLimit(limit);
 
@@ -93,7 +93,7 @@ class WalletService {
 
   /// جلب طلبات شحن المحفظة السابقة.
   Future<List<Map<String, dynamic>>> getMyTopUpRequests({
-    int limit = 50,
+    int limit = 100,
   }) async {
     _validateLimit(limit);
 
