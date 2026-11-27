@@ -180,7 +180,7 @@ class ErpStudioRepository {
   Future<List<Map<String, dynamic>>> previewSource({
     required String companyId,
     required String sourceKey,
-    int limit = 50,
+    int limit = 100,
   }) async {
     _requireCompany(companyId);
     final source = StudioDataSources.byKey(sourceKey);
@@ -196,7 +196,7 @@ class ErpStudioRepository {
   Future<Map<String, List<Map<String, dynamic>>>> previewBindings({
     required String companyId,
     required StudioDocument document,
-    int limit = 50,
+    int limit = 100,
   }) async {
     final keys = <String>{};
     for (final node in document.nodes) {
