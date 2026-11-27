@@ -54,6 +54,8 @@ void main() {
     expect(appCategoryService, contains("return r'\\x' + hex;"));
     expect(appMainSource, contains('if (value is Uint8List) return value;'));
     expect(appMainSource, contains('if (value is List<int>) return Uint8List.fromList(value);'));
+    expect(appMainSource, contains('liveCategoryImageMimes'));
+    expect(appMainSource, contains("SvgPicture.memory(bytes, fit: BoxFit.contain, width: size, height: size)"));
   });
 
   test('category table renders a bounded page instead of every row at once', () {
