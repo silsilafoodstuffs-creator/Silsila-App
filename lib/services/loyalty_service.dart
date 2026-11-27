@@ -72,7 +72,7 @@ class LoyaltyService {
 
   /// جلب سجل حركات النقاط.
   Future<List<Map<String, dynamic>>> getPointsHistory({
-    int limit = 50,
+    int limit = 100,
   }) async {
     _validateLimit(limit);
 
@@ -88,7 +88,7 @@ class LoyaltyService {
 
   /// جلب أهداف المستخدم.
   Future<List<Map<String, dynamic>>> getMyGoals({
-    int limit = 50,
+    int limit = 100,
   }) async {
     _validateLimit(limit);
 
