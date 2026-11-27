@@ -23,7 +23,7 @@ class SearchService {
   Future<List<Map<String, dynamic>>> searchSuppliers({
     String? query,
     String? activityType,
-    int limit = 50,
+    int limit = 100,
   }) async {
     _validateLimit(limit);
 
@@ -65,7 +65,7 @@ class SearchService {
     String? query,
     String? activityType,
     String? category,
-    int limit = 50,
+    int limit = 100,
   }) async {
     _validateLimit(limit);
 
@@ -142,7 +142,7 @@ class SearchService {
   Future<List<Map<String, dynamic>>> searchSuppliersByGovernorate({
     required String governorate,
     String? query,
-    int limit = 50,
+    int limit = 100,
   }) async {
     _validateLimit(limit);
 
