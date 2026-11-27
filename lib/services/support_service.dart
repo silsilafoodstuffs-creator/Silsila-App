@@ -88,7 +88,7 @@ class SupportService {
 
   /// جلب تذاكر الدعم الخاصة بالمستخدم الحالي.
   Future<List<Map<String, dynamic>>> getMyTickets({
-    int limit = 50,
+    int limit = 100,
   }) async {
     _validateLimit(limit);
 
