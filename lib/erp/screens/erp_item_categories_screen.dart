@@ -63,6 +63,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   List<Map<String,dynamic>> _all = [];
   List<Map<String,dynamic>> _companyCategories = [];
   final Map<String, Map<String, dynamic>> _categoriesById = <String, Map<String, dynamic>>{};
+  final Map<String, Map<String, String>> _originalCategoryHierarchy = <String, Map<String, String>>{};
   final Map<String, List<Map<String, dynamic>>> _childrenByParent = <String, List<Map<String, dynamic>>>{};
   final Set<String> _categoryImageLoads = <String>{};
   final Set<String> _categoryImageLoaded = <String>{};
@@ -265,6 +266,14 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       _companyCategories = completeCatalog
           .map((row) => Map<String, dynamic>.from(row))
           .toList(growable: false);
+      _originalCategoryHierarchy
+        ..clear()
+        ..addEntries(_companyCategories
+            .where((row) => _s(row['id']).isNotEmpty)
+            .map((row) => MapEntry(_s(row['id']), <String, String>{
+                  'parent_id': _s(row['parent_id']),
+                  'activity_code': normalizeActivity(_s(row['activity_code'])),
+                })));
 
       _all = completeCatalog.where((row) {
         if (_selectedActivityCode == '*') return true;
@@ -418,6 +427,28 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     final parent = _parentOf(row);
     if (parent == null || parent['parent_id'] == null) return 1;
     return 2;
+  }
+
+  bool _categoryNeedsCodeRegeneration(Map<String, dynamic> row) {
+    if (row['_draft'] == true) return true;
+    var current = row;
+    final visited = <String>{};
+    while (true) {
+      final id = _s(current['id']);
+      if (id.isEmpty || !visited.add(id)) return true;
+      final original = _originalCategoryHierarchy[id];
+      if (original == null) return true;
+      final currentParentId = _s(current['parent_id']);
+      final currentActivity = _normalizeActivityCode(_s(current['activity_code']));
+      if (original['parent_id'] != currentParentId ||
+          original['activity_code'] != currentActivity) {
+        return true;
+      }
+      if (currentParentId.isEmpty) return false;
+      final parent = _categoriesById[currentParentId];
+      if (parent == null) return true;
+      current = parent;
+    }
   }
 
   Future<void> _add({String? parentIdOverride}) async {
@@ -630,7 +661,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         }
         final selectedBytes = _imageBytes[id];
         final payload = <String,dynamic>{
-          'company_id':_company, 'activity_code':_s(row['activity_code']).isEmpty ? _selectedActivityCode : _s(row['activity_code']), 'category_code':row['_draft'] == true || _hierarchyChanged ? '' : _s(row['category_code']), 'category_name':ar,
+          'company_id':_company, 'activity_code':_s(row['activity_code']).isEmpty ? _selectedActivityCode : _s(row['activity_code']), 'category_code':_categoryNeedsCodeRegeneration(row) ? '' : _s(row['category_code']), 'category_name':ar,
           'category_name_en':en, 'parent_id':row['parent_id'], 'is_active':row['is_active'] == true,
           'show_in_app':row['show_in_app'] == true,
           'image_url':(selectedBytes != null || row['_remove_image'] == true) ? null : row['image_url'],
