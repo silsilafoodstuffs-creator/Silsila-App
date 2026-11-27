@@ -35,7 +35,7 @@ void main() {
   });
 
   test('category table renders a bounded page instead of every row at once', () {
-    expect(screen, contains('static const int _categoryPageSize = 100;'));
+    expect(screen, contains('static const int _categoryPageSize = 50;'));
     expect(screen, contains('final pageRows = visibleRows'));
     expect(screen, contains('rows: pageRows.asMap().entries.map'));
     expect(screen, contains('الصفحة التالية'));
