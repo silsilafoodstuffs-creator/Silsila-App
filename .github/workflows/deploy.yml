@@ -1,4 +1,4 @@
-name: Silsila Web Preview Deployment
+name: Silsila GitHub Pages Deployment
 
 on:
   workflow_run:
@@ -80,23 +80,23 @@ jobs:
           echo "ERROR: github-pages artifact was not indexed for this workflow run."
           exit 1
 
-      - name: Publish Web Preview
+      - name: Publish GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
         with:
           artifact_name: silsila-pages-${{ github.run_id }}-${{ github.run_attempt }}
 
-      - name: Verify published Web Preview responds
+      - name: Verify published GitHub Pages responds
         shell: bash
         run: |
           set -euo pipefail
           URL="https://silsilafoodstuffs-creator.github.io/Silsila-App/"
           for attempt in $(seq 1 30); do
             if curl --silent --show-error --fail "$URL" >/dev/null; then
-              echo "Published Web Preview is responding."
+              echo "Published GitHub Pages is responding."
               exit 0
             fi
             sleep 10
           done
-          echo "Published Web Preview did not respond in time."
+          echo "Published GitHub Pages did not respond in time."
           exit 1
