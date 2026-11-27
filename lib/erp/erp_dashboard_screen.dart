@@ -4044,14 +4044,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     final offset = loadMore ? (_workspaceOffsets[page] ?? 0) : 0;
     try {
       final records = await _workspaceRecordsService.listPage(
-        companyId: companyId, pageKey: page, offset: offset, pageSize: 500,
+        companyId: companyId, pageKey: page, offset: offset, pageSize: 50,
       );
       if (!mounted || companyId != _appManagementCompanyId) return;
       setState(() {
         final existing = _saved[page] ?? <Map<String, String>>[];
         _saved[page] = loadMore ? <Map<String, String>>[...existing, ...records] : records;
         _workspaceOffsets[page] = offset + records.length;
-        _workspaceHasMore[page] = records.length == 500;
+        _workspaceHasMore[page] = records.length == 50;
         _cloudLoadedWorkspacePages.add(page);
       });
     } catch (error) {
@@ -4083,6 +4083,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   Widget _workspace() {
     final rows = _rows;
     final loadedCount = (_saved[_page] ?? <Map<String, String>>[]).length;
+    final pageCount = (rows.length / 50).ceil().clamp(1, 999999).toInt();
+    final currentPage = _workspaceTablePageIndex.clamp(0, pageCount - 1).toInt();
+    final pageRows = rows.skip(currentPage * 50).take(50).toList(growable: false);
     final toolbar = _recordToolbar(includeAdd: _group != 'تقارير');
     return ErpScreenFrame(
       title: _page,
@@ -4125,7 +4128,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                   ..._gridKeys.map((k) => DataColumn(label: Text(k, style: const TextStyle(color: _purple, fontWeight: FontWeight.w800)))),
                   const DataColumn(label: Text('إجراءات')),
                 ],
-                rows: rows.map((r) => DataRow(
+                rows: pageRows.map((r) => DataRow(
                   selected: _selectedRecord != null && _sameRecord(r, _selectedRecord!),
                   onSelectChanged: (selected) => setState(() => _selectedRecord = selected == true ? Map<String, String>.from(r) : null),
                   cells: [
@@ -4141,18 +4144,36 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               ),
             ),
         ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 4,
+            runSpacing: 4,
+            children: [
+              Text('صفحة ${currentPage + 1} من $pageCount • ${rows.length} سجل محمّل', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+              IconButton(tooltip: 'الصفحة السابقة', onPressed: currentPage > 0 ? () => setState(() => _workspaceTablePageIndex = currentPage - 1) : null, icon: const Icon(Icons.chevron_right)),
+              for (var page = 0; page < pageCount; page++)
+                ChoiceChip(label: Text('${page + 1}'), selected: currentPage == page, onSelected: (_) => setState(() { _workspaceTablePageIndex = page; _workspacePageJumpController.text = '${page + 1}'; }), visualDensity: VisualDensity.compact),
+              IconButton(tooltip: 'الصفحة التالية', onPressed: currentPage + 1 < pageCount ? () => setState(() => _workspaceTablePageIndex = currentPage + 1) : _workspaceHasMore[_page] == true && !_workspacePageLoadsInProgress.contains(_page) ? () async { final oldLength = rows.length; await _loadWorkspacePage(_page, loadMore: true); if (mounted && (_saved[_page]?.length ?? oldLength) > oldLength) setState(() => _workspaceTablePageIndex = currentPage + 1); } : null, icon: const Icon(Icons.chevron_left)),
+              SizedBox(width: 76, child: TextField(controller: _workspacePageJumpController, keyboardType: TextInputType.number, textAlign: TextAlign.center, decoration: const InputDecoration(hintText: 'رقم الصفحة', isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 7)), onSubmitted: (value) { final requested = int.tryParse(value); if (requested == null || requested < 1 || requested > pageCount) { _showActionMessage('رقم الصفحة يجب أن يكون من 1 إلى $pageCount.'); return; } setState(() => _workspaceTablePageIndex = requested - 1); })),
+            ],
+          ),
+        ),
         if (_workspaceHasMore[_page] == true || _workspacePageLoadsInProgress.contains(_page))
           Align(alignment: Alignment.center, child: Padding(padding: const EdgeInsets.only(top: 10), child: OutlinedButton.icon(
             onPressed: _workspacePageLoadsInProgress.contains(_page) ? null : () => _loadWorkspacePage(_page, loadMore: true),
             icon: _workspacePageLoadsInProgress.contains(_page)
               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.expand_more),
-            label: Text(_workspacePageLoadsInProgress.contains(_page) ? 'جارٍ تحميل السجلات...' : 'تحميل 500 سجل إضافي'),
+            label: Text(_workspacePageLoadsInProgress.contains(_page) ? 'جارٍ تحميل السجلات...' : 'تحميل 50 سجل إضافي'),
           ))),
       ]),
     );
   }
 
+  int _workspaceTablePageIndex = 0;
+  final TextEditingController _workspacePageJumpController = TextEditingController();
   final Map<String, bool> _permissionDraft = {};
   String _pricingMode = 'نسبة';
   String _pricingDirection = 'زيادة';
