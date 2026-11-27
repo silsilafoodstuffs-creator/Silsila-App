@@ -1,10 +1,5 @@
 name: Import real category photographs
 on:
-  push:
-    branches: [main]
-    paths:
-      - "tools/category_images/import_real_category_images.py"
-      - ".github/workflows/import-real-category-images.yml"
   workflow_dispatch:
 
 permissions:
@@ -12,7 +7,7 @@ permissions:
 
 concurrency:
   group: silsila-real-category-photo-import
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   import-category-photos:
