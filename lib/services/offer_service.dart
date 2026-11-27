@@ -39,7 +39,7 @@ class OfferService {
   /// جلب العروض النشطة المتاحة حاليًا، مع إمكانية تحديد النشاط.
   Future<List<Map<String, dynamic>>> getOffers({
     String? activityType,
-    int limit = 50,
+    int limit = 100,
   }) async {
     _validateLimit(limit);
     final response = await _requireClient.rpc(
@@ -56,7 +56,7 @@ class OfferService {
   Future<List<Map<String, dynamic>>> getSupplierOffers(
     String supplierId, {
     bool activeOnly = true,
-    int limit = 50,
+    int limit = 100,
   }) async {
     _validateLimit(limit);
 
