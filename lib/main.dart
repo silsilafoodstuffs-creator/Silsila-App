@@ -197,6 +197,8 @@ const categories = [
 ];
 
 Uint8List? _decodeDatabaseBytea(dynamic value) {
+  if (value is Uint8List) return value;
+  if (value is List<int>) return Uint8List.fromList(value);
   final raw = (value ?? '').toString();
   final prefixLength = raw.startsWith(r'\\x') ? 3 : raw.startsWith(r'\x') ? 2 : 0;
   if (prefixLength == 0 || raw.length <= prefixLength || (raw.length - prefixLength).isOdd) return null;
