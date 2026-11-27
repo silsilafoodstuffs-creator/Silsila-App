@@ -116,7 +116,7 @@ export default function FoundationWorkspace({kind}:{kind:Kind}){
   if(kind==="activity-categories"){initial.workspace_id=activities[0]?.id||"";initial.activity_type=activities[0]?.activity_type||"";initial.activity_name=activities[0]?.workspace_name||"";}
   if(kind==="brand-groups"){initial.group_code="";initial.activity_code=activities[0]?.code||"ACT001";}
   if(kind==="brands"){initial.brand_code="";initial.activity_code=activities[0]?.code||"ACT001";initial.brand_group_id=groups[0]?.id||"";}
-  setForm(initial);setFormOriginal({...initial});
+  setEditing({});setForm(initial);setFormOriginal({...initial});
  };
  const startEdit=(r:Row)=>{setEditing(r);setForm({...r});setFormOriginal({...r});};
  const setField=(key:string,value:any)=>setForm((old:Row)=>({...old,[key]:value}));
