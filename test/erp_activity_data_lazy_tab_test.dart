@@ -3,17 +3,23 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('activity data screen mounts only the selected category tab', () {
-    final source = File('lib/erp/screens/erp_activity_data_screen.dart')
+  test('activity types and item categories open their own independent screens', () {
+    final dashboard = File('lib/erp/erp_dashboard_screen.dart')
+        .readAsStringSync();
+    final categories = File('lib/erp/screens/erp_item_categories_screen.dart')
         .readAsStringSync();
 
-    expect(source, contains('final Map<int, Widget> _tabWidgets'));
-    expect(source, contains('Widget _buildTab(int tab)'));
-    expect(source, contains('_tabWidgets.putIfAbsent(_selectedTab'));
-    expect(source, contains('(tab) => _tabWidgets[tab] ?? const SizedBox.shrink()'));
-    expect(source, contains('IndexedStack(index: _selectedTab, children: children)'));
-    expect(source, contains('initialCatalogTab: tab - 1'));
-    expect(source, isNot(contains('for (var tab = 0; tab < 4; tab++)')));
-    expect(source, contains('if (oldWidget.companyId != widget.companyId)'));
+    expect(
+      dashboard,
+      contains("_page == 'فئات الأصناف'\n                        ? ErpKeyboardNavigation(child: ErpItemCategoriesScreen"),
+    );
+    expect(
+      dashboard,
+      contains("_page == 'أنواع وفئات الأنشطة'\n                        ? ErpKeyboardNavigation(child: ErpActivityTypesScreen"),
+    );
+    expect(categories, contains('class ErpItemCategoriesScreen'));
+    expect(categories, contains("title: 'فئات الأصناف'"));
+    expect(categories, contains('category_code'));
+    expect(categories, contains('parent_id'));
   });
 }
