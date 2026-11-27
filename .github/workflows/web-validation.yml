@@ -65,6 +65,12 @@ jobs:
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
+      - name: Analyze all application and test Dart code
+        run: flutter analyze lib test --no-fatal-infos --no-fatal-warnings
+
+      - name: Run the complete Flutter test suite
+        run: flutter test --reporter expanded
+
       - name: Build production-path Web app without offline-first PWA caching
         run: flutter build web --release --pwa-strategy=none --base-href "/Silsila-App/"
 
