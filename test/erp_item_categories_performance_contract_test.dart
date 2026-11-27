@@ -4,9 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   late String screen;
+  late String appCategoryService;
 
   setUpAll(() {
     screen = File('lib/erp/screens/erp_item_categories_screen.dart')
+        .readAsStringSync();
+    appCategoryService = File('lib/services/category_service.dart')
         .readAsStringSync();
   });
 
@@ -37,9 +40,15 @@ void main() {
   test('category coding uses the standard Cat prefix for all hierarchy levels', () {
     expect(screen, contains(r"'category_code':'Cat$parentDigits${next.toString().padLeft(2, '0')}'"));
     expect(screen, contains('current.startsWith(categoryPrefix)'));
+    expect(screen, contains('digits.startsWith(parentDigits)'));
     expect(screen, contains("update({'category_code': ''})"));
-    expect(screen, contains("_s(root['category_code']) + segment(i + 1)"));
-    expect(screen, contains("_s(sub['category_code']) + segment(i + 1)"));
+    expect(screen, contains('required String parentDigits'));
+  });
+
+  test('app category service converts stored PostgreSQL bytea to image bytes', () {
+    expect(appCategoryService, contains("'image_data': _decodePostgresBytea(row['image_data'])"));
+    expect(appCategoryService, contains('Uint8List? _decodePostgresBytea(dynamic value)'));
+    expect(appCategoryService, contains("return r'\\x' + hex;"));
   });
 
   test('category table renders a bounded page instead of every row at once', () {
