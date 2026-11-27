@@ -1,0 +1,180 @@
+import { lazy, Suspense, useEffect, useState } from "react";
+const PendingWorkspace = lazy(() => import("./PendingWorkspace"));
+const OperationsWorkspace = lazy(() => import("./OperationsWorkspace"));
+const LiveItemsWorkspace = lazy(() => import("./LiveItemsWorkspace"));
+const LiveDocumentsWorkspace = lazy(() => import("./LiveDocumentsWorkspace"));
+const TreasuryWorkspace = lazy(() => import("./TreasuryWorkspace"));
+const CashOrdersWorkspace = lazy(() => import("./CashOrdersWorkspace"));
+const LiveCashboxesWorkspace = lazy(() => import("./LiveCashboxesWorkspace"));
+const SettingsWorkspace = lazy(() => import("./SettingsWorkspace"));
+
+const UsersWorkspace = lazy(() => import("./UsersWorkspace"));
+const JournalWorkspace = lazy(() => import("./JournalWorkspace"));
+const AccountsWorkspace = lazy(() => import("./AccountsWorkspace"));
+const InventoryWorkspace = lazy(() => import("./LiveInventoryWorkspace"));
+const LiveStocktakeWorkspace = lazy(() => import("./LiveStocktakeWorkspace"));
+const LiveWarehouseWorkspace = lazy(() => import("./LiveWarehouseWorkspace"));
+const LiveMasterDataWorkspace = lazy(() => import("./LiveMasterDataWorkspace"));
+const FoundationWorkspace = lazy(() => import("./FoundationWorkspace"));
+const ProgramPoliciesWorkspace = lazy(() => import("./ProgramPoliciesWorkspace"));
+const StudioWorkspace = lazy(() => import("./StudioWorkspace"));
+const PublishedStudioWorkspace = lazy(() => import("./PublishedStudioWorkspace"));
+const LivePartiesWorkspace = lazy(() => import("./LivePartiesWorkspace"));
+const LiveBusinessWorkspace = lazy(() => import("./LiveBusinessWorkspace"));
+const LiveEmployeeWorkspace = lazy(() => import("./LiveEmployeeWorkspace"));
+const LiveHrStructureWorkspace = lazy(() => import("./LiveHrStructureWorkspace"));
+const ExecutiveDashboard = lazy(() => import("./ExecutiveDashboard"));
+import SILSILA_LOGO from "./brand";
+import AuthGate, { useAuth } from "./AuthGate";
+import { supabase } from "./supabase";
+import { MapPin, Heart, LogOut, Info, PanelRightClose, PanelRightOpen, Activity, ArrowDownLeft, ArrowUpLeft, Bell, Boxes, BriefcaseBusiness, Building2, CalendarDays, ChevronDown, ChevronLeft, CircleHelp, ClipboardList, Command, CreditCard, Download, FileBarChart, Home, LayoutDashboard, LifeBuoy, Menu, MoreHorizontal, Package, Plus, ReceiptText, Search, Settings2, ShoppingBag, ShoppingCart, Sparkles, Truck, Users, Wallet, X, LockKeyhole, Eye, EyeOff, Mail, ShieldCheck, GitBranch, Layers3, Tags, Award, UserRoundCog, KeyRound, SlidersHorizontal, RefreshCw, Scale } from "lucide-react";
+
+const nav = [
+ { title:"إعدادات عامة",sections:[
+  {title:"بيانات أساسية",items:[{name:"إعدادات عامة",icon:Settings2},{name:"بيانات الشركة",icon:Building2},{name:"فروع الشركة",icon:GitBranch},{name:"البيانات الجغرافية",icon:MapPin},{name:"الأنشطة",icon:Layers3},{name:"فئات الأنشطة",icon:Tags},{name:"الفئات",icon:Tags},{name:"مجموعات البراندات",icon:Layers3},{name:"البراندات",icon:Award},{name:"المستخدمين",icon:Users},{name:"سياسات البرنامج",icon:SlidersHorizontal},{name:"سلسلة ستوديو",icon:Sparkles},{name:"شاشات الاستوديو المنشورة",icon:Eye}]},
+  {title:"حركات",items:[{name:"إدارة التطبيقات",icon:Layers3},{name:"الربط مع برامج أخرى (API)",icon:GitBranch},{name:"إعلانات التطبيق",icon:Sparkles}]}
+ ]},
+ {title:"إدارة النشاط",sections:[{title:"بيانات أساسية",items:[{name:"مركز النشاط",icon:Activity},{name:"فروع النشاط",icon:GitBranch},{name:"نقاط التشغيل",icon:Building2}]},{title:"حركات",items:[{name:"تشغيل النشاط",icon:Activity}]},{title:"تقارير",items:[{name:"تقارير النشاط",icon:FileBarChart}]}]},
+ {title:"المبيعات",sections:[
+  {title:"بيانات أساسية",items:[{name:"العملاء",icon:Users},{name:"تصنيفات العملاء",icon:Tags},{name:"أهداف العملاء",icon:Award},{name:"نقاط العملاء",icon:Award},{name:"نقاط الأصناف",icon:Package}]},
+  {title:"حركات",items:[{name:"عروض العملاء",icon:FileBarChart},{name:"عروض المناديب",icon:Users},{name:"عروض الرواكد الداخلية",icon:Package},{name:"العروض الترويجية الخارجية",icon:Sparkles},{name:"عروض الأسعار",icon:FileBarChart},{name:"أوامر البيع",icon:ClipboardList},{name:"أذون التجهيز",icon:ClipboardList},{name:"أذون التسليم",icon:Truck},{name:"فواتير البيع",icon:ShoppingCart},{name:"مرتجعات البيع",icon:ReceiptText}]},
+  {title:"تقارير",items:[{name:"تقارير المبيعات",icon:FileBarChart}]}
+ ]},
+ {title:"المشتريات",sections:[
+  {title:"بيانات أساسية",items:[{name:"الموردون",icon:Building2}]},
+  {title:"حركات",items:[{name:"أوامر التوريد",icon:Truck},{name:"أوامر الشراء",icon:ClipboardList},{name:"أذون الاستلام",icon:Package},{name:"فواتير الشراء",icon:ShoppingBag},{name:"مرتجعات الشراء",icon:ReceiptText}]},
+  {title:"تقارير",items:[{name:"تقارير المشتريات",icon:FileBarChart}]}
+ ]},
+ {title:"المخازن",sections:[
+  {title:"بيانات أساسية",items:[{name:"المخازن والأصناف",icon:Boxes},{name:"أرصدة المخزون",icon:Boxes},{name:"إدارة المخازن",icon:Building2},{name:"فئات الأصناف",icon:Tags},{name:"البراندات",icon:Award},{name:"جامع صور الأصناف",icon:Package}]},
+  {title:"حركات",items:[{name:"التحويلات المخزنية",icon:GitBranch},{name:"الجرد المخزني",icon:ClipboardList},{name:"طاقة السيارات",icon:Truck},{name:"أذون التجهيز",icon:ClipboardList},{name:"أذون التسليم",icon:Truck}]},
+  {title:"تقارير",items:[{name:"تقارير المخازن",icon:FileBarChart}]}
+ ]},
+ {title:"الإدارة المالية",sections:[
+  {title:"بيانات أساسية",items:[{name:"دليل الحسابات",icon:Wallet},{name:"الحسابات المالية",icon:Wallet},{name:"مراكز التكلفة",icon:Building2},{name:"الخزينة والبنوك",icon:CreditCard}]},
+  {title:"حركات",items:[{name:"قيود اليومية",icon:ReceiptText},{name:"سندات القبض والصرف",icon:ReceiptText},{name:"أوامر الصرف والتوريد",icon:ClipboardList},{name:"التسويات المالية",icon:Scale},{name:"الأصول الثابتة",icon:Building2}]},
+  {title:"تقارير",items:[{name:"التقارير والتحليلات",icon:FileBarChart},{name:"ميزان المراجعة",icon:Scale},{name:"الأستاذ العام",icon:FileBarChart},{name:"قائمة الدخل",icon:FileBarChart},{name:"المركز المالي",icon:FileBarChart}]}
+ ]},
+ {title:"علاقات العملاء",sections:[{title:"بيانات أساسية",items:[{name:"علاقات العملاء",icon:Users},{name:"تصنيفات العملاء",icon:Tags},{name:"أهداف العملاء",icon:Award}]},{title:"حركات",items:[{name:"الحملات التسويقية",icon:Sparkles},{name:"الزيارات والمتابعات",icon:CalendarDays},{name:"شكاوى وملاحظات العملاء",icon:ClipboardList},{name:"ولاء العملاء",icon:Award}]},{title:"تقارير",items:[{name:"تقارير علاقات العملاء",icon:FileBarChart}]}]},
+ {title:"الموارد البشرية",sections:[
+  {title:"بيانات أساسية",items:[{name:"الموارد البشرية",icon:BriefcaseBusiness},{name:"ملفات الموظفين",icon:Users},{name:"الهيكل التنظيمي",icon:GitBranch},{name:"الوظائف والتعيينات",icon:BriefcaseBusiness}]},
+  {title:"حركات",items:[{name:"الحضور والانصراف",icon:CalendarDays},{name:"الورديات",icon:CalendarDays},{name:"العمل الإضافي",icon:Activity},{name:"الإجازات",icon:CalendarDays},{name:"العقود والتراخيص",icon:FileBarChart},{name:"التدريب",icon:Award},{name:"التأمينات",icon:ShieldCheck},{name:"العهد",icon:BriefcaseBusiness},{name:"الرواتب",icon:Wallet}]},
+  {title:"تقارير",items:[{name:"التقييم الوظيفي",icon:Award},{name:"مؤشرات KPI للموارد البشرية",icon:FileBarChart},{name:"الاستقطاب والمرشحون",icon:Users}]}
+ ]},
+ {title:"الفاتورة الإلكترونية",sections:[{title:"بيانات أساسية",items:[{name:"إعدادات مصلحة الضرائب",icon:Settings2},{name:"حالة الربط والتكامل",icon:GitBranch}]},{title:"حركات",items:[{name:"الفاتورة الإلكترونية",icon:ReceiptText},{name:"الإيصال الإلكتروني",icon:ReceiptText}]},{title:"تقارير",items:[{name:"تقارير الفاتورة الإلكترونية",icon:FileBarChart}]}]},
+ {title:"التصنيع",sections:[{title:"بيانات أساسية",items:[{name:"قوائم المواد BOM",icon:Boxes},{name:"مراحل التشغيل",icon:GitBranch},{name:"مراكز العمل",icon:Building2}]},{title:"حركات",items:[{name:"أوامر الإنتاج",icon:ClipboardList},{name:"صرف خامات الإنتاج",icon:Package},{name:"استلام الإنتاج التام",icon:Package},{name:"تكاليف الإنتاج",icon:Wallet},{name:"جودة الإنتاج",icon:ShieldCheck}]},{title:"تقارير",items:[{name:"تقارير التصنيع",icon:FileBarChart}]}]},
+ {title:"المقاولات",sections:[{title:"بيانات أساسية",items:[{name:"المشروعات",icon:Building2},{name:"المواقع والمراحل",icon:GitBranch},{name:"المقايسات وجداول الكميات",icon:ClipboardList},{name:"المقاولين والموردين",icon:Users}]},{title:"حركات",items:[{name:"المستخلصات",icon:ReceiptText},{name:"أوامر الإسناد",icon:BriefcaseBusiness},{name:"المشتريات والمخازن للمشروعات",icon:Boxes},{name:"تكاليف المشروعات",icon:Wallet}]},{title:"تقارير",items:[{name:"تقارير المقاولات",icon:FileBarChart}]}]},
+ {title:"عن البرنامج",sections:[{title:"معلومات البرنامج",items:[{name:"عن البرنامج",icon:Info}]}]}
+];
+const money = (n:number) => new Intl.NumberFormat("ar-EG").format(n);
+const roleLabels:Record<string,string>={owner:"مالك المنشأة",admin:"مدير النظام",accountant:"محاسب",manager:"مدير",operator:"مشغّل",viewer:"مشاهدة فقط"};
+function AppContent(){
+ const auth=useAuth();
+ const memberRole=sessionStorage.getItem("silsila-member-role")||"";
+ const authenticated=Boolean(sessionStorage.getItem("silsila-user-id"));
+ const displayUserName=sessionStorage.getItem("silsila-user-name")||(authenticated?"اسم المستخدم غير مسجل":"وضع المعاينة");
+ const displayUserInitial=displayUserName.trim().charAt(0)||"؟";
+ const [active,setActiveState]=useState("الملخص التنفيذي"); const [editDirty,setEditDirty]=useState(false); const [pendingActive,setPendingActive]=useState<string|null>(null); const setActive=(next:string)=>{if(editDirty){setPendingActive(next);window.dispatchEvent(new Event("silsila:edit-request-close"));}else setActiveState(next);}; const [collapsed,setCollapsed]=useState(false); const [mobileMenuOpen,setMobileMenuOpen]=useState(false); const [period,setPeriod]=useState("آخر 30 يومًا"); const [expandedMain,setExpandedMain]=useState<string>("إعدادات عامة"); const [expandedSub,setExpandedSub]=useState<string>("إعدادات عامة::بيانات أساسية");
+ const [notice,setNotice]=useState(false);
+ useEffect(()=>{
+  const root=document.documentElement;
+  const defaults:Record<string,string>={
+   "--silsila-topbar-bg":"#FFFFFF",
+   "--silsila-topbar-text":"#38244C",
+   "--silsila-screen-bg":"#FFFFFF",
+   "--silsila-screen-title-color":"#3E007D",
+   "--silsila-screen-title-size":"24px",
+   "--silsila-main-font":"'Tajawal',sans-serif",
+   "--silsila-subheading-font":"'Tajawal',sans-serif",
+   "--silsila-header-font":"'Tajawal',sans-serif",
+   "--silsila-policy-font":"'Tajawal',sans-serif",
+   "--silsila-body-color":"#241735",
+   "--silsila-screen-title-font":"'Tajawal',sans-serif",
+   "--silsila-screen-title-weight":"800",
+   "--silsila-body-size":"14px",
+   "--silsila-topbar-size":"14px",
+   "--silsila-section-title-size":"17px",
+   "--silsila-subheading-size":"15px",
+   "--silsila-table-head-size":"15px",
+   "--silsila-table-body-size":"14px",
+   "--silsila-table-header-bg":"#3E007D",
+   "--silsila-table-header-color":"#FFFFFF",
+   "--silsila-table-row-alt":"#FAF8FC",
+   "--silsila-table-row-hover":"#F5EFFB"
+  };
+  Object.entries(defaults).forEach(([key,value])=>root.style.setProperty(key,value));
+  const companyId=sessionStorage.getItem("silsila-company-id")||"";
+  if(!authenticated||!companyId||!supabase)return;
+  const policyVars:Record<string,string>={
+   "visual_identity.screen_title_color":"--silsila-screen-title-color",
+   "visual_identity.table_header_color":"--silsila-table-header-bg",
+   "visual_identity.table_header_text_color":"--silsila-table-header-color",
+   "visual_identity.table_row_alt_color":"--silsila-table-row-alt",
+   "visual_identity.table_row_hover_color":"--silsila-table-row-hover"
+  };
+  const fontPolicyKeys=["appearance.header_text","appearance.main_heading","appearance.subheading_1","appearance.subheading_2","appearance.subheading_3","appearance.body_text","visual_identity.heading_1"];
+  const policyKeys=[...Object.keys(policyVars),"appearance.header_background","appearance.screen_background","visual_identity.background_color",...fontPolicyKeys];
+  let cancelled=false;
+  void supabase.from("erp_program_policies").select("policy_key,policy_value,is_enabled")
+   .eq("company_id",companyId).in("policy_key",policyKeys)
+   .then(({data,error})=>{
+    if(cancelled||error||!data)return;
+    const enabled=data.filter((row:any)=>row.is_enabled===true);
+    const hex=(value:any)=>/^#[0-9a-fA-F]{6}$/.test(String(value||""));
+    const parseStyle=(value:any)=>{try{const parsed=JSON.parse(String(value||"{}"));return parsed&&typeof parsed==="object"?parsed:{};}catch{return {};}};
+    const appearanceHeader=enabled.find((row:any)=>row.policy_key==="appearance.header_background");
+    if(appearanceHeader&&hex(appearanceHeader.policy_value))root.style.setProperty("--silsila-topbar-bg",appearanceHeader.policy_value);
+    const legacyScreen=enabled.find((row:any)=>row.policy_key==="appearance.screen_background");
+    const identityScreen=enabled.find((row:any)=>row.policy_key==="visual_identity.background_color");
+    const screenBackground=identityScreen||legacyScreen;
+    if(screenBackground&&hex(screenBackground.policy_value))root.style.setProperty("--silsila-screen-bg",screenBackground.policy_value);
+    const applyFontPolicy=(key:string,target:string,min:number,max:number,fallback:number)=>{const row=enabled.find((item:any)=>item.policy_key===key);if(!row)return;const style=parseStyle(row.policy_value);const size=Number(style.size??fallback);if(Number.isFinite(size))root.style.setProperty(target,Math.min(max,Math.max(min,size))+"px");if(["Tajawal","Kufam","Romman"].includes(style.font)){const family="'"+style.font+"',sans-serif";const fontTarget=key==="appearance.header_text"?"--silsila-header-font":key==="appearance.main_heading"||key==="visual_identity.heading_1"?"--silsila-main-font":key==="appearance.subheading_1"?"--silsila-subheading-font":key==="appearance.subheading_2"||key==="appearance.subheading_3"?"--silsila-secondary-font":"--silsila-policy-font";root.style.setProperty(fontTarget,family);if(key==="appearance.body_text")root.style.setProperty("--silsila-policy-font",family);}if(style.bold!==undefined)root.style.setProperty(key==="appearance.main_heading"?"--silsila-screen-title-weight":"--silsila-policy-weight",style.bold?"900":"600");if(hex(style.color)){if(key==="appearance.header_text")root.style.setProperty("--silsila-topbar-text",style.color);else if(key==="appearance.main_heading"||key==="visual_identity.heading_1")root.style.setProperty("--silsila-screen-title-color",style.color);else if(key==="appearance.body_text")root.style.setProperty("--silsila-body-color",style.color);else root.style.setProperty("--silsila-subheading-color",style.color);}};
+    applyFontPolicy("appearance.header_text","--silsila-topbar-size",12,18,14);
+    applyFontPolicy("appearance.main_heading","--silsila-screen-title-size",20,28,24);
+    applyFontPolicy("visual_identity.heading_1","--silsila-screen-title-size",20,28,24);
+    applyFontPolicy("appearance.subheading_1","--silsila-section-title-size",15,22,17);
+    applyFontPolicy("appearance.subheading_2","--silsila-subheading-size",14,20,15);
+    applyFontPolicy("appearance.subheading_3","--silsila-subheading-size",13,18,14);
+    applyFontPolicy("appearance.body_text","--silsila-body-size",12,18,14);
+    root.style.setProperty("--silsila-table-head-size","15px");root.style.setProperty("--silsila-table-body-size","14px");
+    enabled.forEach((row:any)=>{
+     const cssVar=policyVars[row.policy_key];
+     if(cssVar&&hex(row.policy_value))root.style.setProperty(cssVar,row.policy_value);
+    });
+   });
+  return ()=>{cancelled=true;};
+ },[authenticated]); const [exitDialog,setExitDialog]=useState(false); const [pendingExit,setPendingExit]=useState(false);
+ useEffect(()=>{
+  const editState=(event:Event)=>setEditDirty(Boolean((event as CustomEvent<{dirty?:boolean}>).detail?.dirty));
+  const editClosed=()=>setEditDirty(false);
+  const editCancelled=()=>{setPendingActive(null);setPendingExit(false);};
+  window.addEventListener("silsila:edit-state",editState);window.addEventListener("silsila:edit-closed",editClosed);window.addEventListener("silsila:edit-navigation-cancel",editCancelled);
+  return()=>{window.removeEventListener("silsila:edit-state",editState);window.removeEventListener("silsila:edit-closed",editClosed);window.removeEventListener("silsila:edit-navigation-cancel",editCancelled);};
+ },[]);
+ useEffect(()=>{if(!editDirty&&pendingActive!==null){setActiveState(pendingActive);setPendingActive(null);}},[editDirty,pendingActive]);
+ useEffect(()=>{if(!editDirty&&pendingExit){setExitDialog(true);setPendingExit(false);}},[editDirty,pendingExit]);
+ const [quickOpen,setQuickOpen]=useState(false); const [favorites,setFavorites]=useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem("silsila-favorites")||"[]")}catch{return []}}); const toggleFavorite=(name:string)=>setFavorites(current=>{const next=current.includes(name)?current.filter(x=>x!==name):[...current,name];try{localStorage.setItem("silsila-favorites",JSON.stringify(next))}catch{}return next;}); const [dashboardFilters,setDashboardFilters]=useState<string[]>(Array(5).fill(""));
+ const [entered,setEntered]=useState(true); const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [showPassword,setShowPassword]=useState(false); const [loginMessage,setLoginMessage]=useState("");
+ if(!entered) return <div className="login-screen" dir="rtl"><div className="login-orb orb-one"/><div className="login-orb orb-two"/><div className="login-layout"><section className="login-brand-panel"><div className="login-brand"><div className="login-brand-mark"><img src={SILSILA_LOGO} alt="شعار سلسلة"/></div><div><b>سلسلة</b><span>ERP · BUSINESS OS</span></div></div><div className="login-brand-copy"><span className="login-eyebrow"><Sparkles size={14}/> منصة إدارة الأعمال المتكاملة</span><h1>تجارتك اليومية<br/><em>تبدأ من هنا</em></h1><p>منظومة واحدة تربط عملياتك وعملاءك ومخزونك وحساباتك في تجربة عمل متكاملة.</p><div className="login-feature-list"><span><ShieldCheck size={17}/> إدارة مركزية للأعمال</span><span><Boxes size={17}/> مبيعات ومشتريات ومخازن</span><span><Wallet size={17}/> متابعة مالية وتشغيلية</span></div></div><div className="login-brand-footer">سلسلة .. بنربط السوق ببعضه</div></section><section className="login-form-panel"><div className="login-mobile-brand"><div className="login-brand-mark"><img src={SILSILA_LOGO} alt="شعار سلسلة"/></div><b>سلسلة</b></div><div className="login-form-heading"><span>مرحبًا بعودتك</span><h2>تسجيل الدخول</h2><p>أدخل بيانات حسابك للمتابعة إلى مساحة العمل.</p></div><form className="login-form" onSubmit={e=>{e.preventDefault();setLoginMessage("تسجيل الدخول الفعلي غير مفعّل بعد. لم يتم التحقق من الحساب أو كلمة المرور.");}}><label><span>البريد الإلكتروني</span><div className="login-input-wrap"><Mail size={17}/><input type="email" autoComplete="username" placeholder="name@company.com" value={email} onChange={e=>setEmail(e.target.value)} required/></div></label><label><span>كلمة المرور</span><div className="login-input-wrap"><LockKeyhole size={17}/><input type={showPassword?"text":"password"} autoComplete="current-password" placeholder="أدخل كلمة المرور" value={password} onChange={e=>setPassword(e.target.value)} required/><button type="button" onClick={()=>setShowPassword(!showPassword)} aria-label={showPassword?"إخفاء كلمة المرور":"إظهار كلمة المرور"}>{showPassword?<EyeOff size={17}/>:<Eye size={17}/>}</button></div></label><div className="login-form-meta"><label className="login-remember"><input type="checkbox"/> تذكرني</label><button type="button" onClick={()=>setLoginMessage("استعادة كلمة المرور ستتاح بعد ربط خدمة المصادقة.")}>نسيت كلمة المرور؟</button></div><button className="login-submit" type="submit">تسجيل الدخول <ChevronLeft size={17}/></button>{loginMessage&&<div className="login-message" role="status">{loginMessage}</div>}</form><div className="login-preview-access"><div><b>تريد استكشاف الواجهة الآن؟</b><span>الدخول للمعاينة لا يحتاج حسابًا ولا يفعّل صلاحيات حقيقية.</span></div><button type="button" onClick={()=>setEntered(true)}>دخول المعاينة <ChevronLeft size={15}/></button></div><div className="login-security-note"><ShieldCheck size={15}/> المصادقة الحقيقية وربط الحسابات قيد الإعداد</div><footer>© 2026 سلسلة · جميع الحقوق محفوظة</footer></section></div></div>;
+ return <div className="shell">
+  <aside className={"sidebar"+(collapsed?" collapsed":"")+(mobileMenuOpen?" mobile-open":"")}>
+   <div className="brand"><div className="brand-mark"><img src={SILSILA_LOGO} alt="شعار سلسلة"/></div><div className="brand-copy"><b>سلسلة</b><span>ERP • BUSINESS OS</span><i>بنربط السوق ببعضه</i></div><button className="collapse" onClick={()=>{if(window.matchMedia("(max-width: 800px)").matches)setMobileMenuOpen(false);else setCollapsed(!collapsed)}} title={collapsed?"إظهار القوائم":"إخفاء القوائم"} aria-label={collapsed?"إظهار القوائم":"إخفاء القوائم"}>{collapsed?<PanelRightOpen size={18}/>:<PanelRightClose size={18}/>}</button></div>
+   <div className="workspace"><div className="workspace-icon">س</div><div className="workspace-copy"><b>سلسلة للتجارة</b><span>المقر الرئيسي · مصر</span></div><ChevronDown size={15}/></div>
+   <div className="nav-scroll">
+    {nav.map(group=><section className="nav-group" key={group.title}><button type="button" className={"nav-main-toggle"+(expandedMain===group.title?" expanded":"")} aria-expanded={expandedMain===group.title} onClick={()=>setExpandedMain(current=>current===group.title?"":group.title)}><span>{group.title}</span><ChevronDown size={16}/></button>{expandedMain===group.title&&<div className="nav-main-content">{group.sections.map(section=>{const subKey=group.title+"::"+section.title;return <div className="nav-subgroup" key={subKey}><button type="button" className={"nav-subgroup-toggle"+(expandedSub===subKey?" expanded":"")} aria-expanded={expandedSub===subKey} onClick={()=>setExpandedSub(current=>current===subKey?"":subKey)}><span>{section.title}</span><ChevronDown size={14}/></button>{expandedSub===subKey&&<div className="nav-subgroup-items">{section.items.length?section.items.map(item=><div className="nav-entry" key={item.name}><button className={active===item.name?"nav-item active":"nav-item"} onClick={()=>{setActive(item.name);setMobileMenuOpen(false)}}><item.icon size={18}/><span>{item.name}</span>{item.name==="المبيعات"&&<i>12</i>}</button><button className={favorites.includes(item.name)?"nav-favorite active":"nav-favorite"} title={favorites.includes(item.name)?"إزالة من المفضلة":"إضافة إلى الوصول السريع"} aria-label={(favorites.includes(item.name)?"إزالة ":"إضافة ")+item.name+(favorites.includes(item.name)?" من المفضلة":" إلى المفضلة")} onClick={()=>toggleFavorite(item.name)}><Heart size={15} fill={favorites.includes(item.name)?"currentColor":"none"}/></button></div>):<div className="nav-empty">لا توجد شاشات مضافة حاليًا</div>}</div>}</div>})}</div>}</section>)}
+   </div>
+   <div className="sidebar-bottom"><button className="sidebar-exit" onClick={()=>{if(editDirty){setPendingExit(true);window.dispatchEvent(new Event("silsila:edit-request-close"));}else setExitDialog(true);}}><LogOut size={17}/><span>خروج من البرنامج</span></button><div className="help-card"><div className="help-icon"><LifeBuoy size={18}/></div><b>تحتاج إلى مساعدة؟</b><span>فريق سلسلة معك خطوة بخطوة</span><button onClick={()=>setNotice(true)}>تواصل مع الدعم <ChevronLeft size={14}/></button></div><div className="user-mini" title={displayUserName}><div className="avatar">{displayUserInitial}</div><div><b>{displayUserName}</b><span>{roleLabels[memberRole]||"استكشاف الواجهة"}</span></div><MoreHorizontal size={19}/></div></div>
+  </aside>
+  {mobileMenuOpen&&<button className="mobile-menu-backdrop" aria-label="إغلاق القوائم" onClick={()=>setMobileMenuOpen(false)}/>}
+  <main className="main">
+   <header className="topbar"><button type="button" className="mobile-menu-trigger" aria-label="فتح القوائم" aria-expanded={mobileMenuOpen} onClick={()=>setMobileMenuOpen(true)}><Menu size={20}/></button><div className="crumb"><img className="topbar-brand-logo" src={SILSILA_LOGO} alt="شعار سلسلة"/><span>سلسلة</span><ChevronLeft size={14}/><b>{active}</b><button type="button" className="icon-btn refresh-screen screen-title-refresh" title="تحديث الشاشة" aria-label="تحديث الشاشة" onClick={()=>window.location.reload()}><RefreshCw size={18}/></button></div><div className="top-actions"><div className="search"><Search size={17}/><span>ابحث عن أي شيء...</span><kbd>⌘ K</kbd></div><button className="icon-btn executive-shortcut" title="الملخص التنفيذي" aria-label="الملخص التنفيذي" onClick={()=>setActive("الملخص التنفيذي")}><LayoutDashboard size={18}/></button><div className="quick-access-wrap"><button className={"icon-btn quick-access-trigger"+(quickOpen?" active":"")} title="الوصول السريع" aria-label="إظهار الوصول السريع" aria-expanded={quickOpen} onClick={()=>setQuickOpen(!quickOpen)}><Sparkles size={19}/></button>{quickOpen&&<div className="quick-access-popover"><div className="quick-access-head"><div><b>الوصول السريع</b><span>شاشاتك المفضلة</span></div><Heart size={17} fill="currentColor"/></div>{favorites.length?favorites.map(name=><button className="quick-access-item" key={"quick-"+name} onClick={()=>{setActive(name);setQuickOpen(false)}}><span>{name}</span><ChevronLeft size={15}/></button>):<div className="quick-access-empty">لم تضف شاشات للمفضلة بعد. استخدم علامة القلب بجوار أي شاشة.</div>}</div>}</div><button className="icon-btn" onClick={()=>setNotice(!notice)} title="الإشعارات" aria-label="الإشعارات"><Bell size={19}/><em/></button><button className="icon-btn"><CircleHelp size={19}/></button><div className="top-user" title={displayUserName}><div className="avatar">{displayUserInitial}</div><span className="top-user-name">{displayUserName}</span><ChevronDown size={14}/></div></div></header>
+   <div className="content">
+    <div className="welcome-row"><div><div className="eyebrow"><Sparkles size={14}/> الأربعاء، ٢٥ نوفمبر ٢٠٢٦</div><h1>صباح الخير، <span>أهلاً بعودتك</span> 👋</h1><p>إليك نظرة شاملة على أداء أعمالك وما يحدث في سلسلة اليوم.</p></div><div className="welcome-actions"><label className="executive-period"><CalendarDays size={16}/><select value={period} onChange={e=>setPeriod(e.target.value)}><option>اليوم</option><option>آخر 7 أيام</option><option>آخر 30 يومًا</option><option>هذا الشهر</option><option>هذا الربع</option><option>هذا العام</option><option>العام السابق</option></select><ChevronDown size={14}/></label><button className="btn-primary" onClick={()=>setActive("المبيعات")}><Plus size={17}/> عملية جديدة</button></div></div>
+    <Suspense fallback={<div className="workspace-loading" role="status">جارٍ تحميل الشاشة...</div>}>{active==="عن البرنامج"?<section className="about-program"><div className="about-program-brand"><img src={SILSILA_LOGO} alt="شعار سلسلة"/><div><h2>سلسلة</h2><p>بنربط السوق ببعضه</p></div></div><h3>منظومة إدارة الأعمال المتكاملة</h3><p>سلسلة منصة لإدارة وربط العمليات التجارية والمخزون والحسابات والموارد البشرية وعلاقات العملاء في مساحة عمل موحدة.</p><div className="about-program-grid"><article><small>اسم البرنامج</small><b>سلسلة ERP</b></article><article><small>النسخة</small><b>React Preview</b></article><article><small>تاريخ المعاينة</small><b>25 نوفمبر 2026</b></article></div><p className="about-program-note">هذه نسخة تطوير واختبار موازية. بعض الشاشات مرتبطة ببيانات فعلية، وأخرى لا تزال قيد الاستكمال. لا تمثل المعاينة اعتمادًا نهائيًا أو استبدالًا لنسخة Flutter.</p></section>:active==="الملخص التنفيذي"?<ExecutiveDashboard period={period} onNavigate={setActive}/>:((active==="العملاء"?<LivePartiesWorkspace kind="customer"/>:active==="الموردون"?<LivePartiesWorkspace kind="supplier"/>:(active==="المبيعات"||active==="فواتير البيع"||active==="أذون التسليم")?<LiveDocumentsWorkspace kind="sale"/>:(active==="المشتريات"||active==="فواتير الشراء"||active==="أذون الاستلام")?<LiveDocumentsWorkspace kind="purchase"/>:active==="المخازن والأصناف"?<LiveItemsWorkspace/>:active==="سندات القبض والصرف"?<TreasuryWorkspace/>:active==="أوامر الصرف والتوريد"?<CashOrdersWorkspace/>:active==="الخزينة والبنوك"?<LiveCashboxesWorkspace/>:(active==="قيود اليومية"||active==="ميزان المراجعة")?<JournalWorkspace/>:active==="دليل الحسابات"?<AccountsWorkspace/>:["علاقات العملاء","الحملات التسويقية","عروض العملاء","عروض المناديب","عروض الرواكد الداخلية","العروض الترويجية الخارجية","الزيارات والمتابعات","تصنيفات العملاء","أهداف العملاء","إعلانات التطبيق","الموارد البشرية","ملفات الموظفين","الهيكل التنظيمي","الوظائف والتعيينات","التأمينات","الورديات","العمل الإضافي","العهد","الحضور والانصراف","الإجازات","العقود والتراخيص","التدريب","التقييم الوظيفي","مؤشرات KPI للموارد البشرية","الاستقطاب والمرشحون","الرواتب","أوامر الإنتاج","قوائم المواد BOM","مراكز العمل","صرف خامات الإنتاج","استلام الإنتاج التام","تكاليف الإنتاج","جودة الإنتاج","تقارير التصنيع","المشروعات","المواقع والمراحل","المقايسات وجداول الكميات","المشتريات والمخازن للمشروعات","تكاليف المشروعات","تقارير المقاولات","المستخلصات","الفاتورة الإلكترونية","إعدادات مصلحة الضرائب"].includes(active)?(active==="ملفات الموظفين"?<LiveEmployeeWorkspace/>:active==="الهيكل التنظيمي"?<LiveHrStructureWorkspace kind="department"/>:active==="الوظائف والتعيينات"?<LiveHrStructureWorkspace kind="job"/>:<LiveBusinessWorkspace name={active}/>):active==="سلسلة ستوديو"?<StudioWorkspace/>:active==="شاشات الاستوديو المنشورة"?<PublishedStudioWorkspace/>:active==="سياسات البرنامج"?<ProgramPoliciesWorkspace/>:active==="بيانات الشركة"?<FoundationWorkspace kind="company"/>:active==="فروع الشركة"?<FoundationWorkspace kind="branches"/>:(active==="الأنشطة"||active==="أنواع الأنشطة")?<FoundationWorkspace kind="activities"/>:active==="فئات الأنشطة"?<FoundationWorkspace kind="activity-categories"/>:active==="مجموعات البراندات"?<FoundationWorkspace kind="brand-groups"/>:active==="البراندات"?<FoundationWorkspace kind="brands"/>:active==="البيانات الجغرافية"?<LiveMasterDataWorkspace kind="geo"/>:active==="فئات الأصناف"||active==="الفئات"?<LiveMasterDataWorkspace kind="categories"/>:active==="البراندات"?<LiveMasterDataWorkspace kind="brands"/>:active==="مجموعات البراندات"?<LiveMasterDataWorkspace kind="groups"/>:active==="إدارة المخازن"?<LiveWarehouseWorkspace/>:active==="أرصدة المخزون"?<InventoryWorkspace/>:active==="التحويلات المخزنية"?<InventoryWorkspace mode="transfers"/>:active==="الجرد المخزني"?<LiveStocktakeWorkspace/>:(active==="المستخدمين"?<UsersWorkspace/>:["إعدادات عامة","بيانات الشركة","فروع الشركة","أنواع الأنشطة","فئات الأنشطة","مجموعات براندات الانشطة","براندات الانشطة"].includes(active)?<SettingsWorkspace key={active} name={active} onNavigate={setActive}/>:["مركز النشاط","العملاء","الموردون","الشحن والنقل","الحسابات المالية","الخزينة والبنوك","التقارير والتحليلات","الموارد البشرية","ملفات الموظفين","الهيكل التنظيمي","الحضور والانصراف","الإجازات","العقود والتراخيص","التدريب","التأمينات","الرواتب","التقييم الوظيفي","مؤشرات KPI للموارد البشرية","الاستقطاب والمرشحون","علاقات العملاء","الفاتورة الإلكترونية","الإيصال الإلكتروني","إعدادات مصلحة الضرائب","حالة الربط والتكامل","إدارة التطبيقات","الربط مع برامج أخرى (API)","إعلانات التطبيق","البيانات الجغرافية","الفئات","البراندات","إدارة المخازن","فئات الأصناف","التحويلات المخزنية","الجرد المخزني","طاقة السيارات","أذون التجهيز","عروض العملاء","عروض المناديب","عروض الرواكد الداخلية","العروض الترويجية الخارجية","تصنيفات العملاء","أهداف العملاء","نقاط العملاء","نقاط الأصناف","حملات تسويقية","الزيارات والمتابعات","شكاوى وملاحظات العملاء","ولاء العملاء","أوامر الإنتاج","قوائم المواد BOM","مراحل التشغيل","مراكز العمل","صرف خامات الإنتاج","استلام الإنتاج التام","تكاليف الإنتاج","جودة الإنتاج","تقارير التصنيع","المشروعات","المواقع والمراحل","المقايسات وجداول الكميات","المستخلصات","أوامر الإسناد","المشتريات والمخازن للمشروعات","تكاليف المشروعات","المقاولين والموردين","تقارير المقاولات","فروع النشاط","نقاط التشغيل","تقارير المبيعات","تقارير المشتريات","تقارير المخازن","التسويات المالية","الأصول الثابتة","الأستاذ العام","قائمة الدخل","المركز المالي"].includes(active)?<PendingWorkspace name={active}/>:<PendingWorkspace name={active}/>)))}</Suspense>
+    <footer>© 2026 سلسلة — بنربط السوق ببعضه <span>إصدار React التجريبي · تختلف مصادر البيانات حسب الشاشة</span></footer>
+   </div>
+  </main>
+  {exitDialog&&<div className="dialog-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setExitDialog(false)}}><section className="exit-dialog" role="dialog" aria-modal="true" aria-labelledby="exit-dialog-title"><div className="exit-dialog-icon"><LogOut size={23}/></div><h2 id="exit-dialog-title">تأكيد الخروج من البرنامج</h2><p>هل أنت متأكد أنك تريد الخروج من برنامج سلسلة؟ تأكد من حفظ أي تغييرات قبل المتابعة.</p><div className="exit-dialog-actions"><button className="exit-confirm" onClick={()=>{void (async()=>{const signedOut=await auth?.signOut();if(signedOut!==false)setExitDialog(false);})();}}>نعم، خروج</button><button className="exit-no" onClick={()=>setExitDialog(false)}>لا</button><button className="exit-cancel" onClick={()=>setExitDialog(false)}>إلغاء الأمر</button></div></section></div>}{notice&&<div className="toast"><Sparkles size={17}/><span>هذه الوظيفة ضمن مرحلة تصميم المعاينة، وسيتم ربطها بالبيانات والصلاحيات لاحقًا.</span><button onClick={()=>setNotice(false)}><X size={16}/></button></div>}
+ </div>
+}
+export default function App(){return <AuthGate><AppContent/></AuthGate>; }
