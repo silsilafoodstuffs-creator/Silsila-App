@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -1442,6 +1443,7 @@ class _MainShellState extends State<MainShell> {
   final categoryService = CategoryService();
   List<String> liveCategoryNames = [];
   final Map<String, Uint8List> liveCategoryImages = <String, Uint8List>{};
+  final Map<String, String> liveCategoryImageMimes = <String, String>{};
   List<Product> liveProducts = [];
   List<Map<String, dynamic>> liveSuppliers = [];
   bool loadingLiveSuppliers = false;
@@ -1924,6 +1926,14 @@ class _MainShellState extends State<MainShell> {
               (row['name'] ?? '').toString(),
               _decodeDatabaseBytea(row['image_data']),
             )).where((entry) => entry.value != null).map((entry) => MapEntry(entry.key, entry.value!)));
+        liveCategoryImageMimes
+          ..clear()
+          ..addEntries(rootRows
+              .where((row) => (row['image_mime_type'] ?? '').toString().isNotEmpty)
+              .map((row) => MapEntry(
+                    (row['name'] ?? '').toString(),
+                    (row['image_mime_type'] ?? '').toString(),
+                  )));
         if (!visibleCategoryNames.contains(selectedCategory)) {
           selectedCategory = 'الكل';
         }
@@ -2110,10 +2120,12 @@ class _MainShellState extends State<MainShell> {
         child: bytes == null
             ? Container(color: const Color(0xFFF5EFFB), alignment: Alignment.center,
                 child: Icon(_iconForCategory(category), color: purple, size: size * .52))
-            : Image.memory(bytes, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(color: const Color(0xFFF5EFFB),
-                  alignment: Alignment.center,
-                  child: Icon(_iconForCategory(category), color: purple, size: size * .52))),
+            : liveCategoryImageMimes[category] == 'image/svg+xml'
+                ? SvgPicture.memory(bytes, fit: BoxFit.contain, width: size, height: size)
+                : Image.memory(bytes, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(color: const Color(0xFFF5EFFB),
+                      alignment: Alignment.center,
+                      child: Icon(_iconForCategory(category), color: purple, size: size * .52))),
       ),
     );
   }
