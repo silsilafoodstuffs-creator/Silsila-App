@@ -1,24 +1,7 @@
 name: Build Silsila Android App
 
-# Keep only the newest release build for a branch; older commits are superseded.
-concurrency:
-  group: silsila-android-release-${{ github.ref }}
-  cancel-in-progress: true
-
+# Manual-only: Android Release APK is included in the consolidated validation when requested.
 'on':
-  # Build a signed production APK whenever shipped app code, assets, dependencies,
-  # database migrations, or this release workflow changes.
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/build.yml"
-      - "lib/**"
-      - "assets/**"
-      - "pubspec.yaml"
-      - "pubspec.lock"
-      - "android/**"
-      - "supabase/migrations/**"
-      - "tools/prepare_android_release.sh"
   workflow_dispatch:
     inputs:
       test_login:
@@ -26,6 +9,10 @@ concurrency:
         required: true
         default: false
         type: boolean
+
+concurrency:
+  group: silsila-android-release-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
