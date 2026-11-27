@@ -4054,14 +4054,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     final offset = loadMore ? (_workspaceOffsets[page] ?? 0) : 0;
     try {
       final records = await _workspaceRecordsService.listPage(
-        companyId: companyId, pageKey: page, offset: offset, pageSize: 50,
+        companyId: companyId, pageKey: page, offset: offset, pageSize: 100,
       );
       if (!mounted || companyId != _appManagementCompanyId) return;
       setState(() {
         final existing = _saved[page] ?? <Map<String, String>>[];
         _saved[page] = loadMore ? <Map<String, String>>[...existing, ...records] : records;
         _workspaceOffsets[page] = offset + records.length;
-        _workspaceHasMore[page] = records.length == 50;
+        _workspaceHasMore[page] = records.length == 100;
         _cloudLoadedWorkspacePages.add(page);
       });
     } catch (error) {
@@ -4093,9 +4093,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   Widget _workspace() {
     final rows = _rows;
     final loadedCount = (_saved[_page] ?? <Map<String, String>>[]).length;
-    final pageCount = (rows.length / 50).ceil().clamp(1, 999999).toInt();
+    final pageCount = (rows.length / 100).ceil().clamp(1, 999999).toInt();
     final currentPage = _workspaceTablePageIndex.clamp(0, pageCount - 1).toInt();
-    final pageRows = rows.skip(currentPage * 50).take(50).toList(growable: false);
+    final pageRows = rows.skip(currentPage * 100).take(100).toList(growable: false);
     final toolbar = _recordToolbar(includeAdd: _group != 'تقارير');
     return ErpScreenFrame(
       title: _page,
@@ -4176,7 +4176,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             icon: _workspacePageLoadsInProgress.contains(_page)
               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.expand_more),
-            label: Text(_workspacePageLoadsInProgress.contains(_page) ? 'جارٍ تحميل السجلات...' : 'تحميل 50 سجل إضافي'),
+            label: Text(_workspacePageLoadsInProgress.contains(_page) ? 'جارٍ تحميل السجلات...' : 'تحميل 100 سجل إضافي'),
           ))),
       ]),
     );
