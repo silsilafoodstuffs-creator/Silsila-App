@@ -5,12 +5,14 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   late String screen;
   late String appCategoryService;
+  late String appMainSource;
 
   setUpAll(() {
     screen = File('lib/erp/screens/erp_item_categories_screen.dart')
         .readAsStringSync();
     appCategoryService = File('lib/services/category_service.dart')
         .readAsStringSync();
+    appMainSource = File('lib/main.dart').readAsStringSync();
   });
 
   test('category catalog excludes binary image payloads and reads in bounded pages', () {
@@ -49,6 +51,8 @@ void main() {
     expect(appCategoryService, contains("'image_data': _decodePostgresBytea(row['image_data'])"));
     expect(appCategoryService, contains('Uint8List? _decodePostgresBytea(dynamic value)'));
     expect(appCategoryService, contains("return r'\\x' + hex;"));
+    expect(appMainSource, contains('if (value is Uint8List) return value;'));
+    expect(appMainSource, contains('if (value is List<int>) return Uint8List.fromList(value);'));
   });
 
   test('category table renders a bounded page instead of every row at once', () {
