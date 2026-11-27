@@ -438,18 +438,23 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       setState(() => _error = _level == 1 ? 'أضف فئة رئيسية أولًا.' : 'أضف فئة فرعية أولًا.');
       return;
     }
-    final siblingsForNew = _codingCategories.where((r) =>
+    final codeSource = parentId == null ? _companyCategories : _codingCategories;
+    final siblingsForNew = codeSource.where((r) =>
       _s(r['parent_id']) == (parentId ?? '')).toList();
-    final lastUsedSegment = siblingsForNew.fold<int>(0, (maximum, sibling) {
-      final digits = RegExp(r'[0-9]+$').firstMatch(_s(sibling['category_code']))?.group(0);
-      final value = int.tryParse(digits ?? '') ?? 0;
-      return value > maximum ? value : maximum;
-    });
-    final next = lastUsedSegment + 1;
     final parent = parentId == null ? null : _categoriesById[parentId];
     final parentDigits = parent == null
         ? ''
         : _s(parent['category_code']).replaceAll(RegExp(r'[^0-9]'), '');
+    final lastUsedSegment = siblingsForNew.fold<int>(0, (maximum, sibling) {
+      final code = _s(sibling['category_code']);
+      final digits = code.replaceAll(RegExp(r'[^0-9]'), '');
+      if (!code.startsWith('Cat') ||
+          digits.length != parentDigits.length + 2 ||
+          !digits.startsWith(parentDigits)) return maximum;
+      final value = int.tryParse(digits.substring(parentDigits.length)) ?? 0;
+      return value > maximum ? value : maximum;
+    });
+    final next = lastUsedSegment + 1;
     final draftActivityCode = _selectedActivityCode == '*' ? '01' : _selectedActivityCode;
     final draft = <String,dynamic>{
       'id':'draft-${DateTime.now().microsecondsSinceEpoch}', 'company_id':_company, 'activity_code':draftActivityCode,
