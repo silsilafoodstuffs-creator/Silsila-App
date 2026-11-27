@@ -27,7 +27,9 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
   bool _loading = false;
   bool _loadingMore = false;
   bool _hasMore = false;
-  static const int _pageSize = 100;
+  static const int _pageSize = 50;
+  int _pageIndex = 0;
+  final TextEditingController _pageJumpController = TextEditingController();
   String? _error;
   String? _warning;
   String? _sourceTable;
@@ -118,6 +120,9 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
   };
 
   @override
+  void dispose() { _pageJumpController.dispose(); super.dispose(); }
+
+  @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
@@ -148,6 +153,8 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     }
     setState(() {
       _loading = true;
+      _pageIndex = 0;
+      _pageJumpController.clear();
       _error = null;
       _warning = null;
       _rows = <Map<String, dynamic>>[];
@@ -270,6 +277,34 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
         (value ?? '').toString().toLowerCase().contains(q))).toList();
   }
 
+  List<Map<String, dynamic>> get _pageRows {
+    final rows = _visibleRows;
+    final start = (_pageIndex * _pageSize).clamp(0, rows.length);
+    return rows.skip(start).take(_pageSize).toList(growable: false);
+  }
+
+  int get _pageCount => (_visibleRows.length / _pageSize).ceil().clamp(1, 999999).toInt();
+
+  Future<void> _nextPage() async {
+    if (_pageIndex + 1 < _pageCount) {
+      setState(() => _pageIndex++);
+      return;
+    }
+    if (_hasMore && !_loadingMore) {
+      final oldCount = _visibleRows.length;
+      await _loadMore();
+      if (mounted && _visibleRows.length > oldCount) setState(() => _pageIndex++);
+    }
+  }
+
+  void _goToPage(int requested) {
+    if (requested < 1 || requested > _pageCount) {
+      ErpCenterToast.show(context, 'رقم الصفحة يجب أن يكون من 1 إلى $_pageCount.', isError: true);
+      return;
+    }
+    setState(() => _pageIndex = requested - 1);
+  }
+
   List<String> get _columns {
     final keys = <String>[];
     for (final row in _visibleRows) {
@@ -357,7 +392,7 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
                 const SizedBox(height: 10),
                 TextField(
                   decoration: const InputDecoration(prefixIcon: Icon(Icons.search), labelText: 'بحث في البيانات (اضغط Enter للبحث على الخادم)', border: OutlineInputBorder(), isDense: true),
-                  onChanged: (value) => setState(() => _search = value),
+                  onChanged: (value) => setState(() { _search = value; _pageIndex = 0; }),
                   onSubmitted: (_) => _load(),
                 ),
               ]),
@@ -385,7 +420,7 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
                   child: DataTable(
                     headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                     columns: columns.map((key) => DataColumn(label: Text(key, style: const TextStyle(fontWeight: FontWeight.w800)))).toList(),
-                    rows: rows.map((row) => DataRow(
+                    rows: _pageRows.map((row) => DataRow(
                       cells: columns.map((key) => DataCell(
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 260),
@@ -396,12 +431,28 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
                   ),
                 ),
                 ),
-                if (_hasMore || _loadingMore) Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: OutlinedButton.icon(
-                    onPressed: _loadingMore ? null : _loadMore,
-                    icon: _loadingMore ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.expand_more),
-                    label: Text(_loadingMore ? 'جارٍ تحميل المزيد...' : 'تحميل 100 سجل إضافي'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: [
+                      Text('صفحة ${_pageIndex + 1} من $_pageCount • ${_visibleRows.length} سجل محمّل', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                      IconButton(tooltip: 'الصفحة السابقة', onPressed: _pageIndex > 0 ? () => setState(() => _pageIndex--) : null, icon: const Icon(Icons.chevron_right)),
+                      for (var page = 0; page < _pageCount; page++)
+                        ChoiceChip(label: Text('${page + 1}'), selected: _pageIndex == page, onSelected: (_) => setState(() => _pageIndex = page), visualDensity: VisualDensity.compact),
+                      IconButton(tooltip: 'الصفحة التالية', onPressed: _loadingMore ? null : _nextPage, icon: const Icon(Icons.chevron_left)),
+                      SizedBox(width: 76, child: TextField(
+                        controller: _pageJumpController,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        decoration: const InputDecoration(hintText: 'رقم الصفحة', isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 7)),
+                        onSubmitted: (value) { final page = int.tryParse(value); if (page != null) _goToPage(page); },
+                      )),
+                      if (_hasMore || _loadingMore)
+                        TextButton(onPressed: _loadingMore ? null : _loadMore, child: Text(_loadingMore ? 'جارٍ التحميل...' : 'تحميل 50 سجلًا')),
+                    ],
                   ),
                 ),
               ]),
