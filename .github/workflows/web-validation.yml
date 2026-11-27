@@ -34,7 +34,7 @@ permissions:
 # Keep one current Web validation per branch.
 concurrency:
   group: silsila-web-validation-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   web:
