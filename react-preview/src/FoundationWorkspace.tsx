@@ -109,7 +109,7 @@ export default function FoundationWorkspace({kind}:{kind:Kind}){
   setEditing(null);const initial:Row={is_active:true,show_in_app:true,apply_to_all:true};
   if(kind==="branches"){
    initial.governorate_id="";initial.district_id="";initial.area_id="";initial.is_main=false;
-   try{const {data:code,error:codeError}=await supabase.rpc("erp_preview_next_central_code",{p_company_id:companyId,p_entity_key:"branch"});if(codeError)throw codeError;initial.branch_code=textValue(code).trim();if(!initial.branch_code)throw new Error("لم تُرجع سياسة التكويد كودًا صالحًا.");}
+   try{if(!supabase)throw new Error("اتصال قاعدة البيانات غير مهيأ.");const {data:code,error:codeError}=await supabase.rpc("erp_preview_next_central_code",{p_company_id:companyId,p_entity_key:"branch"});if(codeError)throw codeError;initial.branch_code=textValue(code).trim();if(!initial.branch_code)throw new Error("لم تُرجع سياسة التكويد كودًا صالحًا.");}
    catch(e:any){setError("تعذر توليد كود الفرع وفق سياسة التكويد: "+(e?.message||String(e)));return;}
   }
   if(kind==="activities"){initial.id=Math.max(0,...rows.map(r=>Number(r.id)||0))+1;initial.code="ACT"+String(Math.max(0,...rows.map(r=>Number(String(r.code||"").replace(/\D/g,""))||0))+1).padStart(3,"0");initial.sort_order=rows.length+1;}
