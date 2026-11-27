@@ -1369,7 +1369,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     ],
     const Divider(),
     _sectionTitle('آخر الحركات المخزنية','${_stockMovements.length} حركة في دفتر النشاط'),
-    ..._stockMovements.take(50).map((m){
+    ..._stockMovements.take(100).map((m){
       final linkRows=_itemLinks.where((x)=>x['id'].toString()==m['item_link_id'].toString());
       final link=linkRows.isEmpty?null:linkRows.first;
       final item=link?['erp_items'] is Map?Map<String,dynamic>.from(link!['erp_items']):<String,dynamic>{};
