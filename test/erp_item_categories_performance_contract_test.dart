@@ -46,9 +46,13 @@ void main() {
     expect(screen, contains("_normalizeActivityCode(_s(r['activity_code'])) == draftActivityCode"));
     expect(screen, contains('digits.startsWith(parentDigits)'));
     expect(screen, contains('required String parentDigits'));
+    expect(screen, contains('bool _categoryNeedsCodeRegeneration(Map<String, dynamic> row)'));
+    expect(screen, contains('_originalCategoryHierarchy[id]'));
+    expect(screen, contains('if (original[\'parent_id\'] != currentParentId'));
+    expect(screen, contains('final parent = _categoriesById[currentParentId]'));
     expect(screen, contains(r"RegExp(r'^[0-9]{2}$').hasMatch(activityCode)"));
     expect(screen, contains("update({'category_code': ''})"));
-    expect(screen, contains("'category_code':row['_draft'] == true || _hierarchyChanged ? '' : _s(row['category_code'])"));
+    expect(screen, contains("'category_code':_categoryNeedsCodeRegeneration(row) ? '' : _s(row['category_code'])"));
   });
 
   test('app category service converts stored PostgreSQL bytea to image bytes', () {
