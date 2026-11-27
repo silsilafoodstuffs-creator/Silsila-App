@@ -717,7 +717,7 @@ class _SilsilaStudioScreenState extends State<SilsilaStudioScreen> {
       }
       final company = _companyId;
       if (company != null) {
-        _previewData = await _repository.previewBindings(companyId: company, document: _doc, limit: 50);
+        _previewData = await _repository.previewBindings(companyId: company, document: _doc, limit: 100);
         notes.add('تم اختبار مصادر البيانات الفعلية بصلاحيات المستخدم الحالي.');
       } else {
         notes.add('تم اختبار بنية التصميم فقط؛ لم تُختبر قاعدة البيانات لعدم تحديد شركة نشطة.');
