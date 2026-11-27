@@ -376,23 +376,7 @@ class CategoryService {
     final prefixLength = raw.startsWith(r'\\x') ? 3 : raw.startsWith(r'\x') ? 2 : 0;
     if (prefixLength == 0 || raw.length <= prefixLength) return null;
     final hex = raw.substring(prefixLength);
-    if (hex.isEmpty || hex.length.isOdd || !RegExp(r'^[0-9a-fA-F]+
-    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    return r'\x' + hex;
-  }
-
-  void _validateImageUrl(String value) {
-    final uri = Uri.tryParse(value);
-
-    if (uri == null ||
-        !uri.hasScheme ||
-        (uri.scheme != 'https' && uri.scheme != 'http') ||
-        uri.host.isEmpty) {
-      throw ArgumentError('رابط صورة القسم غير صالح.');
-    }
-  }
-}
-).hasMatch(hex)) return null;
+    if (hex.isEmpty || hex.length.isOdd || !RegExp(r'^[0-9a-fA-F]+$').hasMatch(hex)) return null;
     try {
       return Uint8List.fromList(List<int>.generate(
         hex.length ~/ 2,
