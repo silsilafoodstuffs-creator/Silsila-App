@@ -1143,9 +1143,13 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                               border: Border.all(color: const Color(0xFFE4DDED)),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: ErpStandardDataTable(
+                            child: Scrollbar(
+                              thumbVisibility: true,
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.vertical,
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: ErpStandardDataTable(
                                 headingColor: const Color(0xFFF1EAF9),
                                 rowHeight: 40,
                                 showCheckboxColumn: false,
@@ -1271,6 +1275,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                   );
                                 }).toList(),
 
+                                  ),
+                                ),
                               ),
                             ),
                                 ),
