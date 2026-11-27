@@ -40,7 +40,7 @@ void main() {
   });
 
   test('category coding inherits the two-digit activity code across all hierarchy levels', () {
-    expect(screen, contains(r"'category_code':'$parentDigits${next.toString().padLeft(2, '0')}'"));
+    expect(screen, contains(r"""'category_code':'$parentDigits${next.toString().padLeft(2, '0')}'"""));
     expect(screen, contains("final parent = parentId == null ? null : _categoriesById[parentId];"));
     expect(screen, contains("_normalizeActivityCode(_s(parent['activity_code']))"));
     expect(screen, contains("_normalizeActivityCode(_s(r['activity_code'])) == draftActivityCode"));
