@@ -56,6 +56,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   int _categoryPageIndex = 0;
   static const int _categoryPageSize = 100;
   final TextEditingController _categoryPageJumpController = TextEditingController();
+  final ScrollController _categoryVerticalScrollController = ScrollController();
   String? _parentFilter;
   String? _mainCategoryFilter;
   String? _subCategoryFilter;
@@ -96,6 +97,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     for (final c in _en.values) { c.dispose(); }
     _searchController.dispose();
     _categoryPageJumpController.dispose();
+    _categoryVerticalScrollController.dispose();
     super.dispose();
   }
 
@@ -438,13 +440,20 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       setState(() => _error = _level == 1 ? 'أضف فئة رئيسية أولًا.' : 'أضف فئة فرعية أولًا.');
       return;
     }
-    final draftActivityCode = _selectedActivityCode == '*' ? '01' : _selectedActivityCode;
+    final parent = parentId == null ? null : _categoriesById[parentId];
+    final draftActivityCode = parent == null
+        ? _normalizeActivityCode(_selectedActivityCode)
+        : _normalizeActivityCode(_s(parent['activity_code']));
+    if (draftActivityCode.isEmpty || !RegExp(r'^[0-9]{2}$').hasMatch(draftActivityCode)) {
+      setState(() => _error = 'كود النشاط غير صالح؛ يجب أن يتكون من رقمين.');
+      return;
+    }
     final codeSource = parentId == null
-        ? _companyCategories.where((r) => _s(r['activity_code']) == draftActivityCode)
-        : _codingCategories;
+        ? _companyCategories.where((r) =>
+            _normalizeActivityCode(_s(r['activity_code'])) == draftActivityCode)
+        : _companyCategories;
     final siblingsForNew = codeSource.where((r) =>
       _s(r['parent_id']) == (parentId ?? '')).toList();
-    final parent = parentId == null ? null : _categoriesById[parentId];
     final parentDigits = parent == null
         ? draftActivityCode
         : _s(parent['category_code']).replaceAll(RegExp(r'[^0-9]'), '');
@@ -1128,9 +1137,17 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                               border: Border.all(color: const Color(0xFFE4DDED)),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: ErpStandardDataTable(
+                            child: Scrollbar(
+                              controller: _categoryVerticalScrollController,
+                              thumbVisibility: true,
+                              interactive: true,
+                              child: SingleChildScrollView(
+                                controller: _categoryVerticalScrollController,
+                                primary: false,
+                                scrollDirection: Axis.vertical,
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: ErpStandardDataTable(
                                 headingColor: const Color(0xFFF1EAF9),
                                 rowHeight: 40,
                                 showCheckboxColumn: false,
@@ -1256,6 +1273,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                                   );
                                 }).toList(),
 
+                                  ),
+                                ),
                               ),
                             ),
                                 ),
