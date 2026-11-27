@@ -60,7 +60,7 @@ class _ErpStudioPublishedDesignsScreenState extends State<ErpStudioPublishedDesi
       final raw = published['design_json'];
       if (raw is! Map) throw const FormatException('مخطط الإصدار المنشور غير صالح.');
       final document = StudioDocument.fromJson(Map<String, dynamic>.from(raw));
-      final data = await _repository.previewBindings(companyId: company, document: document, limit: 50);
+      final data = await _repository.previewBindings(companyId: company, document: document, limit: 100);
       if (!mounted) return;
       await Navigator.of(context).push(MaterialPageRoute<void>(
         builder: (_) => _PublishedDesignPreview(document: document, dataBySource: data, revision: publishedRevision),
