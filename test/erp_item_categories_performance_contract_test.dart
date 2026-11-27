@@ -41,7 +41,9 @@ void main() {
 
   test('category coding inherits the two-digit activity code across all hierarchy levels', () {
     expect(screen, contains(r"'category_code':'$parentDigits${next.toString().padLeft(2, '0')}'"));
-    expect(screen, contains("final draftActivityCode = _selectedActivityCode == '*' ? '01' : _selectedActivityCode;"));
+    expect(screen, contains("final parent = parentId == null ? null : _categoriesById[parentId];"));
+    expect(screen, contains("_normalizeActivityCode(_s(parent['activity_code']))"));
+    expect(screen, contains("_normalizeActivityCode(_s(r['activity_code'])) == draftActivityCode"));
     expect(screen, contains('digits.startsWith(parentDigits)'));
     expect(screen, contains('required String parentDigits'));
     expect(screen, contains("RegExp(r'^[0-9]{2}$').hasMatch(activityCode)"));
@@ -64,5 +66,9 @@ void main() {
     expect(screen, contains('rows: pageRows.asMap().entries.map'));
     expect(screen, contains('الصفحة التالية'));
     expect(screen, contains('الصفحة السابقة'));
+    expect(screen, contains('final ScrollController _categoryVerticalScrollController = ScrollController();'));
+    expect(screen, contains('thumbVisibility: true'));
+    expect(screen, contains('scrollDirection: Axis.vertical'));
+    expect(screen, contains('controller: _categoryVerticalScrollController'));
   });
 }
