@@ -589,8 +589,12 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           }
         });
       }
-    } catch (_) {
-      // Keep category data usable if optional image bytes cannot be read.
+    } catch (e) {
+      // Do not hide image-read failures: the category itself remains usable,
+      // but the user must know why a saved image could not be displayed.
+      if (mounted) {
+        setState(() => _error = 'تعذر تحميل صور الفئات المحفوظة من قاعدة البيانات: $e');
+      }
     } finally {
       _categoryImageLoads.removeAll(pending.keys);
     }
@@ -751,6 +755,11 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           }
           row['image_data'] = imageSaved['image_data'];
           row['image_mime_type'] = imageSaved['image_mime_type'];
+          // The database response is authoritative. Drop the picker cache so
+          // the post-save reload fetches and renders the persisted bytes.
+          _imageBytes.remove(_s(row['id']));
+          _imageNames.remove(_s(row['id']));
+          _categoryImageLoaded.remove(_s(row['id']));
           row.remove('_remove_image');
         }
       }
