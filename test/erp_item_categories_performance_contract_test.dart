@@ -50,6 +50,9 @@ void main() {
     expect(screen, contains("if (imageSaved == null)"));
     expect(screen, contains("_sameImageBytes(persistedBytes, selectedBytes)"));
     expect(screen, contains("row['image_data'] = imageSaved['image_data']"));
+    expect(screen, contains("_imageBytes.remove(_s(row['id']))"));
+    expect(screen, contains("_categoryImageLoaded.remove(_s(row['id']))"));
+    expect(screen, contains('تعذر تحميل صور الفئات المحفوظة من قاعدة البيانات'));
   });
 
   test('category coding inherits the two-digit activity code across all hierarchy levels', () {
