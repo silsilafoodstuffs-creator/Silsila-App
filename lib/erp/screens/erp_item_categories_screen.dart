@@ -680,9 +680,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           'image_source_url':(selectedBytes != null || row['_remove_image'] == true) ? null : row['image_source_url'],
           'image_attribution':(selectedBytes != null || row['_remove_image'] == true) ? null : row['image_attribution'],
           if (row['_remove_image'] == true) ...{'image_data':null, 'image_mime_type':null},
-          if (selectedBytes != null && selectedBytes.isNotEmpty) ...{
-            'image_data':_byteaHex(selectedBytes), 'image_mime_type':_imageMime(row),
-          },
+          // Image bytes are persisted in a dedicated request after the category row.
+          // This keeps the binary payload out of the general category update.
         };
         if (row['_draft'] == true) {
           final oldDraftId = id;
@@ -691,35 +690,38 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           row..['id']=newId..remove('_draft');
           for (final child in _all.where((candidate) => _s(candidate['parent_id']) == oldDraftId)) { child['parent_id'] = newId; }
         } else {
-          // PostgREST can return success with zero affected rows when RLS filters
-          // the target. Verify the returned row and the persisted image bytes.
-          if (selectedBytes != null && selectedBytes.isNotEmpty) {
-            final saved = await _db!.from('erp_item_categories')
-                .update(payload)
-                .eq('id', id)
-                .eq('company_id', _company!)
-                .select('id,image_data,image_mime_type')
-                .maybeSingle();
-            if (saved == null) {
-              throw StateError('لم تُحدّث قاعدة البيانات صورة الفئة ${row['category_code']}؛ لم يُرجع التحديث أي سجل. تحقق من صلاحية تعديل الفئات للشركة.');
-            }
-            final persistedBytes = _decodeBytea(saved['image_data']);
-            if (persistedBytes == null || !_sameImageBytes(persistedBytes, selectedBytes)) {
-              throw StateError('الصورة التي اخترتها لم تُحفظ مطابقة في قاعدة البيانات للفئة ${row['category_code']}؛ تم رفض إظهار نجاح الحفظ.');
-            }
-            row['image_data'] = saved['image_data'];
-            row['image_mime_type'] = saved['image_mime_type'];
-          } else {
-            final saved = await _db!.from('erp_item_categories')
-                .update(payload)
-                .eq('id', id)
-                .eq('company_id', _company!)
-                .select('id')
-                .maybeSingle();
-            if (saved == null) {
-              throw StateError('لم تُحدّث الفئة ${row['category_code']}؛ لم تُرجع قاعدة البيانات سجلًا مطابقًا للشركة الحالية.');
-            }
+          final saved = await _db!.from('erp_item_categories')
+              .update(payload)
+              .eq('id', id)
+              .eq('company_id', _company!)
+              .select('id')
+              .maybeSingle();
+          if (saved == null) {
+            throw StateError('لم تُحدّث الفئة ${row['category_code']}؛ لم تُرجع قاعدة البيانات سجلًا مطابقًا للشركة الحالية.');
           }
+        }
+        if (selectedBytes != null && selectedBytes.isNotEmpty) {
+          final imageSaved = await _db!.from('erp_item_categories')
+              .update({
+                'image_data': _byteaHex(selectedBytes),
+                'image_mime_type': _imageMime(row),
+                'image_url': null,
+                'image_source_url': null,
+                'image_attribution': null,
+              })
+              .eq('id', _s(row['id']))
+              .eq('company_id', _company!)
+              .select('id,image_data,image_mime_type')
+              .maybeSingle();
+          if (imageSaved == null) {
+            throw StateError('فشل حفظ صورة الفئة ${row['category_code']} في الطلب المستقل؛ لم تُرجع قاعدة البيانات سجلًا.');
+          }
+          final persistedBytes = _decodeBytea(imageSaved['image_data']);
+          if (persistedBytes == null || !_sameImageBytes(persistedBytes, selectedBytes)) {
+            throw StateError('الصورة المختارة للفئة ${row['category_code']} لم تُحفظ مطابقة؛ لن يتم اعتماد الحفظ.');
+          }
+          row['image_data'] = imageSaved['image_data'];
+          row['image_mime_type'] = imageSaved['image_mime_type'];
         }
       }
       final shouldRecode = _hierarchyChanged;
