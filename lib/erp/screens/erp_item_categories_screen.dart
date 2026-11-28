@@ -624,12 +624,23 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   }
 
   String? _imageMime(Map<String,dynamic> row) {
-    final name = (_imageNames[_s(row['id'])] ?? '').toLowerCase();
-    if (name.endsWith('.png')) return 'image/png';
-    if (name.endsWith('.webp')) return 'image/webp';
-    if (name.endsWith('.jpg') || name.endsWith('.jpeg')) return 'image/jpeg';
+    final bytes = _imageBytes[_s(row['id'])];
+    if (bytes != null && bytes.length >= 12) {
+      if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) return 'image/png';
+      if (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) return 'image/jpeg';
+      if (bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x46 &&
+          bytes[8] == 0x57 && bytes[9] == 0x45 && bytes[10] == 0x42 && bytes[11] == 0x50) return 'image/webp';
+    }
     final existing = _s(row['image_mime_type']);
     return existing.isEmpty ? null : existing;
+  }
+
+  bool _sameImageBytes(Uint8List left, Uint8List right) {
+    if (left.length != right.length) return false;
+    for (var i = 0; i < left.length; i++) {
+      if (left[i] != right[i]) return false;
+    }
+    return true;
   }
 
   Future<void> _save() async {
@@ -693,8 +704,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
               throw StateError('لم تُحدّث قاعدة البيانات صورة الفئة ${row['category_code']}؛ لم يُرجع التحديث أي سجل. تحقق من صلاحية تعديل الفئات للشركة.');
             }
             final persistedBytes = _decodeBytea(saved['image_data']);
-            if (persistedBytes == null || persistedBytes.length != selectedBytes.length) {
-              throw StateError('لم يتم التحقق من حفظ الصورة كاملة للفئة ${row['category_code']}.');
+            if (persistedBytes == null || !_sameImageBytes(persistedBytes, selectedBytes)) {
+              throw StateError('الصورة التي اخترتها لم تُحفظ مطابقة في قاعدة البيانات للفئة ${row['category_code']}؛ تم رفض إظهار نجاح الحفظ.');
             }
             row['image_data'] = saved['image_data'];
             row['image_mime_type'] = saved['image_mime_type'];
