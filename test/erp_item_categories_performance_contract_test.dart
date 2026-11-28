@@ -39,11 +39,13 @@ void main() {
     expect(screen, isNot(contains('_expandedIds.addAll(_all.map')));
   });
 
-  test('category image updates verify the persisted database row and byte payload', () {
+  test('category image updates persist bytes separately and verify the exact payload', () {
+    expect(screen, contains("'image_data': _byteaHex(selectedBytes)"));
+    expect(screen, contains("'image_mime_type': _imageMime(row)"));
     expect(screen, contains(".select('id,image_data,image_mime_type')"));
-    expect(screen, contains(".select('id')"));
-    expect(screen, contains("persistedBytes.length != selectedBytes.length"));
-    expect(screen, contains("if (saved == null)"));
+    expect(screen, contains("if (imageSaved == null)"));
+    expect(screen, contains("_sameImageBytes(persistedBytes, selectedBytes)"));
+    expect(screen, contains("row['image_data'] = imageSaved['image_data']"));
   });
 
   test('category coding inherits the two-digit activity code across all hierarchy levels', () {
