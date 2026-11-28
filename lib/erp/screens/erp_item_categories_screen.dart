@@ -680,7 +680,35 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           row..['id']=newId..remove('_draft');
           for (final child in _all.where((candidate) => _s(candidate['parent_id']) == oldDraftId)) { child['parent_id'] = newId; }
         } else {
-          await _db!.from('erp_item_categories').update(payload).eq('id',id).eq('company_id',_company!);
+          // PostgREST can return success with zero affected rows when RLS filters
+          // the target. Verify the returned row and the persisted image bytes.
+          if (selectedBytes != null && selectedBytes.isNotEmpty) {
+            final saved = await _db!.from('erp_item_categories')
+                .update(payload)
+                .eq('id', id)
+                .eq('company_id', _company!)
+                .select('id,image_data,image_mime_type')
+                .maybeSingle();
+            if (saved == null) {
+              throw StateError('لم تُحدّث قاعدة البيانات صورة الفئة ${row['category_code']}؛ لم يُرجع التحديث أي سجل. تحقق من صلاحية تعديل الفئات للشركة.');
+            }
+            final persistedBytes = _decodeBytea(saved['image_data']);
+            if (persistedBytes == null || persistedBytes.length != selectedBytes.length) {
+              throw StateError('لم يتم التحقق من حفظ الصورة كاملة للفئة ${row['category_code']}.');
+            }
+            row['image_data'] = saved['image_data'];
+            row['image_mime_type'] = saved['image_mime_type'];
+          } else {
+            final saved = await _db!.from('erp_item_categories')
+                .update(payload)
+                .eq('id', id)
+                .eq('company_id', _company!)
+                .select('id')
+                .maybeSingle();
+            if (saved == null) {
+              throw StateError('لم تُحدّث الفئة ${row['category_code']}؛ لم تُرجع قاعدة البيانات سجلًا مطابقًا للشركة الحالية.');
+            }
+          }
         }
       }
       final shouldRecode = _hierarchyChanged;
