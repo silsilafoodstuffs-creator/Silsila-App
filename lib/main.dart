@@ -1741,7 +1741,9 @@ class _MainShellState extends State<MainShell> {
     if (database == null) return;
     switch (entity) {
       case 'فئات':
-        if (!_categoriesLoaded) loadLiveCategories();
+        // Always refresh category records and their bytea images when reopening
+        // the category browser, rather than reusing a stale in-memory snapshot.
+        loadLiveCategories();
         if (!_productsLoaded && !loadingLiveProducts) loadLiveProducts();
         break;
       case 'موردين':
@@ -1939,7 +1941,12 @@ class _MainShellState extends State<MainShell> {
         }
       });
     } catch (_) {
-      if (mounted) setState(() => liveCategoryNames = []);
+      if (mounted) setState(() {
+        _categoriesLoaded = false;
+        liveCategoryNames = [];
+        liveCategoryImages.clear();
+        liveCategoryImageMimes.clear();
+      });
     }
   }
 
