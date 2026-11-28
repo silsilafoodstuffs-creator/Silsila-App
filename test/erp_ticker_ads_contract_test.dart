@@ -47,6 +47,19 @@ void main() {
     expect(categoryServiceSource, contains("eq('activity_code', resolvedActivityCode)"));
   });
 
+  test('reopening the category browser refreshes category image bytes from ERP', () {
+    final start = homeSource.indexOf('void _ensureBrowseEntityLoaded(String entity)');
+    final end = homeSource.indexOf('Future<void> _changeActivity', start);
+    expect(start, greaterThanOrEqualTo(0));
+    expect(end, greaterThan(start));
+    final loader = homeSource.substring(start, end);
+    expect(loader, contains("case 'فئات':"));
+    expect(loader, contains('loadLiveCategories();'));
+    expect(loader, isNot(contains('if (!_categoriesLoaded) loadLiveCategories();')));
+    expect(homeSource, contains('liveCategoryImages.clear();'));
+    expect(homeSource, contains('liveCategoryImageMimes.clear();'));
+  });
+
   test('ticker brand artwork is explicitly circular and consistently cover-cropped', () {
     final start = homeSource.indexOf('class _HomeTickerAdsStrip extends StatefulWidget');
     final end = homeSource.indexOf('class MainShell extends StatefulWidget', start);
