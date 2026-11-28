@@ -63,6 +63,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   List<Map<String,dynamic>> _companyCategories = [];
   final Map<String, Map<String, dynamic>> _categoriesById = <String, Map<String, dynamic>>{};
   final Map<String, Map<String, String>> _originalCategoryHierarchy = <String, Map<String, String>>{};
+  final Map<String, Map<String, dynamic>> _originalCategoryRows = <String, Map<String, dynamic>>{};
   final Map<String, List<Map<String, dynamic>>> _childrenByParent = <String, List<Map<String, dynamic>>>{};
   final Set<String> _categoryImageLoads = <String>{};
   final Set<String> _categoryImageLoaded = <String>{};
@@ -272,6 +273,18 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
             .map((row) => MapEntry(_s(row['id']), <String, String>{
                   'parent_id': _s(row['parent_id']),
                   'activity_code': normalizeActivity(_s(row['activity_code'])),
+                })));
+      _originalCategoryRows
+        ..clear()
+        ..addEntries(_companyCategories
+            .where((row) => _s(row['id']).isNotEmpty)
+            .map((row) => MapEntry(_s(row['id']), <String, dynamic>{
+                  'category_name': _s(row['category_name']),
+                  'category_name_en': _s(row['category_name_en']),
+                  'parent_id': _s(row['parent_id']),
+                  'activity_code': normalizeActivity(_s(row['activity_code'])),
+                  'is_active': row['is_active'] == true,
+                  'show_in_app': row['show_in_app'] == true,
                 })));
 
       _all = completeCatalog.where((row) {
@@ -623,8 +636,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     });
   }
 
-  String? _imageMime(Map<String,dynamic> row) {
-    final bytes = _imageBytes[_s(row['id'])];
+  String? _imageMime(Map<String,dynamic> row, {Uint8List? selectedBytes}) {
+    final bytes = selectedBytes ?? _imageBytes[_s(row['id'])];
     if (bytes != null && bytes.length >= 12) {
       if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) return 'image/png';
       if (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) return 'image/jpeg';
@@ -652,6 +665,22 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         final id = _s(row['id']);
         final ar = (_ar[id]?.text ?? _s(row['category_name'])).trim();
         final en = (_en[id]?.text ?? _s(row['category_name_en'])).trim();
+        final selectedBytes = _imageBytes[id];
+        final original = _originalCategoryRows[id];
+        final needsSave = row['_draft'] == true ||
+            original == null ||
+            ar != _s(original['category_name']).trim() ||
+            en != _s(original['category_name_en']).trim() ||
+            _s(row['parent_id']) != _s(original['parent_id']) ||
+            _normalizeActivityCode(_s(row['activity_code'])) != _s(original['activity_code']) ||
+            (row['is_active'] == true) != (original['is_active'] == true) ||
+            (row['show_in_app'] == true) != (original['show_in_app'] == true) ||
+            selectedBytes != null ||
+            row['_remove_image'] == true ||
+            _categoryNeedsCodeRegeneration(row);
+        // Do not rewrite every row in the activity when only one category changed.
+        // Existing legacy rows may not satisfy today's insert/update triggers.
+        if (!needsSave) continue;
         if (ar.isEmpty) { if (row['_draft'] == true) continue; throw StateError('اسم الفئة العربية مطلوب للكود ${row['category_code']}.'); }
         final normalizedName = ar.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
         final duplicate = _all.any((other) => _s(other['id']) != id &&
@@ -671,7 +700,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
             throw StateError('الفئة الفرعية المختارة لا تتبع الفئة الرئيسية المحددة.');
           }
         }
-        final selectedBytes = _imageBytes[id];
+        final selectedMime = selectedBytes == null ? null : _imageMime(row, selectedBytes: selectedBytes);
         final payload = <String,dynamic>{
           'company_id':_company, 'activity_code':_s(row['activity_code']).isEmpty ? _selectedActivityCode : _s(row['activity_code']), 'category_code':_categoryNeedsCodeRegeneration(row) ? '' : _s(row['category_code']), 'category_name':ar,
           'category_name_en':en, 'parent_id':row['parent_id'], 'is_active':row['is_active'] == true,
@@ -704,7 +733,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           final imageSaved = await _db!.from('erp_item_categories')
               .update({
                 'image_data': _byteaHex(selectedBytes),
-                'image_mime_type': _imageMime(row),
+                'image_mime_type': selectedMime,
                 'image_url': null,
                 'image_source_url': null,
                 'image_attribution': null,
@@ -722,6 +751,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           }
           row['image_data'] = imageSaved['image_data'];
           row['image_mime_type'] = imageSaved['image_mime_type'];
+          row.remove('_remove_image');
         }
       }
       final shouldRecode = _hierarchyChanged;
