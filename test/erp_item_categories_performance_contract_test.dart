@@ -39,9 +39,13 @@ void main() {
     expect(screen, isNot(contains('_expandedIds.addAll(_all.map')));
   });
 
-  test('category image updates persist bytes separately and verify the exact payload', () {
+  test('category save touches only changed rows and persists image bytes separately', () {
+    expect(screen, contains('final Map<String, Map<String, dynamic>> _originalCategoryRows'));
+    expect(screen, contains('final needsSave = row[\'_draft\'] == true'));
+    expect(screen, contains('if (!needsSave) continue;'));
     expect(screen, contains("'image_data': _byteaHex(selectedBytes)"));
-    expect(screen, contains("'image_mime_type': _imageMime(row)"));
+    expect(screen, contains("'image_mime_type': selectedMime"));
+    expect(screen, contains('selectedBytes: selectedBytes'));
     expect(screen, contains(".select('id,image_data,image_mime_type')"));
     expect(screen, contains("if (imageSaved == null)"));
     expect(screen, contains("_sameImageBytes(persistedBytes, selectedBytes)"));
