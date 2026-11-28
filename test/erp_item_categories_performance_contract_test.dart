@@ -39,6 +39,13 @@ void main() {
     expect(screen, isNot(contains('_expandedIds.addAll(_all.map')));
   });
 
+  test('category image updates verify the persisted database row and byte payload', () {
+    expect(screen, contains(".select('id,image_data,image_mime_type')"));
+    expect(screen, contains(".select('id')"));
+    expect(screen, contains("persistedBytes.length != selectedBytes.length"));
+    expect(screen, contains("if (saved == null)"));
+  });
+
   test('category coding inherits the two-digit activity code across all hierarchy levels', () {
     expect(screen, contains(r"""'category_code':'$parentDigits${next.toString().padLeft(2, '0')}'"""));
     expect(screen, contains("final parent = parentId == null ? null : _categoriesById[parentId];"));
