@@ -1741,7 +1741,10 @@ class _MainShellState extends State<MainShell> {
     if (database == null) return;
     switch (entity) {
       case 'فئات':
-        if (!_categoriesLoaded) loadLiveCategories();
+        // Refresh the canonical ERP category catalogue whenever the user opens
+        // the category browser. Images are stored as bytea, so a fresh query
+        // replaces the in-memory image cache after an ERP image is changed.
+        loadLiveCategories();
         if (!_productsLoaded && !loadingLiveProducts) loadLiveProducts();
         break;
       case 'موردين':
@@ -1939,7 +1942,12 @@ class _MainShellState extends State<MainShell> {
         }
       });
     } catch (_) {
-      if (mounted) setState(() => liveCategoryNames = []);
+      if (mounted) setState(() {
+        _categoriesLoaded = false;
+        liveCategoryNames = [];
+        liveCategoryImages.clear();
+        liveCategoryImageMimes.clear();
+      });
     }
   }
 
